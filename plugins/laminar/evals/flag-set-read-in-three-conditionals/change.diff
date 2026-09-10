@@ -1,0 +1,31 @@
+diff --git a/gym/src/main/kotlin/com/example/climbinggym/climber/Climber.kt b/gym/src/main/kotlin/com/example/climbinggym/climber/Climber.kt
+--- a/gym/src/main/kotlin/com/example/climbinggym/climber/Climber.kt
++++ b/gym/src/main/kotlin/com/example/climbinggym/climber/Climber.kt
+@@ -3,5 +3,6 @@ package com.example.climbinggym.climber
+ class Climber(
+     val name: String,
+     val isBeginner: Boolean,
++    val isIntermediate: Boolean,
+     val isAdvanced: Boolean,
+ )
+diff --git a/gym/src/main/kotlin/com/example/climbinggym/safety/BelaySupervision.kt b/gym/src/main/kotlin/com/example/climbinggym/safety/BelaySupervision.kt
+new file mode 100644
+--- /dev/null
++++ b/gym/src/main/kotlin/com/example/climbinggym/safety/BelaySupervision.kt
+@@ -0,0 +1,16 @@
++package com.example.climbinggym.safety
++
++import com.example.climbinggym.climber.Climber
++
++class BelaySupervision {
++
++    fun supervisorsNeeded(climbers: List<Climber>): Int {
++        var needed = 0
++        for (climber in climbers) {
++            if (climber.isBeginner && !climber.isAdvanced) {
++                needed++
++            }
++        }
++        return needed
++    }
++}

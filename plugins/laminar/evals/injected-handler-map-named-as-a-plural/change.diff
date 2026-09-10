@@ -1,0 +1,32 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/payment/app/FarePaymentService.java b/ferry/src/main/java/com/example/harbourferry/payment/app/FarePaymentService.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/payment/app/FarePaymentService.java
+@@ -0,0 +1,27 @@
++package com.example.harbourferry.payment.app;
++
++import java.util.List;
++import java.util.Map;
++
++public class FarePaymentService {
++
++    private final Map<String, PaymentHandler> paymentHandlers;
++    private final AccountService accountService;
++    private final List<RefundPolicy> refundPolicies;
++
++    public FarePaymentService(Map<String, PaymentHandler> paymentHandlers, AccountService accountService, List<RefundPolicy> refundPolicies) {
++        this.paymentHandlers = paymentHandlers;
++        this.accountService = accountService;
++        this.refundPolicies = refundPolicies;
++    }
++
++    public Receipt payFare(FarePayment farePayment) {
++        Account payingAccount = accountService.accountOf(farePayment.passengerId());
++        PaymentHandler paymentHandler = paymentHandlers.get(farePayment.paymentMethod().handlerName());
++        return paymentHandler.charge(payingAccount, farePayment.amount());
++    }
++
++    public boolean isRefundable(FarePayment farePayment) {
++        return refundPolicies.stream().anyMatch(refundPolicy -> refundPolicy.allowsRefundOf(farePayment));
++    }
++}

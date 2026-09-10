@@ -1,0 +1,398 @@
+diff --git a/nursery/pom.xml b/nursery/pom.xml
+new file mode 100644
+index 0000000..9c2a1e8
+--- /dev/null
++++ b/nursery/pom.xml
+@@ -0,0 +1,16 @@
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example</groupId>
++    <artifactId>nursery</artifactId>
++    <version>1.0.0</version>
++    <dependencies>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-web</artifactId>
++        </dependency>
++        <dependency>
++            <groupId>org.springframework.modulith</groupId>
++            <artifactId>spring-modulith-starter-core</artifactId>
++        </dependency>
++    </dependencies>
++</project>
+diff --git a/nursery/src/main/java/com/example/nursery/NurseryApplication.java b/nursery/src/main/java/com/example/nursery/NurseryApplication.java
+new file mode 100644
+index 0000000..52949bf
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/NurseryApplication.java
+@@ -0,0 +1,12 @@
++package com.example.nursery;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class NurseryApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(NurseryApplication.class, args);
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/app/api/DeliveryPlanning.java b/nursery/src/main/java/com/example/nursery/delivery/app/api/DeliveryPlanning.java
+new file mode 100644
+index 0000000..9058301
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/app/api/DeliveryPlanning.java
+@@ -0,0 +1,8 @@
++package com.example.nursery.delivery.app.api;
++
++import com.example.nursery.delivery.app.domain.model.DeliveryRound;
++
++public interface DeliveryPlanning {
++
++    DeliveryRound planRound(String variety, String gardenCentre);
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/app/domain/DeliveryPlanningService.java b/nursery/src/main/java/com/example/nursery/delivery/app/domain/DeliveryPlanningService.java
+new file mode 100644
+index 0000000..af37ab0
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/app/domain/DeliveryPlanningService.java
+@@ -0,0 +1,20 @@
++package com.example.nursery.delivery.app.domain;
++
++import com.example.nursery.delivery.app.api.DeliveryPlanning;
++import com.example.nursery.delivery.app.domain.model.DeliveryRound;
++import com.example.nursery.delivery.app.domain.model.TrayToShip;
++import com.example.nursery.delivery.app.spi.TraysToShip;
++
++public class DeliveryPlanningService implements DeliveryPlanning {
++
++    private final TraysToShip traysToShip;
++
++    public DeliveryPlanningService(TraysToShip traysToShip) {
++        this.traysToShip = traysToShip;
++    }
++
++    @Override
++    public DeliveryRound planRound(String variety, String gardenCentre) {
++        return new DeliveryRound(gardenCentre, traysToShip.traysOfVariety(variety).stream().map(TrayToShip::trayNumber).toList());
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/app/domain/model/DeliveryRound.java b/nursery/src/main/java/com/example/nursery/delivery/app/domain/model/DeliveryRound.java
+new file mode 100644
+index 0000000..dbf9c44
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/app/domain/model/DeliveryRound.java
+@@ -0,0 +1,6 @@
++package com.example.nursery.delivery.app.domain.model;
++
++import java.util.List;
++
++public record DeliveryRound(String gardenCentre, List<Integer> trayNumbers) {
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/app/domain/model/TrayToShip.java b/nursery/src/main/java/com/example/nursery/delivery/app/domain/model/TrayToShip.java
+new file mode 100644
+index 0000000..f5dab0f
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/app/domain/model/TrayToShip.java
+@@ -0,0 +1,4 @@
++package com.example.nursery.delivery.app.domain.model;
++
++public record TrayToShip(String variety, int trayNumber) {
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/app/spi/TraysToShip.java b/nursery/src/main/java/com/example/nursery/delivery/app/spi/TraysToShip.java
+new file mode 100644
+index 0000000..ed443d7
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/app/spi/TraysToShip.java
+@@ -0,0 +1,10 @@
++package com.example.nursery.delivery.app.spi;
++
++import com.example.nursery.delivery.app.domain.model.TrayToShip;
++
++import java.util.List;
++
++public interface TraysToShip {
++
++    List<TrayToShip> traysOfVariety(String variety);
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/in/rest/DeliveryController.java b/nursery/src/main/java/com/example/nursery/delivery/in/rest/DeliveryController.java
+new file mode 100644
+index 0000000..27c3305
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/in/rest/DeliveryController.java
+@@ -0,0 +1,23 @@
++package com.example.nursery.delivery.in.rest;
++
++import com.example.nursery.delivery.app.api.DeliveryPlanning;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.bind.annotation.RestController;
++
++import java.util.List;
++
++@RestController
++public class DeliveryController {
++
++    private final DeliveryPlanning deliveryPlanning;
++
++    public DeliveryController(DeliveryPlanning deliveryPlanning) {
++        this.deliveryPlanning = deliveryPlanning;
++    }
++
++    @PostMapping("/rounds")
++    public List<Integer> planRound(@RequestParam String variety, @RequestParam String gardenCentre) {
++        return deliveryPlanning.planRound(variety, gardenCentre).trayNumbers();
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/out/modules/TraysToShipUsingPlantingModule.java b/nursery/src/main/java/com/example/nursery/delivery/out/modules/TraysToShipUsingPlantingModule.java
+new file mode 100644
+index 0000000..9ea27a7
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/out/modules/TraysToShipUsingPlantingModule.java
+@@ -0,0 +1,23 @@
++package com.example.nursery.delivery.out.modules;
++
++import com.example.nursery.delivery.app.domain.model.TrayToShip;
++import com.example.nursery.delivery.app.spi.TraysToShip;
++import com.example.nursery.planting.in.modules.SeedlingLookup;
++
++import java.util.List;
++
++public class TraysToShipUsingPlantingModule implements TraysToShip {
++
++    private final SeedlingLookup seedlingLookup;
++
++    public TraysToShipUsingPlantingModule(SeedlingLookup seedlingLookup) {
++        this.seedlingLookup = seedlingLookup;
++    }
++
++    @Override
++    public List<TrayToShip> traysOfVariety(String variety) {
++        return seedlingLookup.seedlingsOfVariety(variety).stream()
++                .map(seedling -> new TrayToShip(seedling.variety(), seedling.trayNumber()))
++                .toList();
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/package-info.java b/nursery/src/main/java/com/example/nursery/delivery/package-info.java
+new file mode 100644
+index 0000000..320a1e7
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/package-info.java
+@@ -0,0 +1,2 @@
++@org.springframework.modulith.ApplicationModule(allowedDependencies = "planting::seedling-lookup")
++package com.example.nursery.delivery;
+diff --git a/nursery/src/main/java/com/example/nursery/planting/app/api/SeedlingPlanting.java b/nursery/src/main/java/com/example/nursery/planting/app/api/SeedlingPlanting.java
+new file mode 100644
+index 0000000..fae6997
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/app/api/SeedlingPlanting.java
+@@ -0,0 +1,8 @@
++package com.example.nursery.planting.app.api;
++
++import com.example.nursery.planting.app.domain.model.Seedling;
++
++public interface SeedlingPlanting {
++
++    Seedling sow(String variety, int trayNumber);
++}
+diff --git a/nursery/src/main/java/com/example/nursery/planting/app/domain/SeedlingPlantingService.java b/nursery/src/main/java/com/example/nursery/planting/app/domain/SeedlingPlantingService.java
+new file mode 100644
+index 0000000..0270a4f
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/app/domain/SeedlingPlantingService.java
+@@ -0,0 +1,26 @@
++package com.example.nursery.planting.app.domain;
++
++import com.example.nursery.planting.app.api.SeedlingPlanting;
++import com.example.nursery.planting.app.domain.model.Seedling;
++import com.example.nursery.planting.app.spi.TrayStore;
++
++import java.time.Clock;
++import java.time.LocalDate;
++
++public class SeedlingPlantingService implements SeedlingPlanting {
++
++    private final TrayStore trayStore;
++    private final Clock clock;
++
++    public SeedlingPlantingService(TrayStore trayStore, Clock clock) {
++        this.trayStore = trayStore;
++        this.clock = clock;
++    }
++
++    @Override
++    public Seedling sow(String variety, int trayNumber) {
++        Seedling seedling = new Seedling(variety, trayNumber, LocalDate.now(clock));
++        trayStore.save(seedling);
++        return seedling;
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/planting/app/domain/model/Seedling.java b/nursery/src/main/java/com/example/nursery/planting/app/domain/model/Seedling.java
+new file mode 100644
+index 0000000..03d8c3f
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/app/domain/model/Seedling.java
+@@ -0,0 +1,10 @@
++package com.example.nursery.planting.app.domain.model;
++
++import java.time.LocalDate;
++
++public record Seedling(String variety, int trayNumber, LocalDate sownOn) {
++
++    public boolean readyToShipOn(LocalDate day) {
++        return !sownOn.plusWeeks(6).isAfter(day);
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/planting/app/spi/TrayStore.java b/nursery/src/main/java/com/example/nursery/planting/app/spi/TrayStore.java
+new file mode 100644
+index 0000000..7388f98
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/app/spi/TrayStore.java
+@@ -0,0 +1,12 @@
++package com.example.nursery.planting.app.spi;
++
++import com.example.nursery.planting.app.domain.model.Seedling;
++
++import java.util.List;
++
++public interface TrayStore {
++
++    void save(Seedling seedling);
++
++    List<Seedling> seedlingsOfVariety(String variety);
++}
+diff --git a/nursery/src/main/java/com/example/nursery/planting/in/modules/PublicSeedling.java b/nursery/src/main/java/com/example/nursery/planting/in/modules/PublicSeedling.java
+new file mode 100644
+index 0000000..25acff9
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/in/modules/PublicSeedling.java
+@@ -0,0 +1,4 @@
++package com.example.nursery.planting.in.modules;
++
++public record PublicSeedling(String variety, int trayNumber) {
++}
+diff --git a/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java b/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java
+new file mode 100644
+index 0000000..432e24e
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java
+@@ -0,0 +1,20 @@
++package com.example.nursery.planting.in.modules;
++
++import com.example.nursery.planting.app.spi.TrayStore;
++
++import java.util.List;
++
++public class SeedlingLookup {
++
++    private final TrayStore trayStore;
++
++    public SeedlingLookup(TrayStore trayStore) {
++        this.trayStore = trayStore;
++    }
++
++    public List<PublicSeedling> seedlingsOfVariety(String variety) {
++        return trayStore.seedlingsOfVariety(variety).stream()
++                .map(seedling -> new PublicSeedling(seedling.variety(), seedling.trayNumber()))
++                .toList();
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/planting/in/modules/package-info.java b/nursery/src/main/java/com/example/nursery/planting/in/modules/package-info.java
+new file mode 100644
+index 0000000..80b1a76
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/in/modules/package-info.java
+@@ -0,0 +1,2 @@
++@org.springframework.modulith.NamedInterface("seedling-lookup")
++package com.example.nursery.planting.in.modules;
+diff --git a/nursery/src/main/java/com/example/nursery/planting/in/rest/SeedlingController.java b/nursery/src/main/java/com/example/nursery/planting/in/rest/SeedlingController.java
+new file mode 100644
+index 0000000..f855784
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/in/rest/SeedlingController.java
+@@ -0,0 +1,21 @@
++package com.example.nursery.planting.in.rest;
++
++import com.example.nursery.planting.app.api.SeedlingPlanting;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class SeedlingController {
++
++    private final SeedlingPlanting seedlingPlanting;
++
++    public SeedlingController(SeedlingPlanting seedlingPlanting) {
++        this.seedlingPlanting = seedlingPlanting;
++    }
++
++    @PostMapping("/seedlings")
++    public String sow(@RequestParam String variety, @RequestParam int trayNumber) {
++        return seedlingPlanting.sow(variety, trayNumber).variety();
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/planting/out/db/TrayStoreUsingJdbc.java b/nursery/src/main/java/com/example/nursery/planting/out/db/TrayStoreUsingJdbc.java
+new file mode 100644
+index 0000000..97188e5
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/out/db/TrayStoreUsingJdbc.java
+@@ -0,0 +1,31 @@
++package com.example.nursery.planting.out.db;
++
++import com.example.nursery.planting.app.domain.model.Seedling;
++import com.example.nursery.planting.app.spi.TrayStore;
++import org.springframework.jdbc.core.simple.JdbcClient;
++
++import java.util.List;
++
++public class TrayStoreUsingJdbc implements TrayStore {
++
++    private final JdbcClient jdbcClient;
++
++    public TrayStoreUsingJdbc(JdbcClient jdbcClient) {
++        this.jdbcClient = jdbcClient;
++    }
++
++    @Override
++    public void save(Seedling seedling) {
++        jdbcClient.sql("insert into seedling (variety, tray_number, sown_on) values (?, ?, ?)")
++                .params(seedling.variety(), seedling.trayNumber(), seedling.sownOn())
++                .update();
++    }
++
++    @Override
++    public List<Seedling> seedlingsOfVariety(String variety) {
++        return jdbcClient.sql("select variety, tray_number, sown_on from seedling where variety = ?")
++                .param(variety)
++                .query(Seedling.class)
++                .list();
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/planting/package-info.java b/nursery/src/main/java/com/example/nursery/planting/package-info.java
+new file mode 100644
+index 0000000..853c50a
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/package-info.java
+@@ -0,0 +1,2 @@
++@org.springframework.modulith.ApplicationModule
++package com.example.nursery.planting;
+diff --git a/nursery/src/test/java/com/example/nursery/NurseryModulesTest.java b/nursery/src/test/java/com/example/nursery/NurseryModulesTest.java
+new file mode 100644
+index 0000000..04c5ba1
+--- /dev/null
++++ b/nursery/src/test/java/com/example/nursery/NurseryModulesTest.java
+@@ -0,0 +1,12 @@
++package com.example.nursery;
++
++import org.junit.jupiter.api.Test;
++import org.springframework.modulith.core.ApplicationModules;
++
++class NurseryModulesTest {
++
++    @Test
++    void shouldKeepEveryModuleBoundaryWhenTheModulesAreVerified() {
++        ApplicationModules.of(NurseryApplication.class).verify();
++    }
++}

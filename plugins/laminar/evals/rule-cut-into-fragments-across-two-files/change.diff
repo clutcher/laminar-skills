@@ -1,0 +1,80 @@
+diff --git a/library/src/main/java/com/example/library/loan/LoanPeriod.java b/library/src/main/java/com/example/library/loan/LoanPeriod.java
+--- a/library/src/main/java/com/example/library/loan/LoanPeriod.java
++++ b/library/src/main/java/com/example/library/loan/LoanPeriod.java
+@@ -1,16 +1,26 @@
+ package com.example.library.loan;
+ 
+ import java.time.LocalDate;
++import java.util.Optional;
+ 
+ public record LoanPeriod(int days) {
+ 
+     private static final int STANDARD_DAYS = 21;
++    private static final String CHOSEN_PERIOD = "chosenLoanPeriod";
+ 
+     public static LoanPeriod resolve(CirculationSession session, CheckoutRequest request) {
+-        return new LoanPeriod(STANDARD_DAYS);
++        return from(session).or(() -> RequestedLoanLength.from(request)).orElseGet(LoanPeriod::standard);
+     }
+ 
+     public static LoanPeriod resolve(CirculationSession session, RenewalRequest request) {
++        return from(session).or(() -> RequestedLoanLength.from(request)).orElseGet(LoanPeriod::standard);
++    }
++
++    public static Optional<LoanPeriod> from(CirculationSession session) {
++        return Optional.ofNullable(session.attribute(CHOSEN_PERIOD)).map(LoanPeriod.class::cast);
++    }
++
++    public static LoanPeriod standard() {
+         return new LoanPeriod(STANDARD_DAYS);
+     }
+ 
+diff --git a/library/src/main/java/com/example/library/loan/RequestedLoanLength.java b/library/src/main/java/com/example/library/loan/RequestedLoanLength.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/RequestedLoanLength.java
+@@ -0,0 +1,26 @@
++package com.example.library.loan;
++
++import java.util.Optional;
++
++final class RequestedLoanLength {
++
++    private static final int DAYS_PER_WEEK = 7;
++
++    private RequestedLoanLength() {
++    }
++
++    static Optional<LoanPeriod> from(CheckoutRequest request) {
++        return inWeeks(request.getRequestedWeeks());
++    }
++
++    static Optional<LoanPeriod> from(RenewalRequest request) {
++        return inWeeks(request.getRequestedWeeks());
++    }
++
++    private static Optional<LoanPeriod> inWeeks(Integer weeks) {
++        if (weeks == null) {
++            return Optional.empty();
++        }
++        return Optional.of(new LoanPeriod(weeks * DAYS_PER_WEEK));
++    }
++}
+diff --git a/library/src/main/java/com/example/library/loan/ReturnDesk.java b/library/src/main/java/com/example/library/loan/ReturnDesk.java
+--- a/library/src/main/java/com/example/library/loan/ReturnDesk.java
++++ b/library/src/main/java/com/example/library/loan/ReturnDesk.java
+@@ -16,9 +16,13 @@ public class ReturnDesk {
+     }
+ 
+     public void checkIn(String copyBarcode) {
+-        Loan loan = loanStore.findFirstByCopyBarcodeAndReturnedOnIsNull(copyBarcode);
++        Loan loan = openLoanFor(copyBarcode);
+         Loan returned = loan.returnedOn(LocalDate.now(clock));
+         loanStore.save(returned);
+         lateReturnFines.chargeFor(returned);
+     }
++
++    private Loan openLoanFor(String copyBarcode) {
++        return loanStore.findFirstByCopyBarcodeAndReturnedOnIsNull(copyBarcode);
++    }
+ }

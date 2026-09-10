@@ -1,0 +1,30 @@
+diff --git a/shop/src/main/java/com/example/shop/order/OrderConfirmationService.java b/shop/src/main/java/com/example/shop/order/OrderConfirmationService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderConfirmationService.java
+@@ -0,0 +1,25 @@
++package com.example.shop.order;
++
++import com.example.shop.mail.EmailService;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class OrderConfirmationService {
++
++    private final EmailService emailService;
++
++    public void sendOrderConfirmation(Order order) {
++        String email = order.getCustomer().getEmail();
++        String name = order.getCustomer().getFirstName() + " " +
++                order.getCustomer().getLastName();
++        String street = order.getShippingAddress().getStreet();
++        String city = order.getShippingAddress().getCity();
++        String country = order.getShippingAddress().getCountry();
++        double total = order.getItems().stream()
++            .mapToDouble(item -> item.getPrice() * item.getQuantity())
++            .sum();
++
++        String address = street + ", " + city + ", " + country;
++        emailService.send(email, name, address, total);
++    }
++}

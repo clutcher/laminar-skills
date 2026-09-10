@@ -1,0 +1,21 @@
+diff --git a/shop/src/main/java/com/example/shop/access/ResourceActions.java b/shop/src/main/java/com/example/shop/access/ResourceActions.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/access/ResourceActions.java
+@@ -0,0 +1,16 @@
++package com.example.shop.access;
++
++public class ResourceActions {
++
++    public void performAction(User user, String action, Resource resource) {
++        if (user != null) {
++            if (user.isActive()) {
++                if (user.hasPermission(action)) {
++                    if (resource.isAvailable()) {
++                        resource.perform(action);
++                    }
++                }
++            }
++        }
++    }
++}

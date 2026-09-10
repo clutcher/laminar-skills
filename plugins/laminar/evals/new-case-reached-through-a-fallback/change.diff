@@ -1,0 +1,40 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/crossing/CrossingStatus.java b/ferry/src/main/java/com/example/harbourferry/crossing/CrossingStatus.java
+--- a/ferry/src/main/java/com/example/harbourferry/crossing/CrossingStatus.java
++++ b/ferry/src/main/java/com/example/harbourferry/crossing/CrossingStatus.java
+@@ -1,7 +1,8 @@
+ package com.example.harbourferry.crossing;
+ 
+ public enum CrossingStatus {
+     SCHEDULED,
+     BOARDING,
+-    DEPARTED
++    DEPARTED,
++    DIVERTED
+ }
+diff --git a/ferry/src/main/java/com/example/harbourferry/crossing/DepartureBoard.java b/ferry/src/main/java/com/example/harbourferry/crossing/DepartureBoard.java
+--- a/ferry/src/main/java/com/example/harbourferry/crossing/DepartureBoard.java
++++ b/ferry/src/main/java/com/example/harbourferry/crossing/DepartureBoard.java
+@@ -1,14 +1,23 @@
+ package com.example.harbourferry.crossing;
+ 
+ public class DepartureBoard {
+ 
+     public String noticeFor(CrossingStatus status) {
+         if (status == CrossingStatus.SCHEDULED) {
+             return "Boarding opens 45 minutes before departure";
+         }
+         if (status == CrossingStatus.BOARDING) {
+             return "Boarding now at the vehicle ramp";
+         }
+         return "This crossing has departed";
+     }
++
++    public String colourFor(CrossingStatus status) {
++        return switch (status) {
++            case SCHEDULED -> "white";
++            case BOARDING -> "green";
++            case DEPARTED -> "grey";
++            case DIVERTED -> "amber";
++        };
++    }
+ }

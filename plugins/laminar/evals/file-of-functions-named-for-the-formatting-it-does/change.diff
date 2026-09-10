@@ -1,0 +1,20 @@
+diff --git a/courier-desk/src/scans/ScanLineFormatting.ts b/courier-desk/src/scans/ScanLineFormatting.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/scans/ScanLineFormatting.ts
+@@ -0,0 +1,5 @@
++import { ScanRecord } from "./ScanRecord";
++
++export const formatScanLine = (scan: ScanRecord): string => `${scan.parcelId} scanned at ${scan.depotCode} on ${scan.scannedAt.toISOString()}`;
++
++export const formatScanLines = (scans: ScanRecord[]): string => scans.map(formatScanLine).join("\n");
+diff --git a/courier-desk/src/scans/ScanRecord.ts b/courier-desk/src/scans/ScanRecord.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/scans/ScanRecord.ts
+@@ -0,0 +1,5 @@
++export interface ScanRecord {
++  readonly parcelId: string;
++  readonly depotCode: string;
++  readonly scannedAt: Date;
++}

@@ -1,0 +1,150 @@
+diff --git a/courier-desk/src/depot/BreakSchedule.ts b/courier-desk/src/depot/BreakSchedule.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/BreakSchedule.ts
+@@ -0,0 +1,5 @@
++export class BreakSchedule {
++  findBreakHour(shiftStartHour: number): number {
++    return shiftStartHour + 4;
++  }
++}
+diff --git a/courier-desk/src/depot/ColdRoomSlots.ts b/courier-desk/src/depot/ColdRoomSlots.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/ColdRoomSlots.ts
+@@ -0,0 +1,5 @@
++export class ColdRoomSlots {
++  countFreeSlots(usedSlots: number, totalSlots: number): number {
++    return Math.max(0, totalSlots - usedSlots);
++  }
++}
+diff --git a/courier-desk/src/depot/CustomsHold.ts b/courier-desk/src/depot/CustomsHold.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/CustomsHold.ts
+@@ -0,0 +1,5 @@
++export class CustomsHold {
++  isHeld(parcelId: string, heldParcelIds: Set<string>): boolean {
++    return heldParcelIds.has(parcelId);
++  }
++}
+diff --git a/courier-desk/src/depot/DamageReport.ts b/courier-desk/src/depot/DamageReport.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/DamageReport.ts
+@@ -0,0 +1,5 @@
++export class DamageReport {
++  createReport(parcelId: string, description: string): string {
++    return `damage:${parcelId}:${description}`;
++  }
++}
+diff --git a/courier-desk/src/depot/DepartureGate.ts b/courier-desk/src/depot/DepartureGate.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/DepartureGate.ts
+@@ -0,0 +1,5 @@
++export class DepartureGate {
++  openGateFor(vanId: string, gateNumber: number): string {
++    return `gate-${gateNumber}:${vanId}`;
++  }
++}
+diff --git a/courier-desk/src/depot/ForkliftLicence.ts b/courier-desk/src/depot/ForkliftLicence.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/ForkliftLicence.ts
+@@ -0,0 +1,5 @@
++export class ForkliftLicence {
++  isValidOn(expiresOn: Date, day: Date): boolean {
++    return day.getTime() <= expiresOn.getTime();
++  }
++}
+diff --git a/courier-desk/src/depot/InboundScan.ts b/courier-desk/src/depot/InboundScan.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/InboundScan.ts
+@@ -0,0 +1,5 @@
++export class InboundScan {
++  recordScan(parcelId: string, scannedAt: Date): string {
++    return `${parcelId}@${scannedAt.toISOString()}`;
++  }
++}
+diff --git a/courier-desk/src/depot/LoadingPlan.ts b/courier-desk/src/depot/LoadingPlan.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/LoadingPlan.ts
+@@ -0,0 +1,5 @@
++export class LoadingPlan {
++  orderParcelsForLoading(parcelIdsByStop: string[][]): string[] {
++    return [...parcelIdsByStop].reverse().flat();
++  }
++}
+diff --git a/courier-desk/src/depot/NightSecurity.ts b/courier-desk/src/depot/NightSecurity.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/NightSecurity.ts
+@@ -0,0 +1,5 @@
++export class NightSecurity {
++  isAlarmArmed(hour: number): boolean {
++    return hour >= 22 || hour < 5;
++  }
++}
+diff --git a/courier-desk/src/depot/OpeningHours.ts b/courier-desk/src/depot/OpeningHours.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/OpeningHours.ts
+@@ -0,0 +1,5 @@
++export class OpeningHours {
++  isOpenAt(hour: number): boolean {
++    return hour >= 5 && hour < 22;
++  }
++}
+diff --git a/courier-desk/src/depot/OversizeRack.ts b/courier-desk/src/depot/OversizeRack.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/OversizeRack.ts
+@@ -0,0 +1,5 @@
++export class OversizeRack {
++  fitsOnRack(lengthInCentimetres: number): boolean {
++    return lengthInCentimetres <= 240;
++  }
++}
+diff --git a/courier-desk/src/depot/ShelfAllocation.ts b/courier-desk/src/depot/ShelfAllocation.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/ShelfAllocation.ts
+@@ -0,0 +1,5 @@
++export class ShelfAllocation {
++  allocateShelf(parcelWeightInGrams: number): string {
++    return parcelWeightInGrams > 20000 ? "floor" : "shelf-a";
++  }
++}
+diff --git a/courier-desk/src/depot/ShiftRota.ts b/courier-desk/src/depot/ShiftRota.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/ShiftRota.ts
+@@ -0,0 +1,5 @@
++export class ShiftRota {
++  findWorkersOnShift(hour: number, workerIdsByHour: Map<number, string[]>): string[] {
++    return workerIdsByHour.get(hour) ?? [];
++  }
++}
+diff --git a/courier-desk/src/depot/UnloadingBay.ts b/courier-desk/src/depot/UnloadingBay.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/UnloadingBay.ts
+@@ -0,0 +1,5 @@
++export class UnloadingBay {
++  assignBay(vanId: string, freeBays: number[]): number {
++    return freeBays.length > 0 ? freeBays[0] : -1;
++  }
++}
+diff --git a/courier-desk/src/depot/VanCapacity.ts b/courier-desk/src/depot/VanCapacity.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/depot/VanCapacity.ts
+@@ -0,0 +1,5 @@
++export class VanCapacity {
++  hasRoomFor(loadedKilograms: number, parcelKilograms: number): boolean {
++    return loadedKilograms + parcelKilograms <= 1200;
++  }
++}

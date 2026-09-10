@@ -1,0 +1,12 @@
+diff --git a/shop/src/main/java/com/example/shop/payment/Payment.java b/shop/src/main/java/com/example/shop/payment/Payment.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/payment/Payment.java
+@@ -0,0 +1,7 @@
++package com.example.shop.payment;
++
++sealed interface Payment permits Pending, Completed, Failed {}
++
++record Pending() implements Payment {}
++record Completed(String transactionId) implements Payment {}
++record Failed(String errorMessage) implements Payment {}

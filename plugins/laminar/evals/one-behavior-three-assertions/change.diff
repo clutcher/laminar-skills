@@ -1,0 +1,29 @@
+diff --git a/shop/src/test/java/com/example/shop/cart/CartTest.java b/shop/src/test/java/com/example/shop/cart/CartTest.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/test/java/com/example/shop/cart/CartTest.java
+@@ -0,0 +1,24 @@
++package com.example.shop.cart;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import com.example.shop.catalog.Product;
++import org.junit.jupiter.api.Test;
++
++class CartTest {
++
++    @Test
++    void shouldCalculateCartTotalsWithTax() {
++        // given
++        Cart cart = new Cart();
++        cart.add(new Product("Book", 100.0));
++
++        // when
++        CartTotals totals = cart.calculateTotals(0.08);
++
++        // then
++        assertThat(totals.getSubtotal()).isEqualTo(100.0);
++        assertThat(totals.getTaxAmount()).isEqualTo(8.0);
++        assertThat(totals.getTotal()).isEqualTo(108.0);
++    }
++}

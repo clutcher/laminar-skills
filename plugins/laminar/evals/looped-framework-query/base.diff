@@ -1,0 +1,90 @@
+diff --git a/allotments/__init__.py b/allotments/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/allotments/lease_renewal.py b/allotments/lease_renewal.py
+new file mode 100644
+index 0000000..a08c0cc
+--- /dev/null
++++ b/allotments/lease_renewal.py
+@@ -0,0 +1,13 @@
++from dataclasses import dataclass
++from datetime import date
++
++from allotments.lease_store import LeaseStore
++
++
++@dataclass(frozen=True)
++class LeaseRenewal:
++    leases: LeaseStore
++    season_end: date
++
++    def renew(self, plot_number: str) -> None:
++        self.leases.move_end_date(plot_number, self.season_end)
+diff --git a/allotments/lease_store.py b/allotments/lease_store.py
+new file mode 100644
+index 0000000..bf406e4
+--- /dev/null
++++ b/allotments/lease_store.py
+@@ -0,0 +1,16 @@
++from datetime import date
++
++from sqlalchemy import update
++from sqlalchemy.orm import Session
++
++from allotments.plot_lease import PlotLease
++
++
++class LeaseStore:
++    def __init__(self, session: Session):
++        self._session = session
++
++    def move_end_date(self, plot_number: str, ends_on: date) -> None:
++        self._session.execute(
++            update(PlotLease).where(PlotLease.plot_number == plot_number).values(ends_on=ends_on)
++        )
+diff --git a/allotments/plot_lease.py b/allotments/plot_lease.py
+new file mode 100644
+index 0000000..b47d1f1
+--- /dev/null
++++ b/allotments/plot_lease.py
+@@ -0,0 +1,16 @@
++from datetime import date
++
++from sqlalchemy import Date, String
++from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
++
++
++class Base(DeclarativeBase):
++    pass
++
++
++class PlotLease(Base):
++    __tablename__ = "plot_leases"
++
++    plot_number: Mapped[str] = mapped_column(String(8), primary_key=True)
++    holder_name: Mapped[str] = mapped_column(String(120))
++    ends_on: Mapped[date] = mapped_column(Date)
+diff --git a/allotments/season_close.py b/allotments/season_close.py
+new file mode 100644
+index 0000000..57b1d9b
+--- /dev/null
++++ b/allotments/season_close.py
+@@ -0,0 +1,11 @@
++from dataclasses import dataclass
++
++from allotments.lease_renewal import LeaseRenewal
++
++
++@dataclass(frozen=True)
++class SeasonClose:
++    renewal: LeaseRenewal
++
++    def renew_one(self, plot_number: str) -> None:
++        self.renewal.renew(plot_number)
+diff --git a/requirements.txt b/requirements.txt
+new file mode 100644
+index 0000000..5183523
+--- /dev/null
++++ b/requirements.txt
+@@ -0,0 +1 @@
++SQLAlchemy==2.0.36

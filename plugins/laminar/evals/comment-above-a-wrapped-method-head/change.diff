@@ -1,0 +1,28 @@
+diff --git a/harbour/src/main/java/com/example/harbour/berth/BerthFinder.java b/harbour/src/main/java/com/example/harbour/berth/BerthFinder.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/berth/BerthFinder.java
+@@ -0,0 +1,23 @@
++package com.example.harbour.berth;
++
++import java.util.List;
++
++public class BerthFinder {
++
++    private final BerthRegister berthRegister;
++
++    public BerthFinder(BerthRegister berthRegister) {
++        this.berthRegister = berthRegister;
++    }
++
++    // Leaves out every berth that is not free on each day of the stay,
++    // and keeps only the berths long enough for the vessel.
++    public List<Berth> findBerths(
++        Vessel vessel, Stay stay
++    ) {
++        return berthRegister.berths().stream()
++            .filter(berth -> berth.isFreeThroughout(stay))
++            .filter(berth -> berth.fits(vessel))
++            .toList();
++    }
++}

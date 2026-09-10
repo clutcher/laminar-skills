@@ -1,0 +1,139 @@
+diff --git a/hotel-web/src/booking/stay-search.page.ts b/hotel-web/src/booking/stay-search.page.ts
+new file mode 100644
+--- /dev/null
++++ b/hotel-web/src/booking/stay-search.page.ts
+@@ -0,0 +1,35 @@
++import { RoomAvailabilityService } from "../rooms/room-availability.service";
++import { Room } from "../rooms/room-inventory";
++import { RatePlanService } from "../rates/rate-plan.service";
++import { RatePlan } from "../rates/rate-table";
++
++export interface StaySearchForm {
++  hotelId: string;
++  arrivalDate: string;
++  departureDate: string;
++  guestCount: number;
++  loyaltyTier: string;
++}
++
++export interface StayOffer {
++  freeRooms: Room[];
++  nightlyPrices: Map<string, number>;
++  ratePlans: RatePlan[];
++}
++
++export class StaySearchPage {
++  constructor(
++    private readonly rooms: RoomAvailabilityService,
++    private readonly rates: RatePlanService,
++  ) {}
++
++  search(form: StaySearchForm): StayOffer {
++    const stayDates = { hotelId: form.hotelId, arrivalDate: form.arrivalDate, departureDate: form.departureDate };
++    const guests = { hotelId: form.hotelId, guestCount: form.guestCount, loyaltyTier: form.loyaltyTier };
++    return {
++      freeRooms: this.rooms.freeRooms(stayDates),
++      nightlyPrices: this.rooms.nightlyPrices(stayDates),
++      ratePlans: this.rates.ratePlans(guests),
++    };
++  }
++}
+diff --git a/hotel-web/src/rates/rate-plan-input.ts b/hotel-web/src/rates/rate-plan-input.ts
+new file mode 100644
+--- /dev/null
++++ b/hotel-web/src/rates/rate-plan-input.ts
+@@ -0,0 +1,5 @@
++export interface RatePlanInput {
++  hotelId: string;
++  guestCount: number;
++  loyaltyTier: string;
++}
+diff --git a/hotel-web/src/rates/rate-plan.service.ts b/hotel-web/src/rates/rate-plan.service.ts
+new file mode 100644
+--- /dev/null
++++ b/hotel-web/src/rates/rate-plan.service.ts
+@@ -0,0 +1,12 @@
++import { RatePlanInput } from "./rate-plan-input";
++import { RatePlan, RateTable } from "./rate-table";
++
++export class RatePlanService {
++  constructor(private readonly rateTable: RateTable) {}
++
++  ratePlans(input: RatePlanInput): RatePlan[] {
++    return this.rateTable
++      .plansFor(input.hotelId, input.guestCount)
++      .filter(plan => plan.loyaltyTiers.includes(input.loyaltyTier));
++  }
++}
+diff --git a/hotel-web/src/rates/rate-table.ts b/hotel-web/src/rates/rate-table.ts
+new file mode 100644
+--- /dev/null
++++ b/hotel-web/src/rates/rate-table.ts
+@@ -0,0 +1,10 @@
++export interface RatePlan {
++  code: string;
++  loyaltyTiers: string[];
++  offeredFrom: string;
++  offeredUntil: string;
++}
++
++export interface RateTable {
++  plansFor(hotelId: string, guestCount: number): RatePlan[];
++}
+diff --git a/hotel-web/src/rooms/room-availability.service.ts b/hotel-web/src/rooms/room-availability.service.ts
+new file mode 100644
+--- /dev/null
++++ b/hotel-web/src/rooms/room-availability.service.ts
+@@ -0,0 +1,27 @@
++import { Room, RoomInventory } from "./room-inventory";
++import { RoomSearchInput } from "./room-search-input";
++
++export class RoomAvailabilityService {
++  constructor(private readonly inventory: RoomInventory) {}
++
++  freeRooms(input: RoomSearchInput): Room[] {
++    return this.inventory.roomsFreeBetween(input.hotelId, input.arrivalDate, input.departureDate);
++  }
++
++  roomTypesOnOffer(input: RoomSearchInput): string[] {
++    const roomTypes = this.freeRooms(input).map(room => room.roomType);
++    return [...new Set(roomTypes)];
++  }
++
++  accessibleRooms(input: RoomSearchInput): Room[] {
++    return this.freeRooms(input).filter(room => room.stepFree);
++  }
++
++  nightlyPrices(input: RoomSearchInput): Map<string, number> {
++    const prices = new Map<string, number>();
++    for (const room of this.freeRooms(input)) {
++      prices.set(room.roomNumber, room.baseNightlyPrice);
++    }
++    return prices;
++  }
++}
+diff --git a/hotel-web/src/rooms/room-inventory.ts b/hotel-web/src/rooms/room-inventory.ts
+new file mode 100644
+--- /dev/null
++++ b/hotel-web/src/rooms/room-inventory.ts
+@@ -0,0 +1,10 @@
++export interface Room {
++  roomNumber: string;
++  roomType: string;
++  stepFree: boolean;
++  baseNightlyPrice: number;
++}
++
++export interface RoomInventory {
++  roomsFreeBetween(hotelId: string, arrivalDate: string, departureDate: string): Room[];
++}
+diff --git a/hotel-web/src/rooms/room-search-input.ts b/hotel-web/src/rooms/room-search-input.ts
+new file mode 100644
+--- /dev/null
++++ b/hotel-web/src/rooms/room-search-input.ts
+@@ -0,0 +1,5 @@
++export interface RoomSearchInput {
++  hotelId: string;
++  arrivalDate: string;
++  departureDate: string;
++}

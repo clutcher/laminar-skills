@@ -1,0 +1,170 @@
+diff --git a/greenhouse/pyproject.toml b/greenhouse/pyproject.toml
+new file mode 100644
+index 0000000..107c825
+--- /dev/null
++++ b/greenhouse/pyproject.toml
+@@ -0,0 +1,4 @@
++[project]
++name = "greenhouse"
++version = "1.0.0"
++dependencies = ["fastapi==0.111.0", "paho-mqtt==2.1.0", "httpx==0.27.0"]
+diff --git a/greenhouse/src/greenhouse/__init__.py b/greenhouse/src/greenhouse/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/app/__init__.py b/greenhouse/src/greenhouse/app/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/app/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/app/api/__init__.py b/greenhouse/src/greenhouse/app/api/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/app/api/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/app/api/water_beds.py b/greenhouse/src/greenhouse/app/api/water_beds.py
+new file mode 100644
+index 0000000..18b98df
+--- /dev/null
++++ b/greenhouse/src/greenhouse/app/api/water_beds.py
+@@ -0,0 +1,5 @@
++from typing import Protocol
++
++
++class WaterBeds(Protocol):
++    def water_bed(self, bed_id: str) -> int: ...
+diff --git a/greenhouse/src/greenhouse/app/domain/__init__.py b/greenhouse/src/greenhouse/app/domain/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/app/domain/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/app/domain/bed.py b/greenhouse/src/greenhouse/app/domain/bed.py
+new file mode 100644
+index 0000000..03f1a54
+--- /dev/null
++++ b/greenhouse/src/greenhouse/app/domain/bed.py
+@@ -0,0 +1,12 @@
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class Bed:
++    bed_id: str
++    crop: str
++    litres_per_square_metre: int
++    square_metres: int
++
++    def litres_needed(self) -> int:
++        return self.litres_per_square_metre * self.square_metres
+diff --git a/greenhouse/src/greenhouse/app/domain/watering_service.py b/greenhouse/src/greenhouse/app/domain/watering_service.py
+new file mode 100644
+index 0000000..d81f034
+--- /dev/null
++++ b/greenhouse/src/greenhouse/app/domain/watering_service.py
+@@ -0,0 +1,15 @@
++from greenhouse.app.api.water_beds import WaterBeds
++from greenhouse.app.domain.bed import Bed
++from greenhouse.app.spi.valve_control import ValveControl
++
++
++class WateringService(WaterBeds):
++    def __init__(self, beds: dict[str, Bed], valve_control: ValveControl) -> None:
++        self._beds = beds
++        self._valve_control = valve_control
++
++    def water_bed(self, bed_id: str) -> int:
++        bed = self._beds[bed_id]
++        litres = bed.litres_needed()
++        self._valve_control.open_for_litres(bed_id, litres)
++        return litres
+diff --git a/greenhouse/src/greenhouse/app/spi/__init__.py b/greenhouse/src/greenhouse/app/spi/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/app/spi/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/app/spi/valve_control.py b/greenhouse/src/greenhouse/app/spi/valve_control.py
+new file mode 100644
+index 0000000..e576234
+--- /dev/null
++++ b/greenhouse/src/greenhouse/app/spi/valve_control.py
+@@ -0,0 +1,5 @@
++from typing import Protocol
++
++
++class ValveControl(Protocol):
++    def open_for_litres(self, bed_id: str, litres: int) -> None: ...
+diff --git a/greenhouse/src/greenhouse/in/__init__.py b/greenhouse/src/greenhouse/in/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/in/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/in/http/__init__.py b/greenhouse/src/greenhouse/in/http/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/in/http/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/in/http/watering_routes.py b/greenhouse/src/greenhouse/in/http/watering_routes.py
+new file mode 100644
+index 0000000..0612b6f
+--- /dev/null
++++ b/greenhouse/src/greenhouse/in/http/watering_routes.py
+@@ -0,0 +1,13 @@
++from fastapi import APIRouter
++
++from greenhouse.app.api.water_beds import WaterBeds
++
++
++def watering_routes(water_beds: WaterBeds) -> APIRouter:
++    router = APIRouter()
++
++    @router.post("/beds/{bed_id}/watering")
++    def water(bed_id: str) -> dict[str, int]:
++        return {"litres": water_beds.water_bed(bed_id)}
++
++    return router
+diff --git a/greenhouse/src/greenhouse/out/__init__.py b/greenhouse/src/greenhouse/out/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/out/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/out/valves/__init__.py b/greenhouse/src/greenhouse/out/valves/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/out/valves/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/out/valves/valve_control_using_mqtt.py b/greenhouse/src/greenhouse/out/valves/valve_control_using_mqtt.py
+new file mode 100644
+index 0000000..48ff022
+--- /dev/null
++++ b/greenhouse/src/greenhouse/out/valves/valve_control_using_mqtt.py
+@@ -0,0 +1,11 @@
++import paho.mqtt.publish as publish
++
++from greenhouse.app.spi.valve_control import ValveControl
++
++
++class ValveControlUsingMqtt(ValveControl):
++    def __init__(self, broker_host: str) -> None:
++        self._broker_host = broker_host
++
++    def open_for_litres(self, bed_id: str, litres: int) -> None:
++        publish.single(f"valves/{bed_id}", str(litres), hostname=self._broker_host)

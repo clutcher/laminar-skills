@@ -1,0 +1,30 @@
+diff --git a/harbour/src/main/java/com/example/harbour/holds/HoldExpiryService.java b/harbour/src/main/java/com/example/harbour/holds/HoldExpiryService.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/holds/HoldExpiryService.java
+@@ -0,0 +1,25 @@
++package com.example.harbour.holds;
++
++import java.time.Instant;
++
++public class HoldExpiryService {
++
++    private final PassengerNotices notices;
++
++    public HoldExpiryService(PassengerNotices notices) {
++        this.notices = notices;
++    }
++
++    public void notifyPassengersOfExpiredHolds(Harbour harbour, Instant now) {
++        harbour.piers().forEach(pier ->
++            pier.berths().forEach(berth ->
++                berth.holds().stream()
++                    .filter(hold -> hold.hasExpiredAt(now))
++                    .forEach(hold -> hold.passengers().forEach(passenger ->
++                        notices.send(passenger, hold.expiryNotice())))));
++    }
++
++    public void releaseExpiredHolds(Harbour harbour, Instant now) {
++        harbour.piers().forEach(pier -> pier.berths().forEach(berth -> berth.releaseHoldsExpiredAt(now)));
++    }
++}

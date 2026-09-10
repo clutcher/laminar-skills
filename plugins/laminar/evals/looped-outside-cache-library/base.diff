@@ -1,0 +1,140 @@
+diff --git a/tides/pom.xml b/tides/pom.xml
+new file mode 100644
+index 0000000..b036626
+--- /dev/null
++++ b/tides/pom.xml
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>org.tidewatch</groupId>
++    <artifactId>tides</artifactId>
++    <version>1.0.0</version>
++    <dependencies>
++        <dependency>
++            <groupId>com.github.ben-manes.caffeine</groupId>
++            <artifactId>caffeine</artifactId>
++            <version>3.1.8</version>
++        </dependency>
++    </dependencies>
++</project>
+diff --git a/tides/src/main/java/org/tidewatch/tides/report/GaugeReading.java b/tides/src/main/java/org/tidewatch/tides/report/GaugeReading.java
+new file mode 100644
+index 0000000..e000612
+--- /dev/null
++++ b/tides/src/main/java/org/tidewatch/tides/report/GaugeReading.java
+@@ -0,0 +1,4 @@
++package org.tidewatch.tides.report;
++
++public record GaugeReading(String gaugeId, double heightMetres) {
++}
+diff --git a/tides/src/main/java/org/tidewatch/tides/report/GaugeReporter.java b/tides/src/main/java/org/tidewatch/tides/report/GaugeReporter.java
+new file mode 100644
+index 0000000..1157d2e
+--- /dev/null
++++ b/tides/src/main/java/org/tidewatch/tides/report/GaugeReporter.java
+@@ -0,0 +1,15 @@
++package org.tidewatch.tides.report;
++
++import java.io.IOException;
++
++public class GaugeReporter {
++    private final HarbourOfficeClient harbourOffice;
++
++    public GaugeReporter(HarbourOfficeClient harbourOffice) {
++        this.harbourOffice = harbourOffice;
++    }
++
++    public void report(GaugeReading reading) throws IOException, InterruptedException {
++        harbourOffice.post(reading.gaugeId() + "=" + reading.heightMetres());
++    }
++}
+diff --git a/tides/src/main/java/org/tidewatch/tides/report/HarbourOfficeClient.java b/tides/src/main/java/org/tidewatch/tides/report/HarbourOfficeClient.java
+new file mode 100644
+index 0000000..dc70e2f
+--- /dev/null
++++ b/tides/src/main/java/org/tidewatch/tides/report/HarbourOfficeClient.java
+@@ -0,0 +1,24 @@
++package org.tidewatch.tides.report;
++
++import java.io.IOException;
++import java.net.URI;
++import java.net.http.HttpClient;
++import java.net.http.HttpRequest;
++import java.net.http.HttpResponse;
++
++public class HarbourOfficeClient {
++    private final HttpClient httpClient;
++    private final URI readingsEndpoint;
++
++    public HarbourOfficeClient(HttpClient httpClient, URI readingsEndpoint) {
++        this.httpClient = httpClient;
++        this.readingsEndpoint = readingsEndpoint;
++    }
++
++    public void post(String body) throws IOException, InterruptedException {
++        HttpRequest request = HttpRequest.newBuilder(readingsEndpoint)
++                .POST(HttpRequest.BodyPublishers.ofString(body))
++                .build();
++        httpClient.send(request, HttpResponse.BodyHandlers.discarding());
++    }
++}
+diff --git a/tides/src/main/java/org/tidewatch/tides/table/PilotWindows.java b/tides/src/main/java/org/tidewatch/tides/table/PilotWindows.java
+new file mode 100644
+index 0000000..6bd1e79
+--- /dev/null
++++ b/tides/src/main/java/org/tidewatch/tides/table/PilotWindows.java
+@@ -0,0 +1,13 @@
++package org.tidewatch.tides.table;
++
++public class PilotWindows {
++    private final TideTables tideTables;
++
++    public PilotWindows(TideTables tideTables) {
++        this.tideTables = tideTables;
++    }
++
++    public boolean knowsTidesAt(String portCode) {
++        return tideTables.tableOf(portCode).isPresent();
++    }
++}
+diff --git a/tides/src/main/java/org/tidewatch/tides/table/TideTable.java b/tides/src/main/java/org/tidewatch/tides/table/TideTable.java
+new file mode 100644
+index 0000000..2f0174b
+--- /dev/null
++++ b/tides/src/main/java/org/tidewatch/tides/table/TideTable.java
+@@ -0,0 +1,6 @@
++package org.tidewatch.tides.table;
++
++import java.time.LocalTime;
++
++public record TideTable(String portCode, LocalTime nextHighWater, double heightMetres) {
++}
+diff --git a/tides/src/main/java/org/tidewatch/tides/table/TideTables.java b/tides/src/main/java/org/tidewatch/tides/table/TideTables.java
+new file mode 100644
+index 0000000..6702ca8
+--- /dev/null
++++ b/tides/src/main/java/org/tidewatch/tides/table/TideTables.java
+@@ -0,0 +1,22 @@
++package org.tidewatch.tides.table;
++
++import java.time.Duration;
++import java.util.Optional;
++
++import com.github.benmanes.caffeine.cache.Cache;
++import com.github.benmanes.caffeine.cache.Caffeine;
++
++public class TideTables {
++    private final Cache<String, TideTable> tablesByPort = Caffeine.newBuilder()
++            .maximumSize(500)
++            .expireAfterWrite(Duration.ofHours(6))
++            .build();
++
++    public void keep(TideTable table) {
++        tablesByPort.put(table.portCode(), table);
++    }
++
++    public Optional<TideTable> tableOf(String portCode) {
++        return Optional.ofNullable(tablesByPort.getIfPresent(portCode));
++    }
++}

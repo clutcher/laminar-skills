@@ -1,0 +1,40 @@
+diff --git a/shop/src/main/java/com/example/shop/cart/CartPricingService.java b/shop/src/main/java/com/example/shop/cart/CartPricingService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/cart/CartPricingService.java
+@@ -0,0 +1,35 @@
++package com.example.shop.cart;
++
++import com.example.shop.catalog.Product;
++import com.example.shop.pricing.PricingEngine;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class CartPricingService {
++
++    private final CartEntryRepository cartEntryRepository;
++    private final PricingEngine pricingEngine;
++
++    public double recalculatePrice(Long entryId) {
++        CartEntry entry = cartEntryRepository.findById(entryId);
++        double price = pricingEngine.calculate(entry.getProduct(), entry.getQuantity());
++        entry.setTotalPrice(price);
++        cartEntryRepository.save(entry);
++        return price;
++    }
++
++    public double calculatePrice(Product product, int quantity) {
++        return pricingEngine.calculate(product, quantity);
++    }
++
++    public void updateCartEntryPrice(CartEntry entry, double price) {
++        entry.setTotalPrice(price);
++        cartEntryRepository.save(entry);
++    }
++
++    public void recalculateCartEntryPrice(Long entryId) {
++        CartEntry entry = cartEntryRepository.findById(entryId);
++        double price = calculatePrice(entry.getProduct(), entry.getQuantity());
++        updateCartEntryPrice(entry, price);
++    }
++}

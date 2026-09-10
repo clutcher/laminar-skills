@@ -1,0 +1,81 @@
+diff --git a/freight-rating/src/freight_rating/adapters/booking_graph.py b/freight-rating/src/freight_rating/adapters/booking_graph.py
+--- a/freight-rating/src/freight_rating/adapters/booking_graph.py
++++ b/freight-rating/src/freight_rating/adapters/booking_graph.py
+@@ -2,24 +2,30 @@
+ 
+ from strawberry.dataloader import DataLoader
+ 
+-from freight_rating.domain.models import Leg, LegCharge, Rating
++from freight_rating.domain.models import Leg, Rating, SurchargeNote
++from freight_rating.ports.booking_charges import BookingCharges
+ from freight_rating.ports.freight_rating import FreightRating
+ 
+ 
+ class BookingGraph:
+-    def __init__(self, freight_rating: FreightRating):
++    def __init__(self, freight_rating: FreightRating, booking_charges: BookingCharges):
+         self._freight_rating = freight_rating
++        self._booking_charges = booking_charges
+ 
+     def context(self) -> dict[str, DataLoader]:
+-        return {"leg_charges": DataLoader(load_fn=self._leg_charges_of)}
++        return {"leg_ratings": DataLoader(load_fn=self._ratings_per_leg)}
+ 
+-    def booking_rating(self, legs: list[Leg]) -> Rating:
+-        return self._freight_rating.rate(legs)
++    async def booking_charge(self, legs: list[Leg], context: dict[str, DataLoader]) -> Decimal:
++        leg_ratings = await context["leg_ratings"].load_many(legs)
++        return self._booking_charges.total_charge(leg_ratings)
++
++    async def booking_surcharge_notes(self, legs: list[Leg], context: dict[str, DataLoader]) -> list[SurchargeNote]:
++        leg_ratings = await context["leg_ratings"].load_many(legs)
++        return self._booking_charges.surcharge_notes(leg_ratings)
+ 
+     async def leg_charge(self, leg: Leg, context: dict[str, DataLoader]) -> Decimal:
+-        leg_charge = await context["leg_charges"].load(leg)
+-        return leg_charge.charge
++        leg_rating = await context["leg_ratings"].load(leg)
++        return leg_rating.total_charge
+ 
+-    async def _leg_charges_of(self, legs: list[Leg]) -> list[LegCharge]:
+-        rating = self._freight_rating.rate(legs)
+-        return [rating.charge_for(leg) for leg in legs]
++    async def _ratings_per_leg(self, legs: list[Leg]) -> list[Rating]:
++        return [self._freight_rating.rate([leg]) for leg in legs]
+diff --git a/freight-rating/src/freight_rating/domain/booking_charges_service.py b/freight-rating/src/freight_rating/domain/booking_charges_service.py
+new file mode 100644
+--- /dev/null
++++ b/freight-rating/src/freight_rating/domain/booking_charges_service.py
+@@ -0,0 +1,17 @@
++from decimal import Decimal
++
++from freight_rating.domain.models import Rating, SurchargeNote
++from freight_rating.domain.surcharge_rules import SurchargeRules
++from freight_rating.ports.booking_charges import BookingCharges
++
++
++class BookingChargesService(BookingCharges):
++    def __init__(self, surcharge_rules: SurchargeRules):
++        self._surcharge_rules = surcharge_rules
++
++    def total_charge(self, leg_ratings: list[Rating]) -> Decimal:
++        return sum((rating.total_charge for rating in leg_ratings if rating is not None), Decimal("0"))
++
++    def surcharge_notes(self, leg_ratings: list[Rating]) -> list[SurchargeNote]:
++        leg_charges = [rating.leg_charges[0] for rating in leg_ratings if rating is not None]
++        return self._surcharge_rules.notes_for(leg_charges, self.total_charge(leg_ratings))
+diff --git a/freight-rating/src/freight_rating/ports/booking_charges.py b/freight-rating/src/freight_rating/ports/booking_charges.py
+new file mode 100644
+--- /dev/null
++++ b/freight-rating/src/freight_rating/ports/booking_charges.py
+@@ -0,0 +1,10 @@
++from decimal import Decimal
++from typing import Protocol
++
++from freight_rating.domain.models import Rating, SurchargeNote
++
++
++class BookingCharges(Protocol):
++    def total_charge(self, leg_ratings: list[Rating]) -> Decimal: ...
++
++    def surcharge_notes(self, leg_ratings: list[Rating]) -> list[SurchargeNote]: ...

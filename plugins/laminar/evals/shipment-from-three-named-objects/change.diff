@@ -1,0 +1,19 @@
+diff --git a/shop/src/main/java/com/example/shop/shipping/ShipmentService.java b/shop/src/main/java/com/example/shop/shipping/ShipmentService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/shipping/ShipmentService.java
+@@ -0,0 +1,14 @@
++package com.example.shop.shipping;
++
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class ShipmentService {
++
++    private final RateCalculator rateCalculator;
++
++    public Shipment createShipment(Address destination, Parcel parcel, Carrier carrier) {
++        ShippingRate rate = rateCalculator.calculate(destination, parcel, carrier);
++        return new Shipment(destination, rate, parcel.isFragile());
++    }
++}

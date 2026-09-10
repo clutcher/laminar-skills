@@ -1,0 +1,162 @@
+diff --git a/stay-quote/src/main/java/org/example/campsite/stayquote/quote/app/domain/services/notice/QuoteNoticeService.java b/stay-quote/src/main/java/org/example/campsite/stayquote/quote/app/domain/services/notice/QuoteNoticeService.java
+--- a/stay-quote/src/main/java/org/example/campsite/stayquote/quote/app/domain/services/notice/QuoteNoticeService.java
++++ b/stay-quote/src/main/java/org/example/campsite/stayquote/quote/app/domain/services/notice/QuoteNoticeService.java
+@@ -9,6 +9,7 @@
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.NightsAdjustment;
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice;
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.HighValueStayThresholdExceeded;
++import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.MemberRefundApplied;
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.NightsAdjustedToWeeklyTariff;
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.NightsRaisedToMinimumStay;
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.NightsRoundedToFullWeek;
+@@ -46,8 +47,10 @@
+         List<QuoteNotice> detectedNotices = detectNotices(line);
+         List<QuoteNotice> noticesWithoutDiscountOnFailedRate =
+             suppressSeasonDiscountWhenRateFailed(detectedNotices, line);
++        List<QuoteNotice> noticesWithoutRefundOnFailedVoucher =
++            suppressMemberRefundWhenVoucherFailed(noticesWithoutDiscountOnFailedRate);
+ 
+-        return collapseRepeatedRateFailures(noticesWithoutDiscountOnFailedRate);
++        return collapseRepeatedRateFailures(noticesWithoutRefundOnFailedVoucher);
+     }
+ 
+     public List<QuoteNotice> resolveQuoteNotices(StayQuote quote) {
+@@ -76,6 +79,18 @@
+             .toList();
+     }
+ 
++    private static List<QuoteNotice> suppressMemberRefundWhenVoucherFailed(
++        List<QuoteNotice> notices
++    ) {
++        boolean voucherFailed = notices.stream().anyMatch(VoucherPricingFailed.class::isInstance);
++        if (!voucherFailed) {
++            return notices;
++        }
++        return notices.stream()
++            .filter(notice -> !(notice instanceof MemberRefundApplied))
++            .toList();
++    }
++
+     private static List<QuoteNotice> collapseRepeatedRateFailures(
+         List<QuoteNotice> notices
+     ) {
+diff --git a/stay-quote/src/test/java/org/example/campsite/stayquote/quote/app/domain/services/notice/QuoteNoticeServiceTest.java b/stay-quote/src/test/java/org/example/campsite/stayquote/quote/app/domain/services/notice/QuoteNoticeServiceTest.java
+--- a/stay-quote/src/test/java/org/example/campsite/stayquote/quote/app/domain/services/notice/QuoteNoticeServiceTest.java
++++ b/stay-quote/src/test/java/org/example/campsite/stayquote/quote/app/domain/services/notice/QuoteNoticeServiceTest.java
+@@ -8,6 +8,7 @@
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice;
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.HighValueStayThresholdExceeded;
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.LateArrivalRequired;
++import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.MemberRefundApplied;
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.NightsAdjustedToWeeklyTariff;
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.NightsRaisedToMinimumStay;
+ import org.example.campsite.stayquote.quote.app.domain.model.notice.QuoteNotice.NightsRoundedToFullWeek;
+@@ -27,6 +28,8 @@
+ import org.example.campsite.stayquote.quote.app.domain.services.notice.rules.impl.SeasonDiscountRule;
+ import org.example.campsite.stayquote.quote.app.domain.services.notice.rules.impl.VoucherPricingRule;
+ import org.junit.jupiter.api.Test;
++import org.junit.jupiter.params.ParameterizedTest;
++import org.junit.jupiter.params.provider.EnumSource;
+ 
+ import java.math.BigDecimal;
+ import java.util.LinkedHashMap;
+@@ -35,6 +38,7 @@
+ 
+ import static org.example.campsite.stayquote.quote.app.domain.services.notice.QuoteLineFactory.FORMER_PITCH;
+ import static org.example.campsite.stayquote.quote.app.domain.services.notice.QuoteLineFactory.LINE_PITCH;
++import static org.example.campsite.stayquote.quote.app.domain.services.notice.QuoteLineFactory.MEMBER_VOUCHER;
+ import static org.example.campsite.stayquote.quote.app.domain.services.notice.QuoteLineFactory.OFFERED_PITCH;
+ import static org.example.campsite.stayquote.quote.app.domain.services.notice.QuoteLineFactory.SEASON_VOUCHER;
+ import static org.example.campsite.stayquote.quote.app.domain.services.notice.QuoteLineFactory.buildLineTotal;
+@@ -111,6 +115,55 @@
+             new VoucherPricingFailed(QuoteFailureType.VOUCHER_NOT_VALID_FOR_GUEST, LINE_PITCH));
+     }
+ 
++    @ParameterizedTest
++    @EnumSource(value = QuoteFailureType.class, names = {
++        "VOUCHER_NOT_VALID_FOR_GUEST", "VOUCHER_EXPIRED", "VOUCHER_FOR_MEMBERS_ONLY", "PRICED_ON_GROUP_TARIFF"})
++    void shouldReportOnlyTheVoucherFailureWhenTheMemberRefundVoucherCannotBeRedeemed(
++        QuoteFailureType voucherFailure
++    ) {
++        // given
++        Line line = buildQuoteLineWithVoucher(MEMBER_VOUCHER)
++            .failures(List.of(QuoteFailureType.MEMBER_REFUND_RATE, voucherFailure))
++            .build();
++
++        // when
++        List<QuoteNotice> notices = service.resolveLineNotices(line);
++
++        // then
++        assertThat(notices).containsExactly(new VoucherPricingFailed(voucherFailure, LINE_PITCH));
++    }
++
++    @Test
++    void shouldReportOnlyTheInvalidVoucherWhenTheBookingSystemReportsItBeforeTheMemberRefund() {
++        // given
++        Line line = buildQuoteLineWithVoucher(MEMBER_VOUCHER)
++            .failures(List.of(
++                QuoteFailureType.VOUCHER_NOT_VALID_FOR_GUEST,
++                QuoteFailureType.MEMBER_REFUND_RATE))
++            .build();
++
++        // when
++        List<QuoteNotice> notices = service.resolveLineNotices(line);
++
++        // then
++        assertThat(notices).containsExactly(
++            new VoucherPricingFailed(QuoteFailureType.VOUCHER_NOT_VALID_FOR_GUEST, LINE_PITCH));
++    }
++
++    @Test
++    void shouldReportMemberRefundWhenTheMemberRefundVoucherIsValid() {
++        // given
++        Line line = buildQuoteLineWithVoucher(MEMBER_VOUCHER)
++            .failures(List.of(QuoteFailureType.MEMBER_REFUND_RATE))
++            .build();
++
++        // when
++        List<QuoteNotice> notices = service.resolveLineNotices(line);
++
++        // then
++        assertThat(notices).containsExactly(new MemberRefundApplied());
++    }
++
+     @Test
+     void shouldReportSeasonDiscountBeforeLateArrivalWhenBothApplyToTheSameLine() {
+         // given
+diff --git a/stay-quote/src/test/java/org/example/campsite/stayquote/quote/in/graphql/StayQuoteGraphQLControllerMessagesTest.java b/stay-quote/src/test/java/org/example/campsite/stayquote/quote/in/graphql/StayQuoteGraphQLControllerMessagesTest.java
+--- a/stay-quote/src/test/java/org/example/campsite/stayquote/quote/in/graphql/StayQuoteGraphQLControllerMessagesTest.java
++++ b/stay-quote/src/test/java/org/example/campsite/stayquote/quote/in/graphql/StayQuoteGraphQLControllerMessagesTest.java
+@@ -88,6 +88,32 @@
+                 .value("text_quote_late_arrival_only"));
+     }
+ 
++    @Test
++    void shouldExposeOnlyTheInvalidVoucherMessageWhenTheBookingSystemAlsoReportsMemberRefundForTheLine() throws Exception {
++        // given
++        when(bookingSystemClient.quoteStay(buildSoapRequestFor(BOOKED_PITCH)))
++            .thenReturn(buildQuoteResponse("84.00", buildErrors("2041", "2017")));
++
++        GraphQLRequest request = GraphQLRequest.builder()
++            .query(buildEntitiesQuery("... on Pitch { quote(input: $input) {"
++                + " messages { totalCount messages { type content } } } }"))
++            .variables(Map.of(
++                "representations", List.of(Map.of("__typename", "Pitch", "id", BOOKED_PITCH)),
++                "input", buildGuestInput()))
++            .build();
++
++        // when
++        ResultActions result = performGraphQl(request);
++
++        // then
++        result.andExpect(status().isOk())
++            .andExpect(jsonPath("$.errors").doesNotExist())
++            .andExpect(jsonPath("$.data._entities[0].quote.messages.totalCount").value(1))
++            .andExpect(jsonPath("$.data._entities[0].quote.messages.messages[0].type").value("ERROR"))
++            .andExpect(jsonPath("$.data._entities[0].quote.messages.messages[0].content")
++                .value("text_quote_voucher_not_valid_for_guest"));
++    }
++
+     private ResultActions performGraphQl(GraphQLRequest request) throws Exception {
+         ResultActions initialResult = mockMvc.perform(post("/graphql")
+             .header(AUTHORIZATION, TestTokens.bearerFor(RECEPTION_USER, tokenKey))

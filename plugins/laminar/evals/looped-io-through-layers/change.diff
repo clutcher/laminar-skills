@@ -1,0 +1,80 @@
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/assignment/LockerAssignmentService.java b/lockers/src/main/java/org/lockerpost/lockers/assignment/LockerAssignmentService.java
+index 7d172b5..9e350cf 100644
+--- a/lockers/src/main/java/org/lockerpost/lockers/assignment/LockerAssignmentService.java
++++ b/lockers/src/main/java/org/lockerpost/lockers/assignment/LockerAssignmentService.java
+@@ -1,5 +1,8 @@
+ package org.lockerpost.lockers.assignment;
+ 
++import java.util.ArrayList;
++import java.util.List;
++
+ import org.lockerpost.lockers.slot.SlotReservation;
+ 
+ public class LockerAssignmentService {
+@@ -13,4 +16,12 @@ public class LockerAssignmentService {
+     public Assignment assign(Parcel parcel) {
+         return slotReservation.reserveFor(parcel);
+     }
++
++    public List<Assignment> assignAll(List<Parcel> parcels) {
++        List<Assignment> assignments = new ArrayList<>();
++        for (Parcel parcel : parcels) {
++            assignments.add(assign(parcel));
++        }
++        return assignments;
++    }
+ }
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/intake/ParcelIntake.java b/lockers/src/main/java/org/lockerpost/lockers/intake/ParcelIntake.java
+index 888bd89..09f9772 100644
+--- a/lockers/src/main/java/org/lockerpost/lockers/intake/ParcelIntake.java
++++ b/lockers/src/main/java/org/lockerpost/lockers/intake/ParcelIntake.java
+@@ -1,5 +1,8 @@
+ package org.lockerpost.lockers.intake;
+ 
++import java.util.ArrayList;
++import java.util.List;
++
+ import org.lockerpost.lockers.assignment.Parcel;
+ import org.lockerpost.lockers.slot.SlotWeightLimitCache;
+ 
+@@ -14,4 +17,14 @@ public class ParcelIntake {
+     public boolean accepts(Parcel parcel) {
+         return parcel.weightGrams() <= weightLimits.get(parcel.size());
+     }
++
++    public List<Parcel> overweightParcels(List<Parcel> parcels) {
++        List<Parcel> overweight = new ArrayList<>();
++        for (Parcel parcel : parcels) {
++            if (!accepts(parcel)) {
++                overweight.add(parcel);
++            }
++        }
++        return overweight;
++    }
+ }
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/SlotAvailability.java b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotAvailability.java
+index 06f4cc3..78912ce 100644
+--- a/lockers/src/main/java/org/lockerpost/lockers/slot/SlotAvailability.java
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotAvailability.java
+@@ -1,6 +1,8 @@
+ package org.lockerpost.lockers.slot;
+ 
++import java.util.EnumMap;
+ import java.util.List;
++import java.util.Map;
+ 
+ public class SlotAvailability {
+ 
+@@ -9,4 +11,12 @@ public class SlotAvailability {
+                 .filter(SlotCriteria.select().whereSize(size).whereFree().build())
+                 .count();
+     }
++
++    public Map<SlotSize, Long> freeSlotsBySize(List<LockerSlot> slots) {
++        Map<SlotSize, Long> freeSlots = new EnumMap<>(SlotSize.class);
++        for (SlotSize size : SlotSize.values()) {
++            freeSlots.put(size, freeSlotsOf(size, slots));
++        }
++        return freeSlots;
++    }
+ }

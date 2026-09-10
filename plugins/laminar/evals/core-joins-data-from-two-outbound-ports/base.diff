@@ -1,0 +1,158 @@
+diff --git a/loans-service/pom.xml b/loans-service/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/loans-service/pom.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <parent>
++        <groupId>org.springframework.boot</groupId>
++        <artifactId>spring-boot-starter-parent</artifactId>
++        <version>3.3.4</version>
++    </parent>
++    <groupId>com.example</groupId>
++    <artifactId>loans-service</artifactId>
++    <version>1.0.0</version>
++    <dependencies>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-jdbc</artifactId>
++        </dependency>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-web</artifactId>
++        </dependency>
++    </dependencies>
++</project>
+diff --git a/loans-service/src/main/java/com/example/loans/app/api/LoanOverview.java b/loans-service/src/main/java/com/example/loans/app/api/LoanOverview.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/app/api/LoanOverview.java
+@@ -0,0 +1,9 @@
++package com.example.loans.app.api;
++
++import com.example.loans.app.domain.Loan;
++import java.util.List;
++
++public interface LoanOverview {
++
++    List<Loan> openLoansOf(String readerId);
++}
+diff --git a/loans-service/src/main/java/com/example/loans/app/domain/Loan.java b/loans-service/src/main/java/com/example/loans/app/domain/Loan.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/app/domain/Loan.java
+@@ -0,0 +1,6 @@
++package com.example.loans.app.domain;
++
++import java.time.LocalDate;
++
++public record Loan(String copyBarcode, String title, LocalDate borrowedOn, LocalDate dueOn) {
++}
+diff --git a/loans-service/src/main/java/com/example/loans/app/services/LoanOverviewService.java b/loans-service/src/main/java/com/example/loans/app/services/LoanOverviewService.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/app/services/LoanOverviewService.java
+@@ -0,0 +1,25 @@
++package com.example.loans.app.services;
++
++import com.example.loans.app.api.LoanOverview;
++import com.example.loans.app.domain.Loan;
++import com.example.loans.app.spi.LoanRecords;
++import java.util.Comparator;
++import java.util.List;
++import org.springframework.stereotype.Service;
++
++@Service
++public class LoanOverviewService implements LoanOverview {
++
++    private final LoanRecords loanRecords;
++
++    public LoanOverviewService(LoanRecords loanRecords) {
++        this.loanRecords = loanRecords;
++    }
++
++    @Override
++    public List<Loan> openLoansOf(String readerId) {
++        return loanRecords.openLoansOf(readerId).stream()
++                .sorted(Comparator.comparing(Loan::dueOn))
++                .toList();
++    }
++}
+diff --git a/loans-service/src/main/java/com/example/loans/app/spi/LoanRecords.java b/loans-service/src/main/java/com/example/loans/app/spi/LoanRecords.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/app/spi/LoanRecords.java
+@@ -0,0 +1,9 @@
++package com.example.loans.app.spi;
++
++import com.example.loans.app.domain.Loan;
++import java.util.List;
++
++public interface LoanRecords {
++
++    List<Loan> openLoansOf(String readerId);
++}
+diff --git a/loans-service/src/main/java/com/example/loans/in/ReaderController.java b/loans-service/src/main/java/com/example/loans/in/ReaderController.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/in/ReaderController.java
+@@ -0,0 +1,23 @@
++package com.example.loans.in;
++
++import com.example.loans.app.api.LoanOverview;
++import com.example.loans.app.domain.Loan;
++import java.util.List;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class ReaderController {
++
++    private final LoanOverview loanOverview;
++
++    public ReaderController(LoanOverview loanOverview) {
++        this.loanOverview = loanOverview;
++    }
++
++    @GetMapping("/readers/{readerId}/loans")
++    public List<Loan> openLoans(@PathVariable String readerId) {
++        return loanOverview.openLoansOf(readerId);
++    }
++}
+diff --git a/loans-service/src/main/java/com/example/loans/out/JdbcLoanRecords.java b/loans-service/src/main/java/com/example/loans/out/JdbcLoanRecords.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/out/JdbcLoanRecords.java
+@@ -0,0 +1,29 @@
++package com.example.loans.out;
++
++import com.example.loans.app.domain.Loan;
++import com.example.loans.app.spi.LoanRecords;
++import java.util.List;
++import org.springframework.jdbc.core.simple.JdbcClient;
++import org.springframework.stereotype.Repository;
++
++@Repository
++public class JdbcLoanRecords implements LoanRecords {
++
++    private final JdbcClient jdbcClient;
++
++    public JdbcLoanRecords(JdbcClient jdbcClient) {
++        this.jdbcClient = jdbcClient;
++    }
++
++    @Override
++    public List<Loan> openLoansOf(String readerId) {
++        return jdbcClient.sql("""
++                        select copy_barcode, title, borrowed_on, due_on
++                        from loan
++                        where reader_id = :readerId and returned_on is null
++                        """)
++                .param("readerId", readerId)
++                .query(Loan.class)
++                .list();
++    }
++}

@@ -1,0 +1,15 @@
+diff --git a/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleService.kt b/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleService.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleService.kt
+@@ -0,0 +1,10 @@
++package com.example.marina.berths
++
++class BerthScheduleService(private val harbourMaster: HarbourMaster, private val pilotRoster: PilotRoster) {
++
++    fun schedule(request: BerthRequest): BerthSchedule =
++        addPilotSlots(harbourMaster.scheduleFor(request.harbour), pilotRoster)
++
++    private fun addPilotSlots(schedule: BerthSchedule, roster: PilotRoster): BerthSchedule =
++        schedule.copy(slots = schedule.slots + roster.slotsFor(schedule.harbour))
++}

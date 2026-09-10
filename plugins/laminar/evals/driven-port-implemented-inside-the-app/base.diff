@@ -1,0 +1,166 @@
+diff --git a/kennel/composer.json b/kennel/composer.json
+new file mode 100644
+index 0000000..9b32284
+--- /dev/null
++++ b/kennel/composer.json
+@@ -0,0 +1,11 @@
++{
++    "name": "example/kennel",
++    "require": {
++        "php": ">=8.2"
++    },
++    "autoload": {
++        "psr-4": {
++            "Kennel\\": "src/"
++        }
++    }
++}
+diff --git a/kennel/src/Boarding/App/Api/BookStay.php b/kennel/src/Boarding/App/Api/BookStay.php
+new file mode 100644
+index 0000000..b5fe7d3
+--- /dev/null
++++ b/kennel/src/Boarding/App/Api/BookStay.php
+@@ -0,0 +1,12 @@
++<?php
++
++declare(strict_types=1);
++
++namespace Kennel\Boarding\App\Api;
++
++use Kennel\Boarding\App\Domain\Model\Stay;
++
++interface BookStay
++{
++    public function book(string $dogId, string $arrival, int $nights): Stay;
++}
+diff --git a/kennel/src/Boarding/App/Domain/Model/Stay.php b/kennel/src/Boarding/App/Domain/Model/Stay.php
+new file mode 100644
+index 0000000..26cdbcb
+--- /dev/null
++++ b/kennel/src/Boarding/App/Domain/Model/Stay.php
+@@ -0,0 +1,16 @@
++<?php
++
++declare(strict_types=1);
++
++namespace Kennel\Boarding\App\Domain\Model;
++
++final class Stay
++{
++    public function __construct(
++        public readonly string $dogId,
++        public readonly string $arrival,
++        public readonly int $nights,
++        public readonly int $runNumber,
++    ) {
++    }
++}
+diff --git a/kennel/src/Boarding/App/Domain/StayBookingService.php b/kennel/src/Boarding/App/Domain/StayBookingService.php
+new file mode 100644
+index 0000000..40781a4
+--- /dev/null
++++ b/kennel/src/Boarding/App/Domain/StayBookingService.php
+@@ -0,0 +1,23 @@
++<?php
++
++declare(strict_types=1);
++
++namespace Kennel\Boarding\App\Domain;
++
++use Kennel\Boarding\App\Api\BookStay;
++use Kennel\Boarding\App\Domain\Model\Stay;
++use Kennel\Boarding\App\Spi\KennelRuns;
++
++final class StayBookingService implements BookStay
++{
++    public function __construct(private readonly KennelRuns $kennelRuns)
++    {
++    }
++
++    public function book(string $dogId, string $arrival, int $nights): Stay
++    {
++        $stay = new Stay($dogId, $arrival, $nights, $this->kennelRuns->freeRunOn($arrival, $nights));
++        $this->kennelRuns->reserve($stay);
++        return $stay;
++    }
++}
+diff --git a/kennel/src/Boarding/App/Spi/KennelRuns.php b/kennel/src/Boarding/App/Spi/KennelRuns.php
+new file mode 100644
+index 0000000..121b7c3
+--- /dev/null
++++ b/kennel/src/Boarding/App/Spi/KennelRuns.php
+@@ -0,0 +1,14 @@
++<?php
++
++declare(strict_types=1);
++
++namespace Kennel\Boarding\App\Spi;
++
++use Kennel\Boarding\App\Domain\Model\Stay;
++
++interface KennelRuns
++{
++    public function freeRunOn(string $arrival, int $nights): int;
++
++    public function reserve(Stay $stay): void;
++}
+diff --git a/kennel/src/Boarding/In/Http/StayController.php b/kennel/src/Boarding/In/Http/StayController.php
+new file mode 100644
+index 0000000..000c4d4
+--- /dev/null
++++ b/kennel/src/Boarding/In/Http/StayController.php
+@@ -0,0 +1,20 @@
++<?php
++
++declare(strict_types=1);
++
++namespace Kennel\Boarding\In\Http;
++
++use Kennel\Boarding\App\Api\BookStay;
++
++final class StayController
++{
++    public function __construct(private readonly BookStay $bookStay)
++    {
++    }
++
++    public function book(array $request): array
++    {
++        $stay = $this->bookStay->book($request['dogId'], $request['arrival'], (int) $request['nights']);
++        return ['run' => $stay->runNumber];
++    }
++}
+diff --git a/kennel/src/Boarding/Out/Db/KennelRunsUsingPdo.php b/kennel/src/Boarding/Out/Db/KennelRunsUsingPdo.php
+new file mode 100644
+index 0000000..d8393b0
+--- /dev/null
++++ b/kennel/src/Boarding/Out/Db/KennelRunsUsingPdo.php
+@@ -0,0 +1,28 @@
++<?php
++
++declare(strict_types=1);
++
++namespace Kennel\Boarding\Out\Db;
++
++use Kennel\Boarding\App\Domain\Model\Stay;
++use Kennel\Boarding\App\Spi\KennelRuns;
++use PDO;
++
++final class KennelRunsUsingPdo implements KennelRuns
++{
++    public function __construct(private readonly PDO $pdo)
++    {
++    }
++
++    public function freeRunOn(string $arrival, int $nights): int
++    {
++        $query = $this->pdo->prepare('select min(run_number) from free_run where day = ?');
++        $query->execute([$arrival]);
++        return (int) $query->fetchColumn();
++    }
++
++    public function reserve(Stay $stay): void
++    {
++        $this->pdo->prepare('insert into stay values (?, ?, ?, ?)')->execute([$stay->dogId, $stay->arrival, $stay->nights, $stay->runNumber]);
++    }
++}

@@ -1,0 +1,52 @@
+diff --git a/shop/src/main/java/com/example/shop/tax/TaxRateTable.java b/shop/src/main/java/com/example/shop/tax/TaxRateTable.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/tax/TaxRateTable.java
+@@ -0,0 +1,20 @@
++package com.example.shop.tax;
++
++import java.util.Map;
++
++public class TaxRateTable {
++
++    private static final Map<String, Double> TAX_RATE_BY_COUNTRY_CODE_MAP = Map.of(
++            "AT", 0.20,
++            "DE", 0.19,
++            "FR", 0.20,
++            "NL", 0.21);
++
++    public double getTaxRate(String countryCode) {
++        Double taxRate = TAX_RATE_BY_COUNTRY_CODE_MAP.get(countryCode);
++        if (taxRate == null) {
++            throw new UnknownCountryException(countryCode);
++        }
++        return taxRate;
++    }
++}
+diff --git a/shop/src/test/java/com/example/shop/tax/TaxRateTableTest.java b/shop/src/test/java/com/example/shop/tax/TaxRateTableTest.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/test/java/com/example/shop/tax/TaxRateTableTest.java
+@@ -0,0 +1,22 @@
++package com.example.shop.tax;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import org.junit.jupiter.api.Test;
++
++class TaxRateTableTest {
++
++    private final TaxRateTable taxRateTable = new TaxRateTable();
++
++    @Test
++    void shouldReturnNineteenPercentWhenCountryIsGermany() {
++        // given
++        String germanCountryCode = "DE";
++
++        // when
++        double taxRate = taxRateTable.getTaxRate(germanCountryCode);
++
++        // then
++        assertThat(taxRate).isEqualTo(0.19);
++    }
++}

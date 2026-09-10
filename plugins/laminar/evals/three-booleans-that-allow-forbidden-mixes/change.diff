@@ -1,0 +1,12 @@
+diff --git a/shop/src/main/java/com/example/shop/user/User.java b/shop/src/main/java/com/example/shop/user/User.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/user/User.java
+@@ -0,0 +1,7 @@
++package com.example.shop.user;
++
++class User {
++    private boolean isStandard;
++    private boolean isPremium;
++    private boolean isManager;
++}

@@ -1,0 +1,21 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/domain/BookingExpiry.java b/ferry/src/main/java/com/example/harbourferry/booking/domain/BookingExpiry.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/domain/BookingExpiry.java
+@@ -0,0 +1,16 @@
++package com.example.harbourferry.booking.domain;
++
++public class BookingExpiry {
++
++    private final BookingArchive bookingArchive;
++
++    public BookingExpiry(BookingArchive bookingArchive) {
++        this.bookingArchive = bookingArchive;
++    }
++
++    public void expireStaleBooking(Booking booking, long daysSinceBooking) {
++        if (daysSinceBooking > 30) {
++            bookingArchive.expire(booking);
++        }
++    }
++}

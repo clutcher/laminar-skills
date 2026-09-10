@@ -1,0 +1,63 @@
+diff --git a/bean-availability-api/build.gradle.kts b/bean-availability-api/build.gradle.kts
+new file mode 100644
+--- /dev/null
++++ b/bean-availability-api/build.gradle.kts
+@@ -0,0 +1,7 @@
++plugins {
++    java
++}
++
++dependencies {
++    implementation("org.springframework.boot:spring-boot-starter-graphql:3.3.4")
++}
+diff --git a/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls b/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls
+new file mode 100644
+--- /dev/null
++++ b/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls
+@@ -0,0 +1,46 @@
++scalar BigDecimal
++scalar SecondsSinceEpoch
++
++type Query {
++    availability(input: BeanAvailabilityInput!): Availability
++}
++
++type Availability {
++    roasteryStocks: [RoasteryStock!]
++    incomingShipments: [IncomingShipment!]
++    cancellationTerm: CancellationTerm
++}
++
++input BeanAvailabilityInput {
++    coffeeLotId: ID!
++    cafeId: ID!
++}
++
++type CancellationTerm {
++    cancellable: Boolean!
++    cancellationFee: BigDecimal
++}
++
++type RoasteryStock {
++    roastery: Roastery!
++    roastedBags: Int!
++    greenBags: Int
++    status: RoasteryStockStatus!
++}
++
++type Roastery {
++    name: String!
++    loadingDock: String
++    main: Boolean!
++}
++
++enum RoasteryStockStatus {
++    READY
++    RUNNING_LOW
++    SOLD_OUT
++}
++
++type IncomingShipment {
++    bags: Int!
++    expectedArrivalDate: SecondsSinceEpoch
++}

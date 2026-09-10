@@ -1,0 +1,63 @@
+import { Scale, CHANGE_KINDS } from "../../../code/index.mjs";
+import { owesATest } from "../abstractions/walks/testing/TestReachWalk.mjs";
+
+const holdsAnIoChain = abstraction => Boolean(abstraction.ioReach) && (abstraction.ioReach.down.length + abstraction.ioReach.up.length) > 0;
+
+const HIDDEN_CROSSING_PATTERN = / · hidden in /;
+
+export const holdsABoundaryFact = abstraction => {
+  const module = abstraction.module || {};
+  return Boolean(module.exposedDomain || module.appImportsInOut || module.spiImplementedInsideApp)
+    || (module.crossings || []).some(line => HIDDEN_CROSSING_PATTERN.test(line));
+};
+
+const schedulesItsOwnScale = abstraction => {
+  if (abstraction.changeKind !== CHANGE_KINDS.INTERNALS_CHANGED) return true;
+  return abstraction.scale === Scale.METHOD.name || (abstraction.scale === Scale.MODULE.name && holdsABoundaryFact(abstraction));
+};
+
+export class AbstractionTreeWalk {
+  constructor(abstractions) {
+    this.abstractions = abstractions;
+  }
+
+  collectSelectedAbstractions() {
+    const found = [];
+    const visit = abstraction => {
+      if (schedulesItsOwnScale(abstraction)) found.push(abstraction);
+      for (const child of abstraction.children) visit(child);
+    };
+    for (const root of this.abstractions) visit(root);
+    return found;
+  }
+
+  listEveryAbstraction() {
+    const found = [];
+    const visit = abstraction => { found.push(abstraction); for (const child of abstraction.children) visit(child); };
+    for (const root of this.abstractions) visit(root);
+    return found;
+  }
+
+  findIoChainAbstractions() {
+    const found = [];
+    const visit = (abstraction, application) => {
+      if (holdsAnIoChain(abstraction)) found.push({ abstraction, application });
+      for (const child of abstraction.children) visit(child, abstraction.scale === Scale.APPLICATION.name ? abstraction : application);
+    };
+    for (const root of this.abstractions) visit(root, null);
+    return found;
+  }
+
+  findBoundariesOwingATest() {
+    const found = [];
+    const visit = (abstraction, application) => {
+      if (abstraction.scale === Scale.MODULE.name) {
+        found.push(...abstraction.children.filter(owesATest).map(child => ({ abstraction: child, application, module: abstraction })));
+        return;
+      }
+      for (const child of abstraction.children) visit(child, abstraction.scale === Scale.APPLICATION.name ? abstraction : application);
+    };
+    for (const root of this.abstractions) visit(root, null);
+    return found;
+  }
+}

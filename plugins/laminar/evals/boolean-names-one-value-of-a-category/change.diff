@@ -1,0 +1,28 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/fleet/domain/Vessel.java b/ferry/src/main/java/com/example/harbourferry/fleet/domain/Vessel.java
+index 416a755..df7d15d 100644
+--- a/ferry/src/main/java/com/example/harbourferry/fleet/domain/Vessel.java
++++ b/ferry/src/main/java/com/example/harbourferry/fleet/domain/Vessel.java
+@@ -5,11 +5,13 @@ public class Vessel {
+     private final String name;
+     private final int passengerCapacity;
+     private final boolean active;
++    private final boolean hazmatApproved;
+ 
+-    public Vessel(String name, int passengerCapacity, boolean active) {
++    public Vessel(String name, int passengerCapacity, boolean active, boolean hazmatApproved) {
+         this.name = name;
+         this.passengerCapacity = passengerCapacity;
+         this.active = active;
++        this.hazmatApproved = hazmatApproved;
+     }
+ 
+     public String name() {
+@@ -23,4 +25,8 @@ public class Vessel {
+     public boolean isActive() {
+         return active;
+     }
++
++    public boolean mayCarryHazardousCargo() {
++        return active && hazmatApproved;
++    }
+ }

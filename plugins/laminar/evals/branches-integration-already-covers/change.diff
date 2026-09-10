@@ -1,0 +1,388 @@
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/LockerSizeAndHandoverRules.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/LockerSizeAndHandoverRules.java
+new file mode 100644
+index 0000000..c16a502
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/LockerSizeAndHandoverRules.java
+@@ -0,0 +1,21 @@
++package com.example.lockerpost.shipment.domain;
++
++import org.springframework.stereotype.Component;
++
++@Component
++public class LockerSizeAndHandoverRules {
++
++    public LockerSize lockerSizeFor(ShipmentShape shape) {
++        if (shape == ShipmentShape.HEAVY_PARCEL) {
++            return LockerSize.LARGE;
++        }
++        return LockerSize.SMALL;
++    }
++
++    public Handover handoverFor(ShipmentShape shape) {
++        if (shape == ShipmentShape.HIGH_VALUE_PARCEL) {
++            return Handover.SIGNATURE;
++        }
++        return Handover.CODE;
++    }
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/PostalSurchargeTable.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/PostalSurchargeTable.java
+new file mode 100644
+index 0000000..6f0349c
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/PostalSurchargeTable.java
+@@ -0,0 +1,58 @@
++package com.example.lockerpost.shipment.domain;
++
++import com.example.lockerpost.locker.domain.PostalPrefix;
++import org.springframework.stereotype.Component;
++
++import java.util.Map;
++
++@Component
++public class PostalSurchargeTable {
++
++    private static final int UNLISTED_PREFIX_SURCHARGE_CENTS = 480;
++
++    private static final Map<PostalPrefix, Integer> SURCHARGE_CENTS_BY_POSTAL_PREFIX = Map.ofEntries(
++        Map.entry(new PostalPrefix("10"), 0),
++        Map.entry(new PostalPrefix("11"), 0),
++        Map.entry(new PostalPrefix("12"), 40),
++        Map.entry(new PostalPrefix("13"), 40),
++        Map.entry(new PostalPrefix("14"), 60),
++        Map.entry(new PostalPrefix("15"), 60),
++        Map.entry(new PostalPrefix("16"), 80),
++        Map.entry(new PostalPrefix("17"), 80),
++        Map.entry(new PostalPrefix("18"), 110),
++        Map.entry(new PostalPrefix("19"), 110),
++        Map.entry(new PostalPrefix("20"), 140),
++        Map.entry(new PostalPrefix("21"), 140),
++        Map.entry(new PostalPrefix("22"), 180),
++        Map.entry(new PostalPrefix("23"), 190),
++        Map.entry(new PostalPrefix("24"), 190),
++        Map.entry(new PostalPrefix("25"), 210),
++        Map.entry(new PostalPrefix("26"), 210),
++        Map.entry(new PostalPrefix("27"), 230),
++        Map.entry(new PostalPrefix("28"), 240),
++        Map.entry(new PostalPrefix("29"), 240),
++        Map.entry(new PostalPrefix("30"), 250),
++        Map.entry(new PostalPrefix("31"), 260),
++        Map.entry(new PostalPrefix("32"), 260),
++        Map.entry(new PostalPrefix("33"), 280),
++        Map.entry(new PostalPrefix("34"), 290),
++        Map.entry(new PostalPrefix("35"), 300),
++        Map.entry(new PostalPrefix("36"), 300),
++        Map.entry(new PostalPrefix("37"), 320),
++        Map.entry(new PostalPrefix("38"), 330),
++        Map.entry(new PostalPrefix("39"), 330),
++        Map.entry(new PostalPrefix("40"), 350),
++        Map.entry(new PostalPrefix("41"), 360),
++        Map.entry(new PostalPrefix("42"), 370),
++        Map.entry(new PostalPrefix("43"), 370),
++        Map.entry(new PostalPrefix("44"), 390),
++        Map.entry(new PostalPrefix("45"), 400),
++        Map.entry(new PostalPrefix("46"), 410),
++        Map.entry(new PostalPrefix("47"), 420),
++        Map.entry(new PostalPrefix("48"), 430),
++        Map.entry(new PostalPrefix("49"), 450));
++
++    public int surchargeCentsFor(PostalPrefix postalPrefix) {
++        return SURCHARGE_CENTS_BY_POSTAL_PREFIX.getOrDefault(postalPrefix, UNLISTED_PREFIX_SURCHARGE_CENTS);
++    }
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentAdmission.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentAdmission.java
+new file mode 100644
+index 0000000..52fa3a2
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentAdmission.java
+@@ -0,0 +1,37 @@
++package com.example.lockerpost.shipment.domain;
++
++import com.example.lockerpost.locker.domain.LockerBank;
++import com.example.lockerpost.locker.domain.LockerBankDirectory;
++import lombok.RequiredArgsConstructor;
++import org.springframework.stereotype.Component;
++
++import java.util.Optional;
++
++@Component
++@RequiredArgsConstructor
++public class ShipmentAdmission {
++
++    private static final int LIGHT_PARCEL_MAX_GRAMS = 2000;
++    private static final int HIGH_VALUE_MIN_CENTS = 50000;
++
++    private final LockerBankDirectory lockerBankDirectory;
++
++    public AdmittedShipment admit(ShipmentRequest request) {
++        return new AdmittedShipment(requireRegisteredBank(request.destinationBankId()), shapeOf(request));
++    }
++
++    private LockerBank requireRegisteredBank(String destinationBankId) {
++        return Optional.ofNullable(lockerBankDirectory.findBank(destinationBankId))
++            .orElseThrow(() -> new ShipmentRejected("no locker bank is registered as " + destinationBankId));
++    }
++
++    private ShipmentShape shapeOf(ShipmentRequest request) {
++        if (request.declaredValueCents() >= HIGH_VALUE_MIN_CENTS) {
++            return ShipmentShape.HIGH_VALUE_PARCEL;
++        }
++        if (request.weightGrams() > LIGHT_PARCEL_MAX_GRAMS) {
++            return ShipmentShape.HEAVY_PARCEL;
++        }
++        return ShipmentShape.LIGHT_PARCEL;
++    }
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentDispatchPlanner.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentDispatchPlanner.java
+new file mode 100644
+index 0000000..a242db8
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentDispatchPlanner.java
+@@ -0,0 +1,25 @@
++package com.example.lockerpost.shipment.domain;
++
++import com.example.lockerpost.locker.domain.DestinationZone;
++import org.springframework.stereotype.Component;
++
++@Component
++public class ShipmentDispatchPlanner {
++
++    public DispatchPlan planFor(ValidatedShipment shipment) {
++        return new DispatchPlan(
++            shipment.destinationBank().bankId(),
++            carrierFor(shipment.zone()),
++            shipment.lockerSize());
++    }
++
++    private Carrier carrierFor(DestinationZone zone) {
++        if (zone == DestinationZone.SUBURBAN) {
++            return Carrier.REGIONAL_ROUTE;
++        }
++        if (zone == DestinationZone.RURAL) {
++            return Carrier.NATIONAL_PARTNER;
++        }
++        return Carrier.CITY_VAN;
++    }
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentPricingCalculator.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentPricingCalculator.java
+new file mode 100644
+index 0000000..9be4f74
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentPricingCalculator.java
+@@ -0,0 +1,32 @@
++package com.example.lockerpost.shipment.domain;
++
++import lombok.RequiredArgsConstructor;
++import org.springframework.stereotype.Component;
++
++@Component
++@RequiredArgsConstructor
++public class ShipmentPricingCalculator {
++
++    private static final int BASE_FEE_CENTS = 350;
++    private static final int STANDARD_SERVICE_FEE_CENTS = 0;
++    private static final int NEXT_DAY_SERVICE_FEE_CENTS = 450;
++    private static final int SAME_DAY_SERVICE_FEE_CENTS = 900;
++
++    private final PostalSurchargeTable postalSurchargeTable;
++
++    public ShipmentPrice priceOf(ValidatedShipment shipment) {
++        int surchargeCents = postalSurchargeTable.surchargeCentsFor(shipment.postalPrefix());
++        int serviceFeeCents = serviceFeeCentsFor(shipment.serviceLevel());
++        return new ShipmentPrice(BASE_FEE_CENTS + surchargeCents + serviceFeeCents, shipment.serviceLevel());
++    }
++
++    private int serviceFeeCentsFor(ServiceLevel serviceLevel) {
++        if (serviceLevel == ServiceLevel.NEXT_DAY) {
++            return NEXT_DAY_SERVICE_FEE_CENTS;
++        }
++        if (serviceLevel == ServiceLevel.SAME_DAY) {
++            return SAME_DAY_SERVICE_FEE_CENTS;
++        }
++        return STANDARD_SERVICE_FEE_CENTS;
++    }
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/web/ShipmentBookingController.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/web/ShipmentBookingController.java
+new file mode 100644
+index 0000000..52274e8
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/web/ShipmentBookingController.java
+@@ -0,0 +1,45 @@
++package com.example.lockerpost.shipment.web;
++
++import com.example.lockerpost.shipment.domain.AdmittedShipment;
++import com.example.lockerpost.shipment.domain.DispatchPlan;
++import com.example.lockerpost.shipment.domain.LockerSizeAndHandoverRules;
++import com.example.lockerpost.shipment.domain.ShipmentAdmission;
++import com.example.lockerpost.shipment.domain.ShipmentBookingResponse;
++import com.example.lockerpost.shipment.domain.ShipmentDispatchPlanner;
++import com.example.lockerpost.shipment.domain.ShipmentPrice;
++import com.example.lockerpost.shipment.domain.ShipmentPricingCalculator;
++import com.example.lockerpost.shipment.domain.ShipmentRequest;
++import com.example.lockerpost.shipment.domain.ValidatedShipment;
++import lombok.RequiredArgsConstructor;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++@RequestMapping("/shipments")
++@RequiredArgsConstructor
++public class ShipmentBookingController {
++
++    private final ShipmentAdmission shipmentAdmission;
++    private final LockerSizeAndHandoverRules lockerSizeAndHandoverRules;
++    private final ShipmentPricingCalculator shipmentPricingCalculator;
++    private final ShipmentDispatchPlanner shipmentDispatchPlanner;
++
++    @PostMapping
++    public ShipmentBookingResponse book(@RequestBody ShipmentRequest request) {
++        AdmittedShipment admittedShipment = shipmentAdmission.admit(request);
++        ValidatedShipment shipment = new ValidatedShipment(
++            request,
++            admittedShipment.destinationBank(),
++            lockerSizeAndHandoverRules.lockerSizeFor(admittedShipment.shape()),
++            lockerSizeAndHandoverRules.handoverFor(admittedShipment.shape()));
++        ShipmentPrice price = shipmentPricingCalculator.priceOf(shipment);
++        DispatchPlan dispatchPlan = shipmentDispatchPlanner.planFor(shipment);
++        return new ShipmentBookingResponse(
++            shipment.lockerSize(),
++            shipment.handover(),
++            price.totalCents(),
++            dispatchPlan.carrier());
++    }
++}
+diff --git a/parcel-locker/src/test/java/com/example/lockerpost/shipment/web/ShipmentBookingControllerTest.java b/parcel-locker/src/test/java/com/example/lockerpost/shipment/web/ShipmentBookingControllerTest.java
+new file mode 100644
+index 0000000..63be15f
+--- /dev/null
++++ b/parcel-locker/src/test/java/com/example/lockerpost/shipment/web/ShipmentBookingControllerTest.java
+@@ -0,0 +1,128 @@
++package com.example.lockerpost.shipment.web;
++
++import com.example.lockerpost.shipment.domain.Carrier;
++import com.example.lockerpost.shipment.domain.Handover;
++import com.example.lockerpost.shipment.domain.LockerSize;
++import com.example.lockerpost.shipment.domain.ServiceLevel;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.http.MediaType;
++import org.springframework.test.web.servlet.MockMvc;
++import org.springframework.test.web.servlet.ResultActions;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++
++@SpringBootTest
++@AutoConfigureMockMvc
++class ShipmentBookingControllerTest {
++
++    private static final String CITY_BANK_WITHOUT_SURCHARGE = "LB-CITY-014";
++    private static final String CITY_BANK_WITH_SURCHARGE = "LB-CITY-031";
++    private static final String CITY_BANK_WITH_UNLISTED_PREFIX = "LB-CITY-078";
++    private static final String UNREGISTERED_BANK = "LB-CITY-999";
++
++    @Autowired
++    private MockMvc mockMvc;
++
++    @Test
++    void shouldBookALightParcelIntoASmallLockerOpenedByCode() throws Exception {
++        // given
++        String request = shipmentRequest(CITY_BANK_WITHOUT_SURCHARGE, 800, 2500, ServiceLevel.STANDARD);
++
++        // when
++        ResultActions booking = bookShipment(request);
++
++        // then
++        booking.andExpect(status().isOk())
++            .andExpect(content().json(bookingResponse(LockerSize.SMALL, Handover.CODE, 350, Carrier.CITY_VAN)));
++    }
++
++    @Test
++    void shouldBookAHeavyParcelIntoALargeLockerOpenedByCode() throws Exception {
++        // given
++        String request = shipmentRequest(CITY_BANK_WITHOUT_SURCHARGE, 5400, 2500, ServiceLevel.STANDARD);
++
++        // when
++        ResultActions booking = bookShipment(request);
++
++        // then
++        booking.andExpect(status().isOk())
++            .andExpect(content().json(bookingResponse(LockerSize.LARGE, Handover.CODE, 350, Carrier.CITY_VAN)));
++    }
++
++    @Test
++    void shouldBookAHighValueParcelIntoASmallLockerReleasedOnSignature() throws Exception {
++        // given
++        String request = shipmentRequest(CITY_BANK_WITHOUT_SURCHARGE, 900, 84000, ServiceLevel.STANDARD);
++
++        // when
++        ResultActions booking = bookShipment(request);
++
++        // then
++        booking.andExpect(status().isOk())
++            .andExpect(content().json(bookingResponse(LockerSize.SMALL, Handover.SIGNATURE, 350, Carrier.CITY_VAN)));
++    }
++
++    @Test
++    void shouldChargeTheListedSurchargeOfTheDestinationPostalPrefix() throws Exception {
++        // given
++        String request = shipmentRequest(CITY_BANK_WITH_SURCHARGE, 800, 2500, ServiceLevel.STANDARD);
++
++        // when
++        ResultActions booking = bookShipment(request);
++
++        // then
++        booking.andExpect(status().isOk())
++            .andExpect(content().json(bookingResponse(LockerSize.SMALL, Handover.CODE, 610, Carrier.CITY_VAN)));
++    }
++
++    @Test
++    void shouldChargeTheUnlistedSurchargeWhenTheTableHoldsNoRowForTheDestinationPostalPrefix() throws Exception {
++        // given
++        String request = shipmentRequest(CITY_BANK_WITH_UNLISTED_PREFIX, 800, 2500, ServiceLevel.STANDARD);
++
++        // when
++        ResultActions booking = bookShipment(request);
++
++        // then
++        booking.andExpect(status().isOk())
++            .andExpect(content().json(bookingResponse(LockerSize.SMALL, Handover.CODE, 830, Carrier.CITY_VAN)));
++    }
++
++    @Test
++    void shouldRejectTheShipmentWhenNoLockerBankIsRegisteredAsTheDestination() throws Exception {
++        // given
++        String request = shipmentRequest(UNREGISTERED_BANK, 800, 2500, ServiceLevel.STANDARD);
++
++        // when
++        ResultActions booking = bookShipment(request);
++
++        // then
++        booking.andExpect(status().isUnprocessableEntity())
++            .andExpect(result -> assertThat(result.getResolvedException())
++                .hasMessage("no locker bank is registered as " + UNREGISTERED_BANK));
++    }
++
++    private ResultActions bookShipment(String request) throws Exception {
++        return mockMvc.perform(post("/shipments")
++            .contentType(MediaType.APPLICATION_JSON)
++            .content(request));
++    }
++
++    private static String shipmentRequest(String destinationBankId, int weightGrams, int declaredValueCents, ServiceLevel serviceLevel) {
++        return """
++            {"destinationBankId": "%s", "weightGrams": %d, "declaredValueCents": %d, "serviceLevel": "%s"}
++            """.formatted(destinationBankId, weightGrams, declaredValueCents, serviceLevel);
++    }
++
++    private static String bookingResponse(LockerSize lockerSize, Handover handover, int totalCents, Carrier carrier) {
++        return """
++            {"lockerSize": "%s", "handover": "%s", "totalCents": %d, "carrier": "%s"}
++            """.formatted(lockerSize, handover, totalCents, carrier);
++    }
++}

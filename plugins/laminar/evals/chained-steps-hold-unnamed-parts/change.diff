@@ -1,0 +1,72 @@
+diff --git a/theatre/src/main/java/com/example/theatre/boxoffice/BoxOfficeService.java b/theatre/src/main/java/com/example/theatre/boxoffice/BoxOfficeService.java
+new file mode 100644
+--- /dev/null
++++ b/theatre/src/main/java/com/example/theatre/boxoffice/BoxOfficeService.java
+@@ -0,0 +1,67 @@
++package com.example.theatre.boxoffice;
++
++import com.example.theatre.hall.SeatMap;
++import com.example.theatre.performance.Performance;
++import com.example.theatre.pricing.Money;
++import com.example.theatre.pricing.PriceList;
++import java.time.LocalDateTime;
++import java.util.List;
++
++public class BoxOfficeService {
++
++    private final SeatMap seatMap;
++    private final PriceList priceList;
++    private final TicketRepository ticketRepository;
++
++    public BoxOfficeService(SeatMap seatMap, PriceList priceList, TicketRepository ticketRepository) {
++        this.seatMap = seatMap;
++        this.priceList = priceList;
++        this.ticketRepository = ticketRepository;
++    }
++
++    public List<Ticket> createTickets(Reservation reservation, Performance performance) {
++        return reservation.seatNumbers().stream()
++                .map(seatNumber -> new Ticket(
++                        performance.id(),
++                        seatMap.findSeat(performance.hall(), seatNumber),
++                        priceList.priceFor(performance.category(), seatNumber, reservation.discountCode())))
++                .toList();
++    }
++
++    public List<Reservation> getReservationsToRelease(Performance performance, LocalDateTime now) {
++        return ticketRepository.findReservations(performance.id()).stream()
++                .filter(reservation -> !reservation.isPaid()
++                        && reservation.holdExpiresAt().isBefore(now)
++                        && !reservation.holder().isSubscriber())
++                .toList();
++    }
++
++    public List<SeatLabel> createSeatLabelsForPaidReservations(List<Performance> performances) {
++        return performances.stream()
++                .flatMap(performance -> performance.reservations().stream()
++                        .filter(Reservation::isPaid)
++                        .map(reservation -> new SeatLabel(performance.title(), reservation.holder().name())))
++                .toList();
++    }
++
++    public List<Money> getPricesToCharge(List<Ticket> tickets) {
++        return tickets.stream()
++                .map(ticket -> {
++                    if (ticket.holder().isChild()) {
++                        return priceList.childPrice(ticket.category());
++                    }
++                    if (ticket.holder().isStudent()) {
++                        return priceList.studentPrice(ticket.category());
++                    }
++                    return priceList.fullPrice(ticket.category());
++                })
++                .toList();
++    }
++
++    public List<Reservation> getUnpaidReservations(Performance performance) {
++        return ticketRepository.findReservations(performance.id()).stream()
++                .filter(reservation -> !reservation.isPaid())
++                .peek(ticketRepository::markReminderSent)
++                .toList();
++    }
++}

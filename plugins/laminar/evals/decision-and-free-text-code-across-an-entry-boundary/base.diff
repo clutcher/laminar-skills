@@ -1,0 +1,199 @@
+diff --git a/fleet-api/build.gradle.kts b/fleet-api/build.gradle.kts
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/build.gradle.kts
+@@ -0,0 +1,7 @@
++plugins {
++    java
++}
++
++dependencies {
++    implementation("org.springframework.boot:spring-boot-starter-graphql:3.3.4")
++}
+diff --git a/fleet-api/src/main/java/org/bikes/fleet/bike/Accessory.java b/fleet-api/src/main/java/org/bikes/fleet/bike/Accessory.java
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/src/main/java/org/bikes/fleet/bike/Accessory.java
+@@ -0,0 +1,4 @@
++package org.bikes.fleet.bike;
++
++public record Accessory(String label) {
++}
+diff --git a/fleet-api/src/main/java/org/bikes/fleet/bike/AccessoryCatalogue.java b/fleet-api/src/main/java/org/bikes/fleet/bike/AccessoryCatalogue.java
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/src/main/java/org/bikes/fleet/bike/AccessoryCatalogue.java
+@@ -0,0 +1,8 @@
++package org.bikes.fleet.bike;
++
++import java.util.List;
++
++public interface AccessoryCatalogue {
++
++    List<Accessory> accessoriesRentedWith(String serialNumber);
++}
+diff --git a/fleet-api/src/main/java/org/bikes/fleet/bike/Bike.java b/fleet-api/src/main/java/org/bikes/fleet/bike/Bike.java
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/src/main/java/org/bikes/fleet/bike/Bike.java
+@@ -0,0 +1,4 @@
++package org.bikes.fleet.bike;
++
++public record Bike(String id, String serialNumber, Station station, SupplierFrameRow supplierFrameRow, int lastReportedBatteryPercent) {
++}
+diff --git a/fleet-api/src/main/java/org/bikes/fleet/bike/BikeRegistry.java b/fleet-api/src/main/java/org/bikes/fleet/bike/BikeRegistry.java
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/src/main/java/org/bikes/fleet/bike/BikeRegistry.java
+@@ -0,0 +1,8 @@
++package org.bikes.fleet.bike;
++
++import java.util.List;
++
++public interface BikeRegistry {
++
++    List<Bike> bikesAt(String stationId);
++}
+diff --git a/fleet-api/src/main/java/org/bikes/fleet/bike/Region.java b/fleet-api/src/main/java/org/bikes/fleet/bike/Region.java
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/src/main/java/org/bikes/fleet/bike/Region.java
+@@ -0,0 +1,7 @@
++package org.bikes.fleet.bike;
++
++public enum Region {
++    ALPINE,
++    COASTAL,
++    URBAN
++}
+diff --git a/fleet-api/src/main/java/org/bikes/fleet/bike/Station.java b/fleet-api/src/main/java/org/bikes/fleet/bike/Station.java
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/src/main/java/org/bikes/fleet/bike/Station.java
+@@ -0,0 +1,4 @@
++package org.bikes.fleet.bike;
++
++public record Station(String id, String displayName, Region region) {
++}
+diff --git a/fleet-api/src/main/java/org/bikes/fleet/bike/SupplierFrameRow.java b/fleet-api/src/main/java/org/bikes/fleet/bike/SupplierFrameRow.java
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/src/main/java/org/bikes/fleet/bike/SupplierFrameRow.java
+@@ -0,0 +1,4 @@
++package org.bikes.fleet.bike;
++
++public record SupplierFrameRow(String supplierName, String frameCode) {
++}
+diff --git a/fleet-api/src/main/java/org/bikes/fleet/web/BikeQueries.java b/fleet-api/src/main/java/org/bikes/fleet/web/BikeQueries.java
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/src/main/java/org/bikes/fleet/web/BikeQueries.java
+@@ -0,0 +1,23 @@
++package org.bikes.fleet.web;
++
++import java.util.List;
++import org.bikes.fleet.bike.Bike;
++import org.bikes.fleet.bike.BikeRegistry;
++import org.springframework.graphql.data.method.annotation.Argument;
++import org.springframework.graphql.data.method.annotation.QueryMapping;
++import org.springframework.stereotype.Controller;
++
++@Controller
++public class BikeQueries {
++
++    private final BikeRegistry bikeRegistry;
++
++    public BikeQueries(BikeRegistry bikeRegistry) {
++        this.bikeRegistry = bikeRegistry;
++    }
++
++    @QueryMapping
++    public List<Bike> bikesAtStation(@Argument String stationId) {
++        return bikeRegistry.bikesAt(stationId);
++    }
++}
+diff --git a/fleet-api/src/main/resources/graphql/fleet.graphqls b/fleet-api/src/main/resources/graphql/fleet.graphqls
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/src/main/resources/graphql/fleet.graphqls
+@@ -0,0 +1,21 @@
++type Query {
++  bikesAtStation(stationId: ID!): [Bike!]!
++}
++
++type Bike {
++  id: ID!
++  serialNumber: String!
++  station: Station!
++}
++
++type Station {
++  id: ID!
++  displayName: String!
++  region: Region!
++}
++
++enum Region {
++  ALPINE
++  COASTAL
++  URBAN
++}
+diff --git a/rider-web/package.json b/rider-web/package.json
+new file mode 100644
+--- /dev/null
++++ b/rider-web/package.json
+@@ -0,0 +1,7 @@
++{
++  "name": "rider-web",
++  "private": true,
++  "dependencies": {
++    "react": "18.3.1"
++  }
++}
+diff --git a/rider-web/src/bike/BikeCard.tsx b/rider-web/src/bike/BikeCard.tsx
+new file mode 100644
+--- /dev/null
++++ b/rider-web/src/bike/BikeCard.tsx
+@@ -0,0 +1,10 @@
++import { BikeSummary } from "./BikeSummary";
++
++export function BikeCard({ bike }: { bike: BikeSummary }) {
++  return (
++    <article className="bike-card">
++      <h3>{bike.serialNumber}</h3>
++      <p>{bike.station.displayName}</p>
++    </article>
++  );
++}
+diff --git a/rider-web/src/bike/BikeSummary.ts b/rider-web/src/bike/BikeSummary.ts
+new file mode 100644
+--- /dev/null
++++ b/rider-web/src/bike/BikeSummary.ts
+@@ -0,0 +1,12 @@
++export type Region = "ALPINE" | "COASTAL" | "URBAN";
++
++export interface StationSummary {
++  displayName: string;
++  region: Region;
++}
++
++export interface BikeSummary {
++  id: string;
++  serialNumber: string;
++  station: StationSummary;
++}
+diff --git a/rider-web/src/bike/bikesAtStation.graphql b/rider-web/src/bike/bikesAtStation.graphql
+new file mode 100644
+--- /dev/null
++++ b/rider-web/src/bike/bikesAtStation.graphql
+@@ -0,0 +1,10 @@
++query BikesAtStation($stationId: ID!) {
++  bikesAtStation(stationId: $stationId) {
++    id
++    serialNumber
++    station {
++      displayName
++      region
++    }
++  }
++}

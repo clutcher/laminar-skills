@@ -1,0 +1,169 @@
+diff --git a/freight-rating/pyproject.toml b/freight-rating/pyproject.toml
+new file mode 100644
+--- /dev/null
++++ b/freight-rating/pyproject.toml
+@@ -0,0 +1,8 @@
++[project]
++name = "freight-rating"
++version = "1.0.0"
++requires-python = ">=3.12"
++dependencies = [
++    "httpx>=0.27",
++    "strawberry-graphql>=0.240",
++]
+diff --git a/freight-rating/src/freight_rating/adapters/booking_graph.py b/freight-rating/src/freight_rating/adapters/booking_graph.py
+new file mode 100644
+--- /dev/null
++++ b/freight-rating/src/freight_rating/adapters/booking_graph.py
+@@ -0,0 +1,25 @@
++from decimal import Decimal
++
++from strawberry.dataloader import DataLoader
++
++from freight_rating.domain.models import Leg, LegCharge, Rating
++from freight_rating.ports.freight_rating import FreightRating
++
++
++class BookingGraph:
++    def __init__(self, freight_rating: FreightRating):
++        self._freight_rating = freight_rating
++
++    def context(self) -> dict[str, DataLoader]:
++        return {"leg_charges": DataLoader(load_fn=self._leg_charges_of)}
++
++    def booking_rating(self, legs: list[Leg]) -> Rating:
++        return self._freight_rating.rate(legs)
++
++    async def leg_charge(self, leg: Leg, context: dict[str, DataLoader]) -> Decimal:
++        leg_charge = await context["leg_charges"].load(leg)
++        return leg_charge.charge
++
++    async def _leg_charges_of(self, legs: list[Leg]) -> list[LegCharge]:
++        rating = self._freight_rating.rate(legs)
++        return [rating.charge_for(leg) for leg in legs]
+diff --git a/freight-rating/src/freight_rating/adapters/http_tariff_source.py b/freight-rating/src/freight_rating/adapters/http_tariff_source.py
+new file mode 100644
+--- /dev/null
++++ b/freight-rating/src/freight_rating/adapters/http_tariff_source.py
+@@ -0,0 +1,16 @@
++from decimal import Decimal
++
++import httpx
++
++from freight_rating.ports.tariff_source import TariffSource
++
++
++class HttpTariffSource(TariffSource):
++    def __init__(self, client: httpx.Client):
++        self._client = client
++
++    def rates_per_kg(self, lanes: set[tuple[str, str]]) -> dict[tuple[str, str], Decimal]:
++        lane_requests = [{"origin": origin, "destination": destination} for origin, destination in lanes]
++        response = self._client.post("/tariffs/per-kg", json=lane_requests)
++        response.raise_for_status()
++        return {(tariff["origin"], tariff["destination"]): Decimal(tariff["ratePerKg"]) for tariff in response.json()}
+diff --git a/freight-rating/src/freight_rating/domain/models.py b/freight-rating/src/freight_rating/domain/models.py
+new file mode 100644
+--- /dev/null
++++ b/freight-rating/src/freight_rating/domain/models.py
+@@ -0,0 +1,31 @@
++from dataclasses import dataclass
++from decimal import Decimal
++
++
++@dataclass(frozen=True)
++class Leg:
++    origin: str
++    destination: str
++    weight_kg: Decimal
++
++
++@dataclass(frozen=True)
++class LegCharge:
++    leg: Leg
++    charge: Decimal
++
++
++@dataclass(frozen=True)
++class SurchargeNote:
++    subject: str
++    text: str
++
++
++@dataclass(frozen=True)
++class Rating:
++    leg_charges: list[LegCharge]
++    total_charge: Decimal
++    surcharge_notes: list[SurchargeNote]
++
++    def charge_for(self, leg: Leg) -> LegCharge:
++        return next(leg_charge for leg_charge in self.leg_charges if leg_charge.leg == leg)
+diff --git a/freight-rating/src/freight_rating/domain/rating_service.py b/freight-rating/src/freight_rating/domain/rating_service.py
+new file mode 100644
+--- /dev/null
++++ b/freight-rating/src/freight_rating/domain/rating_service.py
+@@ -0,0 +1,18 @@
++from decimal import Decimal
++
++from freight_rating.domain.models import Leg, LegCharge, Rating
++from freight_rating.domain.surcharge_rules import SurchargeRules
++from freight_rating.ports.freight_rating import FreightRating
++from freight_rating.ports.tariff_source import TariffSource
++
++
++class RatingService(FreightRating):
++    def __init__(self, tariff_source: TariffSource, surcharge_rules: SurchargeRules):
++        self._tariff_source = tariff_source
++        self._surcharge_rules = surcharge_rules
++
++    def rate(self, legs: list[Leg]) -> Rating:
++        rates_per_kg = self._tariff_source.rates_per_kg({(leg.origin, leg.destination) for leg in legs})
++        leg_charges = [LegCharge(leg, leg.weight_kg * rates_per_kg[(leg.origin, leg.destination)]) for leg in legs]
++        total_charge = sum((leg_charge.charge for leg_charge in leg_charges), Decimal("0"))
++        return Rating(leg_charges, total_charge, self._surcharge_rules.notes_for(leg_charges, total_charge))
+diff --git a/freight-rating/src/freight_rating/domain/surcharge_rules.py b/freight-rating/src/freight_rating/domain/surcharge_rules.py
+new file mode 100644
+--- /dev/null
++++ b/freight-rating/src/freight_rating/domain/surcharge_rules.py
+@@ -0,0 +1,18 @@
++from decimal import Decimal
++
++from freight_rating.domain.models import LegCharge, SurchargeNote
++
++HEAVY_LIFT_WEIGHT_KG = Decimal("20000")
++CREDIT_APPROVAL_CHARGE = Decimal("50000")
++
++
++class SurchargeRules:
++    def notes_for(self, leg_charges: list[LegCharge], total_charge: Decimal) -> list[SurchargeNote]:
++        notes = [
++            SurchargeNote(f"{leg_charge.leg.origin}-{leg_charge.leg.destination}", "Heavy lift surcharge applies")
++            for leg_charge in leg_charges
++            if leg_charge.leg.weight_kg > HEAVY_LIFT_WEIGHT_KG
++        ]
++        if total_charge > CREDIT_APPROVAL_CHARGE:
++            notes.append(SurchargeNote("booking", "Booking needs credit approval"))
++        return notes
+diff --git a/freight-rating/src/freight_rating/ports/freight_rating.py b/freight-rating/src/freight_rating/ports/freight_rating.py
+new file mode 100644
+--- /dev/null
++++ b/freight-rating/src/freight_rating/ports/freight_rating.py
+@@ -0,0 +1,7 @@
++from typing import Protocol
++
++from freight_rating.domain.models import Leg, Rating
++
++
++class FreightRating(Protocol):
++    def rate(self, legs: list[Leg]) -> Rating: ...
+diff --git a/freight-rating/src/freight_rating/ports/tariff_source.py b/freight-rating/src/freight_rating/ports/tariff_source.py
+new file mode 100644
+--- /dev/null
++++ b/freight-rating/src/freight_rating/ports/tariff_source.py
+@@ -0,0 +1,6 @@
++from decimal import Decimal
++from typing import Protocol
++
++
++class TariffSource(Protocol):
++    def rates_per_kg(self, lanes: set[tuple[str, str]]) -> dict[tuple[str, str], Decimal]: ...

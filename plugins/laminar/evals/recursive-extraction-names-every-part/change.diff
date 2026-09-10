@@ -1,0 +1,55 @@
+diff --git a/shop/src/main/java/com/example/shop/order/OrderPlacementService.java b/shop/src/main/java/com/example/shop/order/OrderPlacementService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderPlacementService.java
+@@ -0,0 +1,50 @@
++package com.example.shop.order;
++
++import com.example.shop.payment.PaymentGateway;
++import com.example.shop.stock.InsufficientStockException;
++import com.example.shop.stock.StockLevel;
++import com.example.shop.stock.StockRepository;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class OrderPlacementService {
++
++    private final CartValidator cartValidator;
++    private final StockRepository stockRepository;
++    private final PaymentGateway paymentGateway;
++    private final OrderRepository orderRepository;
++
++    public Order placeOrder(Cart cart) {
++        validateCart(cart);
++        reserveInventory(cart);
++        chargePayment(cart);
++        return createOrder(cart);
++    }
++
++    private void validateCart(Cart cart) {
++        cartValidator.validate(cart);
++    }
++
++    private void reserveInventory(Cart cart) {
++        for (LineItem item : cart.getLineItems()) {
++            reserveStock(item.getProductId(), item.getQuantity());
++        }
++    }
++
++    private void reserveStock(long productId, int quantity) {
++        StockLevel stockLevel = stockRepository.findByProductId(productId);
++        if (stockLevel.getAvailable() < quantity) {
++            throw new InsufficientStockException(productId);
++        }
++        stockLevel.reserve(quantity);
++        stockRepository.save(stockLevel);
++    }
++
++    private void chargePayment(Cart cart) {
++        paymentGateway.charge(cart.getCustomerId(), cart.getTotal());
++    }
++
++    private Order createOrder(Cart cart) {
++        return orderRepository.save(new Order(cart.getCustomerId(), cart.getLineItems()));
++    }
++}

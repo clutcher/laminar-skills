@@ -1,0 +1,105 @@
+diff --git a/go.mod b/go.mod
+new file mode 100644
+index 0000000..56fd2f7
+--- /dev/null
++++ b/go.mod
+@@ -0,0 +1,5 @@
++module example.com/crossings
++
++go 1.22
++
++require github.com/Masterminds/squirrel v1.5.4
+diff --git a/timetable/fare_table.go b/timetable/fare_table.go
+new file mode 100644
+index 0000000..72942da
+--- /dev/null
++++ b/timetable/fare_table.go
+@@ -0,0 +1,19 @@
++package timetable
++
++import "sync"
++
++type FareTable struct {
++	mu            sync.RWMutex
++	pencePerRoute map[string]int
++}
++
++func NewFareTable(pencePerRoute map[string]int) *FareTable {
++	return &FareTable{pencePerRoute: pencePerRoute}
++}
++
++func (t *FareTable) Get(route string) (int, bool) {
++	t.mu.RLock()
++	defer t.mu.RUnlock()
++	pence, found := t.pencePerRoute[route]
++	return pence, found
++}
+diff --git a/timetable/ferry.go b/timetable/ferry.go
+new file mode 100644
+index 0000000..a54bee6
+--- /dev/null
++++ b/timetable/ferry.go
+@@ -0,0 +1,7 @@
++package timetable
++
++type Ferry struct {
++	ID       string
++	Route    string
++	Capacity int
++}
+diff --git a/timetable/sailing_store.go b/timetable/sailing_store.go
+new file mode 100644
+index 0000000..29fc312
+--- /dev/null
++++ b/timetable/sailing_store.go
+@@ -0,0 +1,22 @@
++package timetable
++
++import (
++	"context"
++	"database/sql"
++)
++
++type SailingStore interface {
++	Open(ctx context.Context, ferryID string, route string, seats int) error
++}
++
++type sqlSailingStore struct {
++	db *sql.DB
++}
++
++func NewSailingStore(db *sql.DB) SailingStore {
++	return &sqlSailingStore{db: db}
++}
++
++func (s *sqlSailingStore) Open(ctx context.Context, ferryID string, route string, seats int) error {
++	return s.db.QueryRowContext(ctx, "UPDATE sailings SET open = true, seats_left = $3 WHERE ferry_id = $1 AND route = $2 RETURNING id", ferryID, route, seats).Err()
++}
+diff --git a/timetable/timetable.go b/timetable/timetable.go
+new file mode 100644
+index 0000000..b5b42bb
+--- /dev/null
++++ b/timetable/timetable.go
+@@ -0,0 +1,22 @@
++package timetable
++
++import (
++	"context"
++	"fmt"
++)
++
++type Timetable struct {
++	sailings  SailingStore
++	fareCache *FareTable
++}
++
++func NewTimetable(sailings SailingStore, fareCache *FareTable) *Timetable {
++	return &Timetable{sailings: sailings, fareCache: fareCache}
++}
++
++func (t *Timetable) PublishSailing(ctx context.Context, f Ferry) error {
++	if err := t.sailings.Open(ctx, f.ID, f.Route, f.Capacity); err != nil {
++		return fmt.Errorf("open sailing of ferry %s on route %s: %w", f.ID, f.Route, err)
++	}
++	return nil
++}

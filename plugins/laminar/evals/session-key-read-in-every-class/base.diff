@@ -1,0 +1,63 @@
+diff --git a/shop/src/main/java/com/example/shop/b2b/GlobalConstants.java b/shop/src/main/java/com/example/shop/b2b/GlobalConstants.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/b2b/GlobalConstants.java
+@@ -0,0 +1,9 @@
++package com.example.shop.b2b;
++
++public final class GlobalConstants {
++
++    public static final String CURRENT_B2B_UNIT_SESSION_ATTRIBUTE_KEY = "currentB2BUnit";
++
++    private GlobalConstants() {
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/checkout/DeliveryOptions.java b/shop/src/main/java/com/example/shop/checkout/DeliveryOptions.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/checkout/DeliveryOptions.java
+@@ -0,0 +1,18 @@
++package com.example.shop.checkout;
++
++import com.example.shop.b2b.B2BUnitModel;
++import com.example.shop.b2b.GlobalConstants;
++import com.example.shop.session.SessionService;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class DeliveryOptions {
++
++    private final SessionService sessionService;
++
++    public boolean offersNextDayDelivery() {
++        B2BUnitModel unit = (B2BUnitModel) sessionService.getAttribute(
++            GlobalConstants.CURRENT_B2B_UNIT_SESSION_ATTRIBUTE_KEY);
++        return unit != null && unit.hasNextDayContract();
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/quote/QuotePricing.java b/shop/src/main/java/com/example/shop/quote/QuotePricing.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/quote/QuotePricing.java
+@@ -0,0 +1,21 @@
++package com.example.shop.quote;
++
++import com.example.shop.b2b.B2BUnitModel;
++import com.example.shop.session.SessionService;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class QuotePricing {
++
++    private static final String CURRENT_B2B_UNIT = "currentB2BUnit";
++
++    private final SessionService sessionService;
++
++    public double calculateQuoteDiscount(Quote quote) {
++        B2BUnitModel unit = (B2BUnitModel) sessionService.getAttribute(CURRENT_B2B_UNIT);
++        if (unit != null && unit.hasFrameworkContract()) {
++            return quote.getTotal() * 0.05;
++        }
++        return 0;
++    }
++}

@@ -1,0 +1,29 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/crossing/Crossing.java b/ferry/src/main/java/com/example/harbourferry/crossing/Crossing.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/crossing/Crossing.java
+@@ -0,0 +1,24 @@
++package com.example.harbourferry.crossing;
++
++public class Crossing {
++
++    private final String route;
++    private final String status;
++
++    public Crossing(String route, String status) {
++        this.route = route;
++        this.status = status;
++    }
++
++    public String route() {
++        return route;
++    }
++
++    public boolean isOpenForBoarding() {
++        return status.equals("BOARDING");
++    }
++
++    public boolean hasLeftPort() {
++        return status.equals("DEPARTED") || status.equals("ARRIVED");
++    }
++}

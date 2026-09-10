@@ -1,0 +1,28 @@
+diff --git a/toollibrary/src/main/java/com/example/toollibrary/fees/LateFeeCalculation.java b/toollibrary/src/main/java/com/example/toollibrary/fees/LateFeeCalculation.java
+new file mode 100644
+--- /dev/null
++++ b/toollibrary/src/main/java/com/example/toollibrary/fees/LateFeeCalculation.java
+@@ -0,0 +1,23 @@
++package com.example.toollibrary.fees;
++
++import java.time.LocalDate;
++import java.time.temporal.ChronoUnit;
++
++public class LateFeeCalculation {
++
++    private static final long LATE_FEE_IN_CENTS_PER_DAY = 100;
++
++    public Money calculateLateFee(ToolLoan loan, LocalDate returnedOn) {
++        long lateDays = Math.max(0, subtractDueDate(loan, returnedOn));
++        long feeInCents = Math.min(multiplyByDailyFee(lateDays), loan.tool().replacementPriceInCents());
++        return Money.ofCents(feeInCents);
++    }
++
++    private long subtractDueDate(ToolLoan loan, LocalDate returnedOn) {
++        return ChronoUnit.DAYS.between(loan.dueOn(), returnedOn);
++    }
++
++    private long multiplyByDailyFee(long lateDays) {
++        return lateDays * LATE_FEE_IN_CENTS_PER_DAY;
++    }
++}

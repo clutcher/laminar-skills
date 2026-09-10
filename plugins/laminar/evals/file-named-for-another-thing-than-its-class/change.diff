@@ -1,0 +1,18 @@
+diff --git a/ferry-desk/src/sailings/Ticket.js b/ferry-desk/src/sailings/Ticket.js
+new file mode 100644
+--- /dev/null
++++ b/ferry-desk/src/sailings/Ticket.js
+@@ -0,0 +1,13 @@
++export class Timetable {
++  constructor(departures) {
++    this.departures = departures;
++  }
++
++  nextDepartureAfter(time) {
++    return this.departures.find(departure => departure.leavesAt > time) || null;
++  }
++
++  departuresTo(harbour) {
++    return this.departures.filter(departure => departure.harbour === harbour);
++  }
++}

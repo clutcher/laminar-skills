@@ -1,0 +1,78 @@
+diff --git a/clinic/src/vaccination/vaccination-desk.ts b/clinic/src/vaccination/vaccination-desk.ts
+new file mode 100644
+--- /dev/null
++++ b/clinic/src/vaccination/vaccination-desk.ts
+@@ -0,0 +1,73 @@
++import { Appointment } from '../appointments/appointment';
++import { AppointmentRepository } from '../appointments/appointment-repository';
++import { Clinic } from '../clinic/clinic';
++import { FeeTable } from '../fees/fee-table';
++import { Money } from '../fees/money';
++import { Owner } from '../owners/owner';
++import { Pet } from '../pets/pet';
++import { BoosterReminder } from './booster-reminder';
++import { VaccinationLine } from './vaccination-line';
++import { VaccineSchedule } from './vaccine-schedule';
++
++export class VaccinationDesk {
++  constructor(
++    private readonly vaccineSchedule: VaccineSchedule,
++    private readonly feeTable: FeeTable,
++    private readonly appointmentRepository: AppointmentRepository,
++  ) {}
++
++  createBoosterReminders(pets: Pet[], clinic: Clinic): BoosterReminder[] {
++    return pets.map(pet => this.createBoosterReminder(pet, clinic));
++  }
++
++  getPetsDueForBooster(pets: Pet[], today: Date): Pet[] {
++    return pets.filter(pet => pet.isDueForBoosterOn(today));
++  }
++
++  createVaccinationLines(owners: Owner[]): VaccinationLine[] {
++    return owners.flatMap(owner => this.createVaccinationLinesOfOwner(owner));
++  }
++
++  getAppointmentFees(appointments: Appointment[]): Money[] {
++    return appointments.map(appointment => this.getAppointmentFee(appointment));
++  }
++
++  getMissedAppointments(appointments: Appointment[], now: Date): Appointment[] {
++    return appointments.filter(appointment => appointment.isMissedAt(now));
++  }
++
++  markNoShows(appointments: Appointment[]): void {
++    appointments.forEach(appointment => this.appointmentRepository.markNoShow(appointment.id));
++  }
++
++  getEmailsOfOwnersWithBoosterDue(pets: Pet[], today: Date): string[] {
++    return pets
++      .filter(pet => pet.isDueForBoosterOn(today))
++      .map(pet => pet.owner)
++      .map(owner => owner.email)
++      .filter(isFirstOccurrence);
++  }
++
++  private createBoosterReminder(pet: Pet, clinic: Clinic): BoosterReminder {
++    const dueOn = this.vaccineSchedule.nextDoseDate(pet.species, pet.lastVaccinatedOn, clinic.region);
++    return { petName: pet.name, ownerEmail: pet.owner.email, dueOn };
++  }
++
++  private createVaccinationLinesOfOwner(owner: Owner): VaccinationLine[] {
++    return owner.getVaccinatedPets().map(pet => pet.createVaccinationLine(owner.name));
++  }
++
++  private getAppointmentFee(appointment: Appointment): Money {
++    if (appointment.isEmergency) {
++      return this.feeTable.emergencyFee(appointment.species);
++    }
++    if (appointment.isFollowUp) {
++      return this.feeTable.followUpFee(appointment.species);
++    }
++    return this.feeTable.standardFee(appointment.species);
++  }
++}
++
++function isFirstOccurrence(value: string, index: number, values: string[]): boolean {
++  return values.indexOf(value) === index;
++}

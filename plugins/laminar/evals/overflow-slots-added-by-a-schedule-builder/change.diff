@@ -1,0 +1,36 @@
+diff --git a/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleBuilder.kt b/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleBuilder.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleBuilder.kt
+@@ -0,0 +1,17 @@
++package com.example.marina.berths
++
++class BerthScheduleBuilder private constructor(private val harbour: String, private val slots: MutableList<String>) {
++
++    fun withOverflowSlotsFor(request: BerthRequest): BerthScheduleBuilder {
++        val unplacedVessels = request.vessels.filter { vessel -> vessel !in slots }
++        slots += unplacedVessels.map { vessel -> "overflow-$vessel" }
++        return this
++    }
++
++    fun build(): BerthSchedule = BerthSchedule(harbour, slots.toList())
++
++    companion object {
++
++        fun from(schedule: BerthSchedule): BerthScheduleBuilder = BerthScheduleBuilder(schedule.harbour, schedule.slots.toMutableList())
++    }
++}
+diff --git a/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleService.kt b/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleService.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleService.kt
+@@ -0,0 +1,9 @@
++package com.example.marina.berths
++
++class BerthScheduleService(private val harbourMaster: HarbourMaster) {
++
++    fun schedule(request: BerthRequest): BerthSchedule =
++        BerthScheduleBuilder.from(harbourMaster.scheduleFor(request.harbour))
++            .withOverflowSlotsFor(request)
++            .build()
++}

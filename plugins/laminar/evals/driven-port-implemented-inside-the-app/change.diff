@@ -1,0 +1,73 @@
+diff --git a/kennel/src/Boarding/App/Domain/StayBookingService.php b/kennel/src/Boarding/App/Domain/StayBookingService.php
+index 40781a4..48b0506 100644
+--- a/kennel/src/Boarding/App/Domain/StayBookingService.php
++++ b/kennel/src/Boarding/App/Domain/StayBookingService.php
+@@ -7,15 +7,22 @@ namespace Kennel\Boarding\App\Domain;
+ use Kennel\Boarding\App\Api\BookStay;
+ use Kennel\Boarding\App\Domain\Model\Stay;
+ use Kennel\Boarding\App\Spi\KennelRuns;
++use Kennel\Boarding\App\Spi\VaccinationRecords;
++use DomainException;
+ 
+ final class StayBookingService implements BookStay
+ {
+-    public function __construct(private readonly KennelRuns $kennelRuns)
+-    {
++    public function __construct(
++        private readonly KennelRuns $kennelRuns,
++        private readonly VaccinationRecords $vaccinationRecords,
++    ) {
+     }
+ 
+     public function book(string $dogId, string $arrival, int $nights): Stay
+     {
++        if (!$this->vaccinationRecords->isVaccinatedOn($dogId, $arrival)) {
++            throw new DomainException('A dog needs a valid vaccination to board.');
++        }
+         $stay = new Stay($dogId, $arrival, $nights, $this->kennelRuns->freeRunOn($arrival, $nights));
+         $this->kennelRuns->reserve($stay);
+         return $stay;
+diff --git a/kennel/src/Boarding/App/Domain/VaccinationRecordsInMemory.php b/kennel/src/Boarding/App/Domain/VaccinationRecordsInMemory.php
+new file mode 100644
+index 0000000..c70d161
+--- /dev/null
++++ b/kennel/src/Boarding/App/Domain/VaccinationRecordsInMemory.php
+@@ -0,0 +1,22 @@
++<?php
++
++declare(strict_types=1);
++
++namespace Kennel\Boarding\App\Domain;
++
++use Kennel\Boarding\App\Spi\VaccinationRecords;
++
++final class VaccinationRecordsInMemory implements VaccinationRecords
++{
++    private array $validUntilByDog = [];
++
++    public function record(string $dogId, string $validUntil): void
++    {
++        $this->validUntilByDog[$dogId] = $validUntil;
++    }
++
++    public function isVaccinatedOn(string $dogId, string $day): bool
++    {
++        return isset($this->validUntilByDog[$dogId]) && $this->validUntilByDog[$dogId] >= $day;
++    }
++}
+diff --git a/kennel/src/Boarding/App/Spi/VaccinationRecords.php b/kennel/src/Boarding/App/Spi/VaccinationRecords.php
+new file mode 100644
+index 0000000..e5fd8c0
+--- /dev/null
++++ b/kennel/src/Boarding/App/Spi/VaccinationRecords.php
+@@ -0,0 +1,10 @@
++<?php
++
++declare(strict_types=1);
++
++namespace Kennel\Boarding\App\Spi;
++
++interface VaccinationRecords
++{
++    public function isVaccinatedOn(string $dogId, string $day): bool;
++}

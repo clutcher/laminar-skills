@@ -1,0 +1,223 @@
+diff --git a/library/src/main/java/com/example/library/loan/CheckoutRequest.java b/library/src/main/java/com/example/library/loan/CheckoutRequest.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/CheckoutRequest.java
+@@ -0,0 +1,26 @@
++package com.example.library.loan;
++
++public class CheckoutRequest {
++
++    private final String libraryCardNumber;
++    private final String copyBarcode;
++    private final Integer requestedWeeks;
++
++    public CheckoutRequest(String libraryCardNumber, String copyBarcode, Integer requestedWeeks) {
++        this.libraryCardNumber = libraryCardNumber;
++        this.copyBarcode = copyBarcode;
++        this.requestedWeeks = requestedWeeks;
++    }
++
++    public String getLibraryCardNumber() {
++        return libraryCardNumber;
++    }
++
++    public String getCopyBarcode() {
++        return copyBarcode;
++    }
++
++    public Integer getRequestedWeeks() {
++        return requestedWeeks;
++    }
++}
+diff --git a/library/src/main/java/com/example/library/loan/CirculationSession.java b/library/src/main/java/com/example/library/loan/CirculationSession.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/CirculationSession.java
+@@ -0,0 +1,6 @@
++package com.example.library.loan;
++
++public interface CirculationSession {
++
++    Object attribute(String key);
++}
+diff --git a/library/src/main/java/com/example/library/loan/LateReturnFines.java b/library/src/main/java/com/example/library/loan/LateReturnFines.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/LateReturnFines.java
+@@ -0,0 +1,6 @@
++package com.example.library.loan;
++
++public interface LateReturnFines {
++
++    void chargeFor(Loan returnedLoan);
++}
+diff --git a/library/src/main/java/com/example/library/loan/Loan.java b/library/src/main/java/com/example/library/loan/Loan.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/Loan.java
+@@ -0,0 +1,18 @@
++package com.example.library.loan;
++
++import java.time.LocalDate;
++
++public record Loan(String memberId, String copyBarcode, LocalDate lentOn, LocalDate dueOn, LocalDate returnedOn) {
++
++    public Loan extendedTo(LocalDate newDueOn) {
++        return new Loan(memberId, copyBarcode, lentOn, newDueOn, returnedOn);
++    }
++
++    public Loan returnedOn(LocalDate day) {
++        return new Loan(memberId, copyBarcode, lentOn, dueOn, day);
++    }
++
++    public boolean isLate() {
++        return returnedOn != null && returnedOn.isAfter(dueOn);
++    }
++}
+diff --git a/library/src/main/java/com/example/library/loan/LoanDesk.java b/library/src/main/java/com/example/library/loan/LoanDesk.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/LoanDesk.java
+@@ -0,0 +1,30 @@
++package com.example.library.loan;
++
++import java.time.Clock;
++import java.time.LocalDate;
++
++public class LoanDesk {
++
++    private final MemberDirectory memberDirectory;
++    private final LoanStore loanStore;
++    private final Clock clock;
++
++    public LoanDesk(MemberDirectory memberDirectory, LoanStore loanStore, Clock clock) {
++        this.memberDirectory = memberDirectory;
++        this.loanStore = loanStore;
++        this.clock = clock;
++    }
++
++    public Loan checkout(CirculationSession session, CheckoutRequest request) {
++        Member member = memberDirectory.findByCardNumber(request.getLibraryCardNumber());
++        LoanPeriod period = LoanPeriod.resolve(session, request);
++        LocalDate lentOn = LocalDate.now(clock);
++        return loanStore.save(new Loan(member.id(), request.getCopyBarcode(), lentOn, period.dueDateFrom(lentOn), null));
++    }
++
++    public Loan renew(CirculationSession session, RenewalRequest request) {
++        Loan loan = loanStore.findFirstByCopyBarcodeAndReturnedOnIsNull(request.getCopyBarcode());
++        LoanPeriod period = LoanPeriod.resolve(session, request);
++        return loanStore.save(loan.extendedTo(period.dueDateFrom(LocalDate.now(clock))));
++    }
++}
+diff --git a/library/src/main/java/com/example/library/loan/LoanPeriod.java b/library/src/main/java/com/example/library/loan/LoanPeriod.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/LoanPeriod.java
+@@ -0,0 +1,20 @@
++package com.example.library.loan;
++
++import java.time.LocalDate;
++
++public record LoanPeriod(int days) {
++
++    private static final int STANDARD_DAYS = 21;
++
++    public static LoanPeriod resolve(CirculationSession session, CheckoutRequest request) {
++        return new LoanPeriod(STANDARD_DAYS);
++    }
++
++    public static LoanPeriod resolve(CirculationSession session, RenewalRequest request) {
++        return new LoanPeriod(STANDARD_DAYS);
++    }
++
++    public LocalDate dueDateFrom(LocalDate lentOn) {
++        return lentOn.plusDays(days);
++    }
++}
+diff --git a/library/src/main/java/com/example/library/loan/LoanStore.java b/library/src/main/java/com/example/library/loan/LoanStore.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/LoanStore.java
+@@ -0,0 +1,8 @@
++package com.example.library.loan;
++
++public interface LoanStore {
++
++    Loan findFirstByCopyBarcodeAndReturnedOnIsNull(String copyBarcode);
++
++    Loan save(Loan loan);
++}
+diff --git a/library/src/main/java/com/example/library/loan/Member.java b/library/src/main/java/com/example/library/loan/Member.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/Member.java
+@@ -0,0 +1,4 @@
++package com.example.library.loan;
++
++public record Member(String id, String name) {
++}
+diff --git a/library/src/main/java/com/example/library/loan/MemberDirectory.java b/library/src/main/java/com/example/library/loan/MemberDirectory.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/MemberDirectory.java
+@@ -0,0 +1,6 @@
++package com.example.library.loan;
++
++public interface MemberDirectory {
++
++    Member findByCardNumber(String libraryCardNumber);
++}
+diff --git a/library/src/main/java/com/example/library/loan/RenewalRequest.java b/library/src/main/java/com/example/library/loan/RenewalRequest.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/RenewalRequest.java
+@@ -0,0 +1,20 @@
++package com.example.library.loan;
++
++public class RenewalRequest {
++
++    private final String copyBarcode;
++    private final Integer requestedWeeks;
++
++    public RenewalRequest(String copyBarcode, Integer requestedWeeks) {
++        this.copyBarcode = copyBarcode;
++        this.requestedWeeks = requestedWeeks;
++    }
++
++    public String getCopyBarcode() {
++        return copyBarcode;
++    }
++
++    public Integer getRequestedWeeks() {
++        return requestedWeeks;
++    }
++}
+diff --git a/library/src/main/java/com/example/library/loan/ReturnDesk.java b/library/src/main/java/com/example/library/loan/ReturnDesk.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loan/ReturnDesk.java
+@@ -0,0 +1,24 @@
++package com.example.library.loan;
++
++import java.time.Clock;
++import java.time.LocalDate;
++
++public class ReturnDesk {
++
++    private final LoanStore loanStore;
++    private final LateReturnFines lateReturnFines;
++    private final Clock clock;
++
++    public ReturnDesk(LoanStore loanStore, LateReturnFines lateReturnFines, Clock clock) {
++        this.loanStore = loanStore;
++        this.lateReturnFines = lateReturnFines;
++        this.clock = clock;
++    }
++
++    public void checkIn(String copyBarcode) {
++        Loan loan = loanStore.findFirstByCopyBarcodeAndReturnedOnIsNull(copyBarcode);
++        Loan returned = loan.returnedOn(LocalDate.now(clock));
++        loanStore.save(returned);
++        lateReturnFines.chargeFor(returned);
++    }
++}

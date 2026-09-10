@@ -1,0 +1,34 @@
+diff --git a/shop/src/main/java/com/example/shop/order/OrderPlacementService.java b/shop/src/main/java/com/example/shop/order/OrderPlacementService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderPlacementService.java
+@@ -0,0 +1,29 @@
++package com.example.shop.order;
++
++import com.example.shop.catalog.Product;
++import com.example.shop.catalog.ProductRepository;
++import com.example.shop.customer.Customer;
++import com.example.shop.customer.CustomerRepository;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class OrderPlacementService {
++
++    private final CustomerRepository customerRepository;
++    private final ProductRepository productRepository;
++
++    public Order placeOrder(Cart cart) {
++        Customer customer = customerRepository.find(cart.getCustomerId());
++
++        double subtotal = 0;
++        for (LineItem item : cart.getLineItems()) {
++            Product product = productRepository.find(item.getProductId());
++            subtotal += product.getPrice() * item.getQuantity();
++        }
++
++        double discount = customer.isPremium() ? subtotal * 0.1 : 0;
++        double total = subtotal - discount;
++
++        return new Order(customer, cart.getLineItems(), total);
++    }
++}

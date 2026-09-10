@@ -1,0 +1,104 @@
+diff --git a/bikeshare/capacity_cache.py b/bikeshare/capacity_cache.py
+new file mode 100644
+index 0000000..68374d5
+--- /dev/null
++++ b/bikeshare/capacity_cache.py
+@@ -0,0 +1,9 @@
++class CapacityCache:
++    def __init__(self):
++        self._capacities = {}
++
++    def put(self, station_id, capacity):
++        self._capacities[station_id] = capacity
++
++    def get(self, station_id):
++        return self._capacities.get(station_id)
+diff --git a/bikeshare/dock_availability.py b/bikeshare/dock_availability.py
+new file mode 100644
+index 0000000..ed6fe7c
+--- /dev/null
++++ b/bikeshare/dock_availability.py
+@@ -0,0 +1,11 @@
++from bikeshare.dock_store import DockStore
++
++
++class DockAvailability:
++    def __init__(self, database_path, minimum_free_docks):
++        self.store = DockStore(database_path)
++        self.minimum_free_docks = minimum_free_docks
++
++    def shortfall_at(self, station):
++        free = self.store.free_docks(station.station_id)
++        return max(self.minimum_free_docks - free, 0)
+diff --git a/bikeshare/dock_query.py b/bikeshare/dock_query.py
+new file mode 100644
+index 0000000..beb462f
+--- /dev/null
++++ b/bikeshare/dock_query.py
+@@ -0,0 +1,13 @@
++class DockQuery:
++    def __init__(self, station_id):
++        self.station_id = station_id
++        self.conditions = []
++
++    def where(self, column, value):
++        self.conditions.append((column, value))
++        return self
++
++    def statement(self):
++        clauses = ["station_id = ?"] + [f"{column} = ?" for column, _ in self.conditions]
++        parameters = [self.station_id] + [value for _, value in self.conditions]
++        return "SELECT dock_id FROM docks WHERE " + " AND ".join(clauses), parameters
+diff --git a/bikeshare/dock_store.py b/bikeshare/dock_store.py
+new file mode 100644
+index 0000000..fdd83e3
+--- /dev/null
++++ b/bikeshare/dock_store.py
+@@ -0,0 +1,16 @@
++import sqlite3
++
++
++class DockStore:
++    def __init__(self, database_path):
++        self.conn = sqlite3.connect(database_path)
++
++    def free_docks(self, station_id):
++        return self._count_docks(station_id, occupied=False)
++
++    def _count_docks(self, station_id, occupied):
++        row = self.conn.execute(
++            "SELECT count(*) FROM docks WHERE station_id = ? AND occupied = ?",
++            (station_id, occupied),
++        ).fetchone()
++        return row[0]
+diff --git a/bikeshare/rebalancer.py b/bikeshare/rebalancer.py
+new file mode 100644
+index 0000000..96b53b2
+--- /dev/null
++++ b/bikeshare/rebalancer.py
+@@ -0,0 +1,11 @@
++from bikeshare.capacity_cache import CapacityCache
++from bikeshare.dock_availability import DockAvailability
++
++
++class Rebalancer:
++    def __init__(self, database_path, minimum_free_docks):
++        self.availability = DockAvailability(database_path, minimum_free_docks)
++        self.capacity_cache = CapacityCache()
++
++    def remember_capacity(self, station):
++        self.capacity_cache.put(station.station_id, station.capacity)
+diff --git a/bikeshare/stations.py b/bikeshare/stations.py
+new file mode 100644
+index 0000000..458d9ea
+--- /dev/null
++++ b/bikeshare/stations.py
+@@ -0,0 +1,8 @@
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class Station:
++    station_id: str
++    name: str
++    capacity: int

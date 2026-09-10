@@ -1,0 +1,105 @@
+diff --git a/parcel-post/src/main/java/com/example/parcelpost/shipment/ParcelHandling.java b/parcel-post/src/main/java/com/example/parcelpost/shipment/ParcelHandling.java
+new file mode 100644
+--- /dev/null
++++ b/parcel-post/src/main/java/com/example/parcelpost/shipment/ParcelHandling.java
+@@ -0,0 +1,39 @@
++package com.example.parcelpost.shipment;
++
++import java.util.Optional;
++
++public record ParcelHandling(int parcelCount, String insurancePolicyId) {
++
++    private static final int ONE_PARCEL = 1;
++
++    public static ParcelHandling resolve(ShipmentContext context, QuoteRequest request) {
++        return from(context).or(() -> from(request)).orElseGet(ParcelHandling::unspecified);
++    }
++
++    public static ParcelHandling resolve(ShipmentContext context, PickupRequest request) {
++        return from(context).or(() -> from(request)).orElseGet(ParcelHandling::unspecified);
++    }
++
++    public static Optional<ParcelHandling> from(ShipmentContext context) {
++        return context.getAttachedValue() instanceof ParcelHandling handling ? Optional.of(handling) : Optional.empty();
++    }
++
++    public static Optional<ParcelHandling> from(QuoteRequest request) {
++        return from(request.getParcelCount(), request.getInsurancePolicyId());
++    }
++
++    public static Optional<ParcelHandling> from(PickupRequest request) {
++        return from(request.getParcelCount(), request.getInsurancePolicyId());
++    }
++
++    public static ParcelHandling unspecified() {
++        return new ParcelHandling(ONE_PARCEL, null);
++    }
++
++    private static Optional<ParcelHandling> from(Integer parcelCount, String insurancePolicyId) {
++        if (parcelCount == null && insurancePolicyId == null) {
++            return Optional.empty();
++        }
++        return Optional.of(new ParcelHandling(parcelCount == null ? ONE_PARCEL : parcelCount, insurancePolicyId));
++    }
++}
+diff --git a/parcel-post/src/main/java/com/example/parcelpost/shipment/PickupRequest.java b/parcel-post/src/main/java/com/example/parcelpost/shipment/PickupRequest.java
+new file mode 100644
+--- /dev/null
++++ b/parcel-post/src/main/java/com/example/parcelpost/shipment/PickupRequest.java
+@@ -0,0 +1,20 @@
++package com.example.parcelpost.shipment;
++
++public class PickupRequest {
++
++    private final Integer parcelCount;
++    private final String insurancePolicyId;
++
++    public PickupRequest(Integer parcelCount, String insurancePolicyId) {
++        this.parcelCount = parcelCount;
++        this.insurancePolicyId = insurancePolicyId;
++    }
++
++    public Integer getParcelCount() {
++        return parcelCount;
++    }
++
++    public String getInsurancePolicyId() {
++        return insurancePolicyId;
++    }
++}
+diff --git a/parcel-post/src/main/java/com/example/parcelpost/shipment/QuoteRequest.java b/parcel-post/src/main/java/com/example/parcelpost/shipment/QuoteRequest.java
+new file mode 100644
+--- /dev/null
++++ b/parcel-post/src/main/java/com/example/parcelpost/shipment/QuoteRequest.java
+@@ -0,0 +1,20 @@
++package com.example.parcelpost.shipment;
++
++public class QuoteRequest {
++
++    private final Integer parcelCount;
++    private final String insurancePolicyId;
++
++    public QuoteRequest(Integer parcelCount, String insurancePolicyId) {
++        this.parcelCount = parcelCount;
++        this.insurancePolicyId = insurancePolicyId;
++    }
++
++    public Integer getParcelCount() {
++        return parcelCount;
++    }
++
++    public String getInsurancePolicyId() {
++        return insurancePolicyId;
++    }
++}
+diff --git a/parcel-post/src/main/java/com/example/parcelpost/shipment/ShipmentContext.java b/parcel-post/src/main/java/com/example/parcelpost/shipment/ShipmentContext.java
+new file mode 100644
+--- /dev/null
++++ b/parcel-post/src/main/java/com/example/parcelpost/shipment/ShipmentContext.java
+@@ -0,0 +1,6 @@
++package com.example.parcelpost.shipment;
++
++public interface ShipmentContext {
++
++    Object getAttachedValue();
++}

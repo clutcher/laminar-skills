@@ -1,0 +1,45 @@
+diff --git a/shop/src/main/java/com/example/shop/order/OrderConfirmationService.java b/shop/src/main/java/com/example/shop/order/OrderConfirmationService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderConfirmationService.java
+@@ -0,0 +1,40 @@
++package com.example.shop.order;
++
++import com.example.shop.customer.Address;
++import com.example.shop.mail.EmailService;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class OrderConfirmationService {
++
++    private final EmailService emailService;
++
++    public void sendOrderConfirmation(Order order) {
++        emailService.send(
++            getRecipientEmail(order),
++            getRecipientName(order),
++            getFormattedAddress(order),
++            calculateTotal(order)
++        );
++    }
++
++    private String getRecipientEmail(Order order) {
++        return order.getCustomer().getEmail();
++    }
++
++    private String getRecipientName(Order order) {
++        return order.getCustomer().getFirstName() + " " +
++                order.getCustomer().getLastName();
++    }
++
++    private String getFormattedAddress(Order order) {
++        Address shippingAddress = order.getShippingAddress();
++        return shippingAddress.getStreet() + ", " + shippingAddress.getCity() + ", " + shippingAddress.getCountry();
++    }
++
++    private double calculateTotal(Order order) {
++        return order.getItems().stream()
++            .mapToDouble(item -> item.getPrice() * item.getQuantity())
++            .sum();
++    }
++}

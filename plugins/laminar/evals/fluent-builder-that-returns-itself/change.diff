@@ -1,0 +1,107 @@
+diff --git a/shop/src/main/java/com/example/shop/report/PdfDocument.java b/shop/src/main/java/com/example/shop/report/PdfDocument.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/report/PdfDocument.java
+@@ -0,0 +1,62 @@
++package com.example.shop.report;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class PdfDocument {
++
++    private final PageSize pageSize;
++    private final Margins margins;
++    private final String title;
++    private final List<Section> sections;
++    private final Section footer;
++
++    private PdfDocument(PageSize pageSize, Margins margins, String title, List<Section> sections, Section footer) {
++        this.pageSize = pageSize;
++        this.margins = margins;
++        this.title = title;
++        this.sections = List.copyOf(sections);
++        this.footer = footer;
++    }
++
++    public static Builder builder() {
++        return new Builder();
++    }
++
++    public static final class Builder {
++
++        private PageSize pageSize;
++        private Margins margins;
++        private String title;
++        private final List<Section> sections = new ArrayList<>();
++        private Section footer;
++
++        public Builder a4WithStandardMargins() {
++            this.pageSize = PageSize.A4;
++            this.margins = new Margins(2, 2, 2.5, 2);
++            return this;
++        }
++
++        public Builder title(String title) {
++            this.title = title;
++            return this;
++        }
++
++        public Builder sections(Section... sections) {
++            this.sections.addAll(List.of(sections));
++            return this;
++        }
++
++        public Builder footer(Section footer) {
++            this.footer = footer;
++            return this;
++        }
++
++        public PdfDocument build() {
++            if (pageSize == null || margins == null || title == null || footer == null) {
++                throw new IllegalStateException("A PDF document needs a page size, margins, a title and a footer");
++            }
++            return new PdfDocument(pageSize, margins, title, sections, footer);
++        }
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/report/QuarterlyReportService.java b/shop/src/main/java/com/example/shop/report/QuarterlyReportService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/report/QuarterlyReportService.java
+@@ -0,0 +1,35 @@
++package com.example.shop.report;
++
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class QuarterlyReportService {
++
++    private final SectionLayout sectionLayout;
++
++    public PdfDocument render(ReportData data) {
++        PdfDocument doc = PdfDocument.builder()
++            .a4WithStandardMargins()
++            .title("Quarterly Report")
++            .sections(buildHeader(data), buildCharts(data), buildTables(data))
++            .footer(buildFooter(data))
++            .build();
++        return doc;
++    }
++
++    private Section buildHeader(ReportData data) {
++        return sectionLayout.header(data.quarter(), data.companyName());
++    }
++
++    private Section buildCharts(ReportData data) {
++        return sectionLayout.revenueCharts(data.revenueByMonth());
++    }
++
++    private Section buildTables(ReportData data) {
++        return sectionLayout.orderTables(data.ordersByRegion());
++    }
++
++    private Section buildFooter(ReportData data) {
++        return sectionLayout.footer(data.preparedBy());
++    }
++}

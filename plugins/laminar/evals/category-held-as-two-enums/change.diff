@@ -1,0 +1,27 @@
+diff --git a/shop/src/main/java/com/example/shop/user/CustomerType.java b/shop/src/main/java/com/example/shop/user/CustomerType.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/user/CustomerType.java
+@@ -0,0 +1,3 @@
++package com.example.shop.user;
++
++public enum CustomerType { NONE, STANDARD, PREMIUM }
+diff --git a/shop/src/main/java/com/example/shop/user/User.java b/shop/src/main/java/com/example/shop/user/User.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/user/User.java
+@@ -0,0 +1,6 @@
++package com.example.shop.user;
++
++class User {
++    private CustomerType customerType;
++    private UserRole role;
++}
+diff --git a/shop/src/main/java/com/example/shop/user/UserRole.java b/shop/src/main/java/com/example/shop/user/UserRole.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/user/UserRole.java
+@@ -0,0 +1,3 @@
++package com.example.shop.user;
++
++public enum UserRole { CUSTOMER, MANAGER, ADMIN }

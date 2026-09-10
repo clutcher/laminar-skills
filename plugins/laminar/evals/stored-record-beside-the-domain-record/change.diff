@@ -1,0 +1,92 @@
+diff --git a/berths/src/main/java/com/example/berths/booking/BerthBooking.java b/berths/src/main/java/com/example/berths/booking/BerthBooking.java
+new file mode 100644
+index 0000000..cb3e288
+--- /dev/null
++++ b/berths/src/main/java/com/example/berths/booking/BerthBooking.java
+@@ -0,0 +1,10 @@
++package com.example.berths.booking;
++
++import java.time.LocalDate;
++
++public record BerthBooking(String vesselName, int berthNumber, LocalDate arrivesOn, LocalDate leavesOn, int lengthMetres) {
++
++    public boolean overlaps(BerthBooking other) {
++        return berthNumber == other.berthNumber && !leavesOn.isBefore(other.arrivesOn) && !other.leavesOn.isBefore(arrivesOn);
++    }
++}
+diff --git a/berths/src/main/java/com/example/berths/booking/storage/BerthBookingConverter.java b/berths/src/main/java/com/example/berths/booking/storage/BerthBookingConverter.java
+new file mode 100644
+index 0000000..af32156
+--- /dev/null
++++ b/berths/src/main/java/com/example/berths/booking/storage/BerthBookingConverter.java
+@@ -0,0 +1,14 @@
++package com.example.berths.booking.storage;
++
++import com.example.berths.booking.BerthBooking;
++
++public class BerthBookingConverter {
++
++    public BerthBookingEntity toEntity(BerthBooking booking) {
++        return new BerthBookingEntity(booking.vesselName(), booking.berthNumber(), booking.arrivesOn(), booking.leavesOn(), booking.lengthMetres());
++    }
++
++    public BerthBooking toDomain(BerthBookingEntity entity) {
++        return new BerthBooking(entity.getVesselName(), entity.getBerthNumber(), entity.getArrivesOn(), entity.getLeavesOn(), entity.getLengthMetres());
++    }
++}
+diff --git a/berths/src/main/java/com/example/berths/booking/storage/BerthBookingEntity.java b/berths/src/main/java/com/example/berths/booking/storage/BerthBookingEntity.java
+new file mode 100644
+index 0000000..fa6b7dc
+--- /dev/null
++++ b/berths/src/main/java/com/example/berths/booking/storage/BerthBookingEntity.java
+@@ -0,0 +1,50 @@
++package com.example.berths.booking.storage;
++
++import jakarta.persistence.Column;
++import jakarta.persistence.Entity;
++import jakarta.persistence.GeneratedValue;
++import jakarta.persistence.Id;
++import jakarta.persistence.Table;
++
++import java.time.LocalDate;
++
++@Entity
++@Table(name = "berth_booking")
++public class BerthBookingEntity {
++
++    @Id
++    @GeneratedValue
++    private Long id;
++
++    @Column(name = "vessel_name")
++    private String vesselName;
++
++    @Column(name = "berth_number")
++    private int berthNumber;
++
++    @Column(name = "arrives_on")
++    private LocalDate arrivesOn;
++
++    @Column(name = "leaves_on")
++    private LocalDate leavesOn;
++
++    @Column(name = "length_metres")
++    private int lengthMetres;
++
++    protected BerthBookingEntity() {
++    }
++
++    public BerthBookingEntity(String vesselName, int berthNumber, LocalDate arrivesOn, LocalDate leavesOn, int lengthMetres) {
++        this.vesselName = vesselName;
++        this.berthNumber = berthNumber;
++        this.arrivesOn = arrivesOn;
++        this.leavesOn = leavesOn;
++        this.lengthMetres = lengthMetres;
++    }
++
++    public String getVesselName() { return vesselName; }
++    public int getBerthNumber() { return berthNumber; }
++    public LocalDate getArrivesOn() { return arrivesOn; }
++    public LocalDate getLeavesOn() { return leavesOn; }
++    public int getLengthMetres() { return lengthMetres; }
++}

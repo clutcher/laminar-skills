@@ -1,0 +1,23 @@
+diff --git a/shop/src/main/java/com/example/shop/order/Order.java b/shop/src/main/java/com/example/shop/order/Order.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/Order.java
+@@ -0,0 +1,18 @@
++package com.example.shop.order;
++
++class Order {
++    private Long id;
++    private String customerFirstName;
++    private String customerLastName;
++    private String customerEmail;
++    private String shippingStreet;
++    private String shippingCity;
++    private String shippingPostalCode;
++    private String shippingCountry;
++    private String billingStreet;
++    private String billingCity;
++    private String billingPostalCode;
++    private String billingCountry;
++    private double total;
++    private OrderStatus status;
++}

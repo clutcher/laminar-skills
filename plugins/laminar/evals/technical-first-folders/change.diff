@@ -1,0 +1,156 @@
+diff --git a/company-website/controllers/ConsignmentController.java b/company-website/controllers/ConsignmentController.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/controllers/ConsignmentController.java
+@@ -0,0 +1,22 @@
++package com.example.website.controllers;
++
++import com.example.website.model.Consignment;
++import com.example.website.services.SplitConsignmentService;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class ConsignmentController {
++
++    private final SplitConsignmentService splitConsignmentService;
++
++    public ConsignmentController(SplitConsignmentService splitConsignmentService) {
++        this.splitConsignmentService = splitConsignmentService;
++    }
++
++    @PostMapping("/orders/{orderId}/consignments")
++    public java.util.List<Consignment> splitOrder(@PathVariable Long orderId) {
++        return splitConsignmentService.splitIntoConsignments(orderId);
++    }
++}
+diff --git a/company-website/controllers/OrderController.java b/company-website/controllers/OrderController.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/controllers/OrderController.java
+@@ -0,0 +1,22 @@
++package com.example.website.controllers;
++
++import com.example.website.model.Order;
++import com.example.website.services.PlaceOrderService;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class OrderController {
++
++    private final PlaceOrderService placeOrderService;
++
++    public OrderController(PlaceOrderService placeOrderService) {
++        this.placeOrderService = placeOrderService;
++    }
++
++    @PostMapping("/orders")
++    public Order placeOrder(@RequestBody Order order) {
++        return placeOrderService.placeOrder(order);
++    }
++}
+diff --git a/company-website/repositories/ConsignmentRepository.java b/company-website/repositories/ConsignmentRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/repositories/ConsignmentRepository.java
+@@ -0,0 +1,7 @@
++package com.example.website.repositories;
++
++import com.example.website.model.Consignment;
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface ConsignmentRepository extends JpaRepository<Consignment, Long> {
++}
+diff --git a/company-website/repositories/OrderRepository.java b/company-website/repositories/OrderRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/repositories/OrderRepository.java
+@@ -0,0 +1,7 @@
++package com.example.website.repositories;
++
++import com.example.website.model.Order;
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface OrderRepository extends JpaRepository<Order, Long> {
++}
+diff --git a/company-website/repositories/ProductRepository.java b/company-website/repositories/ProductRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/repositories/ProductRepository.java
+@@ -0,0 +1,7 @@
++package com.example.website.repositories;
++
++import com.example.website.model.Product;
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface ProductRepository extends JpaRepository<Product, Long> {
++}
+diff --git a/company-website/repositories/WarehouseRepository.java b/company-website/repositories/WarehouseRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/repositories/WarehouseRepository.java
+@@ -0,0 +1,7 @@
++package com.example.website.repositories;
++
++import com.example.website.model.Warehouse;
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
++}
+diff --git a/company-website/services/PlaceOrderService.java b/company-website/services/PlaceOrderService.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/services/PlaceOrderService.java
+@@ -0,0 +1,19 @@
++package com.example.website.services;
++
++import com.example.website.model.Order;
++import com.example.website.repositories.OrderRepository;
++import org.springframework.stereotype.Service;
++
++@Service
++public class PlaceOrderService {
++
++    private final OrderRepository orderRepository;
++
++    public PlaceOrderService(OrderRepository orderRepository) {
++        this.orderRepository = orderRepository;
++    }
++
++    public Order placeOrder(Order order) {
++        return orderRepository.save(order);
++    }
++}
+diff --git a/company-website/services/SplitConsignmentService.java b/company-website/services/SplitConsignmentService.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/services/SplitConsignmentService.java
+@@ -0,0 +1,25 @@
++package com.example.website.services;
++
++import com.example.website.model.Consignment;
++import com.example.website.repositories.ConsignmentRepository;
++import com.example.website.repositories.WarehouseRepository;
++import java.util.List;
++import org.springframework.stereotype.Service;
++
++@Service
++public class SplitConsignmentService {
++
++    private final ConsignmentRepository consignmentRepository;
++    private final WarehouseRepository warehouseRepository;
++
++    public SplitConsignmentService(ConsignmentRepository consignmentRepository, WarehouseRepository warehouseRepository) {
++        this.consignmentRepository = consignmentRepository;
++        this.warehouseRepository = warehouseRepository;
++    }
++
++    public List<Consignment> splitIntoConsignments(Long orderId) {
++        return warehouseRepository.findAll().stream()
++                .map(warehouse -> consignmentRepository.save(new Consignment(orderId, warehouse.getId())))
++                .toList();
++    }
++}

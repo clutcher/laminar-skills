@@ -1,0 +1,21 @@
+diff --git a/greenhouse/src/ventilation/greenhouse-ventilation.ts b/greenhouse/src/ventilation/greenhouse-ventilation.ts
+new file mode 100644
+--- /dev/null
++++ b/greenhouse/src/ventilation/greenhouse-ventilation.ts
+@@ -0,0 +1,16 @@
++import { Greenhouse } from "./greenhouse";
++import { VentOpening } from "./vent-opening";
++import { VentSchedule } from "./vent-schedule";
++
++export class GreenhouseVentilation {
++  constructor(private readonly ventSchedule: VentSchedule) {}
++
++  openVentsFor(greenhouse: Greenhouse, readingAt: Date): VentOpening {
++    const insideTemperature = greenhouse.readTemperatureAt(readingAt);
++    const targetTemperature = this.ventSchedule.readTargetTemperatureAt(readingAt);
++
++    const degreesTooWarm = insideTemperature - targetTemperature;
++
++    return VentOpening.createForDegreesTooWarm(degreesTooWarm);
++  }
++}

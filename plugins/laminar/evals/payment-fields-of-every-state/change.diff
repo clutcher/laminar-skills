@@ -1,0 +1,20 @@
+diff --git a/shop/src/main/java/com/example/shop/payment/Payment.java b/shop/src/main/java/com/example/shop/payment/Payment.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/payment/Payment.java
+@@ -0,0 +1,7 @@
++package com.example.shop.payment;
++
++class Payment {
++    PaymentState state;
++    String transactionId;
++    String errorMessage;
++}
+diff --git a/shop/src/main/java/com/example/shop/payment/PaymentState.java b/shop/src/main/java/com/example/shop/payment/PaymentState.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/payment/PaymentState.java
+@@ -0,0 +1,3 @@
++package com.example.shop.payment;
++
++enum PaymentState { PENDING, COMPLETED, FAILED }

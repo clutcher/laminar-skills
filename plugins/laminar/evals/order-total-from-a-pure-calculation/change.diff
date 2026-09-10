@@ -1,0 +1,50 @@
+diff --git a/shop/src/main/java/com/example/shop/order/OrderPlacementService.java b/shop/src/main/java/com/example/shop/order/OrderPlacementService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderPlacementService.java
+@@ -0,0 +1,45 @@
++package com.example.shop.order;
++
++import com.example.shop.catalog.Product;
++import com.example.shop.catalog.ProductRepository;
++import com.example.shop.customer.Customer;
++import com.example.shop.customer.CustomerRepository;
++import java.util.List;
++import java.util.Map;
++import java.util.stream.Collectors;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class OrderPlacementService {
++
++    private final CustomerRepository customerRepository;
++    private final ProductRepository productRepository;
++
++    public Order placeOrder(Cart cart) {
++        Customer customer = customerRepository.find(cart.getCustomerId());
++        List<Product> products = productRepository.findAll(cart.getProductIds());
++
++        OrderTotals totals = calculateOrder(cart, customer, products);
++
++        return new Order(customer, cart.getLineItems(), totals);
++    }
++
++    OrderTotals calculateOrder(Cart cart, Customer customer, List<Product> products) {
++        double subtotal = calculateSubtotal(cart, products);
++        double discount = calculateDiscount(customer, subtotal);
++        double total = subtotal - discount;
++        return new OrderTotals(subtotal, discount, total);
++    }
++
++    private double calculateSubtotal(Cart cart, List<Product> products) {
++        Map<Long, Double> priceByProductIdMap = products.stream()
++                .collect(Collectors.toMap(Product::getId, Product::getPrice));
++        return cart.getLineItems().stream()
++                .mapToDouble(lineItem -> priceByProductIdMap.get(lineItem.getProductId()) * lineItem.getQuantity())
++                .sum();
++    }
++
++    private double calculateDiscount(Customer customer, double subtotal) {
++        return customer.isPremium() ? subtotal * 0.1 : 0;
++    }
++}

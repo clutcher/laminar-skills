@@ -1,0 +1,23 @@
+diff --git a/shop/src/main/java/com/example/shop/order/OrderConfirmationService.java b/shop/src/main/java/com/example/shop/order/OrderConfirmationService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderConfirmationService.java
+@@ -0,0 +1,18 @@
++package com.example.shop.order;
++
++import com.example.shop.mail.EmailMessage;
++import com.example.shop.mail.EmailMessageFactory;
++import com.example.shop.mail.EmailService;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class OrderConfirmationService {
++
++    private final EmailMessageFactory emailMessageFactory;
++    private final EmailService emailService;
++
++    public void sendOrderConfirmation(Order order) {
++        EmailMessage message = emailMessageFactory.createConfirmationMessage(order);
++        emailService.send(message);
++    }
++}

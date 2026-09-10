@@ -1,0 +1,83 @@
+diff --git a/shop/src/main/java/com/example/shop/notification/EmailPermissionService.java b/shop/src/main/java/com/example/shop/notification/EmailPermissionService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/notification/EmailPermissionService.java
+@@ -0,0 +1,23 @@
++package com.example.shop.notification;
++
++import com.example.shop.user.NotificationPreferences;
++import com.example.shop.user.User;
++
++class EmailPermissionService {
++
++    boolean canSend(User user) {
++        if (user == null) {
++            return false;
++        }
++        NotificationPreferences notificationPreferences = user.getPreferences();
++        if (notificationPreferences == null
++                || !notificationPreferences.isEmailEnabled()) {
++            return false;
++        }
++        String emailAddress = user.getEmailAddress();
++        if (emailAddress == null || emailAddress.isBlank()) {
++            return false;
++        }
++        return true;
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/notification/NotificationService.java b/shop/src/main/java/com/example/shop/notification/NotificationService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/notification/NotificationService.java
+@@ -0,0 +1,21 @@
++package com.example.shop.notification;
++
++import com.example.shop.mail.EmailService;
++import com.example.shop.user.User;
++import com.example.shop.user.UserRepository;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++class NotificationService {
++    private final UserRepository userRepository;
++    private final EmailService emailService;
++    private final EmailPermissionService emailPermissionService;
++
++    public boolean notifyUser(long userId, String message) {
++        User user = userRepository.findById(userId);
++        if (!emailPermissionService.canSend(user)) {
++            return false;
++        }
++        return emailService.send(user.getEmailAddress(), message);
++    }
++}
+diff --git a/shop/src/test/java/com/example/shop/notification/EmailPermissionServiceTest.java b/shop/src/test/java/com/example/shop/notification/EmailPermissionServiceTest.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/test/java/com/example/shop/notification/EmailPermissionServiceTest.java
+@@ -0,0 +1,24 @@
++package com.example.shop.notification;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import com.example.shop.user.NotificationPreferences;
++import com.example.shop.user.User;
++import org.junit.jupiter.api.Test;
++
++class EmailPermissionServiceTest {
++
++    private final EmailPermissionService emailPermissionService = new EmailPermissionService();
++
++    @Test
++    void shouldAllowSendingWhenEmailEnabledAndValid() {
++        // given
++        User user = new User("test@example.com", new NotificationPreferences(true));
++
++        // when
++        boolean result = emailPermissionService.canSend(user);
++
++        // then
++        assertThat(result).isTrue();
++    }
++}

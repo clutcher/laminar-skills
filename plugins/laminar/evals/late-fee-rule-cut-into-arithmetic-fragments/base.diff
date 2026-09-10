@@ -1,0 +1,33 @@
+diff --git a/toollibrary/src/main/java/com/example/toollibrary/fees/Money.java b/toollibrary/src/main/java/com/example/toollibrary/fees/Money.java
+new file mode 100644
+--- /dev/null
++++ b/toollibrary/src/main/java/com/example/toollibrary/fees/Money.java
+@@ -0,0 +1,8 @@
++package com.example.toollibrary.fees;
++
++public record Money(long cents) {
++
++    public static Money ofCents(long cents) {
++        return new Money(cents);
++    }
++}
+diff --git a/toollibrary/src/main/java/com/example/toollibrary/fees/Tool.java b/toollibrary/src/main/java/com/example/toollibrary/fees/Tool.java
+new file mode 100644
+--- /dev/null
++++ b/toollibrary/src/main/java/com/example/toollibrary/fees/Tool.java
+@@ -0,0 +1,4 @@
++package com.example.toollibrary.fees;
++
++public record Tool(String name, long replacementPriceInCents) {
++}
+diff --git a/toollibrary/src/main/java/com/example/toollibrary/fees/ToolLoan.java b/toollibrary/src/main/java/com/example/toollibrary/fees/ToolLoan.java
+new file mode 100644
+--- /dev/null
++++ b/toollibrary/src/main/java/com/example/toollibrary/fees/ToolLoan.java
+@@ -0,0 +1,6 @@
++package com.example.toollibrary.fees;
++
++import java.time.LocalDate;
++
++public record ToolLoan(Tool tool, String memberId, LocalDate dueOn) {
++}

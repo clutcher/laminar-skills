@@ -1,0 +1,205 @@
+diff --git a/src/main/java/org/riverside/library/catalogue/CatalogueHttpClient.java b/src/main/java/org/riverside/library/catalogue/CatalogueHttpClient.java
+new file mode 100644
+index 0000000..6fb5d20
+--- /dev/null
++++ b/src/main/java/org/riverside/library/catalogue/CatalogueHttpClient.java
+@@ -0,0 +1,6 @@
++package org.riverside.library.catalogue;
++
++public interface CatalogueHttpClient {
++
++    CatalogueRecord recordFor(String isbn);
++}
+diff --git a/src/main/java/org/riverside/library/catalogue/CatalogueRecord.java b/src/main/java/org/riverside/library/catalogue/CatalogueRecord.java
+new file mode 100644
+index 0000000..c8aa850
+--- /dev/null
++++ b/src/main/java/org/riverside/library/catalogue/CatalogueRecord.java
+@@ -0,0 +1,4 @@
++package org.riverside.library.catalogue;
++
++public record CatalogueRecord(String isbn, String title, String author) {
++}
+diff --git a/src/main/java/org/riverside/library/loan/Loan.java b/src/main/java/org/riverside/library/loan/Loan.java
+new file mode 100644
+index 0000000..b03e981
+--- /dev/null
++++ b/src/main/java/org/riverside/library/loan/Loan.java
+@@ -0,0 +1,6 @@
++package org.riverside.library.loan;
++
++import java.time.LocalDate;
++
++public record Loan(String memberEmail, String isbn, LocalDate dueDate) {
++}
+diff --git a/src/main/java/org/riverside/library/loan/LoanRepository.java b/src/main/java/org/riverside/library/loan/LoanRepository.java
+new file mode 100644
+index 0000000..e2d6523
+--- /dev/null
++++ b/src/main/java/org/riverside/library/loan/LoanRepository.java
+@@ -0,0 +1,9 @@
++package org.riverside.library.loan;
++
++import java.time.LocalDate;
++import java.util.List;
++
++public interface LoanRepository {
++
++    List<Loan> findOverdueOn(LocalDate day);
++}
+diff --git a/src/main/java/org/riverside/library/notice/DueDateLabel.java b/src/main/java/org/riverside/library/notice/DueDateLabel.java
+new file mode 100644
+index 0000000..03186e5
+--- /dev/null
++++ b/src/main/java/org/riverside/library/notice/DueDateLabel.java
+@@ -0,0 +1,10 @@
++package org.riverside.library.notice;
++
++import java.time.LocalDate;
++
++public class DueDateLabel {
++
++    public String labelFor(LocalDate dueDate) {
++        return dueDate.toString();
++    }
++}
+diff --git a/src/main/java/org/riverside/library/notice/LoanLine.java b/src/main/java/org/riverside/library/notice/LoanLine.java
+new file mode 100644
+index 0000000..7374517
+--- /dev/null
++++ b/src/main/java/org/riverside/library/notice/LoanLine.java
+@@ -0,0 +1,18 @@
++package org.riverside.library.notice;
++
++import org.riverside.library.loan.Loan;
++
++public class LoanLine {
++
++    private final TitleLabel titleLabel;
++    private final DueDateLabel dueDateLabel;
++
++    public LoanLine(TitleLabel titleLabel, DueDateLabel dueDateLabel) {
++        this.titleLabel = titleLabel;
++        this.dueDateLabel = dueDateLabel;
++    }
++
++    public String describe(Loan loan) {
++        return titleLabel.labelFor(loan.isbn()) + ", due " + dueDateLabel.labelFor(loan.dueDate());
++    }
++}
+diff --git a/src/main/java/org/riverside/library/notice/LongDateFormat.java b/src/main/java/org/riverside/library/notice/LongDateFormat.java
+new file mode 100644
+index 0000000..db7da49
+--- /dev/null
++++ b/src/main/java/org/riverside/library/notice/LongDateFormat.java
+@@ -0,0 +1,14 @@
++package org.riverside.library.notice;
++
++import java.time.LocalDate;
++import java.time.format.DateTimeFormatter;
++import java.util.Locale;
++
++public class LongDateFormat {
++
++    private static final DateTimeFormatter LONG_DATE = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Locale.ENGLISH);
++
++    public String render(LocalDate date) {
++        return LONG_DATE.format(date);
++    }
++}
+diff --git a/src/main/java/org/riverside/library/notice/NoticeMailer.java b/src/main/java/org/riverside/library/notice/NoticeMailer.java
+new file mode 100644
+index 0000000..7fe9e9f
+--- /dev/null
++++ b/src/main/java/org/riverside/library/notice/NoticeMailer.java
+@@ -0,0 +1,6 @@
++package org.riverside.library.notice;
++
++public interface NoticeMailer {
++
++    void queue(OverdueNotice notice);
++}
+diff --git a/src/main/java/org/riverside/library/notice/OverdueNotice.java b/src/main/java/org/riverside/library/notice/OverdueNotice.java
+new file mode 100644
+index 0000000..9655b68
+--- /dev/null
++++ b/src/main/java/org/riverside/library/notice/OverdueNotice.java
+@@ -0,0 +1,4 @@
++package org.riverside.library.notice;
++
++public record OverdueNotice(String memberEmail, String subject, String body) {
++}
+diff --git a/src/main/java/org/riverside/library/notice/OverdueNoticeComposer.java b/src/main/java/org/riverside/library/notice/OverdueNoticeComposer.java
+new file mode 100644
+index 0000000..4bc6af6
+--- /dev/null
++++ b/src/main/java/org/riverside/library/notice/OverdueNoticeComposer.java
+@@ -0,0 +1,20 @@
++package org.riverside.library.notice;
++
++import org.riverside.library.loan.Loan;
++
++import java.time.LocalDate;
++
++public class OverdueNoticeComposer {
++
++    private final LoanLine loanLine;
++
++    public OverdueNoticeComposer(LoanLine loanLine) {
++        this.loanLine = loanLine;
++    }
++
++    public OverdueNotice compose(Loan loan, LocalDate day) {
++        String subject = "Your loan is overdue since " + loan.dueDate();
++        String body = "Please return " + loanLine.describe(loan) + " to any Riverside branch.";
++        return new OverdueNotice(loan.memberEmail(), subject, body);
++    }
++}
+diff --git a/src/main/java/org/riverside/library/notice/OverdueNoticeRun.java b/src/main/java/org/riverside/library/notice/OverdueNoticeRun.java
+new file mode 100644
+index 0000000..de6186d
+--- /dev/null
++++ b/src/main/java/org/riverside/library/notice/OverdueNoticeRun.java
+@@ -0,0 +1,28 @@
++package org.riverside.library.notice;
++
++import org.riverside.library.loan.Loan;
++import org.riverside.library.loan.LoanRepository;
++
++import java.time.LocalDate;
++import java.util.List;
++
++public class OverdueNoticeRun {
++
++    private final LoanRepository loanRepository;
++    private final OverdueNoticeComposer noticeComposer;
++    private final NoticeMailer noticeMailer;
++
++    public OverdueNoticeRun(LoanRepository loanRepository, OverdueNoticeComposer noticeComposer, NoticeMailer noticeMailer) {
++        this.loanRepository = loanRepository;
++        this.noticeComposer = noticeComposer;
++        this.noticeMailer = noticeMailer;
++    }
++
++    public void runFor(LocalDate day) {
++        List<Loan> overdueLoans = loanRepository.findOverdueOn(day);
++        for (Loan loan : overdueLoans) {
++            OverdueNotice notice = noticeComposer.compose(loan, day);
++            noticeMailer.queue(notice);
++        }
++    }
++}
+diff --git a/src/main/java/org/riverside/library/notice/TitleLabel.java b/src/main/java/org/riverside/library/notice/TitleLabel.java
+new file mode 100644
+index 0000000..f996d43
+--- /dev/null
++++ b/src/main/java/org/riverside/library/notice/TitleLabel.java
+@@ -0,0 +1,8 @@
++package org.riverside.library.notice;
++
++public class TitleLabel {
++
++    public String labelFor(String isbn) {
++        return "the item with ISBN " + isbn;
++    }
++}

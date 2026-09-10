@@ -1,0 +1,168 @@
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exceptions/LanguageNotOfferedException.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exceptions/LanguageNotOfferedException.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exceptions/LanguageNotOfferedException.java
+@@ -0,0 +1,10 @@
++package org.example.museum.collection.exhibit.app.domain.model.exceptions;
++
++import java.util.Locale;
++
++public class LanguageNotOfferedException extends RuntimeException {
++
++    public LanguageNotOfferedException(Locale language) {
++        super("language '" + language.toLanguageTag() + "' is not offered for exhibit texts");
++    }
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/ExhibitSearchOptions.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/ExhibitSearchOptions.java
+--- a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/ExhibitSearchOptions.java
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/ExhibitSearchOptions.java
+@@ -1,9 +1,11 @@
+ package org.example.museum.collection.exhibit.app.domain.model.exhibit.search;
+ 
+ import lombok.Builder;
++import java.util.Locale;
+ 
+ @Builder
+ public record ExhibitSearchOptions(
++        Locale language,
+         Projection projection
+ ) {
+ 
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/services/ExhibitSearchService.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/services/ExhibitSearchService.java
+--- a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/services/ExhibitSearchService.java
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/services/ExhibitSearchService.java
+@@ -5,7 +5,9 @@
+ import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchCriteria;
+ import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchOptions;
+ import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.PageRequest;
++import org.example.museum.collection.exhibit.app.domain.services.validators.SupportedLanguageValidator;
+ import org.example.museum.collection.exhibit.app.spi.ExhibitCatalogue;
++import org.example.museum.collection.exhibit.app.spi.LanguageCatalogue;
+ import org.springframework.stereotype.Service;
+ 
+ import java.util.List;
+@@ -14,16 +16,19 @@
+ public class ExhibitSearchService implements ApiForExhibitSearch {
+ 
+     private final ExhibitCatalogue exhibitCatalogue;
++    private final SupportedLanguageValidator supportedLanguageValidator;
+ 
+-    public ExhibitSearchService(ExhibitCatalogue exhibitCatalogue) {
++    public ExhibitSearchService(ExhibitCatalogue exhibitCatalogue, LanguageCatalogue languageCatalogue) {
+         this.exhibitCatalogue = exhibitCatalogue;
++        this.supportedLanguageValidator = new SupportedLanguageValidator(languageCatalogue);
+     }
+ 
+     @Override
+     public List<? extends ExhibitSummary> search(ExhibitSearchCriteria criteria, PageRequest page, ExhibitSearchOptions options) {
++        supportedLanguageValidator.validate(options.language());
+         return switch (options.projection()) {
+             case SUMMARY -> exhibitCatalogue.findSummaries(criteria, page);
+-            case DETAILED -> exhibitCatalogue.findWithDescriptions(criteria, page);
++            case DETAILED -> exhibitCatalogue.findWithDescriptions(criteria, page, options.language());
+         };
+     }
+ }
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/services/validators/SupportedLanguageValidator.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/services/validators/SupportedLanguageValidator.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/services/validators/SupportedLanguageValidator.java
+@@ -0,0 +1,21 @@
++package org.example.museum.collection.exhibit.app.domain.services.validators;
++
++import org.example.museum.collection.exhibit.app.domain.model.exceptions.LanguageNotOfferedException;
++import org.example.museum.collection.exhibit.app.spi.LanguageCatalogue;
++
++import java.util.Locale;
++
++public class SupportedLanguageValidator {
++
++    private final LanguageCatalogue languageCatalogue;
++
++    public SupportedLanguageValidator(LanguageCatalogue languageCatalogue) {
++        this.languageCatalogue = languageCatalogue;
++    }
++
++    public void validate(Locale requestedLanguage) {
++        if (requestedLanguage != null && !languageCatalogue.offers(requestedLanguage)) {
++            throw new LanguageNotOfferedException(requestedLanguage);
++        }
++    }
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/spi/ExhibitCatalogue.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/spi/ExhibitCatalogue.java
+--- a/collection/src/main/java/org/example/museum/collection/exhibit/app/spi/ExhibitCatalogue.java
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/spi/ExhibitCatalogue.java
+@@ -5,10 +5,11 @@
+ import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.PageRequest;
+ 
+ import java.util.List;
++import java.util.Locale;
+ 
+ public interface ExhibitCatalogue {
+ 
+     List<? extends ExhibitSummary> findSummaries(ExhibitSearchCriteria criteria, PageRequest page);
+ 
+-    List<? extends ExhibitSummary> findWithDescriptions(ExhibitSearchCriteria criteria, PageRequest page);
++    List<? extends ExhibitSummary> findWithDescriptions(ExhibitSearchCriteria criteria, PageRequest page, Locale language);
+ }
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/spi/LanguageCatalogue.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/spi/LanguageCatalogue.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/spi/LanguageCatalogue.java
+@@ -0,0 +1,8 @@
++package org.example.museum.collection.exhibit.app.spi;
++
++import java.util.Locale;
++
++public interface LanguageCatalogue {
++
++    boolean offers(Locale language);
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/ExhibitGraphQLController.java b/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/ExhibitGraphQLController.java
+--- a/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/ExhibitGraphQLController.java
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/ExhibitGraphQLController.java
+@@ -16,6 +16,7 @@
+ import org.springframework.stereotype.Controller;
+ 
+ import java.util.List;
++import java.util.Locale;
+ 
+ @Controller
+ public class ExhibitGraphQLController {
+@@ -30,11 +31,12 @@
+     public List<org.example.museum.generated.graphql.types.Exhibit> getExhibits(
+             @Argument("filter") ExhibitFilterInput filter,
+             @Argument("page") PageInput page,
++            @Argument("language") Locale language,
+             DataFetchingFieldSelectionSet selectionSet
+     ) {
+         ExhibitSearchCriteria criteria = ExhibitFilterMapper.INSTANCE.toCriteria(filter);
+         PageRequest pageRequest = ExhibitFilterMapper.INSTANCE.toPageRequest(page);
+-        ExhibitSearchOptions options = ExhibitSearchOptionsMapper.INSTANCE.toOptions(selectionSet);
++        ExhibitSearchOptions options = ExhibitSearchOptionsMapper.INSTANCE.toOptions(selectionSet, language);
+ 
+         List<? extends ExhibitSummary> exhibits = apiForExhibitSearch.search(criteria, pageRequest, options);
+         return ExhibitResponseMapper.INSTANCE.toExhibitList(exhibits);
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/mappers/ExhibitSearchOptionsMapper.java b/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/mappers/ExhibitSearchOptionsMapper.java
+--- a/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/mappers/ExhibitSearchOptionsMapper.java
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/mappers/ExhibitSearchOptionsMapper.java
+@@ -8,15 +8,18 @@
+ import org.mapstruct.Mapper;
+ import org.mapstruct.factory.Mappers;
+ 
++import java.util.Locale;
++
+ @Mapper
+ public interface ExhibitSearchOptionsMapper {
+     ExhibitSearchOptionsMapper INSTANCE = Mappers.getMapper(ExhibitSearchOptionsMapper.class);
+ 
+-    default ExhibitSearchOptions toOptions(DataFetchingFieldSelectionSet selectionSet) {
++    default ExhibitSearchOptions toOptions(DataFetchingFieldSelectionSet selectionSet, Locale language) {
+         boolean summaryIsEnough = selectionSet.getImmediateFields().stream()
+                 .map(SelectedField::getName)
+                 .allMatch(ExhibitSummary.FIELDS::contains);
+         return ExhibitSearchOptions.builder()
++                .language(language)
+                 .projection(summaryIsEnough ? Projection.SUMMARY : Projection.DETAILED)
+                 .build();
+     }

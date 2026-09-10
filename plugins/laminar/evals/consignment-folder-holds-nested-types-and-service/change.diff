@@ -1,0 +1,85 @@
+diff --git a/courier-desk/src/main/java/com/example/courier/consignment/Consignment.java b/courier-desk/src/main/java/com/example/courier/consignment/Consignment.java
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/main/java/com/example/courier/consignment/Consignment.java
+@@ -0,0 +1,45 @@
++package com.example.courier.consignment;
++
++import java.util.List;
++
++public class Consignment {
++
++    public record Line(String parcelId, int weightInGrams) {
++    }
++
++    public enum Status {
++        BOOKED,
++        DISPATCHED,
++        DELIVERED
++    }
++
++    private final String consignmentId;
++    private final List<Line> lines;
++    private Status status;
++
++    public Consignment(String consignmentId, List<Line> lines) {
++        this.consignmentId = consignmentId;
++        this.lines = List.copyOf(lines);
++        this.status = Status.BOOKED;
++    }
++
++    public String getConsignmentId() {
++        return consignmentId;
++    }
++
++    public int getTotalWeightInGrams() {
++        return lines.stream().mapToInt(Line::weightInGrams).sum();
++    }
++
++    public boolean isDispatched() {
++        return status == Status.DISPATCHED;
++    }
++
++    public void dispatch() {
++        status = Status.DISPATCHED;
++    }
++
++    public void markDelivered() {
++        status = Status.DELIVERED;
++    }
++}
+diff --git a/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentService.java b/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentService.java
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentService.java
+@@ -0,0 +1,30 @@
++package com.example.courier.consignment;
++
++import java.util.HashMap;
++import java.util.Map;
++import java.util.NoSuchElementException;
++
++public class ConsignmentService {
++
++    private final Map<String, Consignment> consignmentsById = new HashMap<>();
++
++    public void registerConsignment(Consignment consignment) {
++        consignmentsById.put(consignment.getConsignmentId(), consignment);
++    }
++
++    public void dispatchConsignment(String consignmentId) {
++        findConsignment(consignmentId).dispatch();
++    }
++
++    public void confirmDelivery(String consignmentId) {
++        findConsignment(consignmentId).markDelivered();
++    }
++
++    private Consignment findConsignment(String consignmentId) {
++        Consignment consignment = consignmentsById.get(consignmentId);
++        if (consignment == null) {
++            throw new NoSuchElementException("No consignment " + consignmentId);
++        }
++        return consignment;
++    }
++}

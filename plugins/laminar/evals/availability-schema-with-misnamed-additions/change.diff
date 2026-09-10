@@ -1,0 +1,22 @@
+diff --git a/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls b/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls
+--- a/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls
++++ b/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls
+@@ -8,6 +8,8 @@
+ type Availability {
+     roasteryStocks: [RoasteryStock!]
+     incomingShipments: [IncomingShipment!]
++    roastingSchedules: [RoastingSchedule!]
++    supplyLevel: String
+     cancellationTerm: CancellationTerm
+ }
+ 
+@@ -44,3 +46,9 @@
+     bags: Int!
+     expectedArrivalDate: SecondsSinceEpoch
+ }
++
++type RoastingSchedule {
++    qty: Int!
++    unit: String
++    expectedLandingDate: SecondsSinceEpoch
++}

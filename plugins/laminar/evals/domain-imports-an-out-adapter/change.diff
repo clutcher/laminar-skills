@@ -1,0 +1,49 @@
+diff --git a/greenhouse/src/greenhouse/app/domain/watering_service.py b/greenhouse/src/greenhouse/app/domain/watering_service.py
+index d81f034..cd35ff6 100644
+--- a/greenhouse/src/greenhouse/app/domain/watering_service.py
++++ b/greenhouse/src/greenhouse/app/domain/watering_service.py
+@@ -1,15 +1,20 @@
+ from greenhouse.app.api.water_beds import WaterBeds
+ from greenhouse.app.domain.bed import Bed
+ from greenhouse.app.spi.valve_control import ValveControl
++from greenhouse.out.sensors.soil_probe_client import SoilProbeClient
+ 
+ 
+ class WateringService(WaterBeds):
+-    def __init__(self, beds: dict[str, Bed], valve_control: ValveControl) -> None:
++    def __init__(self, beds: dict[str, Bed], valve_control: ValveControl, soil_moisture: SoilProbeClient) -> None:
+         self._beds = beds
+         self._valve_control = valve_control
++        self._soil_moisture = soil_moisture
+ 
+     def water_bed(self, bed_id: str) -> int:
+         bed = self._beds[bed_id]
++        moisture_percent = self._soil_moisture.moisture_percent_of(bed_id)
++        if moisture_percent >= 40:
++            return 0
+         litres = bed.litres_needed()
+         self._valve_control.open_for_litres(bed_id, litres)
+         return litres
+diff --git a/greenhouse/src/greenhouse/out/sensors/__init__.py b/greenhouse/src/greenhouse/out/sensors/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/out/sensors/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/out/sensors/soil_probe_client.py b/greenhouse/src/greenhouse/out/sensors/soil_probe_client.py
+new file mode 100644
+index 0000000..7525a1d
+--- /dev/null
++++ b/greenhouse/src/greenhouse/out/sensors/soil_probe_client.py
+@@ -0,0 +1,10 @@
++import httpx
++
++
++class SoilProbeClient:
++    def __init__(self, probe_url: str) -> None:
++        self._probe_url = probe_url
++
++    def moisture_percent_of(self, bed_id: str) -> int:
++        response = httpx.get(f"{self._probe_url}/beds/{bed_id}/moisture")
++        return int(response.json()["percent"])

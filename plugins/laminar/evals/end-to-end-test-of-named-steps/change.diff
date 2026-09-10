@@ -1,0 +1,19 @@
+diff --git a/garden-shop/e2e/checkout.spec.ts b/garden-shop/e2e/checkout.spec.ts
+new file mode 100644
+--- /dev/null
++++ b/garden-shop/e2e/checkout.spec.ts
+@@ -0,0 +1,14 @@
++import { test } from "@playwright/test";
++import {
++  givenAShopperWithTwoSeedPacketsInTheBasket,
++  thenTheReceiptShowsTheGardenClubDiscount,
++  whenTheShopperChecksOutWithTheGardenClubCode,
++} from "./steps/checkoutSteps";
++
++test("should take the garden club discount off the basket", async ({ page }) => {
++  const basket = await givenAShopperWithTwoSeedPacketsInTheBasket(page);
++
++  const receipt = await whenTheShopperChecksOutWithTheGardenClubCode(page, basket);
++
++  await thenTheReceiptShowsTheGardenClubDiscount(receipt);
++});

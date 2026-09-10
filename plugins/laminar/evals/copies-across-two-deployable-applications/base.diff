@@ -1,0 +1,175 @@
+diff --git a/dispatch/pom.xml b/dispatch/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/dispatch/pom.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example.shipping</groupId>
++    <artifactId>dispatch</artifactId>
++    <version>1.0.0</version>
++    <packaging>jar</packaging>
++</project>
+diff --git a/dispatch/src/main/java/com/example/shipping/dispatch/DispatchApplication.java b/dispatch/src/main/java/com/example/shipping/dispatch/DispatchApplication.java
+new file mode 100644
+--- /dev/null
++++ b/dispatch/src/main/java/com/example/shipping/dispatch/DispatchApplication.java
+@@ -0,0 +1,12 @@
++package com.example.shipping.dispatch;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class DispatchApplication {
++
++    public static void main(String[] arguments) {
++        SpringApplication.run(DispatchApplication.class, arguments);
++    }
++}
+diff --git a/dispatch/src/main/java/com/example/shipping/dispatch/release/Parcel.java b/dispatch/src/main/java/com/example/shipping/dispatch/release/Parcel.java
+new file mode 100644
+--- /dev/null
++++ b/dispatch/src/main/java/com/example/shipping/dispatch/release/Parcel.java
+@@ -0,0 +1,4 @@
++package com.example.shipping.dispatch.release;
++
++public record Parcel(String id, int declaredValueInEuro, String customsDeclarationNumber) {
++}
+diff --git a/dispatch/src/main/java/com/example/shipping/dispatch/release/ReleasePlanner.java b/dispatch/src/main/java/com/example/shipping/dispatch/release/ReleasePlanner.java
+new file mode 100644
+--- /dev/null
++++ b/dispatch/src/main/java/com/example/shipping/dispatch/release/ReleasePlanner.java
+@@ -0,0 +1,16 @@
++package com.example.shipping.dispatch.release;
++
++import java.util.List;
++
++public class ReleasePlanner {
++
++    private final TrackingClient trackingClient;
++
++    public ReleasePlanner(TrackingClient trackingClient) {
++        this.trackingClient = trackingClient;
++    }
++
++    public List<Parcel> releasable(List<Parcel> waiting) {
++        return waiting;
++    }
++}
+diff --git a/dispatch/src/main/java/com/example/shipping/dispatch/release/TrackingClient.java b/dispatch/src/main/java/com/example/shipping/dispatch/release/TrackingClient.java
+new file mode 100644
+--- /dev/null
++++ b/dispatch/src/main/java/com/example/shipping/dispatch/release/TrackingClient.java
+@@ -0,0 +1,19 @@
++package com.example.shipping.dispatch.release;
++
++import org.springframework.web.client.RestClient;
++
++public class TrackingClient {
++
++    private final RestClient trackingApi;
++
++    public TrackingClient(RestClient trackingApi) {
++        this.trackingApi = trackingApi;
++    }
++
++    public String statusCodeOf(String parcelId) {
++        return trackingApi.get()
++            .uri("/parcels/{parcelId}/status", parcelId)
++            .retrieve()
++            .body(String.class);
++    }
++}
+diff --git a/tracking/pom.xml b/tracking/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/tracking/pom.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example.shipping</groupId>
++    <artifactId>tracking</artifactId>
++    <version>1.0.0</version>
++    <packaging>jar</packaging>
++</project>
+diff --git a/tracking/src/main/java/com/example/shipping/tracking/TrackingApplication.java b/tracking/src/main/java/com/example/shipping/tracking/TrackingApplication.java
+new file mode 100644
+--- /dev/null
++++ b/tracking/src/main/java/com/example/shipping/tracking/TrackingApplication.java
+@@ -0,0 +1,12 @@
++package com.example.shipping.tracking;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class TrackingApplication {
++
++    public static void main(String[] arguments) {
++        SpringApplication.run(TrackingApplication.class, arguments);
++    }
++}
+diff --git a/tracking/src/main/java/com/example/shipping/tracking/status/CustomsHoldPolicy.java b/tracking/src/main/java/com/example/shipping/tracking/status/CustomsHoldPolicy.java
+new file mode 100644
+--- /dev/null
++++ b/tracking/src/main/java/com/example/shipping/tracking/status/CustomsHoldPolicy.java
+@@ -0,0 +1,8 @@
++package com.example.shipping.tracking.status;
++
++public class CustomsHoldPolicy {
++
++    public boolean isHeldAtCustoms(Shipment shipment) {
++        return shipment.declaredValueInEuro() > 1000 && shipment.customsDeclarationNumber() == null;
++    }
++}
+diff --git a/tracking/src/main/java/com/example/shipping/tracking/status/ParcelStatusController.java b/tracking/src/main/java/com/example/shipping/tracking/status/ParcelStatusController.java
+new file mode 100644
+--- /dev/null
++++ b/tracking/src/main/java/com/example/shipping/tracking/status/ParcelStatusController.java
+@@ -0,0 +1,23 @@
++package com.example.shipping.tracking.status;
++
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class ParcelStatusController {
++
++    private final ShipmentStore shipments;
++    private final CustomsHoldPolicy customsHoldPolicy;
++
++    public ParcelStatusController(ShipmentStore shipments, CustomsHoldPolicy customsHoldPolicy) {
++        this.shipments = shipments;
++        this.customsHoldPolicy = customsHoldPolicy;
++    }
++
++    @GetMapping("/parcels/{parcelId}/status")
++    public String statusCodeOf(@PathVariable String parcelId) {
++        Shipment shipment = shipments.byParcelId(parcelId);
++        return customsHoldPolicy.isHeldAtCustoms(shipment) ? "HELD_AT_CUSTOMS" : "IN_TRANSIT";
++    }
++}
+diff --git a/tracking/src/main/java/com/example/shipping/tracking/status/Shipment.java b/tracking/src/main/java/com/example/shipping/tracking/status/Shipment.java
+new file mode 100644
+--- /dev/null
++++ b/tracking/src/main/java/com/example/shipping/tracking/status/Shipment.java
+@@ -0,0 +1,4 @@
++package com.example.shipping.tracking.status;
++
++public record Shipment(String parcelId, int declaredValueInEuro, String customsDeclarationNumber) {
++}
+diff --git a/tracking/src/main/java/com/example/shipping/tracking/status/ShipmentStore.java b/tracking/src/main/java/com/example/shipping/tracking/status/ShipmentStore.java
+new file mode 100644
+--- /dev/null
++++ b/tracking/src/main/java/com/example/shipping/tracking/status/ShipmentStore.java
+@@ -0,0 +1,6 @@
++package com.example.shipping.tracking.status;
++
++public interface ShipmentStore {
++
++    Shipment byParcelId(String parcelId);
++}

@@ -1,0 +1,97 @@
+diff --git a/courier-desk/src/main/java/com/example/courier/consignment/Consignment.java b/courier-desk/src/main/java/com/example/courier/consignment/Consignment.java
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/main/java/com/example/courier/consignment/Consignment.java
+@@ -0,0 +1,36 @@
++package com.example.courier.consignment;
++
++import java.util.List;
++
++public class Consignment {
++
++    private final String consignmentId;
++    private final List<ConsignmentLine> lines;
++    private ConsignmentStatus status;
++
++    public Consignment(String consignmentId, List<ConsignmentLine> lines) {
++        this.consignmentId = consignmentId;
++        this.lines = List.copyOf(lines);
++        this.status = ConsignmentStatus.BOOKED;
++    }
++
++    public String getConsignmentId() {
++        return consignmentId;
++    }
++
++    public int getTotalWeightInGrams() {
++        return lines.stream().mapToInt(ConsignmentLine::weightInGrams).sum();
++    }
++
++    public boolean isDispatched() {
++        return status == ConsignmentStatus.DISPATCHED;
++    }
++
++    public void dispatch() {
++        status = ConsignmentStatus.DISPATCHED;
++    }
++
++    public void markDelivered() {
++        status = ConsignmentStatus.DELIVERED;
++    }
++}
+diff --git a/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentLine.java b/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentLine.java
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentLine.java
+@@ -0,0 +1,4 @@
++package com.example.courier.consignment;
++
++public record ConsignmentLine(String parcelId, int weightInGrams) {
++}
+diff --git a/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentService.java b/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentService.java
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentService.java
+@@ -0,0 +1,30 @@
++package com.example.courier.consignment;
++
++import java.util.HashMap;
++import java.util.Map;
++import java.util.NoSuchElementException;
++
++public class ConsignmentService {
++
++    private final Map<String, Consignment> consignmentsById = new HashMap<>();
++
++    public void registerConsignment(Consignment consignment) {
++        consignmentsById.put(consignment.getConsignmentId(), consignment);
++    }
++
++    public void dispatchConsignment(String consignmentId) {
++        findConsignment(consignmentId).dispatch();
++    }
++
++    public void confirmDelivery(String consignmentId) {
++        findConsignment(consignmentId).markDelivered();
++    }
++
++    private Consignment findConsignment(String consignmentId) {
++        Consignment consignment = consignmentsById.get(consignmentId);
++        if (consignment == null) {
++            throw new NoSuchElementException("No consignment " + consignmentId);
++        }
++        return consignment;
++    }
++}
+diff --git a/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentStatus.java b/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentStatus.java
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/main/java/com/example/courier/consignment/ConsignmentStatus.java
+@@ -0,0 +1,7 @@
++package com.example.courier.consignment;
++
++public enum ConsignmentStatus {
++    BOOKED,
++    DISPATCHED,
++    DELIVERED
++}

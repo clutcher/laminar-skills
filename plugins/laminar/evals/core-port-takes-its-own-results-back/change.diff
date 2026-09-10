@@ -1,0 +1,130 @@
+diff --git a/quote-service/src/main/java/com/example/quote/app/api/QuoteResultMerging.java b/quote-service/src/main/java/com/example/quote/app/api/QuoteResultMerging.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/app/api/QuoteResultMerging.java
+@@ -0,0 +1,13 @@
++package com.example.quote.app.api;
++
++import com.example.quote.app.domain.QuoteResult;
++import com.example.quote.app.domain.UnderwritingNotice;
++import java.math.BigDecimal;
++import java.util.List;
++
++public interface QuoteResultMerging {
++
++    BigDecimal totalPremiumOf(List<QuoteResult> lineQuotes);
++
++    List<UnderwritingNotice> noticesOf(List<QuoteResult> lineQuotes);
++}
+diff --git a/quote-service/src/main/java/com/example/quote/app/services/QuoteResultMergingService.java b/quote-service/src/main/java/com/example/quote/app/services/QuoteResultMergingService.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/app/services/QuoteResultMergingService.java
+@@ -0,0 +1,37 @@
++package com.example.quote.app.services;
++
++import com.example.quote.app.api.QuoteResultMerging;
++import com.example.quote.app.domain.LinePremium;
++import com.example.quote.app.domain.QuoteResult;
++import com.example.quote.app.domain.UnderwritingNotice;
++import java.math.BigDecimal;
++import java.util.List;
++import java.util.Objects;
++import org.springframework.stereotype.Service;
++
++@Service
++public class QuoteResultMergingService implements QuoteResultMerging {
++
++    private final UnderwritingNoticeRules underwritingNoticeRules;
++
++    public QuoteResultMergingService(UnderwritingNoticeRules underwritingNoticeRules) {
++        this.underwritingNoticeRules = underwritingNoticeRules;
++    }
++
++    @Override
++    public BigDecimal totalPremiumOf(List<QuoteResult> lineQuotes) {
++        return lineQuotes.stream()
++                .filter(Objects::nonNull)
++                .map(QuoteResult::totalPremium)
++                .reduce(BigDecimal.ZERO, BigDecimal::add);
++    }
++
++    @Override
++    public List<UnderwritingNotice> noticesOf(List<QuoteResult> lineQuotes) {
++        List<LinePremium> linePremiums = lineQuotes.stream()
++                .filter(Objects::nonNull)
++                .map(lineQuote -> lineQuote.linePremiums().get(0))
++                .toList();
++        return underwritingNoticeRules.noticesFor(linePremiums, totalPremiumOf(lineQuotes));
++    }
++}
+diff --git a/quote-service/src/main/java/com/example/quote/in/BasketQuoteController.java b/quote-service/src/main/java/com/example/quote/in/BasketQuoteController.java
+--- a/quote-service/src/main/java/com/example/quote/in/BasketQuoteController.java
++++ b/quote-service/src/main/java/com/example/quote/in/BasketQuoteController.java
+@@ -4,11 +4,10 @@
+ import static java.util.stream.Collectors.toMap;
+ 
+ import com.example.quote.app.api.QuoteCalculation;
+-import com.example.quote.app.domain.CoverLine;
+-import com.example.quote.app.domain.LinePremium;
++import com.example.quote.app.api.QuoteResultMerging;
+ import com.example.quote.app.domain.QuoteResult;
++import com.example.quote.app.domain.UnderwritingNotice;
+ import java.math.BigDecimal;
+-import java.util.Collection;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
+@@ -25,11 +24,14 @@
+ public class BasketQuoteController {
+ 
+     private final QuoteCalculation quoteCalculation;
++    private final QuoteResultMerging quoteResultMerging;
+ 
+-    public BasketQuoteController(QuoteCalculation quoteCalculation, BatchLoaderRegistry batchLoaderRegistry) {
++    public BasketQuoteController(QuoteCalculation quoteCalculation, QuoteResultMerging quoteResultMerging,
++            BatchLoaderRegistry batchLoaderRegistry) {
+         this.quoteCalculation = quoteCalculation;
+-        batchLoaderRegistry.forTypePair(BasketLine.class, LinePremium.class)
+-                .registerMappedBatchLoader((basketLines, environment) -> Mono.just(linePremiumsOf(basketLines)));
++        this.quoteResultMerging = quoteResultMerging;
++        batchLoaderRegistry.forTypePair(BasketLine.class, QuoteResult.class)
++                .registerMappedBatchLoader((basketLines, environment) -> Mono.just(lineQuotesOf(basketLines)));
+     }
+ 
+     @QueryMapping
+@@ -37,22 +39,23 @@
+         return new Basket(lines);
+     }
+ 
+-    @SchemaMapping(typeName = "Basket", field = "quote")
+-    public QuoteResult quote(Basket basket) {
+-        return quoteCalculation.calculate(coverLinesOf(basket.lines()));
++    @SchemaMapping(typeName = "Basket", field = "totalPremium")
++    public CompletableFuture<BigDecimal> totalPremium(Basket basket, DataLoader<BasketLine, QuoteResult> lineQuotes) {
++        return lineQuotes.loadMany(basket.lines()).thenApply(quoteResultMerging::totalPremiumOf);
+     }
+ 
+-    @SchemaMapping(typeName = "BasketLine", field = "premium")
+-    public CompletableFuture<BigDecimal> premium(BasketLine basketLine, DataLoader<BasketLine, LinePremium> linePremiums) {
+-        return linePremiums.load(basketLine).thenApply(LinePremium::premium);
++    @SchemaMapping(typeName = "Basket", field = "notices")
++    public CompletableFuture<List<UnderwritingNotice>> notices(Basket basket, DataLoader<BasketLine, QuoteResult> lineQuotes) {
++        return lineQuotes.loadMany(basket.lines()).thenApply(quoteResultMerging::noticesOf);
+     }
+ 
+-    private Map<BasketLine, LinePremium> linePremiumsOf(Set<BasketLine> basketLines) {
+-        QuoteResult quote = quoteCalculation.calculate(coverLinesOf(basketLines));
+-        return basketLines.stream().collect(toMap(identity(), basketLine -> quote.premiumFor(basketLine.coverCode())));
++    @SchemaMapping(typeName = "BasketLine", field = "premium")
++    public CompletableFuture<BigDecimal> premium(BasketLine basketLine, DataLoader<BasketLine, QuoteResult> lineQuotes) {
++        return lineQuotes.load(basketLine).thenApply(QuoteResult::totalPremium);
+     }
+ 
+-    private static List<CoverLine> coverLinesOf(Collection<BasketLine> basketLines) {
+-        return basketLines.stream().map(BasketLine::coverLine).toList();
++    private Map<BasketLine, QuoteResult> lineQuotesOf(Set<BasketLine> basketLines) {
++        return basketLines.stream()
++                .collect(toMap(identity(), basketLine -> quoteCalculation.calculate(List.of(basketLine.coverLine()))));
+     }
+ }

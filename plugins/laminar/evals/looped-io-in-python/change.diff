@@ -1,0 +1,33 @@
+diff --git a/bikeshare/rebalancer.py b/bikeshare/rebalancer.py
+index 96b53b2..62bd4fa 100644
+--- a/bikeshare/rebalancer.py
++++ b/bikeshare/rebalancer.py
+@@ -1,5 +1,6 @@
+ from bikeshare.capacity_cache import CapacityCache
+ from bikeshare.dock_availability import DockAvailability
++from bikeshare.dock_query import DockQuery
+ 
+ 
+ class Rebalancer:
+@@ -9,3 +10,21 @@ class Rebalancer:
+ 
+     def remember_capacity(self, station):
+         self.capacity_cache.put(station.station_id, station.capacity)
++
++    def docks_to_free(self, stations):
++        shortfalls = {}
++        for station in stations:
++            shortfalls[station.station_id] = self.availability.shortfall_at(station)
++        return shortfalls
++
++    def broken_dock_statements(self, stations):
++        statements = []
++        for station in stations:
++            statements.append(DockQuery(station.station_id).where("broken", True).statement())
++        return statements
++
++    def known_capacities(self, stations):
++        capacities = {}
++        for station in stations:
++            capacities[station.station_id] = self.capacity_cache.get(station.station_id)
++        return capacities

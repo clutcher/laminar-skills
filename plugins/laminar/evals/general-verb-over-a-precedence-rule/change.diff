@@ -1,0 +1,31 @@
+diff --git a/paddle/rentals/rental_length.py b/paddle/rentals/rental_length.py
+new file mode 100644
+--- /dev/null
++++ b/paddle/rentals/rental_length.py
+@@ -0,0 +1,26 @@
++from datetime import date
++
++from paddle.rentals.booking import Booking
++from paddle.rentals.member_profiles import MemberProfiles
++from paddle.rentals.season_rules import SeasonRules
++
++SHOP_DEFAULT_HOURS = 4
++
++
++class RentalLength:
++
++    def __init__(self, member_profiles: MemberProfiles, season_rules: SeasonRules) -> None:
++        self._member_profiles = member_profiles
++        self._season_rules = season_rules
++
++    def determine_hours(self, booking: Booking) -> int:
++        requested_hours = booking.requested_hours
++        if requested_hours is not None:
++            return self.cap_hours_at_season_limit(requested_hours, booking.rental_day)
++        usual_hours = self._member_profiles.usual_hours(booking.member_id)
++        if usual_hours is not None:
++            return self.cap_hours_at_season_limit(usual_hours, booking.rental_day)
++        return SHOP_DEFAULT_HOURS
++
++    def cap_hours_at_season_limit(self, hours: int, rental_day: date) -> int:
++        return min(hours, self._season_rules.longest_rental_hours(rental_day))

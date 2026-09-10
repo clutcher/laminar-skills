@@ -1,0 +1,30 @@
+diff --git a/harbour-desk/src/tides/TideReading.ts b/harbour-desk/src/tides/TideReading.ts
+new file mode 100644
+--- /dev/null
++++ b/harbour-desk/src/tides/TideReading.ts
+@@ -0,0 +1,25 @@
++export class TideReading {
++  constructor(
++    readonly stationCode: string,
++    readonly measuredAt: Date,
++    readonly heightInCentimetres: number,
++  ) {}
++
++  static parseCsvLine(line: string): TideReading {
++    const [stationCode, measuredAt, height] = line.split(";");
++    return new TideReading(stationCode, new Date(measuredAt), Number(height));
++  }
++
++  toCsvLine(): string {
++    return [this.stationCode, this.measuredAt.toISOString(), this.heightInCentimetres].join(";");
++  }
++
++  formatForDisplay(): string {
++    const metres = (this.heightInCentimetres / 100).toFixed(2);
++    return `${this.stationCode}: ${metres} m at ${this.measuredAt.toISOString().slice(11, 16)}`;
++  }
++
++  isAbove(heightInCentimetres: number): boolean {
++    return this.heightInCentimetres > heightInCentimetres;
++  }
++}

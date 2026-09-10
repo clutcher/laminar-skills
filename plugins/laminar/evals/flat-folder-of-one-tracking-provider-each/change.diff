@@ -1,0 +1,204 @@
+diff --git a/courier-desk/src/tracking-providers/AramexTrackingProvider.ts b/courier-desk/src/tracking-providers/AramexTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/AramexTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class AramexTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "ARAMEX";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/BpostTrackingProvider.ts b/courier-desk/src/tracking-providers/BpostTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/BpostTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class BpostTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "BPOST";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/CanadaPostTrackingProvider.ts b/courier-desk/src/tracking-providers/CanadaPostTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/CanadaPostTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class CanadaPostTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "CANADAPOST";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/ColissimoTrackingProvider.ts b/courier-desk/src/tracking-providers/ColissimoTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/ColissimoTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class ColissimoTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "COLISSIMO";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/DhlTrackingProvider.ts b/courier-desk/src/tracking-providers/DhlTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/DhlTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class DhlTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "DHL";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/DpdTrackingProvider.ts b/courier-desk/src/tracking-providers/DpdTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/DpdTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class DpdTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "DPD";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/FedexTrackingProvider.ts b/courier-desk/src/tracking-providers/FedexTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/FedexTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class FedexTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "FEDEX";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/GlsTrackingProvider.ts b/courier-desk/src/tracking-providers/GlsTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/GlsTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class GlsTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "GLS";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/HermesTrackingProvider.ts b/courier-desk/src/tracking-providers/HermesTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/HermesTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class HermesTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "HERMES";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/PostNlTrackingProvider.ts b/courier-desk/src/tracking-providers/PostNlTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/PostNlTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class PostNlTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "POSTNL";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/RoyalMailTrackingProvider.ts b/courier-desk/src/tracking-providers/RoyalMailTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/RoyalMailTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class RoyalMailTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "ROYALMAIL";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/TrackingProvider.ts b/courier-desk/src/tracking-providers/TrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/TrackingProvider.ts
+@@ -0,0 +1,4 @@
++export interface TrackingProvider {
++  readonly carrierCode: string;
++  readTrackingStatus(trackingNumber: string): string;
++}
+diff --git a/courier-desk/src/tracking-providers/UpsTrackingProvider.ts b/courier-desk/src/tracking-providers/UpsTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/UpsTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class UpsTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "UPS";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}
+diff --git a/courier-desk/src/tracking-providers/UspsTrackingProvider.ts b/courier-desk/src/tracking-providers/UspsTrackingProvider.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/tracking-providers/UspsTrackingProvider.ts
+@@ -0,0 +1,10 @@
++import { TrackingProvider } from "./TrackingProvider";
++
++export class UspsTrackingProvider implements TrackingProvider {
++  readonly carrierCode = "USPS";
++  private readonly statusByTrackingNumber = new Map<string, string>();
++
++  readTrackingStatus(trackingNumber: string): string {
++    return this.statusByTrackingNumber.get(trackingNumber) ?? "unknown";
++  }
++}

@@ -1,0 +1,33 @@
+{
+  "name": "laminar",
+  "description": "Reviews code against the three qualities of high-quality code in Laminar Software Design: simple to understand and change, correct in behavior, and fast enough for its purpose. A simplicity finding names the cognitive failure a reader meets, a correctness finding names the missing prevention decision or the missing test, and a performance finding names the waste a known alternative avoids.",
+  "keywords": ["code-review", "software-design", "simplicity", "correctness", "performance", "laminar"],
+  "version": "0.50.2",
+  "license": "MIT AND CC-BY-4.0",
+  "homepage": "https://github.com/clutcher/laminar-skills",
+  "author": {
+    "name": "Igor Zarvanskyi"
+  },
+  "agents": [
+    "./agents/review/correctness/judge-prevention.md",
+    "./agents/review/correctness/judge-simplicity-test-method.md",
+    "./agents/review/correctness/judge-test-plan.md",
+    "./agents/review/correctness/judge-validate-at-the-boundary.md",
+    "./agents/review/design/judge-entry-boundary.md",
+    "./agents/review/design/judge-leaked-details.md",
+    "./agents/review/design/judge-over-extraction.md",
+    "./agents/review/design/judge-scoped-parameters.md",
+    "./agents/review/performance/judge-abstraction.md",
+    "./agents/review/performance/judge-io-paths.md",
+    "./agents/review/screen-io.md",
+    "./agents/review/screen-presence.md",
+    "./agents/review/simplicity/judge-class.md",
+    "./agents/review/simplicity/judge-comment.md",
+    "./agents/review/simplicity/judge-decision.md",
+    "./agents/review/simplicity/judge-method.md",
+    "./agents/review/simplicity/judge-module.md",
+    "./agents/review/simplicity/judge-variable.md",
+    "./agents/review/verifier.md",
+    "./agents/review/refuter.md"
+  ]
+}

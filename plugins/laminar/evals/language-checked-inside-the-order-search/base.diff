@@ -1,0 +1,211 @@
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/api/ApiForExhibitSearch.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/api/ApiForExhibitSearch.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/api/ApiForExhibitSearch.java
+@@ -0,0 +1,13 @@
++package org.example.museum.collection.exhibit.app.api;
++
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.ExhibitSummary;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchCriteria;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchOptions;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.PageRequest;
++
++import java.util.List;
++
++public interface ApiForExhibitSearch {
++
++    List<? extends ExhibitSummary> search(ExhibitSearchCriteria criteria, PageRequest page, ExhibitSearchOptions options);
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/ExhibitSummary.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/ExhibitSummary.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/ExhibitSummary.java
+@@ -0,0 +1,12 @@
++package org.example.museum.collection.exhibit.app.domain.model.exhibit;
++
++import java.util.Set;
++
++public interface ExhibitSummary {
++
++    Set<String> FIELDS = Set.of("id", "hall", "onDisplaySince");
++
++    String id();
++
++    String hall();
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/ExhibitSearchCriteria.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/ExhibitSearchCriteria.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/ExhibitSearchCriteria.java
+@@ -0,0 +1,9 @@
++package org.example.museum.collection.exhibit.app.domain.model.exhibit.search;
++
++import java.util.List;
++
++public record ExhibitSearchCriteria(
++        String inventoryNumber,
++        List<String> hallIds
++) {
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/ExhibitSearchOptions.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/ExhibitSearchOptions.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/ExhibitSearchOptions.java
+@@ -0,0 +1,14 @@
++package org.example.museum.collection.exhibit.app.domain.model.exhibit.search;
++
++import lombok.Builder;
++
++@Builder
++public record ExhibitSearchOptions(
++        Projection projection
++) {
++
++    public enum Projection {
++        SUMMARY,
++        DETAILED
++    }
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/PageRequest.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/PageRequest.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/model/exhibit/search/PageRequest.java
+@@ -0,0 +1,8 @@
++package org.example.museum.collection.exhibit.app.domain.model.exhibit.search;
++
++public record PageRequest(int size, String afterCursor) {
++
++    public static PageRequest firstOnly() {
++        return new PageRequest(1, null);
++    }
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/services/ExhibitSearchService.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/services/ExhibitSearchService.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/domain/services/ExhibitSearchService.java
+@@ -0,0 +1,29 @@
++package org.example.museum.collection.exhibit.app.domain.services;
++
++import org.example.museum.collection.exhibit.app.api.ApiForExhibitSearch;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.ExhibitSummary;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchCriteria;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchOptions;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.PageRequest;
++import org.example.museum.collection.exhibit.app.spi.ExhibitCatalogue;
++import org.springframework.stereotype.Service;
++
++import java.util.List;
++
++@Service
++public class ExhibitSearchService implements ApiForExhibitSearch {
++
++    private final ExhibitCatalogue exhibitCatalogue;
++
++    public ExhibitSearchService(ExhibitCatalogue exhibitCatalogue) {
++        this.exhibitCatalogue = exhibitCatalogue;
++    }
++
++    @Override
++    public List<? extends ExhibitSummary> search(ExhibitSearchCriteria criteria, PageRequest page, ExhibitSearchOptions options) {
++        return switch (options.projection()) {
++            case SUMMARY -> exhibitCatalogue.findSummaries(criteria, page);
++            case DETAILED -> exhibitCatalogue.findWithDescriptions(criteria, page);
++        };
++    }
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/app/spi/ExhibitCatalogue.java b/collection/src/main/java/org/example/museum/collection/exhibit/app/spi/ExhibitCatalogue.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/app/spi/ExhibitCatalogue.java
+@@ -0,0 +1,14 @@
++package org.example.museum.collection.exhibit.app.spi;
++
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.ExhibitSummary;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchCriteria;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.PageRequest;
++
++import java.util.List;
++
++public interface ExhibitCatalogue {
++
++    List<? extends ExhibitSummary> findSummaries(ExhibitSearchCriteria criteria, PageRequest page);
++
++    List<? extends ExhibitSummary> findWithDescriptions(ExhibitSearchCriteria criteria, PageRequest page);
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/ExhibitGraphQLController.java b/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/ExhibitGraphQLController.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/ExhibitGraphQLController.java
+@@ -0,0 +1,43 @@
++package org.example.museum.collection.exhibit.in.graphql;
++
++import org.example.museum.generated.graphql.types.ExhibitFilterInput;
++import org.example.museum.generated.graphql.types.PageInput;
++import org.example.museum.collection.exhibit.app.api.ApiForExhibitSearch;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.ExhibitSummary;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchCriteria;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchOptions;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.PageRequest;
++import org.example.museum.collection.exhibit.in.graphql.mappers.ExhibitFilterMapper;
++import org.example.museum.collection.exhibit.in.graphql.mappers.ExhibitResponseMapper;
++import org.example.museum.collection.exhibit.in.graphql.mappers.ExhibitSearchOptionsMapper;
++import graphql.schema.DataFetchingFieldSelectionSet;
++import org.springframework.graphql.data.method.annotation.Argument;
++import org.springframework.graphql.data.method.annotation.QueryMapping;
++import org.springframework.stereotype.Controller;
++
++import java.util.List;
++
++@Controller
++public class ExhibitGraphQLController {
++
++    private final ApiForExhibitSearch apiForExhibitSearch;
++
++    public ExhibitGraphQLController(ApiForExhibitSearch apiForExhibitSearch) {
++        this.apiForExhibitSearch = apiForExhibitSearch;
++    }
++
++    @QueryMapping(name = "exhibits")
++    public List<org.example.museum.generated.graphql.types.Exhibit> getExhibits(
++            @Argument("filter") ExhibitFilterInput filter,
++            @Argument("page") PageInput page,
++            DataFetchingFieldSelectionSet selectionSet
++    ) {
++        ExhibitSearchCriteria criteria = ExhibitFilterMapper.INSTANCE.toCriteria(filter);
++        PageRequest pageRequest = ExhibitFilterMapper.INSTANCE.toPageRequest(page);
++        ExhibitSearchOptions options = ExhibitSearchOptionsMapper.INSTANCE.toOptions(selectionSet);
++
++        List<? extends ExhibitSummary> exhibits = apiForExhibitSearch.search(criteria, pageRequest, options);
++        return ExhibitResponseMapper.INSTANCE.toExhibitList(exhibits);
++    }
++
++}
+diff --git a/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/mappers/ExhibitSearchOptionsMapper.java b/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/mappers/ExhibitSearchOptionsMapper.java
+new file mode 100644
+--- /dev/null
++++ b/collection/src/main/java/org/example/museum/collection/exhibit/in/graphql/mappers/ExhibitSearchOptionsMapper.java
+@@ -0,0 +1,24 @@
++package org.example.museum.collection.exhibit.in.graphql.mappers;
++
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.ExhibitSummary;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchOptions;
++import org.example.museum.collection.exhibit.app.domain.model.exhibit.search.ExhibitSearchOptions.Projection;
++import graphql.schema.DataFetchingFieldSelectionSet;
++import graphql.schema.SelectedField;
++import org.mapstruct.Mapper;
++import org.mapstruct.factory.Mappers;
++
++@Mapper
++public interface ExhibitSearchOptionsMapper {
++    ExhibitSearchOptionsMapper INSTANCE = Mappers.getMapper(ExhibitSearchOptionsMapper.class);
++
++    default ExhibitSearchOptions toOptions(DataFetchingFieldSelectionSet selectionSet) {
++        boolean summaryIsEnough = selectionSet.getImmediateFields().stream()
++                .map(SelectedField::getName)
++                .allMatch(ExhibitSummary.FIELDS::contains);
++        return ExhibitSearchOptions.builder()
++                .projection(summaryIsEnough ? Projection.SUMMARY : Projection.DETAILED)
++                .build();
++    }
++
++}

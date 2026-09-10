@@ -1,0 +1,31 @@
+diff --git a/ticket-office/src/main/java/org/harbour/ticketoffice/notice/BookingNotices.java b/ticket-office/src/main/java/org/harbour/ticketoffice/notice/BookingNotices.java
+--- a/ticket-office/src/main/java/org/harbour/ticketoffice/notice/BookingNotices.java
++++ b/ticket-office/src/main/java/org/harbour/ticketoffice/notice/BookingNotices.java
+@@ -9,6 +9,7 @@
+ 
+     public List<PassengerNotice> afterBooking(int seatsLeftOnCrossing) {
+         List<PassengerNotice> notices = new ArrayList<>();
++        notices.add(new PassengerNotice(PassengerNoticeSeverity.SUCCESS, "Your ticket is booked"));
+         if (seatsLeftOnCrossing < FEW_SEATS_LEFT) {
+             notices.add(new PassengerNotice(PassengerNoticeSeverity.INFO, "Few seats are left on this crossing"));
+         }
+diff --git a/ticket-office/src/main/java/org/harbour/ticketoffice/notice/PassengerNoticeSeverity.java b/ticket-office/src/main/java/org/harbour/ticketoffice/notice/PassengerNoticeSeverity.java
+--- a/ticket-office/src/main/java/org/harbour/ticketoffice/notice/PassengerNoticeSeverity.java
++++ b/ticket-office/src/main/java/org/harbour/ticketoffice/notice/PassengerNoticeSeverity.java
+@@ -3,5 +3,6 @@
+ public enum PassengerNoticeSeverity {
+     INFO,
+     WARN,
+-    ERROR
++    ERROR,
++    SUCCESS
+ }
+diff --git a/ticket-office/src/main/resources/graphql/ticket-office.graphqls b/ticket-office/src/main/resources/graphql/ticket-office.graphqls
+--- a/ticket-office/src/main/resources/graphql/ticket-office.graphqls
++++ b/ticket-office/src/main/resources/graphql/ticket-office.graphqls
+@@ -34,4 +34,5 @@
+   INFO
+   WARN
+   ERROR
++  SUCCESS
+ }

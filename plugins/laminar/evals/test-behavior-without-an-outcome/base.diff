@@ -1,0 +1,125 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/adapter/HttpRouteFares.java b/ferry/src/main/java/com/example/harbourferry/booking/adapter/HttpRouteFares.java
+new file mode 100644
+index 0000000..fcb1d23
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/adapter/HttpRouteFares.java
+@@ -0,0 +1,21 @@
++package com.example.harbourferry.booking.adapter;
++
++import com.example.harbourferry.booking.domain.RouteFares;
++import lombok.RequiredArgsConstructor;
++import org.springframework.stereotype.Component;
++import org.springframework.web.client.RestClient;
++
++@Component
++@RequiredArgsConstructor
++public class HttpRouteFares implements RouteFares {
++
++    private final RestClient fareServiceClient;
++
++    @Override
++    public int fareFor(String route) {
++        return fareServiceClient.get()
++            .uri("/fares?route={route}", route)
++            .retrieve()
++            .body(Integer.class);
++    }
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/adapter/JdbcTicketStore.java b/ferry/src/main/java/com/example/harbourferry/booking/adapter/JdbcTicketStore.java
+new file mode 100644
+index 0000000..08deb8d
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/adapter/JdbcTicketStore.java
+@@ -0,0 +1,21 @@
++package com.example.harbourferry.booking.adapter;
++
++import com.example.harbourferry.booking.domain.Ticket;
++import com.example.harbourferry.booking.domain.TicketStore;
++import lombok.RequiredArgsConstructor;
++import org.springframework.jdbc.core.simple.JdbcClient;
++import org.springframework.stereotype.Repository;
++
++@Repository
++@RequiredArgsConstructor
++public class JdbcTicketStore implements TicketStore {
++
++    private final JdbcClient jdbcClient;
++
++    @Override
++    public void save(Ticket ticket) {
++        jdbcClient.sql("INSERT INTO ticket (route, departure, seat_number, fare_cents) VALUES (?, ?, ?, ?)")
++            .params(ticket.crossing().route(), ticket.crossing().departure(), ticket.seatNumber(), ticket.fareCents())
++            .update();
++    }
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/domain/BookingRequest.java b/ferry/src/main/java/com/example/harbourferry/booking/domain/BookingRequest.java
+new file mode 100644
+index 0000000..bc53e1d
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/domain/BookingRequest.java
+@@ -0,0 +1,4 @@
++package com.example.harbourferry.booking.domain;
++
++public record BookingRequest(Crossing crossing, String passengerName) {
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/domain/Crossing.java b/ferry/src/main/java/com/example/harbourferry/booking/domain/Crossing.java
+new file mode 100644
+index 0000000..5708db0
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/domain/Crossing.java
+@@ -0,0 +1,7 @@
++package com.example.harbourferry.booking.domain;
++
++import java.time.LocalDateTime;
++import java.util.SortedSet;
++
++public record Crossing(String route, LocalDateTime departure, SortedSet<Integer> seatsLeft) {
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/domain/CrossingFull.java b/ferry/src/main/java/com/example/harbourferry/booking/domain/CrossingFull.java
+new file mode 100644
+index 0000000..8fa2174
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/domain/CrossingFull.java
+@@ -0,0 +1,8 @@
++package com.example.harbourferry.booking.domain;
++
++public class CrossingFull extends RuntimeException {
++
++    public CrossingFull(Crossing crossing) {
++        super("no seat is left on the " + crossing.route() + " crossing at " + crossing.departure());
++    }
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/domain/RouteFares.java b/ferry/src/main/java/com/example/harbourferry/booking/domain/RouteFares.java
+new file mode 100644
+index 0000000..1065db6
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/domain/RouteFares.java
+@@ -0,0 +1,6 @@
++package com.example.harbourferry.booking.domain;
++
++public interface RouteFares {
++
++    int fareFor(String route);
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/domain/Ticket.java b/ferry/src/main/java/com/example/harbourferry/booking/domain/Ticket.java
+new file mode 100644
+index 0000000..fc45c07
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/domain/Ticket.java
+@@ -0,0 +1,4 @@
++package com.example.harbourferry.booking.domain;
++
++public record Ticket(Crossing crossing, int seatNumber, int fareCents) {
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/domain/TicketStore.java b/ferry/src/main/java/com/example/harbourferry/booking/domain/TicketStore.java
+new file mode 100644
+index 0000000..3995f4d
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/domain/TicketStore.java
+@@ -0,0 +1,6 @@
++package com.example.harbourferry.booking.domain;
++
++public interface TicketStore {
++
++    void save(Ticket ticket);
++}

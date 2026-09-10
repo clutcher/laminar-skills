@@ -1,0 +1,90 @@
+diff --git a/dispatch/src/main/java/com/example/shipping/dispatch/carriers/Carrier.java b/dispatch/src/main/java/com/example/shipping/dispatch/carriers/Carrier.java
+new file mode 100644
+--- /dev/null
++++ b/dispatch/src/main/java/com/example/shipping/dispatch/carriers/Carrier.java
+@@ -0,0 +1,8 @@
++package com.example.shipping.dispatch.carriers;
++
++public enum Carrier {
++    BLUE_LINE_EXPRESS,
++    HARBOUR_POST,
++    NORTH_RIVER_FREIGHT,
++    OTHER_CARRIER
++}
+diff --git a/dispatch/src/main/java/com/example/shipping/dispatch/carriers/CarrierCodeConverter.java b/dispatch/src/main/java/com/example/shipping/dispatch/carriers/CarrierCodeConverter.java
+new file mode 100644
+--- /dev/null
++++ b/dispatch/src/main/java/com/example/shipping/dispatch/carriers/CarrierCodeConverter.java
+@@ -0,0 +1,16 @@
++package com.example.shipping.dispatch.carriers;
++
++import java.util.Map;
++
++public class CarrierCodeConverter {
++
++    private static final Map<String, Carrier> CARRIERS_BY_CODE = Map.of(
++        "BLX", Carrier.BLUE_LINE_EXPRESS,
++        "HPO", Carrier.HARBOUR_POST,
++        "NRF", Carrier.NORTH_RIVER_FREIGHT
++    );
++
++    public Carrier toCarrier(String carrierCode) {
++        return CARRIERS_BY_CODE.getOrDefault(carrierCode, Carrier.OTHER_CARRIER);
++    }
++}
+diff --git a/dispatch/src/main/java/com/example/shipping/dispatch/release/ReleasePlanner.java b/dispatch/src/main/java/com/example/shipping/dispatch/release/ReleasePlanner.java
+--- a/dispatch/src/main/java/com/example/shipping/dispatch/release/ReleasePlanner.java
++++ b/dispatch/src/main/java/com/example/shipping/dispatch/release/ReleasePlanner.java
+@@ -11,6 +11,17 @@
+     }
+ 
+     public List<Parcel> releasable(List<Parcel> waiting) {
+-        return waiting;
++        return waiting.stream().filter(this::canRelease).toList();
++    }
++
++    private boolean canRelease(Parcel parcel) {
++        if ("HELD_AT_CUSTOMS".equals(trackingClient.statusCodeOf(parcel.id()))) {
++            return false;
++        }
++        return !isHeldAtCustoms(parcel);
++    }
++
++    private boolean isHeldAtCustoms(Parcel parcel) {
++        return parcel.declaredValueInEuro() > 1000 && parcel.customsDeclarationNumber() == null;
+     }
+ }
+diff --git a/tracking/src/main/java/com/example/shipping/tracking/carriers/Carrier.java b/tracking/src/main/java/com/example/shipping/tracking/carriers/Carrier.java
+new file mode 100644
+--- /dev/null
++++ b/tracking/src/main/java/com/example/shipping/tracking/carriers/Carrier.java
+@@ -0,0 +1,8 @@
++package com.example.shipping.tracking.carriers;
++
++public enum Carrier {
++    BLUE_LINE_EXPRESS,
++    HARBOUR_POST,
++    NORTH_RIVER_FREIGHT,
++    OTHER_CARRIER
++}
+diff --git a/tracking/src/main/java/com/example/shipping/tracking/carriers/CarrierCodeConverter.java b/tracking/src/main/java/com/example/shipping/tracking/carriers/CarrierCodeConverter.java
+new file mode 100644
+--- /dev/null
++++ b/tracking/src/main/java/com/example/shipping/tracking/carriers/CarrierCodeConverter.java
+@@ -0,0 +1,16 @@
++package com.example.shipping.tracking.carriers;
++
++import java.util.Map;
++
++public class CarrierCodeConverter {
++
++    private static final Map<String, Carrier> CARRIERS_BY_CODE = Map.of(
++        "BLX", Carrier.BLUE_LINE_EXPRESS,
++        "HPO", Carrier.HARBOUR_POST,
++        "NRF", Carrier.NORTH_RIVER_FREIGHT
++    );
++
++    public Carrier toCarrier(String carrierCode) {
++        return CARRIERS_BY_CODE.getOrDefault(carrierCode, Carrier.OTHER_CARRIER);
++    }
++}

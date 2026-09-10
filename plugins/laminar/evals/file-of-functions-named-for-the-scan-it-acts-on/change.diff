@@ -1,0 +1,25 @@
+diff --git a/courier-desk/src/scans/ParcelScan.ts b/courier-desk/src/scans/ParcelScan.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/scans/ParcelScan.ts
+@@ -0,0 +1,10 @@
++import { ScanRecord } from "./ScanRecord";
++
++export const readParcelScan = (barcodeText: string, scannedAt: Date): ScanRecord => {
++  const [parcelId, depotCode] = barcodeText.split("|");
++  return { parcelId, depotCode, scannedAt };
++};
++
++export const formatParcelScan = (scan: ScanRecord): string => `${scan.parcelId} scanned at ${scan.depotCode} on ${scan.scannedAt.toISOString()}`;
++
++export const isScannedAfterCutoff = (scan: ScanRecord, cutoffHour: number): boolean => scan.scannedAt.getHours() >= cutoffHour;
+diff --git a/courier-desk/src/scans/ScanRecord.ts b/courier-desk/src/scans/ScanRecord.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/scans/ScanRecord.ts
+@@ -0,0 +1,5 @@
++export interface ScanRecord {
++  readonly parcelId: string;
++  readonly depotCode: string;
++  readonly scannedAt: Date;
++}

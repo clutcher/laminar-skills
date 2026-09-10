@@ -1,0 +1,1 @@
+simplicity-class,design-over-extraction,design-scoped-parameters

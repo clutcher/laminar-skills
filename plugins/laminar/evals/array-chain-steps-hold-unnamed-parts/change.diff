@@ -1,0 +1,63 @@
+diff --git a/clinic/src/vaccination/vaccination-desk.ts b/clinic/src/vaccination/vaccination-desk.ts
+new file mode 100644
+--- /dev/null
++++ b/clinic/src/vaccination/vaccination-desk.ts
+@@ -0,0 +1,58 @@
++import { Appointment } from '../appointments/appointment';
++import { AppointmentRepository } from '../appointments/appointment-repository';
++import { Clinic } from '../clinic/clinic';
++import { FeeTable } from '../fees/fee-table';
++import { Money } from '../fees/money';
++import { Owner } from '../owners/owner';
++import { Pet } from '../pets/pet';
++import { BoosterReminder } from './booster-reminder';
++import { VaccinationLine } from './vaccination-line';
++import { VaccineSchedule } from './vaccine-schedule';
++
++export class VaccinationDesk {
++  constructor(
++    private readonly vaccineSchedule: VaccineSchedule,
++    private readonly feeTable: FeeTable,
++    private readonly appointmentRepository: AppointmentRepository,
++  ) {}
++
++  createBoosterReminders(pets: Pet[], clinic: Clinic): BoosterReminder[] {
++    return pets.map(pet => ({
++      petName: pet.name,
++      ownerEmail: pet.owner.email,
++      dueOn: this.vaccineSchedule.nextDoseDate(pet.species, pet.lastVaccinatedOn, clinic.region),
++    }));
++  }
++
++  getPetsDueForBooster(pets: Pet[], today: Date): Pet[] {
++    return pets.filter(pet => pet.isRegistered && pet.boosterDueOn <= today && !pet.hasUpcomingAppointment);
++  }
++
++  createVaccinationLines(owners: Owner[]): VaccinationLine[] {
++    return owners.flatMap(owner =>
++      owner.pets
++        .filter(pet => pet.hasVaccinations())
++        .map(pet => ({ ownerName: owner.name, petName: pet.name, vaccine: pet.lastVaccination().vaccine })),
++    );
++  }
++
++  getAppointmentFees(appointments: Appointment[]): Money[] {
++    return appointments.map(appointment => {
++      if (appointment.isEmergency) {
++        return this.feeTable.emergencyFee(appointment.species);
++      }
++      return appointment.isFollowUp
++        ? this.feeTable.followUpFee(appointment.species)
++        : this.feeTable.standardFee(appointment.species);
++    });
++  }
++
++  getMissedAppointments(appointments: Appointment[], now: Date): Appointment[] {
++    return appointments
++      .filter(appointment => appointment.isMissedAt(now))
++      .map(appointment => {
++        this.appointmentRepository.markNoShow(appointment.id);
++        return appointment;
++      });
++  }
++}

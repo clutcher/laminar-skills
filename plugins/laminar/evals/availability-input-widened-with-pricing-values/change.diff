@@ -1,0 +1,108 @@
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/AvailabilityInput.java b/storefront-api/src/main/java/com/example/storefront/product/AvailabilityInput.java
+index 7e429b5..764c75e 100644
+--- a/storefront-api/src/main/java/com/example/storefront/product/AvailabilityInput.java
++++ b/storefront-api/src/main/java/com/example/storefront/product/AvailabilityInput.java
+@@ -1,4 +1,4 @@
+ package com.example.storefront.product;
+ 
+-public record AvailabilityInput(String accountId, String languageId) {
++public record AvailabilityInput(String accountId, String languageId, int quantity, String agreementId) {
+ }
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/ProductFieldResolvers.java b/storefront-api/src/main/java/com/example/storefront/product/ProductFieldResolvers.java
+index fdca98f..5049b1e 100644
+--- a/storefront-api/src/main/java/com/example/storefront/product/ProductFieldResolvers.java
++++ b/storefront-api/src/main/java/com/example/storefront/product/ProductFieldResolvers.java
+@@ -24,16 +24,16 @@ public class ProductFieldResolvers {
+ 
+     @SchemaMapping
+     public Availability availability(Product product, @Argument AvailabilityInput input) {
+-        return stockLookup.availabilityFor(product.sku(), input.accountId(), input.languageId());
++        return stockLookup.availabilityFor(ProductLookupKey.forAvailability(product, input));
+     }
+ 
+     @SchemaMapping
+     public DeliveryEstimate deliveryEstimate(Product product, @Argument AvailabilityInput input) {
+-        return stockLookup.deliveryEstimateFor(product.sku(), input.accountId(), input.languageId());
++        return stockLookup.deliveryEstimateFor(ProductLookupKey.forAvailability(product, input));
+     }
+ 
+     @SchemaMapping
+     public List<PickupStore> pickupStores(Product product, @Argument AvailabilityInput input) {
+-        return stockLookup.pickupStoresFor(product.sku(), input.accountId(), input.languageId());
++        return stockLookup.pickupStoresFor(ProductLookupKey.forAvailability(product, input));
+     }
+ }
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java b/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java
+index 5a04d52..483d707 100644
+--- a/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java
++++ b/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java
+@@ -5,4 +5,8 @@ public record ProductLookupKey(String sku, String accountId, String languageId,
+     public static ProductLookupKey forPrice(Product product, PriceInput input) {
+         return new ProductLookupKey(product.sku(), input.accountId(), input.languageId(), input.quantity(), input.agreementId());
+     }
++
++    public static ProductLookupKey forAvailability(Product product, AvailabilityInput input) {
++        return new ProductLookupKey(product.sku(), input.accountId(), input.languageId(), input.quantity(), input.agreementId());
++    }
+ }
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/StockLookup.java b/storefront-api/src/main/java/com/example/storefront/product/StockLookup.java
+index edbfdd4..69c0037 100644
+--- a/storefront-api/src/main/java/com/example/storefront/product/StockLookup.java
++++ b/storefront-api/src/main/java/com/example/storefront/product/StockLookup.java
+@@ -4,9 +4,9 @@ import java.util.List;
+ 
+ public interface StockLookup {
+ 
+-    Availability availabilityFor(String sku, String accountId, String languageId);
++    Availability availabilityFor(ProductLookupKey key);
+ 
+-    DeliveryEstimate deliveryEstimateFor(String sku, String accountId, String languageId);
++    DeliveryEstimate deliveryEstimateFor(ProductLookupKey key);
+ 
+-    List<PickupStore> pickupStoresFor(String sku, String accountId, String languageId);
++    List<PickupStore> pickupStoresFor(ProductLookupKey key);
+ }
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java b/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java
+index 2005bec..14848f9 100644
+--- a/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java
++++ b/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java
+@@ -13,19 +13,19 @@ public class WarehouseStockLookup implements StockLookup {
+     }
+ 
+     @Override
+-    public Availability availabilityFor(String sku, String accountId, String languageId) {
+-        return warehouseClient.stockLevel(sku, accountId).toAvailability();
++    public Availability availabilityFor(ProductLookupKey key) {
++        return warehouseClient.stockLevel(key.sku(), key.accountId()).toAvailability();
+     }
+ 
+     @Override
+-    public DeliveryEstimate deliveryEstimateFor(String sku, String accountId, String languageId) {
+-        return warehouseClient.shippingWindow(sku, accountId).toDeliveryEstimate(languageId);
++    public DeliveryEstimate deliveryEstimateFor(ProductLookupKey key) {
++        return warehouseClient.shippingWindow(key.sku(), key.accountId()).toDeliveryEstimate(key.languageId());
+     }
+ 
+     @Override
+-    public List<PickupStore> pickupStoresFor(String sku, String accountId, String languageId) {
+-        return warehouseClient.storesHolding(sku, accountId).stream()
+-                .map(store -> store.toPickupStore(languageId))
++    public List<PickupStore> pickupStoresFor(ProductLookupKey key) {
++        return warehouseClient.storesHolding(key.sku(), key.accountId()).stream()
++                .map(store -> store.toPickupStore(key.languageId()))
+                 .toList();
+     }
+ }
+diff --git a/storefront-api/src/main/resources/graphql/product.graphqls b/storefront-api/src/main/resources/graphql/product.graphqls
+index d3b159d..422373e 100644
+--- a/storefront-api/src/main/resources/graphql/product.graphqls
++++ b/storefront-api/src/main/resources/graphql/product.graphqls
+@@ -21,6 +21,8 @@ input PriceInput {
+ input AvailabilityInput {
+     accountId: ID!
+     languageId: String!
++    quantity: Int!
++    agreementId: ID
+ }
+ 
+ type Price {

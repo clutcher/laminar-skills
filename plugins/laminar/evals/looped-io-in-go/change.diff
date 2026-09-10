@@ -1,0 +1,48 @@
+diff --git a/timetable/timetable.go b/timetable/timetable.go
+index b5b42bb..b528e84 100644
+--- a/timetable/timetable.go
++++ b/timetable/timetable.go
+@@ -3,6 +3,8 @@ package timetable
+ import (
+ 	"context"
+ 	"fmt"
++
++	sq "github.com/Masterminds/squirrel"
+ )
+ 
+ type Timetable struct {
+@@ -20,3 +22,34 @@ func (t *Timetable) PublishSailing(ctx context.Context, f Ferry) error {
+ 	}
+ 	return nil
+ }
++
++func (t *Timetable) PublishDaySailings(ctx context.Context, ferries []Ferry) error {
++	for _, f := range ferries {
++		if err := t.PublishSailing(ctx, f); err != nil {
++			return err
++		}
++	}
++	return nil
++}
++
++func (t *Timetable) TicketCountQueries(ferries []Ferry) ([]string, error) {
++	queries := make([]string, 0, len(ferries))
++	for _, f := range ferries {
++		query, _, err := sq.Select("count(*)").From("tickets").Where(sq.Eq{"ferry_id": f.ID, "route": f.Route}).ToSql()
++		if err != nil {
++			return nil, err
++		}
++		queries = append(queries, query)
++	}
++	return queries, nil
++}
++
++func (t *Timetable) RoutesWithoutFare(ferries []Ferry) []string {
++	var unpricedRoutes []string
++	for _, f := range ferries {
++		if _, priced := t.fareCache.Get(f.Route); !priced {
++			unpricedRoutes = append(unpricedRoutes, f.Route)
++		}
++	}
++	return unpricedRoutes
++}

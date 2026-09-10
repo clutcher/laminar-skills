@@ -1,0 +1,18 @@
+diff --git a/shop/src/main/kotlin/com/example/seedshop/orders/SeedOrder.kt b/shop/src/main/kotlin/com/example/seedshop/orders/SeedOrder.kt
+--- a/shop/src/main/kotlin/com/example/seedshop/orders/SeedOrder.kt
++++ b/shop/src/main/kotlin/com/example/seedshop/orders/SeedOrder.kt
+@@ -4,4 +4,13 @@ class SeedOrder(
+     val number: String,
+     val isPaid: Boolean,
+     val isShipped: Boolean,
+-)
++    val isCancelled: Boolean,
++) {
++
++    fun shipped(): SeedOrder {
++        if (!isPaid) {
++            throw IllegalStateException("Order $number cannot be shipped before it is paid")
++        }
++        return SeedOrder(number, isPaid, true, isCancelled)
++    }
++}

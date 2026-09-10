@@ -1,0 +1,54 @@
+diff --git a/shop/src/main/kotlin/com/example/seedshop/orders/SeedOrder.kt b/shop/src/main/kotlin/com/example/seedshop/orders/SeedOrder.kt
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/kotlin/com/example/seedshop/orders/SeedOrder.kt
+@@ -0,0 +1,7 @@
++package com.example.seedshop.orders
++
++class SeedOrder(
++    val number: String,
++    val isPaid: Boolean,
++    val isShipped: Boolean,
++)
+diff --git a/shop/src/main/kotlin/com/example/seedshop/packing/ParcelDesk.kt b/shop/src/main/kotlin/com/example/seedshop/packing/ParcelDesk.kt
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/kotlin/com/example/seedshop/packing/ParcelDesk.kt
+@@ -0,0 +1,16 @@
++package com.example.seedshop.packing
++
++import com.example.seedshop.orders.SeedOrder
++
++class ParcelDesk {
++
++    fun parcelsToPack(orders: List<SeedOrder>): List<SeedOrder> {
++        val ready = mutableListOf<SeedOrder>()
++        for (order in orders) {
++            if (order.isPaid && !order.isShipped) {
++                ready.add(order)
++            }
++        }
++        return ready
++    }
++}
+diff --git a/shop/src/main/kotlin/com/example/seedshop/payments/PaymentReminders.kt b/shop/src/main/kotlin/com/example/seedshop/payments/PaymentReminders.kt
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/kotlin/com/example/seedshop/payments/PaymentReminders.kt
+@@ -0,0 +1,16 @@
++package com.example.seedshop.payments
++
++import com.example.seedshop.orders.SeedOrder
++
++class PaymentReminders {
++
++    fun remindersFor(orders: List<SeedOrder>): List<String> {
++        val reminders = mutableListOf<String>()
++        for (order in orders) {
++            if (!order.isPaid) {
++                reminders.add("Order ${order.number} is waiting for payment")
++            }
++        }
++        return reminders
++    }
++}

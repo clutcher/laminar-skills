@@ -1,0 +1,164 @@
+diff --git a/loans-service/src/main/java/com/example/loans/app/api/ReaderActivityAggregation.java b/loans-service/src/main/java/com/example/loans/app/api/ReaderActivityAggregation.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/app/api/ReaderActivityAggregation.java
+@@ -0,0 +1,9 @@
++package com.example.loans.app.api;
++
++import com.example.loans.app.domain.ActivityEntry;
++import java.util.List;
++
++public interface ReaderActivityAggregation {
++
++    List<ActivityEntry> combinedActivityOf(String readerId);
++}
+diff --git a/loans-service/src/main/java/com/example/loans/app/domain/ActivityEntry.java b/loans-service/src/main/java/com/example/loans/app/domain/ActivityEntry.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/app/domain/ActivityEntry.java
+@@ -0,0 +1,6 @@
++package com.example.loans.app.domain;
++
++import java.time.LocalDate;
++
++public record ActivityEntry(LocalDate happenedOn, String title, String description) {
++}
+diff --git a/loans-service/src/main/java/com/example/loans/app/domain/Reservation.java b/loans-service/src/main/java/com/example/loans/app/domain/Reservation.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/app/domain/Reservation.java
+@@ -0,0 +1,6 @@
++package com.example.loans.app.domain;
++
++import java.time.LocalDate;
++
++public record Reservation(String title, LocalDate reservedOn, int queuePosition) {
++}
+diff --git a/loans-service/src/main/java/com/example/loans/app/services/ReaderActivityAggregationService.java b/loans-service/src/main/java/com/example/loans/app/services/ReaderActivityAggregationService.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/app/services/ReaderActivityAggregationService.java
+@@ -0,0 +1,41 @@
++package com.example.loans.app.services;
++
++import com.example.loans.app.api.ReaderActivityAggregation;
++import com.example.loans.app.domain.ActivityEntry;
++import com.example.loans.app.domain.Loan;
++import com.example.loans.app.domain.Reservation;
++import com.example.loans.app.spi.LoanRecords;
++import com.example.loans.app.spi.ReservationRecords;
++import java.util.Comparator;
++import java.util.List;
++import java.util.stream.Stream;
++import org.springframework.stereotype.Service;
++
++@Service
++public class ReaderActivityAggregationService implements ReaderActivityAggregation {
++
++    private final LoanRecords loanRecords;
++    private final ReservationRecords reservationRecords;
++
++    public ReaderActivityAggregationService(LoanRecords loanRecords, ReservationRecords reservationRecords) {
++        this.loanRecords = loanRecords;
++        this.reservationRecords = reservationRecords;
++    }
++
++    @Override
++    public List<ActivityEntry> combinedActivityOf(String readerId) {
++        Stream<ActivityEntry> loans = loanRecords.openLoansOf(readerId).stream().map(this::dueBackEntryOf);
++        Stream<ActivityEntry> reservations = reservationRecords.activeReservationsOf(readerId).stream().map(this::reservedEntryOf);
++        return Stream.concat(loans, reservations)
++                .sorted(Comparator.comparing(ActivityEntry::happenedOn))
++                .toList();
++    }
++
++    private ActivityEntry dueBackEntryOf(Loan loan) {
++        return new ActivityEntry(loan.dueOn(), loan.title(), "Due back");
++    }
++
++    private ActivityEntry reservedEntryOf(Reservation reservation) {
++        return new ActivityEntry(reservation.reservedOn(), reservation.title(), "Reserved, place " + reservation.queuePosition() + " in the queue");
++    }
++}
+diff --git a/loans-service/src/main/java/com/example/loans/app/spi/ReservationRecords.java b/loans-service/src/main/java/com/example/loans/app/spi/ReservationRecords.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/app/spi/ReservationRecords.java
+@@ -0,0 +1,9 @@
++package com.example.loans.app.spi;
++
++import com.example.loans.app.domain.Reservation;
++import java.util.List;
++
++public interface ReservationRecords {
++
++    List<Reservation> activeReservationsOf(String readerId);
++}
+diff --git a/loans-service/src/main/java/com/example/loans/in/ReaderController.java b/loans-service/src/main/java/com/example/loans/in/ReaderController.java
+--- a/loans-service/src/main/java/com/example/loans/in/ReaderController.java
++++ b/loans-service/src/main/java/com/example/loans/in/ReaderController.java
+@@ -1,6 +1,8 @@
+ package com.example.loans.in;
+ 
+ import com.example.loans.app.api.LoanOverview;
++import com.example.loans.app.api.ReaderActivityAggregation;
++import com.example.loans.app.domain.ActivityEntry;
+ import com.example.loans.app.domain.Loan;
+ import java.util.List;
+ import org.springframework.web.bind.annotation.GetMapping;
+@@ -11,13 +13,20 @@
+ public class ReaderController {
+ 
+     private final LoanOverview loanOverview;
++    private final ReaderActivityAggregation readerActivityAggregation;
+ 
+-    public ReaderController(LoanOverview loanOverview) {
++    public ReaderController(LoanOverview loanOverview, ReaderActivityAggregation readerActivityAggregation) {
+         this.loanOverview = loanOverview;
++        this.readerActivityAggregation = readerActivityAggregation;
+     }
+ 
+     @GetMapping("/readers/{readerId}/loans")
+     public List<Loan> openLoans(@PathVariable String readerId) {
+         return loanOverview.openLoansOf(readerId);
+     }
++
++    @GetMapping("/readers/{readerId}/activity")
++    public List<ActivityEntry> activity(@PathVariable String readerId) {
++        return readerActivityAggregation.combinedActivityOf(readerId);
++    }
+ }
+diff --git a/loans-service/src/main/java/com/example/loans/out/JdbcReservationRecords.java b/loans-service/src/main/java/com/example/loans/out/JdbcReservationRecords.java
+new file mode 100644
+--- /dev/null
++++ b/loans-service/src/main/java/com/example/loans/out/JdbcReservationRecords.java
+@@ -0,0 +1,29 @@
++package com.example.loans.out;
++
++import com.example.loans.app.domain.Reservation;
++import com.example.loans.app.spi.ReservationRecords;
++import java.util.List;
++import org.springframework.jdbc.core.simple.JdbcClient;
++import org.springframework.stereotype.Repository;
++
++@Repository
++public class JdbcReservationRecords implements ReservationRecords {
++
++    private final JdbcClient jdbcClient;
++
++    public JdbcReservationRecords(JdbcClient jdbcClient) {
++        this.jdbcClient = jdbcClient;
++    }
++
++    @Override
++    public List<Reservation> activeReservationsOf(String readerId) {
++        return jdbcClient.sql("""
++                        select title, reserved_on, queue_position
++                        from reservation
++                        where reader_id = :readerId and collected_on is null
++                        """)
++                .param("readerId", readerId)
++                .query(Reservation.class)
++                .list();
++    }
++}

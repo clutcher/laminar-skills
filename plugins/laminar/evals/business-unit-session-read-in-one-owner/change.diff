@@ -1,0 +1,36 @@
+diff --git a/shop/src/main/java/com/example/shop/b2b/B2BUnitService.java b/shop/src/main/java/com/example/shop/b2b/B2BUnitService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/b2b/B2BUnitService.java
+@@ -0,0 +1,31 @@
++package com.example.shop.b2b;
++
++import com.example.shop.session.SessionService;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class B2BUnitService {
++
++    private static final String CURRENT_B2B_UNIT_SESSION_KEY = "currentB2BUnit";
++
++    private final SessionService sessionService;
++
++    public B2BUnitModel getCurrentB2BUnit() {
++        Object b2bUnitSessionValue = sessionService.getAttribute(
++                CURRENT_B2B_UNIT_SESSION_KEY);
++        if (b2bUnitSessionValue instanceof B2BUnitModel) {
++            return (B2BUnitModel) b2bUnitSessionValue;
++        }
++        return null;
++    }
++
++    public void setCurrentB2BUnit(B2BUnitModel unit) {
++        if (unit != null) {
++            sessionService.setAttribute(CURRENT_B2B_UNIT_SESSION_KEY, unit);
++        }
++    }
++
++    public void clearCurrentB2BUnit() {
++        sessionService.setAttribute(CURRENT_B2B_UNIT_SESSION_KEY, null);
++    }
++}

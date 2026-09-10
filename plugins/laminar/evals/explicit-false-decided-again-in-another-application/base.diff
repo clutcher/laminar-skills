@@ -1,0 +1,95 @@
+diff --git a/ferry/pom.xml b/ferry/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/ferry/pom.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example.harbourferry</groupId>
++    <artifactId>ferry</artifactId>
++    <version>1.0.0</version>
++    <packaging>jar</packaging>
++</project>
+diff --git a/harbour-console/package.json b/harbour-console/package.json
+new file mode 100644
+--- /dev/null
++++ b/harbour-console/package.json
+@@ -0,0 +1,9 @@
++{
++  "name": "harbour-console",
++  "version": "1.0.0",
++  "private": true,
++  "dependencies": {
++    "@angular/core": "^18.2.0",
++    "@angular/common": "^18.2.0"
++  }
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/vessel/Vessel.java b/ferry/src/main/java/com/example/harbourferry/vessel/Vessel.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/vessel/Vessel.java
+@@ -0,0 +1,26 @@
++package com.example.harbourferry.vessel;
++
++public class Vessel {
++
++    private final String name;
++    private final int passengerCapacity;
++    private final Boolean spotCheckPassed;
++
++    public Vessel(String name, int passengerCapacity, Boolean spotCheckPassed) {
++        this.name = name;
++        this.passengerCapacity = passengerCapacity;
++        this.spotCheckPassed = spotCheckPassed;
++    }
++
++    public String getName() {
++        return name;
++    }
++
++    public int getPassengerCapacity() {
++        return passengerCapacity;
++    }
++
++    public Boolean getSpotCheckPassed() {
++        return spotCheckPassed;
++    }
++}
+diff --git a/harbour-console/src/app/vessels/vessel-certificate-link.component.ts b/harbour-console/src/app/vessels/vessel-certificate-link.component.ts
+new file mode 100644
+--- /dev/null
++++ b/harbour-console/src/app/vessels/vessel-certificate-link.component.ts
+@@ -0,0 +1,7 @@
++import { VesselSummary } from "./vessel-summary";
++
++export class VesselCertificateLinkComponent {
++  showsCertificate(vessel: VesselSummary): boolean {
++    return vessel.spotCheckPassed === true;
++  }
++}
+diff --git a/harbour-console/src/app/vessels/vessel-status-badge.component.ts b/harbour-console/src/app/vessels/vessel-status-badge.component.ts
+new file mode 100644
+--- /dev/null
++++ b/harbour-console/src/app/vessels/vessel-status-badge.component.ts
+@@ -0,0 +1,10 @@
++import { VesselSummary } from "./vessel-summary";
++
++export class VesselStatusBadgeComponent {
++  labelFor(vessel: VesselSummary): string {
++    if (vessel.spotCheckPassed === false) {
++      return "Barred from sailing";
++    }
++    return "Cleared to sail";
++  }
++}
+diff --git a/harbour-console/src/app/vessels/vessel-summary.ts b/harbour-console/src/app/vessels/vessel-summary.ts
+new file mode 100644
+--- /dev/null
++++ b/harbour-console/src/app/vessels/vessel-summary.ts
+@@ -0,0 +1,5 @@
++export interface VesselSummary {
++  name: string;
++  passengerCapacity: number;
++  spotCheckPassed: boolean | null;
++}

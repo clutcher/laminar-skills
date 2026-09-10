@@ -1,0 +1,62 @@
+diff --git a/bikes/src/invoicing/out/modules/charges-using-rental-module.ts b/bikes/src/invoicing/out/modules/charges-using-rental-module.ts
+new file mode 100644
+index 0000000..c1a42e7
+--- /dev/null
++++ b/bikes/src/invoicing/out/modules/charges-using-rental-module.ts
+@@ -0,0 +1,10 @@
++import { RentalLookup, RentalReceipt } from "../../../rental";
++
++export class ChargesUsingRentalModule {
++  constructor(private readonly rentalLookup: RentalLookup) {}
++
++  async chargedCentsOf(riderId: string): Promise<number> {
++    const receipts: RentalReceipt[] = await this.rentalLookup.receiptsOfRider(riderId, new Date());
++    return receipts.filter(receipt => !receipt.isFree()).reduce((sum, receipt) => sum + receipt.priceInCents, 0);
++  }
++}
+diff --git a/bikes/src/rental/app/domain/model/rental-receipt.ts b/bikes/src/rental/app/domain/model/rental-receipt.ts
+new file mode 100644
+index 0000000..1a55de5
+--- /dev/null
++++ b/bikes/src/rental/app/domain/model/rental-receipt.ts
+@@ -0,0 +1,11 @@
++export class RentalReceipt {
++  constructor(
++    readonly rentalId: string,
++    readonly minutes: number,
++    readonly priceInCents: number,
++  ) {}
++
++  isFree(): boolean {
++    return this.minutes <= 15;
++  }
++}
+diff --git a/bikes/src/rental/in/modules/rental-lookup.ts b/bikes/src/rental/in/modules/rental-lookup.ts
+index 3d456ad..5b1454f 100644
+--- a/bikes/src/rental/in/modules/rental-lookup.ts
++++ b/bikes/src/rental/in/modules/rental-lookup.ts
+@@ -1,4 +1,5 @@
+ import { BikeStore } from "../../app/spi/bike-store";
++import { RentalReceipt } from "../../app/domain/model/rental-receipt";
+ import { PublicRental } from "./public-rental";
+ 
+ export class RentalLookup {
+@@ -8,4 +9,9 @@ export class RentalLookup {
+     const rentals = await this.bikeStore.rentalsOfRider(riderId);
+     return rentals.map(rental => ({ rentalId: rental.rentalId, bikeId: rental.bikeId, startedAt: rental.startedAt.toISOString() }));
+   }
++
++  async receiptsOfRider(riderId: string, endedAt: Date): Promise<RentalReceipt[]> {
++    const rentals = await this.bikeStore.rentalsOfRider(riderId);
++    return rentals.map(rental => new RentalReceipt(rental.rentalId, rental.minutesUntil(endedAt), rental.minutesUntil(endedAt) * 10));
++  }
+ }
+diff --git a/bikes/src/rental/index.ts b/bikes/src/rental/index.ts
+index e401528..90ee485 100644
+--- a/bikes/src/rental/index.ts
++++ b/bikes/src/rental/index.ts
+@@ -1,3 +1,4 @@
+ export type { RentBike } from "./app/api/rent-bike";
+ export type { PublicRental } from "./in/modules/public-rental";
+ export { RentalLookup } from "./in/modules/rental-lookup";
++export { RentalReceipt } from "./app/domain/model/rental-receipt";

@@ -1,0 +1,23 @@
+diff --git a/shop/src/main/java/com/example/shop/review/ReviewService.java b/shop/src/main/java/com/example/shop/review/ReviewService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/review/ReviewService.java
+@@ -0,0 +1,18 @@
++package com.example.shop.review;
++
++import java.util.List;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class ReviewService {
++
++    private final ReviewRepository reviewRepository;
++
++    public ProductReview getReview(Long productId) {
++        return reviewRepository.findByProductId(productId);
++    }
++
++    public List<ProductReview> getReviews(List<Long> productIds) {
++        return reviewRepository.findByProductIdIn(productIds);
++    }
++}

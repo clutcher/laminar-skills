@@ -1,0 +1,50 @@
+diff --git a/shop/src/main/java/com/example/shop/order/OrderProcessingService.java b/shop/src/main/java/com/example/shop/order/OrderProcessingService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderProcessingService.java
+@@ -0,0 +1,45 @@
++package com.example.shop.order;
++
++import com.example.shop.mail.ConfirmationMailer;
++import com.example.shop.payment.PaymentGateway;
++import com.example.shop.stock.StockReservation;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class OrderProcessingService {
++
++    private final StockReservation stockReservation;
++    private final PaymentGateway paymentGateway;
++    private final ConfirmationMailer confirmationMailer;
++
++    public void processOrder(Order order) {
++        if (order == null) {
++            return;
++        }
++        if (!order.hasLineItems()) {
++            return;
++        }
++        if (order.getCustomer() == null) {
++            return;
++        }
++        if (!order.getPayment().isValid()) {
++            return;
++        }
++
++        reserveInventory(order);
++        chargePayment(order);
++        sendConfirmation(order);
++    }
++
++    private void reserveInventory(Order order) {
++        stockReservation.reserve(order.getLineItems());
++    }
++
++    private void chargePayment(Order order) {
++        paymentGateway.charge(order.getPayment());
++    }
++
++    private void sendConfirmation(Order order) {
++        confirmationMailer.send(order);
++    }
++}

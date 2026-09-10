@@ -1,0 +1,33 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/voyage/Voyage.java b/ferry/src/main/java/com/example/harbourferry/voyage/Voyage.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/voyage/Voyage.java
+@@ -0,0 +1,28 @@
++package com.example.harbourferry.voyage;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class Voyage {
++
++    private final int passengerCapacity;
++    private final List<String> passengerNames = new ArrayList<>();
++
++    public Voyage(int passengerCapacity) {
++        if (passengerCapacity < 1) {
++            throw new IllegalArgumentException("A voyage carries at least 1 passenger");
++        }
++        this.passengerCapacity = passengerCapacity;
++    }
++
++    public void board(String passengerName) {
++        if (passengerNames.size() >= passengerCapacity) {
++            throw new IllegalStateException("The voyage is full");
++        }
++        passengerNames.add(passengerName);
++    }
++
++    public List<String> passengerNames() {
++        return passengerNames;
++    }
++}

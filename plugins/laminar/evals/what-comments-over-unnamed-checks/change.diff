@@ -1,0 +1,32 @@
+diff --git a/shop/src/main/java/com/example/shop/catalog/ProductVisibility.java b/shop/src/main/java/com/example/shop/catalog/ProductVisibility.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/catalog/ProductVisibility.java
+@@ -0,0 +1,27 @@
++package com.example.shop.catalog;
++
++import com.example.shop.customer.Customer;
++
++public class ProductVisibility {
++
++    public boolean isProductVisibleToCustomer(Product product, Customer customer) {
++        // Check if product is approved and enabled for storefront
++        if (product.getApprovalStatus() != ApprovalStatus.APPROVED
++                || !product.isEnabledForStorefront()) {
++            return false;
++        }
++
++        // Check if product is in customer's assigned catalog
++        if (!customer.getAssignedCatalogs().contains(product.getCatalog())) {
++            return false;
++        }
++
++        // Check if customer's business unit can access this product category
++        if (!customer.getBusinessUnit().getAllowedCategories()
++                .contains(product.getCategory())) {
++            return false;
++        }
++
++        return true;
++    }
++}

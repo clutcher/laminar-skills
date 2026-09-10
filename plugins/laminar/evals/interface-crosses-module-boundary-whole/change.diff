@@ -1,0 +1,153 @@
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/pricing/RideDuration.java b/bikeshare/src/main/java/com/example/bikeshare/pricing/RideDuration.java
+new file mode 100644
+index 0000000..ca4b879
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/pricing/RideDuration.java
+@@ -0,0 +1,4 @@
++package com.example.bikeshare.pricing;
++
++public record RideDuration(int minutes) {
++}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RidePriceCalculator.java b/bikeshare/src/main/java/com/example/bikeshare/pricing/RidePriceCalculator.java
+similarity index 85%
+rename from bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RidePriceCalculator.java
+rename to bikeshare/src/main/java/com/example/bikeshare/pricing/RidePriceCalculator.java
+index 6ad351b..7b01bf1 100644
+--- a/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RidePriceCalculator.java
++++ b/bikeshare/src/main/java/com/example/bikeshare/pricing/RidePriceCalculator.java
+@@ -1,5 +1,6 @@
+-package com.example.bikeshare.pricing.internal;
++package com.example.bikeshare.pricing;
+ 
++import com.example.bikeshare.pricing.internal.SeasonalRateTable;
+ import org.springframework.stereotype.Component;
+ 
+ import java.time.LocalDate;
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RideDuration.java b/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RideDuration.java
+deleted file mode 100644
+index 80677cf..0000000
+--- a/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RideDuration.java
++++ /dev/null
+@@ -1,4 +0,0 @@
+-package com.example.bikeshare.pricing.internal;
+-
+-public record RideDuration(int minutes) {
+-}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/SeasonalRateTable.java b/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/SeasonalRateTable.java
+index 343450a..86f645a 100644
+--- a/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/SeasonalRateTable.java
++++ b/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/SeasonalRateTable.java
+@@ -6,7 +6,7 @@ import java.time.LocalDate;
+ import java.time.Month;
+ 
+ @Component
+-class SeasonalRateTable {
++public class SeasonalRateTable {
+ 
+     private static final int SUMMER_CENTS_PER_MINUTE = 18;
+ 
+@@ -14,13 +14,13 @@ class SeasonalRateTable {
+ 
+     private static final int LONG_RIDE_DISCOUNT_IN_CENTS = 250;
+ 
+-    int centsPerMinuteOn(LocalDate rideDate) {
++    public int centsPerMinuteOn(LocalDate rideDate) {
+         Month month = rideDate.getMonth();
+         boolean summer = month.getValue() >= Month.MAY.getValue() && month.getValue() <= Month.SEPTEMBER.getValue();
+         return summer ? SUMMER_CENTS_PER_MINUTE : WINTER_CENTS_PER_MINUTE;
+     }
+ 
+-    int longRideDiscountInCents() {
++    public int longRideDiscountInCents() {
+         return LONG_RIDE_DISCOUNT_IN_CENTS;
+     }
+ }
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/ride/internal/RideChargeCalculator.java b/bikeshare/src/main/java/com/example/bikeshare/ride/internal/RideChargeCalculator.java
+new file mode 100644
+index 0000000..19ddbd8
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/ride/internal/RideChargeCalculator.java
+@@ -0,0 +1,21 @@
++package com.example.bikeshare.ride.internal;
++
++import com.example.bikeshare.pricing.RideDuration;
++import com.example.bikeshare.pricing.RidePriceCalculator;
++import org.springframework.stereotype.Service;
++
++import java.time.LocalDate;
++
++@Service
++class RideChargeCalculator {
++
++    private final RidePriceCalculator ridePrices;
++
++    RideChargeCalculator(RidePriceCalculator ridePrices) {
++        this.ridePrices = ridePrices;
++    }
++
++    int amountToChargeInCentsFor(RideDuration ridden, LocalDate rideDate) {
++        return ridePrices.priceInCentsFor(ridden, rideDate) - ridePrices.longRideDiscountInCentsFor(ridden);
++    }
++}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/ride/internal/RideChargeController.java b/bikeshare/src/main/java/com/example/bikeshare/ride/internal/RideChargeController.java
+new file mode 100644
+index 0000000..251b51b
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/ride/internal/RideChargeController.java
+@@ -0,0 +1,24 @@
++package com.example.bikeshare.ride.internal;
++
++import com.example.bikeshare.pricing.RideDuration;
++import org.springframework.format.annotation.DateTimeFormat;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.bind.annotation.RestController;
++
++import java.time.LocalDate;
++
++@RestController
++class RideChargeController {
++
++    private final RideChargeCalculator rideCharges;
++
++    RideChargeController(RideChargeCalculator rideCharges) {
++        this.rideCharges = rideCharges;
++    }
++
++    @GetMapping("/rides/charge")
++    int amountToChargeInCents(@RequestParam int minutes, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate rideDate) {
++        return rideCharges.amountToChargeInCentsFor(new RideDuration(minutes), rideDate);
++    }
++}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/ride/package-info.java b/bikeshare/src/main/java/com/example/bikeshare/ride/package-info.java
+new file mode 100644
+index 0000000..046111d
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/ride/package-info.java
+@@ -0,0 +1,2 @@
++@org.springframework.modulith.ApplicationModule(allowedDependencies = "pricing")
++package com.example.bikeshare.ride;
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectory.java b/bikeshare/src/main/java/com/example/bikeshare/station/StationDirectory.java
+similarity index 71%
+rename from bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectory.java
+rename to bikeshare/src/main/java/com/example/bikeshare/station/StationDirectory.java
+index 8c4154e..a07ec77 100644
+--- a/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectory.java
++++ b/bikeshare/src/main/java/com/example/bikeshare/station/StationDirectory.java
+@@ -1,4 +1,4 @@
+-package com.example.bikeshare.station.internal;
++package com.example.bikeshare.station;
+ 
+ import java.util.Optional;
+ 
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectoryUsingMemory.java b/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectoryUsingMemory.java
+index ea561ae..1e348c8 100644
+--- a/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectoryUsingMemory.java
++++ b/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectoryUsingMemory.java
+@@ -1,5 +1,6 @@
+ package com.example.bikeshare.station.internal;
+ 
++import com.example.bikeshare.station.StationDirectory;
+ import org.springframework.stereotype.Component;
+ 
+ import java.util.Map;

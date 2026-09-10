@@ -1,0 +1,17 @@
+diff --git a/harbour/src/main/java/com/example/harbour/dues/PortDuesCalculator.java b/harbour/src/main/java/com/example/harbour/dues/PortDuesCalculator.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/dues/PortDuesCalculator.java
+@@ -0,0 +1,12 @@
++package com.example.harbour.dues;
++
++public class PortDuesCalculator {
++
++    private static final Money DUES_PER_STARTED_100_TONNES = Money.euros(42);
++    private static final int TONNES_PER_DUES_UNIT = 100;
++
++    // Harbour Dues Order, second schedule: dues are charged per started 100 gross tonnes.
++    public Money calculatePortDues(Vessel vessel) {
++        return DUES_PER_STARTED_100_TONNES.times(Math.ceilDiv(vessel.grossTonnage(), TONNES_PER_DUES_UNIT));
++    }
++}

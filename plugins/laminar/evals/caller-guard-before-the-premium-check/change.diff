@@ -1,0 +1,29 @@
+diff --git a/shop/src/main/java/com/example/shop/pricing/DiscountCalculator.java b/shop/src/main/java/com/example/shop/pricing/DiscountCalculator.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/pricing/DiscountCalculator.java
+@@ -0,0 +1,24 @@
++package com.example.shop.pricing;
++
++import com.example.shop.b2b.B2BUnitModel;
++import com.example.shop.b2b.B2BUnitService;
++import com.example.shop.order.Order;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class DiscountCalculator {
++
++    private final B2BUnitService b2bUnitService;
++
++    public double calculateDiscount(Order order) {
++        B2BUnitModel currentUnit = b2bUnitService.getCurrentB2BUnit();
++        if (currentUnit == null) {
++            return 0;
++        }
++
++        if (currentUnit.isPremium()) {
++            return order.getTotal() * 0.1;
++        }
++        return 0;
++    }
++}

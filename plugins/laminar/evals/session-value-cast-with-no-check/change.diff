@@ -1,0 +1,40 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/checkin/CurrentVoyageService.java b/ferry/src/main/java/com/example/harbourferry/checkin/CurrentVoyageService.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/checkin/CurrentVoyageService.java
+@@ -0,0 +1,22 @@
++package com.example.harbourferry.checkin;
++
++import com.example.harbourferry.voyage.Voyage;
++
++public class CurrentVoyageService {
++
++    private static final String CURRENT_VOYAGE_SESSION_KEY = "currentVoyage";
++
++    private final SessionStore sessionStore;
++
++    public CurrentVoyageService(SessionStore sessionStore) {
++        this.sessionStore = sessionStore;
++    }
++
++    public Voyage getCurrentVoyage() {
++        return (Voyage) sessionStore.getAttribute(CURRENT_VOYAGE_SESSION_KEY);
++    }
++
++    public void setCurrentVoyage(Voyage voyage) {
++        sessionStore.setAttribute(CURRENT_VOYAGE_SESSION_KEY, voyage);
++    }
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/checkin/SessionStore.java b/ferry/src/main/java/com/example/harbourferry/checkin/SessionStore.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/checkin/SessionStore.java
+@@ -0,0 +1,8 @@
++package com.example.harbourferry.checkin;
++
++public interface SessionStore {
++
++    Object getAttribute(String key);
++
++    void setAttribute(String key, Object value);
++}

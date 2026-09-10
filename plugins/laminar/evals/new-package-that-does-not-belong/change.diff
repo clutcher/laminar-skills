@@ -1,0 +1,135 @@
+diff --git a/inventory-service/pom.xml b/inventory-service/pom.xml
+new file mode 100644
+index 0000000..a25c738
+--- /dev/null
++++ b/inventory-service/pom.xml
+@@ -0,0 +1,6 @@
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.shop</groupId>
++    <artifactId>inventory-service</artifactId>
++    <version>1.0.0</version>
++</project>
+diff --git a/inventory-service/src/main/java/com/shop/inventory/StockReservationService.java b/inventory-service/src/main/java/com/shop/inventory/StockReservationService.java
+new file mode 100644
+index 0000000..8cdfb75
+--- /dev/null
++++ b/inventory-service/src/main/java/com/shop/inventory/StockReservationService.java
+@@ -0,0 +1,14 @@
++package com.shop.inventory;
++
++public class StockReservationService {
++
++    private final StockService stockService;
++
++    public StockReservationService(StockService stockService) {
++        this.stockService = stockService;
++    }
++
++    public boolean reserveStock(String sku, int quantity) {
++        return stockService.unitsInStock(sku) >= quantity;
++    }
++}
+diff --git a/inventory-service/src/main/java/com/shop/inventory/StockService.java b/inventory-service/src/main/java/com/shop/inventory/StockService.java
+new file mode 100644
+index 0000000..c3f42f5
+--- /dev/null
++++ b/inventory-service/src/main/java/com/shop/inventory/StockService.java
+@@ -0,0 +1,13 @@
++package com.shop.inventory;
++
++import java.util.HashMap;
++import java.util.Map;
++
++public class StockService {
++
++    private final Map<String, Integer> unitsInStockBySku = new HashMap<>();
++
++    public int unitsInStock(String sku) {
++        return unitsInStockBySku.getOrDefault(sku, 0);
++    }
++}
+diff --git a/order-service/src/main/java/com/shop/order/newsletter/NewsletterSendingService.java b/order-service/src/main/java/com/shop/order/newsletter/NewsletterSendingService.java
+new file mode 100644
+index 0000000..154585a
+--- /dev/null
++++ b/order-service/src/main/java/com/shop/order/newsletter/NewsletterSendingService.java
+@@ -0,0 +1,10 @@
++package com.shop.order.newsletter;
++
++import java.util.List;
++
++public class NewsletterSendingService {
++
++    public int sendNewsletter(String subject, List<String> subscribedEmails) {
++        return subscribedEmails.size();
++    }
++}
+diff --git a/order-service/src/main/java/com/shop/order/newsletter/NewsletterSubscriptionService.java b/order-service/src/main/java/com/shop/order/newsletter/NewsletterSubscriptionService.java
+new file mode 100644
+index 0000000..82b0de8
+--- /dev/null
++++ b/order-service/src/main/java/com/shop/order/newsletter/NewsletterSubscriptionService.java
+@@ -0,0 +1,17 @@
++package com.shop.order.newsletter;
++
++import java.util.HashSet;
++import java.util.Set;
++
++public class NewsletterSubscriptionService {
++
++    private final Set<String> subscribedEmails = new HashSet<>();
++
++    public void subscribe(String email) {
++        subscribedEmails.add(email);
++    }
++
++    public void unsubscribe(String email) {
++        subscribedEmails.remove(email);
++    }
++}
+diff --git a/order-service/src/main/java/com/shop/order/payment/PaymentRetryService.java b/order-service/src/main/java/com/shop/order/payment/PaymentRetryService.java
+new file mode 100644
+index 0000000..8a52d07
+--- /dev/null
++++ b/order-service/src/main/java/com/shop/order/payment/PaymentRetryService.java
+@@ -0,0 +1,16 @@
++package com.shop.order.payment;
++
++import java.math.BigDecimal;
++
++public class PaymentRetryService {
++
++    private final PaymentService paymentService;
++
++    public PaymentRetryService(PaymentService paymentService) {
++        this.paymentService = paymentService;
++    }
++
++    public String retryFailedPayment(String orderId, BigDecimal amount) {
++        return paymentService.chargeOrder(orderId, amount);
++    }
++}
+diff --git a/scripts/backfill-order-totals.py b/scripts/backfill-order-totals.py
+new file mode 100644
+index 0000000..6c691f2
+--- /dev/null
++++ b/scripts/backfill-order-totals.py
+@@ -0,0 +1,17 @@
++import csv
++import sys
++
++
++def order_total(unit_price, quantity):
++    return unit_price * quantity
++
++
++def with_order_totals(rows):
++    return [{**row, "order_total": order_total(float(row["unit_price"]), int(row["quantity"]))} for row in rows]
++
++
++if __name__ == "__main__":
++    reader = csv.DictReader(sys.stdin)
++    writer = csv.DictWriter(sys.stdout, fieldnames=reader.fieldnames + ["order_total"])
++    writer.writeheader()
++    writer.writerows(with_order_totals(reader))

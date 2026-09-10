@@ -1,0 +1,52 @@
+diff --git a/berths/src/booking/berth-booking-store.ts b/berths/src/booking/berth-booking-store.ts
+new file mode 100644
+index 0000000..461b7fb
+--- /dev/null
++++ b/berths/src/booking/berth-booking-store.ts
+@@ -0,0 +1,14 @@
++import { DataSource, Repository } from "typeorm";
++import { BerthBooking } from "./berth-booking";
++
++export class BerthBookingStore {
++  private readonly bookings: Repository<BerthBooking>;
++
++  constructor(dataSource: DataSource) {
++    this.bookings = dataSource.getRepository(BerthBooking);
++  }
++
++  async bookingsOfBerth(berthNumber: number): Promise<BerthBooking[]> {
++    return this.bookings.findBy({ berthNumber });
++  }
++}
+diff --git a/berths/src/booking/berth-booking.ts b/berths/src/booking/berth-booking.ts
+new file mode 100644
+index 0000000..bb469e7
+--- /dev/null
++++ b/berths/src/booking/berth-booking.ts
+@@ -0,0 +1,26 @@
++import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
++
++@Entity({ name: "berth_booking" })
++export class BerthBooking {
++  @PrimaryGeneratedColumn()
++  id!: number;
++
++  @Column({ name: "vessel_name" })
++  vesselName!: string;
++
++  @Column({ name: "berth_number" })
++  berthNumber!: number;
++
++  @Column({ name: "arrives_on", type: "date" })
++  arrivesOn!: Date;
++
++  @Column({ name: "leaves_on", type: "date" })
++  leavesOn!: Date;
++
++  @Column({ name: "length_metres" })
++  lengthMetres!: number;
++
++  overlaps(other: BerthBooking): boolean {
++    return this.berthNumber === other.berthNumber && this.leavesOn >= other.arrivesOn && other.leavesOn >= this.arrivesOn;
++  }
++}

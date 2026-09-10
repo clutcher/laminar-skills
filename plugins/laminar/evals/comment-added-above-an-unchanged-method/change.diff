@@ -1,0 +1,11 @@
+diff --git a/harbour/src/main/java/com/example/harbour/berth/BerthPlanner.java b/harbour/src/main/java/com/example/harbour/berth/BerthPlanner.java
+--- a/harbour/src/main/java/com/example/harbour/berth/BerthPlanner.java
++++ b/harbour/src/main/java/com/example/harbour/berth/BerthPlanner.java
+@@ -5,6 +5,7 @@
+ 
+ public class BerthPlanner {
+ 
++    // Drops the berths under maintenance during the stay, then picks the one with the lowest daily rate.
+     public Berth pickBerth(List<Berth> berths, Stay stay) {
+         return berths.stream()
+             .filter(berth -> !berth.isUnderMaintenanceDuring(stay))

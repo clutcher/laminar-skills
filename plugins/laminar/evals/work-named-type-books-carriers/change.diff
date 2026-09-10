@@ -1,0 +1,45 @@
+diff --git a/freight-desk/src/main/java/com/example/freight/shipping/CarrierBookingService.java b/freight-desk/src/main/java/com/example/freight/shipping/CarrierBookingService.java
+new file mode 100644
+--- /dev/null
++++ b/freight-desk/src/main/java/com/example/freight/shipping/CarrierBookingService.java
+@@ -0,0 +1,18 @@
++package com.example.freight.shipping;
++
++public class CarrierBookingService {
++
++    private final CarrierClient carrierClient;
++
++    public CarrierBookingService(CarrierClient carrierClient) {
++        this.carrierClient = carrierClient;
++    }
++
++    public CarrierBooking bookCarrier(String shipmentId, String carrierCode) {
++        return carrierClient.book(shipmentId, carrierCode);
++    }
++
++    public void cancelCarrierBooking(String bookingReference) {
++        carrierClient.cancel(bookingReference);
++    }
++}
+diff --git a/freight-desk/src/main/java/com/example/freight/shipping/CarrierClient.java b/freight-desk/src/main/java/com/example/freight/shipping/CarrierClient.java
+new file mode 100644
+--- /dev/null
++++ b/freight-desk/src/main/java/com/example/freight/shipping/CarrierClient.java
+@@ -0,0 +1,8 @@
++package com.example.freight.shipping;
++
++public interface CarrierClient {
++
++    CarrierBooking book(String shipmentId, String carrierCode);
++
++    void cancel(String bookingReference);
++}
+diff --git a/freight-desk/src/main/java/com/example/freight/shipping/CarrierBooking.java b/freight-desk/src/main/java/com/example/freight/shipping/CarrierBooking.java
+new file mode 100644
+--- /dev/null
++++ b/freight-desk/src/main/java/com/example/freight/shipping/CarrierBooking.java
+@@ -0,0 +1,4 @@
++package com.example.freight.shipping;
++
++public record CarrierBooking(String bookingReference, String carrierCode) {
++}

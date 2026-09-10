@@ -1,0 +1,70 @@
+diff --git a/courier-desk/src/parcels/Parcel.ts b/courier-desk/src/parcels/Parcel.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/parcels/Parcel.ts
+@@ -0,0 +1,6 @@
++export interface Parcel {
++  readonly parcelId: string;
++  readonly recipientName: string;
++  readonly weightGrams: number;
++  readonly declaredValueEuros: number;
++}
+diff --git a/courier-desk/src/print/CustomsDeclaration.ts b/courier-desk/src/print/CustomsDeclaration.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/print/CustomsDeclaration.ts
+@@ -0,0 +1,7 @@
++import { Parcel } from "../parcels/Parcel";
++
++export class CustomsDeclaration {
++  print(parcel: Parcel): string {
++    return [`Customs declaration for ${parcel.parcelId}`, `Declared value: ${parcel.declaredValueEuros.toFixed(2)} EUR`].join("\n");
++  }
++}
+diff --git a/courier-desk/src/print/DeliveryNote.ts b/courier-desk/src/print/DeliveryNote.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/print/DeliveryNote.ts
+@@ -0,0 +1,7 @@
++import { Parcel } from "../parcels/Parcel";
++
++export class DeliveryNote {
++  print(parcel: Parcel): string {
++    return [`Delivery note for ${parcel.recipientName}`, `Parcel ${parcel.parcelId}`].join("\n");
++  }
++}
+diff --git a/courier-desk/src/print/DriverManifest.ts b/courier-desk/src/print/DriverManifest.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/print/DriverManifest.ts
+@@ -0,0 +1,7 @@
++import { Parcel } from "../parcels/Parcel";
++
++export class DriverManifest {
++  print(routeId: string, parcels: Parcel[]): string {
++    return [`Manifest for route ${routeId}`, ...parcels.map(parcel => `${parcel.parcelId} | ${parcel.recipientName}`)].join("\n");
++  }
++}
+diff --git a/courier-desk/src/print/PrintStep.ts b/courier-desk/src/print/PrintStep.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/print/PrintStep.ts
+@@ -0,0 +1,18 @@
++import { Parcel } from "../parcels/Parcel";
++import { DriverManifest } from "./DriverManifest";
++import { DeliveryNote } from "./DeliveryNote";
++import { CustomsDeclaration } from "./CustomsDeclaration";
++
++export class PrintStep {
++  constructor(
++    private readonly driverManifest: DriverManifest,
++    private readonly deliveryNote: DeliveryNote,
++    private readonly customsDeclaration: CustomsDeclaration,
++  ) {}
++
++  printRouteDocuments(routeId: string, parcels: Parcel[]): string[] {
++    const notes = parcels.map(parcel => this.deliveryNote.print(parcel));
++    const declarations = parcels.filter(parcel => parcel.declaredValueEuros > 0).map(parcel => this.customsDeclaration.print(parcel));
++    return [this.driverManifest.print(routeId, parcels), ...notes, ...declarations];
++  }
++}

@@ -1,0 +1,81 @@
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/app/spi/TraysReadyToShip.java b/nursery/src/main/java/com/example/nursery/delivery/app/spi/TraysReadyToShip.java
+new file mode 100644
+index 0000000..64a61cd
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/app/spi/TraysReadyToShip.java
+@@ -0,0 +1,10 @@
++package com.example.nursery.delivery.app.spi;
++
++import com.example.nursery.delivery.app.domain.model.TrayToShip;
++
++import java.util.List;
++
++public interface TraysReadyToShip {
++
++    List<TrayToShip> readyTraysOfVariety(String variety);
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/out/modules/TraysReadyToShipUsingPlantingModule.java b/nursery/src/main/java/com/example/nursery/delivery/out/modules/TraysReadyToShipUsingPlantingModule.java
+new file mode 100644
+index 0000000..54763ef
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/out/modules/TraysReadyToShipUsingPlantingModule.java
+@@ -0,0 +1,25 @@
++package com.example.nursery.delivery.out.modules;
++
++import com.example.nursery.delivery.app.domain.model.TrayToShip;
++import com.example.nursery.delivery.app.spi.TraysReadyToShip;
++import com.example.nursery.planting.in.modules.PublicSeedlingReadiness;
++import com.example.nursery.planting.in.modules.SeedlingLookup;
++
++import java.util.List;
++
++public class TraysReadyToShipUsingPlantingModule implements TraysReadyToShip {
++
++    private final SeedlingLookup seedlingLookup;
++
++    public TraysReadyToShipUsingPlantingModule(SeedlingLookup seedlingLookup) {
++        this.seedlingLookup = seedlingLookup;
++    }
++
++    @Override
++    public List<TrayToShip> readyTraysOfVariety(String variety) {
++        return seedlingLookup.readinessOfVariety(variety).stream()
++                .filter(PublicSeedlingReadiness::readyToShip)
++                .map(readiness -> new TrayToShip(readiness.variety(), readiness.trayNumber()))
++                .toList();
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/planting/in/modules/PublicSeedlingReadiness.java b/nursery/src/main/java/com/example/nursery/planting/in/modules/PublicSeedlingReadiness.java
+new file mode 100644
+index 0000000..c759f50
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/in/modules/PublicSeedlingReadiness.java
+@@ -0,0 +1,4 @@
++package com.example.nursery.planting.in.modules;
++
++public record PublicSeedlingReadiness(String variety, int trayNumber, boolean readyToShip) {
++}
+diff --git a/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java b/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java
+index 432e24e..fcf87d3 100644
+--- a/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java
++++ b/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java
+@@ -2,6 +2,7 @@ package com.example.nursery.planting.in.modules;
+ 
+ import com.example.nursery.planting.app.spi.TrayStore;
+ 
++import java.time.LocalDate;
+ import java.util.List;
+ 
+ public class SeedlingLookup {
+@@ -17,4 +18,11 @@ public class SeedlingLookup {
+                 .map(seedling -> new PublicSeedling(seedling.variety(), seedling.trayNumber()))
+                 .toList();
+     }
++
++    public List<PublicSeedlingReadiness> readinessOfVariety(String variety) {
++        LocalDate today = LocalDate.now();
++        return trayStore.seedlingsOfVariety(variety).stream()
++                .map(seedling -> new PublicSeedlingReadiness(seedling.variety(), seedling.trayNumber(), seedling.readyToShipOn(today)))
++                .toList();
++    }
+ }

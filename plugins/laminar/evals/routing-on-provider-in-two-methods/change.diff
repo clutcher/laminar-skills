@@ -1,0 +1,16 @@
+diff --git a/shop/src/main/java/com/example/shop/payment/PaymentService.java b/shop/src/main/java/com/example/shop/payment/PaymentService.java
+--- a/shop/src/main/java/com/example/shop/payment/PaymentService.java
++++ b/shop/src/main/java/com/example/shop/payment/PaymentService.java
+@@ -16,4 +16,12 @@
+             paypal.captureOrder(order.getPaypalOrderId());
+         }
+     }
++
++    public void refundPayment(Order order, double amount) {
++        if (order.getPaymentProvider() == PaymentProvider.CYBERSOURCE) {
++            cybersource.refundPayment(order.getTransactionId(), amount);
++        } else if (order.getPaymentProvider() == PaymentProvider.PAYPAL) {
++            paypal.refundCapture(order.getCaptureId(), amount);
++        }
++    }
+ }

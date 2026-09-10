@@ -1,0 +1,39 @@
+diff --git a/shop/src/main/java/com/example/shop/shipping/DeliveryPriceCalculator.java b/shop/src/main/java/com/example/shop/shipping/DeliveryPriceCalculator.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/shipping/DeliveryPriceCalculator.java
+@@ -0,0 +1,34 @@
++package com.example.shop.shipping;
++
++import com.example.shop.cart.Cart;
++import com.example.shop.cart.LineItem;
++import com.example.shop.customer.Address;
++import java.util.List;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class DeliveryPriceCalculator {
++
++    private final RoutePlanner routePlanner;
++    private final ShippingTariff shippingTariff;
++
++    public double calculateDeliveryPrice(Cart cart) {
++        double weight = calculateTotalWeight(cart.getLineItems());
++        double distance = calculateDistance(cart.getDeliveryAddress());
++        return computeShippingCost(weight, distance);
++    }
++
++    private double calculateTotalWeight(List<LineItem> lineItems) {
++        return lineItems.stream()
++                .mapToDouble(lineItem -> lineItem.getWeight() * lineItem.getQuantity())
++                .sum();
++    }
++
++    private double calculateDistance(Address deliveryAddress) {
++        return routePlanner.measureDistance(deliveryAddress);
++    }
++
++    private double computeShippingCost(double weight, double distance) {
++        return shippingTariff.calculateCost(weight, distance);
++    }
++}

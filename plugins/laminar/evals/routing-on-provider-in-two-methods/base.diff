@@ -1,0 +1,24 @@
+diff --git a/shop/src/main/java/com/example/shop/payment/PaymentService.java b/shop/src/main/java/com/example/shop/payment/PaymentService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/payment/PaymentService.java
+@@ -0,0 +1,19 @@
++package com.example.shop.payment;
++
++import com.example.shop.order.Order;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class PaymentService {
++
++    private final CyberSourceClient cybersource;
++    private final PayPalClient paypal;
++
++    public void chargePayment(Order order) {
++        if (order.getPaymentProvider() == PaymentProvider.CYBERSOURCE) {
++            cybersource.createPayment(order.getNumber(), order.getTotal());
++        } else if (order.getPaymentProvider() == PaymentProvider.PAYPAL) {
++            paypal.captureOrder(order.getPaypalOrderId());
++        }
++    }
++}

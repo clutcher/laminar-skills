@@ -1,0 +1,62 @@
+diff --git a/greenhouse/src/greenhouse/app/domain/watering_service.py b/greenhouse/src/greenhouse/app/domain/watering_service.py
+index d81f034..fd3c824 100644
+--- a/greenhouse/src/greenhouse/app/domain/watering_service.py
++++ b/greenhouse/src/greenhouse/app/domain/watering_service.py
+@@ -1,15 +1,20 @@
+ from greenhouse.app.api.water_beds import WaterBeds
+ from greenhouse.app.domain.bed import Bed
+ from greenhouse.app.spi.valve_control import ValveControl
++from greenhouse.app.spi.soil_moisture import SoilMoisture
+ 
+ 
+ class WateringService(WaterBeds):
+-    def __init__(self, beds: dict[str, Bed], valve_control: ValveControl) -> None:
++    def __init__(self, beds: dict[str, Bed], valve_control: ValveControl, soil_moisture: SoilMoisture) -> None:
+         self._beds = beds
+         self._valve_control = valve_control
++        self._soil_moisture = soil_moisture
+ 
+     def water_bed(self, bed_id: str) -> int:
+         bed = self._beds[bed_id]
++        moisture_percent = self._soil_moisture.moisture_percent_of(bed_id)
++        if moisture_percent >= 40:
++            return 0
+         litres = bed.litres_needed()
+         self._valve_control.open_for_litres(bed_id, litres)
+         return litres
+diff --git a/greenhouse/src/greenhouse/app/spi/soil_moisture.py b/greenhouse/src/greenhouse/app/spi/soil_moisture.py
+new file mode 100644
+index 0000000..bea2587
+--- /dev/null
++++ b/greenhouse/src/greenhouse/app/spi/soil_moisture.py
+@@ -0,0 +1,5 @@
++from typing import Protocol
++
++
++class SoilMoisture(Protocol):
++    def moisture_percent_of(self, bed_id: str) -> int: ...
+diff --git a/greenhouse/src/greenhouse/out/sensors/__init__.py b/greenhouse/src/greenhouse/out/sensors/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/greenhouse/src/greenhouse/out/sensors/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/greenhouse/src/greenhouse/out/sensors/soil_moisture_using_probe.py b/greenhouse/src/greenhouse/out/sensors/soil_moisture_using_probe.py
+new file mode 100644
+index 0000000..94632d2
+--- /dev/null
++++ b/greenhouse/src/greenhouse/out/sensors/soil_moisture_using_probe.py
+@@ -0,0 +1,12 @@
++import httpx
++
++from greenhouse.app.spi.soil_moisture import SoilMoisture
++
++
++class SoilMoistureUsingProbe(SoilMoisture):
++    def __init__(self, probe_url: str) -> None:
++        self._probe_url = probe_url
++
++    def moisture_percent_of(self, bed_id: str) -> int:
++        response = httpx.get(f"{self._probe_url}/beds/{bed_id}/moisture")
++        return int(response.json()["percent"])

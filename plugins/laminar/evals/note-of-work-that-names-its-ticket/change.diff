@@ -1,0 +1,22 @@
+diff --git a/toollibrary/lending/lending_desk.go b/toollibrary/lending/lending_desk.go
+new file mode 100644
+--- /dev/null
++++ b/toollibrary/lending/lending_desk.go
+@@ -0,0 +1,17 @@
++package lending
++
++import "errors"
++
++var ErrToolAlreadyLent = errors.New("the tool is already lent")
++
++type LendingDesk struct {
++	loans LoanBook
++}
++
++func (desk *LendingDesk) LendTool(member Member, tool Tool) (Loan, error) {
++	// TODO(TOOLS-482) check the member's unpaid late fees before lending
++	if !tool.IsOnTheShelf() {
++		return Loan{}, ErrToolAlreadyLent
++	}
++	return desk.loans.Open(member.ID, tool.ID)
++}

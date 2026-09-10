@@ -1,0 +1,12 @@
+diff --git a/tide-station/src/readings/TideReadings.js b/tide-station/src/readings/TideReadings.js
+new file mode 100644
+--- /dev/null
++++ b/tide-station/src/readings/TideReadings.js
+@@ -0,0 +1,7 @@
++const toSavedReading = reading => ({ gauge: reading.gaugeCode, metres: reading.heightMetres, at: reading.measuredAt.toISOString() });
++
++const fromSavedReading = saved => ({ gaugeCode: saved.gauge, heightMetres: saved.metres, measuredAt: new Date(saved.at) });
++
++export const convertTideReadingsToJson = readings => JSON.stringify(readings.map(toSavedReading));
++
++export const parseTideReadingsFromJson = text => JSON.parse(text).map(fromSavedReading);

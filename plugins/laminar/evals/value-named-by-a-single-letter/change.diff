@@ -1,0 +1,27 @@
+diff --git a/allotment/src/main/java/com/example/allotment/harvests/HarvestLedger.java b/allotment/src/main/java/com/example/allotment/harvests/HarvestLedger.java
+new file mode 100644
+--- /dev/null
++++ b/allotment/src/main/java/com/example/allotment/harvests/HarvestLedger.java
+@@ -0,0 +1,22 @@
++package com.example.allotment.harvests;
++
++import java.util.List;
++
++public class HarvestLedger {
++
++    private final List<Harvest> harvests;
++
++    public HarvestLedger(List<Harvest> harvests) {
++        this.harvests = List.copyOf(harvests);
++    }
++
++    public int sumHarvestedGrams(String variety) {
++        int w = 0;
++        for (Harvest harvest : harvests) {
++            if (harvest.variety().equals(variety)) {
++                w += harvest.weightInGrams();
++            }
++        }
++        return w;
++    }
++}

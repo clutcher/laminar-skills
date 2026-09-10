@@ -1,0 +1,46 @@
+diff --git a/shop/src/main/java/com/example/shop/order/OrderRules.java b/shop/src/main/java/com/example/shop/order/OrderRules.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderRules.java
+@@ -0,0 +1,41 @@
++package com.example.shop.order;
++
++import com.example.shop.shipping.ShippingOptions;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class OrderRules {
++
++    public static final int ORDER_EXPIRATION_DAYS = 30;
++    public static final double EXPRESS_SHIPPING_THRESHOLD = 100.0;
++    public static final double PREMIUM_DISCOUNT_RATE = 0.10;
++
++    private final OrderLifecycle orderLifecycle;
++    private final ShippingOptions shippingOptions;
++
++    public void expireStaleOrder(Order order, long daysSinceOrder) {
++        if (daysSinceOrder > ORDER_EXPIRATION_DAYS) {
++            expireOrder(order);
++        }
++    }
++
++    public void offerExpressShipping(Order order) {
++        double orderTotal = order.getTotal();
++        if (orderTotal > EXPRESS_SHIPPING_THRESHOLD) {
++            enableExpressShipping(order);
++        }
++    }
++
++    public double calculatePremiumDiscount(double total) {
++        double discount = total * PREMIUM_DISCOUNT_RATE;
++        return discount;
++    }
++
++    private void expireOrder(Order order) {
++        orderLifecycle.expire(order);
++    }
++
++    private void enableExpressShipping(Order order) {
++        shippingOptions.enableExpress(order);
++    }
++}

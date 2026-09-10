@@ -1,0 +1,65 @@
+diff --git a/gym/src/main/kotlin/com/example/climbinggym/climber/Climber.kt b/gym/src/main/kotlin/com/example/climbinggym/climber/Climber.kt
+new file mode 100644
+--- /dev/null
++++ b/gym/src/main/kotlin/com/example/climbinggym/climber/Climber.kt
+@@ -0,0 +1,7 @@
++package com.example.climbinggym.climber
++
++class Climber(
++    val name: String,
++    val isBeginner: Boolean,
++    val isAdvanced: Boolean,
++)
+diff --git a/gym/src/main/kotlin/com/example/climbinggym/courses/LeadCourse.kt b/gym/src/main/kotlin/com/example/climbinggym/courses/LeadCourse.kt
+new file mode 100644
+--- /dev/null
++++ b/gym/src/main/kotlin/com/example/climbinggym/courses/LeadCourse.kt
+@@ -0,0 +1,12 @@
++package com.example.climbinggym.courses
++
++import com.example.climbinggym.climber.Climber
++
++class LeadCourse(val title: String) {
++
++    private val climbers = mutableListOf<Climber>()
++
++    fun add(climber: Climber) {
++        climbers.add(climber)
++    }
++}
+diff --git a/gym/src/main/kotlin/com/example/climbinggym/courses/LeadCourseBooking.kt b/gym/src/main/kotlin/com/example/climbinggym/courses/LeadCourseBooking.kt
+new file mode 100644
+--- /dev/null
++++ b/gym/src/main/kotlin/com/example/climbinggym/courses/LeadCourseBooking.kt
+@@ -0,0 +1,13 @@
++package com.example.climbinggym.courses
++
++import com.example.climbinggym.climber.Climber
++
++class LeadCourseBooking(private val course: LeadCourse) {
++
++    fun book(climber: Climber) {
++        if (climber.isBeginner) {
++            throw IllegalStateException("${climber.name} cannot join a lead course yet")
++        }
++        course.add(climber)
++    }
++}
+diff --git a/gym/src/main/kotlin/com/example/climbinggym/routes/RouteAdvisor.kt b/gym/src/main/kotlin/com/example/climbinggym/routes/RouteAdvisor.kt
+new file mode 100644
+--- /dev/null
++++ b/gym/src/main/kotlin/com/example/climbinggym/routes/RouteAdvisor.kt
+@@ -0,0 +1,13 @@
++package com.example.climbinggym.routes
++
++import com.example.climbinggym.climber.Climber
++
++class RouteAdvisor {
++
++    fun highestSuggestedGrade(climber: Climber): Int {
++        if (climber.isAdvanced) {
++            return 7
++        }
++        return 4
++    }
++}

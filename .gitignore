@@ -1,0 +1,27 @@
+# Deny by default at the root: publishing a file here means adding a line here.
+# Under /plugins/ the tree is re-included whole, so a new file there is tracked at once.
+/*
+
+!/.gitignore
+!/LICENSE
+!/LICENSE-CC-BY-4.0
+!/README.md
+!/.claude-plugin/
+!/plugins/
+
+# Eval run output sits inside the re-included plugin tree, so it needs its own rule.
+/plugins/laminar/evals/results/
+
+# Local-only workspace, already covered by the deny line above.
+/.workspace/
+
+# Python bytecode.
+__pycache__/
+*.py[cod]
+
+# Editor and OS noise.
+.DS_Store
+*~
+*.swp
+*.orig
+*.rej

@@ -1,0 +1,24 @@
+diff --git a/toollibrary/tests/test_tool_loans.py b/toollibrary/tests/test_tool_loans.py
+new file mode 100644
+--- /dev/null
++++ b/toollibrary/tests/test_tool_loans.py
+@@ -0,0 +1,19 @@
++from datetime import date
++
++from toollibrary.loans import ToolLoan
++
++
++def test_late_fee():
++    loan = ToolLoan(tool_name="Cordless Hedge Trimmer", lent_on=date(2026, 5, 4), due_on=date(2026, 5, 11))
++
++    fee_in_cents = loan.late_fee_in_cents(returned_on=date(2026, 5, 14))
++
++    assert fee_in_cents == 300
++
++
++def test_should_charge_one_euro_for_each_late_day_when_the_trimmer_comes_back_after_its_due_date():
++    loan = ToolLoan(tool_name="Cordless Hedge Trimmer", lent_on=date(2026, 5, 4), due_on=date(2026, 5, 11))
++
++    fee_in_cents = loan.late_fee_in_cents(returned_on=date(2026, 5, 14))
++
++    assert fee_in_cents == 300

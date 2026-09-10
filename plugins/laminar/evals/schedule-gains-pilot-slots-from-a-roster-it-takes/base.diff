@@ -1,0 +1,49 @@
+diff --git a/marina/build.gradle.kts b/marina/build.gradle.kts
+new file mode 100644
+--- /dev/null
++++ b/marina/build.gradle.kts
+@@ -0,0 +1,6 @@
++plugins {
++    kotlin("jvm") version "1.9.24"
++}
++
++group = "com.example"
++version = "1.0.0"
+diff --git a/marina/src/main/kotlin/com/example/marina/berths/BerthRequest.kt b/marina/src/main/kotlin/com/example/marina/berths/BerthRequest.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/berths/BerthRequest.kt
+@@ -0,0 +1,3 @@
++package com.example.marina.berths
++
++data class BerthRequest(val harbour: String, val vessels: List<String>)
+diff --git a/marina/src/main/kotlin/com/example/marina/berths/BerthSchedule.kt b/marina/src/main/kotlin/com/example/marina/berths/BerthSchedule.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/berths/BerthSchedule.kt
+@@ -0,0 +1,3 @@
++package com.example.marina.berths
++
++data class BerthSchedule(val harbour: String, val slots: List<String>)
+diff --git a/marina/src/main/kotlin/com/example/marina/berths/HarbourMaster.kt b/marina/src/main/kotlin/com/example/marina/berths/HarbourMaster.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/berths/HarbourMaster.kt
+@@ -0,0 +1,6 @@
++package com.example.marina.berths
++
++interface HarbourMaster {
++
++    fun scheduleFor(harbour: String): BerthSchedule
++}
+diff --git a/marina/src/main/kotlin/com/example/marina/berths/PilotRoster.kt b/marina/src/main/kotlin/com/example/marina/berths/PilotRoster.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/berths/PilotRoster.kt
+@@ -0,0 +1,6 @@
++package com.example.marina.berths
++
++interface PilotRoster {
++
++    fun slotsFor(harbour: String): List<String>
++}

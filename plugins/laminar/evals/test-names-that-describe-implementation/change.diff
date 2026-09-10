@@ -1,0 +1,127 @@
+diff --git a/shop/src/test/java/com/example/shop/order/OrderServiceTest.java b/shop/src/test/java/com/example/shop/order/OrderServiceTest.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/test/java/com/example/shop/order/OrderServiceTest.java
+@@ -0,0 +1,122 @@
++package com.example.shop.order;
++
++import static com.example.shop.order.Quantity.quantity;
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.mockito.Mockito.when;
++
++import com.example.shop.catalog.Product;
++import com.example.shop.customer.Customer;
++import com.example.shop.customer.CustomerType;
++import com.example.shop.mail.RecordingConfirmationMailer;
++import com.example.shop.stock.StockLevelService;
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.extension.ExtendWith;
++import org.mockito.InjectMocks;
++import org.mockito.Mock;
++import org.mockito.Spy;
++import org.mockito.junit.jupiter.MockitoExtension;
++
++@ExtendWith(MockitoExtension.class)
++class OrderServiceTest {
++
++    @Mock
++    private StockLevelService stockLevelService;
++
++    @Spy
++    private RecordingConfirmationMailer confirmationMailer = new RecordingConfirmationMailer();
++
++    @InjectMocks
++    private OrderService orderService;
++
++    private final Customer customer = new Customer("Alice", CustomerType.PREMIUM);
++
++    @Test
++    void shouldApplyDiscountWhenCustomerIsPremium() {
++        // given
++        Customer customer = new Customer("Alice", CustomerType.PREMIUM);
++        Order order = new Order(customer);
++        order.addItem(new Product("Book", 50.0));
++
++        // when
++        double total = orderService.calculateTotal(order);
++
++        // then
++        assertThat(total).isEqualTo(45.0);
++    }
++
++    @Test
++    void shouldRejectOrderWhenInventoryInsufficient() {
++        // given
++        Product product = new Product("Laptop", 999.0);
++        Order order = new Order(customer);
++        order.add(product, quantity(1));
++
++        when(stockLevelService.getStock(product)).thenReturn(0);
++
++        // when
++        Result result = orderService.submit(order);
++
++        // then
++        assertThat(result.isRejected()).isTrue();
++        assertThat(result.getReason()).isEqualTo("Insufficient inventory");
++    }
++
++    @Test
++    void shouldSendConfirmationEmailWhenOrderCompletes() {
++        // given
++        Product product = new Product("Laptop", 999.0);
++        Order order = new Order(new Customer("Alice", "alice.meyer@example.com", CustomerType.STANDARD));
++        order.add(product, quantity(1));
++
++        when(stockLevelService.getStock(product)).thenReturn(4);
++
++        // when
++        orderService.submit(order);
++
++        // then
++        assertThat(confirmationMailer.recipients()).containsExactly("alice.meyer@example.com");
++    }
++
++    @Test
++    void testCalculateMethod() {
++        // given
++        Order order = new Order(new Customer("Bob", CustomerType.STANDARD));
++        order.addItem(new Product("Book", 50.0));
++
++        // when
++        double total = orderService.calculateTotal(order);
++
++        // then
++        assertThat(total).isEqualTo(50.0);
++    }
++
++    @Test
++    void testWithMocks() {
++        // given
++        Product product = new Product("Laptop", 999.0);
++        Order order = new Order(customer);
++        order.add(product, quantity(2));
++
++        when(stockLevelService.getStock(product)).thenReturn(5);
++
++        // when
++        Result result = orderService.submit(order);
++
++        // then
++        assertThat(result.isAccepted()).isTrue();
++    }
++
++    @Test
++    void testOrderService_case1() {
++        // given
++        Order order = new Order(customer);
++        order.addItem(new Product("Book", 50.0));
++        order.addItem(new Product("Book", 50.0));
++
++        // when
++        double total = orderService.calculateTotal(order);
++
++        // then
++        assertThat(total).isEqualTo(90.0);
++    }
++}

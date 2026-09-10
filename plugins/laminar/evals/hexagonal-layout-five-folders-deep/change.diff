@@ -1,0 +1,250 @@
+diff --git a/company-website/order/app/api/ApiForOrderPlacing.java b/company-website/order/app/api/ApiForOrderPlacing.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/app/api/ApiForOrderPlacing.java
+@@ -0,0 +1,8 @@
++package com.example.website.order.app.api;
++
++import java.util.List;
++
++public interface ApiForOrderPlacing {
++
++    Long placeOrder(Long customerId, List<Long> productIds);
++}
+diff --git a/company-website/order/app/domain/model/Order.java b/company-website/order/app/domain/model/Order.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/app/domain/model/Order.java
+@@ -0,0 +1,27 @@
++package com.example.website.order.app.domain.model;
++
++import java.util.List;
++
++public class Order {
++
++    private Long id;
++    private final Long customerId;
++    private final List<Product> products;
++
++    public Order(Long customerId, List<Product> products) {
++        this.customerId = customerId;
++        this.products = List.copyOf(products);
++    }
++
++    public Long getId() {
++        return id;
++    }
++
++    public Long getCustomerId() {
++        return customerId;
++    }
++
++    public List<Product> getProducts() {
++        return products;
++    }
++}
+diff --git a/company-website/order/app/domain/model/Product.java b/company-website/order/app/domain/model/Product.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/app/domain/model/Product.java
+@@ -0,0 +1,4 @@
++package com.example.website.order.app.domain.model;
++
++public record Product(Long id, String name, double price) {
++}
+diff --git a/company-website/order/app/domain/services/OrderPlacingService.java b/company-website/order/app/domain/services/OrderPlacingService.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/app/domain/services/OrderPlacingService.java
+@@ -0,0 +1,30 @@
++package com.example.website.order.app.domain.services;
++
++import com.example.website.order.app.api.ApiForOrderPlacing;
++import com.example.website.order.app.domain.model.Order;
++import com.example.website.order.app.domain.model.Product;
++import com.example.website.order.app.spi.ConsignmentRepository;
++import com.example.website.order.app.spi.OrderRepository;
++import com.example.website.order.app.spi.ProductRepository;
++import java.util.List;
++
++public class OrderPlacingService implements ApiForOrderPlacing {
++
++    private final OrderRepository orderRepository;
++    private final ProductRepository productRepository;
++    private final ConsignmentRepository consignmentRepository;
++
++    public OrderPlacingService(OrderRepository orderRepository, ProductRepository productRepository, ConsignmentRepository consignmentRepository) {
++        this.orderRepository = orderRepository;
++        this.productRepository = productRepository;
++        this.consignmentRepository = consignmentRepository;
++    }
++
++    @Override
++    public Long placeOrder(Long customerId, List<Long> productIds) {
++        List<Product> products = productRepository.findAllById(productIds);
++        Order order = orderRepository.save(new Order(customerId, products));
++        consignmentRepository.planConsignmentsFor(order);
++        return order.getId();
++    }
++}
+diff --git a/company-website/order/app/spi/ConsignmentRepository.java b/company-website/order/app/spi/ConsignmentRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/app/spi/ConsignmentRepository.java
+@@ -0,0 +1,8 @@
++package com.example.website.order.app.spi;
++
++import com.example.website.order.app.domain.model.Order;
++
++public interface ConsignmentRepository {
++
++    void planConsignmentsFor(Order order);
++}
+diff --git a/company-website/order/app/spi/OrderRepository.java b/company-website/order/app/spi/OrderRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/app/spi/OrderRepository.java
+@@ -0,0 +1,8 @@
++package com.example.website.order.app.spi;
++
++import com.example.website.order.app.domain.model.Order;
++
++public interface OrderRepository {
++
++    Order save(Order order);
++}
+diff --git a/company-website/order/app/spi/ProductRepository.java b/company-website/order/app/spi/ProductRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/app/spi/ProductRepository.java
+@@ -0,0 +1,9 @@
++package com.example.website.order.app.spi;
++
++import com.example.website.order.app.domain.model.Product;
++import java.util.List;
++
++public interface ProductRepository {
++
++    List<Product> findAllById(List<Long> productIds);
++}
+diff --git a/company-website/order/in/modules/dto/PublicOrder.java b/company-website/order/in/modules/dto/PublicOrder.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/in/modules/dto/PublicOrder.java
+@@ -0,0 +1,4 @@
++package com.example.website.order.in.modules.dto;
++
++public record PublicOrder(Long id, Long customerId) {
++}
+diff --git a/company-website/order/in/rest/OrderController.java b/company-website/order/in/rest/OrderController.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/in/rest/OrderController.java
+@@ -0,0 +1,25 @@
++package com.example.website.order.in.rest;
++
++import com.example.website.order.app.api.ApiForOrderPlacing;
++import java.util.List;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class OrderController {
++
++    private final ApiForOrderPlacing apiForOrderPlacing;
++
++    public OrderController(ApiForOrderPlacing apiForOrderPlacing) {
++        this.apiForOrderPlacing = apiForOrderPlacing;
++    }
++
++    @PostMapping("/orders")
++    public Long placeOrder(@RequestBody PlaceOrderRequest request) {
++        return apiForOrderPlacing.placeOrder(request.customerId(), request.productIds());
++    }
++
++    public record PlaceOrderRequest(Long customerId, List<Long> productIds) {
++    }
++}
+diff --git a/company-website/order/out/db/OrderRepositoryUsingJpa.java b/company-website/order/out/db/OrderRepositoryUsingJpa.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/out/db/OrderRepositoryUsingJpa.java
+@@ -0,0 +1,22 @@
++package com.example.website.order.out.db;
++
++import com.example.website.order.app.domain.model.Order;
++import com.example.website.order.app.spi.OrderRepository;
++import jakarta.persistence.EntityManager;
++import org.springframework.stereotype.Repository;
++
++@Repository
++public class OrderRepositoryUsingJpa implements OrderRepository {
++
++    private final EntityManager entityManager;
++
++    public OrderRepositoryUsingJpa(EntityManager entityManager) {
++        this.entityManager = entityManager;
++    }
++
++    @Override
++    public Order save(Order order) {
++        entityManager.persist(order);
++        return order;
++    }
++}
+diff --git a/company-website/order/out/db/ProductRepositoryUsingJpa.java b/company-website/order/out/db/ProductRepositoryUsingJpa.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/out/db/ProductRepositoryUsingJpa.java
+@@ -0,0 +1,24 @@
++package com.example.website.order.out.db;
++
++import com.example.website.order.app.domain.model.Product;
++import com.example.website.order.app.spi.ProductRepository;
++import jakarta.persistence.EntityManager;
++import java.util.List;
++import org.springframework.stereotype.Repository;
++
++@Repository
++public class ProductRepositoryUsingJpa implements ProductRepository {
++
++    private final EntityManager entityManager;
++
++    public ProductRepositoryUsingJpa(EntityManager entityManager) {
++        this.entityManager = entityManager;
++    }
++
++    @Override
++    public List<Product> findAllById(List<Long> productIds) {
++        return entityManager.createQuery("select p from Product p where p.id in :productIds", Product.class)
++                .setParameter("productIds", productIds)
++                .getResultList();
++    }
++}
+diff --git a/company-website/order/out/modules/ConsignmentRepositoryUsingConsignmentModule.java b/company-website/order/out/modules/ConsignmentRepositoryUsingConsignmentModule.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/out/modules/ConsignmentRepositoryUsingConsignmentModule.java
+@@ -0,0 +1,21 @@
++package com.example.website.order.out.modules;
++
++import com.example.website.consignment.in.modules.ApiForConsignmentPlanning;
++import com.example.website.order.app.domain.model.Order;
++import com.example.website.order.app.spi.ConsignmentRepository;
++import org.springframework.stereotype.Component;
++
++@Component
++public class ConsignmentRepositoryUsingConsignmentModule implements ConsignmentRepository {
++
++    private final ApiForConsignmentPlanning apiForConsignmentPlanning;
++
++    public ConsignmentRepositoryUsingConsignmentModule(ApiForConsignmentPlanning apiForConsignmentPlanning) {
++        this.apiForConsignmentPlanning = apiForConsignmentPlanning;
++    }
++
++    @Override
++    public void planConsignmentsFor(Order order) {
++        apiForConsignmentPlanning.planConsignments(order.getId(), order.getCustomerId());
++    }
++}

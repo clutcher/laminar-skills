@@ -1,0 +1,46 @@
+diff --git a/tides/src/main/java/org/tidewatch/tides/report/GaugeReporter.java b/tides/src/main/java/org/tidewatch/tides/report/GaugeReporter.java
+index 1157d2e..0910c9f 100644
+--- a/tides/src/main/java/org/tidewatch/tides/report/GaugeReporter.java
++++ b/tides/src/main/java/org/tidewatch/tides/report/GaugeReporter.java
+@@ -1,6 +1,7 @@
+ package org.tidewatch.tides.report;
+ 
+ import java.io.IOException;
++import java.util.List;
+ 
+ public class GaugeReporter {
+     private final HarbourOfficeClient harbourOffice;
+@@ -12,4 +13,10 @@ public class GaugeReporter {
+     public void report(GaugeReading reading) throws IOException, InterruptedException {
+         harbourOffice.post(reading.gaugeId() + "=" + reading.heightMetres());
+     }
++
++    public void reportAll(List<GaugeReading> readings) throws IOException, InterruptedException {
++        for (GaugeReading reading : readings) {
++            report(reading);
++        }
++    }
+ }
+diff --git a/tides/src/main/java/org/tidewatch/tides/table/PilotWindows.java b/tides/src/main/java/org/tidewatch/tides/table/PilotWindows.java
+index 6bd1e79..5fc5282 100644
+--- a/tides/src/main/java/org/tidewatch/tides/table/PilotWindows.java
++++ b/tides/src/main/java/org/tidewatch/tides/table/PilotWindows.java
+@@ -1,5 +1,7 @@
+ package org.tidewatch.tides.table;
+ 
++import java.util.List;
++
+ public class PilotWindows {
+     private final TideTables tideTables;
+ 
+@@ -10,4 +12,10 @@ public class PilotWindows {
+     public boolean knowsTidesAt(String portCode) {
+         return tideTables.tableOf(portCode).isPresent();
+     }
++
++    public List<String> portsWithoutTideTable(List<String> portCodes) {
++        return portCodes.stream()
++                .filter(portCode -> !knowsTidesAt(portCode))
++                .toList();
++    }
+ }

@@ -1,0 +1,219 @@
+diff --git a/storefront-api/build.gradle.kts b/storefront-api/build.gradle.kts
+new file mode 100644
+index 0000000..8c6751b
+--- /dev/null
++++ b/storefront-api/build.gradle.kts
+@@ -0,0 +1,7 @@
++plugins {
++    java
++}
++
++dependencies {
++    implementation("org.springframework.boot:spring-boot-starter-graphql:3.3.4")
++}
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/AvailabilityInput.java b/storefront-api/src/main/java/com/example/storefront/product/AvailabilityInput.java
+new file mode 100644
+index 0000000..7e429b5
+--- /dev/null
++++ b/storefront-api/src/main/java/com/example/storefront/product/AvailabilityInput.java
+@@ -0,0 +1,4 @@
++package com.example.storefront.product;
++
++public record AvailabilityInput(String accountId, String languageId) {
++}
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/PriceInput.java b/storefront-api/src/main/java/com/example/storefront/product/PriceInput.java
+new file mode 100644
+index 0000000..9fc0276
+--- /dev/null
++++ b/storefront-api/src/main/java/com/example/storefront/product/PriceInput.java
+@@ -0,0 +1,4 @@
++package com.example.storefront.product;
++
++public record PriceInput(String accountId, String languageId, int quantity, String agreementId) {
++}
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/PriceLookup.java b/storefront-api/src/main/java/com/example/storefront/product/PriceLookup.java
+new file mode 100644
+index 0000000..3b1b731
+--- /dev/null
++++ b/storefront-api/src/main/java/com/example/storefront/product/PriceLookup.java
+@@ -0,0 +1,6 @@
++package com.example.storefront.product;
++
++public interface PriceLookup {
++
++    Price priceFor(ProductLookupKey key);
++}
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/Product.java b/storefront-api/src/main/java/com/example/storefront/product/Product.java
+new file mode 100644
+index 0000000..151f47a
+--- /dev/null
++++ b/storefront-api/src/main/java/com/example/storefront/product/Product.java
+@@ -0,0 +1,4 @@
++package com.example.storefront.product;
++
++public record Product(String sku, String name) {
++}
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/ProductFieldResolvers.java b/storefront-api/src/main/java/com/example/storefront/product/ProductFieldResolvers.java
+new file mode 100644
+index 0000000..fdca98f
+--- /dev/null
++++ b/storefront-api/src/main/java/com/example/storefront/product/ProductFieldResolvers.java
+@@ -0,0 +1,39 @@
++package com.example.storefront.product;
++
++import java.util.List;
++import org.springframework.graphql.data.method.annotation.Argument;
++import org.springframework.graphql.data.method.annotation.SchemaMapping;
++import org.springframework.stereotype.Controller;
++
++@Controller
++@SchemaMapping(typeName = "Product")
++public class ProductFieldResolvers {
++
++    private final PriceLookup priceLookup;
++    private final StockLookup stockLookup;
++
++    public ProductFieldResolvers(PriceLookup priceLookup, StockLookup stockLookup) {
++        this.priceLookup = priceLookup;
++        this.stockLookup = stockLookup;
++    }
++
++    @SchemaMapping
++    public Price price(Product product, @Argument PriceInput input) {
++        return priceLookup.priceFor(ProductLookupKey.forPrice(product, input));
++    }
++
++    @SchemaMapping
++    public Availability availability(Product product, @Argument AvailabilityInput input) {
++        return stockLookup.availabilityFor(product.sku(), input.accountId(), input.languageId());
++    }
++
++    @SchemaMapping
++    public DeliveryEstimate deliveryEstimate(Product product, @Argument AvailabilityInput input) {
++        return stockLookup.deliveryEstimateFor(product.sku(), input.accountId(), input.languageId());
++    }
++
++    @SchemaMapping
++    public List<PickupStore> pickupStores(Product product, @Argument AvailabilityInput input) {
++        return stockLookup.pickupStoresFor(product.sku(), input.accountId(), input.languageId());
++    }
++}
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java b/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java
+new file mode 100644
+index 0000000..5a04d52
+--- /dev/null
++++ b/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java
+@@ -0,0 +1,8 @@
++package com.example.storefront.product;
++
++public record ProductLookupKey(String sku, String accountId, String languageId, int quantity, String agreementId) {
++
++    public static ProductLookupKey forPrice(Product product, PriceInput input) {
++        return new ProductLookupKey(product.sku(), input.accountId(), input.languageId(), input.quantity(), input.agreementId());
++    }
++}
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/StockLookup.java b/storefront-api/src/main/java/com/example/storefront/product/StockLookup.java
+new file mode 100644
+index 0000000..edbfdd4
+--- /dev/null
++++ b/storefront-api/src/main/java/com/example/storefront/product/StockLookup.java
+@@ -0,0 +1,12 @@
++package com.example.storefront.product;
++
++import java.util.List;
++
++public interface StockLookup {
++
++    Availability availabilityFor(String sku, String accountId, String languageId);
++
++    DeliveryEstimate deliveryEstimateFor(String sku, String accountId, String languageId);
++
++    List<PickupStore> pickupStoresFor(String sku, String accountId, String languageId);
++}
+diff --git a/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java b/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java
+new file mode 100644
+index 0000000..2005bec
+--- /dev/null
++++ b/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java
+@@ -0,0 +1,31 @@
++package com.example.storefront.product;
++
++import java.util.List;
++import org.springframework.stereotype.Service;
++
++@Service
++public class WarehouseStockLookup implements StockLookup {
++
++    private final WarehouseClient warehouseClient;
++
++    public WarehouseStockLookup(WarehouseClient warehouseClient) {
++        this.warehouseClient = warehouseClient;
++    }
++
++    @Override
++    public Availability availabilityFor(String sku, String accountId, String languageId) {
++        return warehouseClient.stockLevel(sku, accountId).toAvailability();
++    }
++
++    @Override
++    public DeliveryEstimate deliveryEstimateFor(String sku, String accountId, String languageId) {
++        return warehouseClient.shippingWindow(sku, accountId).toDeliveryEstimate(languageId);
++    }
++
++    @Override
++    public List<PickupStore> pickupStoresFor(String sku, String accountId, String languageId) {
++        return warehouseClient.storesHolding(sku, accountId).stream()
++                .map(store -> store.toPickupStore(languageId))
++                .toList();
++    }
++}
+diff --git a/storefront-api/src/main/resources/graphql/product.graphqls b/storefront-api/src/main/resources/graphql/product.graphqls
+new file mode 100644
+index 0000000..d3b159d
+--- /dev/null
++++ b/storefront-api/src/main/resources/graphql/product.graphqls
+@@ -0,0 +1,44 @@
++type Query {
++    product(sku: ID!): Product
++}
++
++type Product {
++    sku: ID!
++    name: String!
++    price(input: PriceInput!): Price
++    availability(input: AvailabilityInput!): Availability
++    deliveryEstimate(input: AvailabilityInput!): DeliveryEstimate
++    pickupStores(input: AvailabilityInput!): [PickupStore!]
++}
++
++input PriceInput {
++    accountId: ID!
++    languageId: String!
++    quantity: Int!
++    agreementId: ID
++}
++
++input AvailabilityInput {
++    accountId: ID!
++    languageId: String!
++}
++
++type Price {
++    amount: Float!
++    currency: String!
++}
++
++type Availability {
++    inStock: Boolean!
++    quantityOnHand: Int!
++}
++
++type DeliveryEstimate {
++    earliestDate: String!
++    latestDate: String!
++}
++
++type PickupStore {
++    storeId: ID!
++    name: String!
++}

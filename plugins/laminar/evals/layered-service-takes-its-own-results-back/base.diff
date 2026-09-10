@@ -1,0 +1,267 @@
+diff --git a/tour-booking/pom.xml b/tour-booking/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/pom.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <parent>
++        <groupId>org.springframework.boot</groupId>
++        <artifactId>spring-boot-starter-parent</artifactId>
++        <version>3.3.4</version>
++    </parent>
++    <groupId>com.example</groupId>
++    <artifactId>tour-booking</artifactId>
++    <version>1.0.0</version>
++    <dependencies>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-graphql</artifactId>
++        </dependency>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-jdbc</artifactId>
++        </dependency>
++    </dependencies>
++</project>
+diff --git a/tour-booking/src/main/java/com/example/tours/controller/Itinerary.java b/tour-booking/src/main/java/com/example/tours/controller/Itinerary.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/controller/Itinerary.java
+@@ -0,0 +1,6 @@
++package com.example.tours.controller;
++
++import java.util.List;
++
++public record Itinerary(List<ItineraryStop> stops) {
++}
+diff --git a/tour-booking/src/main/java/com/example/tours/controller/ItineraryPriceController.java b/tour-booking/src/main/java/com/example/tours/controller/ItineraryPriceController.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/controller/ItineraryPriceController.java
+@@ -0,0 +1,58 @@
++package com.example.tours.controller;
++
++import static java.util.function.Function.identity;
++import static java.util.stream.Collectors.toMap;
++
++import com.example.tours.service.StopPrice;
++import com.example.tours.service.TourPrice;
++import com.example.tours.service.TourPriceService;
++import com.example.tours.service.TourStop;
++import java.math.BigDecimal;
++import java.util.Collection;
++import java.util.List;
++import java.util.Map;
++import java.util.Set;
++import java.util.concurrent.CompletableFuture;
++import org.dataloader.DataLoader;
++import org.springframework.graphql.data.method.annotation.Argument;
++import org.springframework.graphql.data.method.annotation.QueryMapping;
++import org.springframework.graphql.data.method.annotation.SchemaMapping;
++import org.springframework.graphql.execution.BatchLoaderRegistry;
++import org.springframework.stereotype.Controller;
++import reactor.core.publisher.Mono;
++
++@Controller
++public class ItineraryPriceController {
++
++    private final TourPriceService tourPriceService;
++
++    public ItineraryPriceController(TourPriceService tourPriceService, BatchLoaderRegistry batchLoaderRegistry) {
++        this.tourPriceService = tourPriceService;
++        batchLoaderRegistry.forTypePair(ItineraryStop.class, StopPrice.class)
++                .registerMappedBatchLoader((itineraryStops, environment) -> Mono.just(stopPricesOf(itineraryStops)));
++    }
++
++    @QueryMapping
++    public Itinerary priceItinerary(@Argument List<ItineraryStop> stops) {
++        return new Itinerary(stops);
++    }
++
++    @SchemaMapping(typeName = "Itinerary", field = "price")
++    public TourPrice price(Itinerary itinerary) {
++        return tourPriceService.priceOf(tourStopsOf(itinerary.stops()));
++    }
++
++    @SchemaMapping(typeName = "ItineraryStop", field = "price")
++    public CompletableFuture<BigDecimal> stopPrice(ItineraryStop itineraryStop, DataLoader<ItineraryStop, StopPrice> stopPrices) {
++        return stopPrices.load(itineraryStop).thenApply(StopPrice::price);
++    }
++
++    private Map<ItineraryStop, StopPrice> stopPricesOf(Set<ItineraryStop> itineraryStops) {
++        TourPrice tourPrice = tourPriceService.priceOf(tourStopsOf(itineraryStops));
++        return itineraryStops.stream().collect(toMap(identity(), itineraryStop -> tourPrice.priceFor(itineraryStop.stopCode())));
++    }
++
++    private static List<TourStop> tourStopsOf(Collection<ItineraryStop> itineraryStops) {
++        return itineraryStops.stream().map(ItineraryStop::tourStop).toList();
++    }
++}
+diff --git a/tour-booking/src/main/java/com/example/tours/controller/ItineraryStop.java b/tour-booking/src/main/java/com/example/tours/controller/ItineraryStop.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/controller/ItineraryStop.java
+@@ -0,0 +1,10 @@
++package com.example.tours.controller;
++
++import com.example.tours.service.TourStop;
++
++public record ItineraryStop(String stopCode, int guests) {
++
++    public TourStop tourStop() {
++        return new TourStop(stopCode, guests);
++    }
++}
+diff --git a/tour-booking/src/main/java/com/example/tours/repository/SeasonRateRepository.java b/tour-booking/src/main/java/com/example/tours/repository/SeasonRateRepository.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/repository/SeasonRateRepository.java
+@@ -0,0 +1,30 @@
++package com.example.tours.repository;
++
++import java.math.BigDecimal;
++import java.util.Map;
++import java.util.Set;
++import java.util.stream.Collectors;
++import org.springframework.jdbc.core.simple.JdbcClient;
++import org.springframework.stereotype.Repository;
++
++@Repository
++public class SeasonRateRepository {
++
++    private final JdbcClient jdbcClient;
++
++    public SeasonRateRepository(JdbcClient jdbcClient) {
++        this.jdbcClient = jdbcClient;
++    }
++
++    public Map<String, BigDecimal> pricesPerGuestFor(Set<String> stopCodes) {
++        return jdbcClient.sql("""
++                        select stop_code, price_per_guest
++                        from season_rate
++                        where stop_code in (:stopCodes) and current_date between valid_from and valid_until
++                        """)
++                .param("stopCodes", stopCodes)
++                .query((row, rowNumber) -> Map.entry(row.getString("stop_code"), row.getBigDecimal("price_per_guest")))
++                .stream()
++                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
++    }
++}
+diff --git a/tour-booking/src/main/java/com/example/tours/service/PriceNotice.java b/tour-booking/src/main/java/com/example/tours/service/PriceNotice.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/service/PriceNotice.java
+@@ -0,0 +1,4 @@
++package com.example.tours.service;
++
++public record PriceNotice(String subject, String message) {
++}
+diff --git a/tour-booking/src/main/java/com/example/tours/service/PriceNoticeRules.java b/tour-booking/src/main/java/com/example/tours/service/PriceNoticeRules.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/service/PriceNoticeRules.java
+@@ -0,0 +1,24 @@
++package com.example.tours.service;
++
++import java.math.BigDecimal;
++import java.util.ArrayList;
++import java.util.List;
++import org.springframework.stereotype.Service;
++
++@Service
++public class PriceNoticeRules {
++
++    private static final BigDecimal TOUR_DESK_APPROVAL_TOTAL = new BigDecimal("5000.00");
++
++    public List<PriceNotice> noticesFor(List<StopPrice> stopPrices, BigDecimal total) {
++        List<PriceNotice> notices = new ArrayList<>();
++        stopPrices.stream()
++                .filter(stopPrice -> stopPrice.price().signum() == 0)
++                .map(stopPrice -> new PriceNotice(stopPrice.stopCode(), "Stop has no season rate"))
++                .forEach(notices::add);
++        if (total.compareTo(TOUR_DESK_APPROVAL_TOTAL) > 0) {
++            notices.add(new PriceNotice("tour", "Group price needs approval by the tour desk"));
++        }
++        return notices;
++    }
++}
+diff --git a/tour-booking/src/main/java/com/example/tours/service/StopPrice.java b/tour-booking/src/main/java/com/example/tours/service/StopPrice.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/service/StopPrice.java
+@@ -0,0 +1,6 @@
++package com.example.tours.service;
++
++import java.math.BigDecimal;
++
++public record StopPrice(String stopCode, BigDecimal price) {
++}
+diff --git a/tour-booking/src/main/java/com/example/tours/service/TourPrice.java b/tour-booking/src/main/java/com/example/tours/service/TourPrice.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/service/TourPrice.java
+@@ -0,0 +1,14 @@
++package com.example.tours.service;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++public record TourPrice(List<StopPrice> stopPrices, BigDecimal total, List<PriceNotice> notices) {
++
++    public StopPrice priceFor(String stopCode) {
++        return stopPrices.stream()
++                .filter(stopPrice -> stopPrice.stopCode().equals(stopCode))
++                .findFirst()
++                .orElseThrow();
++    }
++}
+diff --git a/tour-booking/src/main/java/com/example/tours/service/TourPriceService.java b/tour-booking/src/main/java/com/example/tours/service/TourPriceService.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/service/TourPriceService.java
+@@ -0,0 +1,34 @@
++package com.example.tours.service;
++
++import com.example.tours.repository.SeasonRateRepository;
++import java.math.BigDecimal;
++import java.util.List;
++import java.util.Map;
++import java.util.stream.Collectors;
++import org.springframework.stereotype.Service;
++
++@Service
++public class TourPriceService {
++
++    private final SeasonRateRepository seasonRateRepository;
++    private final PriceNoticeRules priceNoticeRules;
++
++    public TourPriceService(SeasonRateRepository seasonRateRepository, PriceNoticeRules priceNoticeRules) {
++        this.seasonRateRepository = seasonRateRepository;
++        this.priceNoticeRules = priceNoticeRules;
++    }
++
++    public TourPrice priceOf(List<TourStop> stops) {
++        Map<String, BigDecimal> pricesPerGuest = seasonRateRepository.pricesPerGuestFor(
++                stops.stream().map(TourStop::stopCode).collect(Collectors.toSet()));
++        List<StopPrice> stopPrices = stops.stream()
++                .map(stop -> stopPriceOf(stop, pricesPerGuest.getOrDefault(stop.stopCode(), BigDecimal.ZERO)))
++                .toList();
++        BigDecimal total = stopPrices.stream().map(StopPrice::price).reduce(BigDecimal.ZERO, BigDecimal::add);
++        return new TourPrice(stopPrices, total, priceNoticeRules.noticesFor(stopPrices, total));
++    }
++
++    private StopPrice stopPriceOf(TourStop stop, BigDecimal pricePerGuest) {
++        return new StopPrice(stop.stopCode(), pricePerGuest.multiply(BigDecimal.valueOf(stop.guests())));
++    }
++}
+diff --git a/tour-booking/src/main/java/com/example/tours/service/TourStop.java b/tour-booking/src/main/java/com/example/tours/service/TourStop.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/service/TourStop.java
+@@ -0,0 +1,4 @@
++package com.example.tours.service;
++
++public record TourStop(String stopCode, int guests) {
++}

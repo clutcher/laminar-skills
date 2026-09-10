@@ -1,0 +1,12 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/vessel/Vessel.java b/ferry/src/main/java/com/example/harbourferry/vessel/Vessel.java
+--- a/ferry/src/main/java/com/example/harbourferry/vessel/Vessel.java
++++ b/ferry/src/main/java/com/example/harbourferry/vessel/Vessel.java
+@@ -23,4 +23,8 @@ public class Vessel {
+     public Boolean getSpotCheckPassed() {
+         return spotCheckPassed;
+     }
++
++    public boolean isBarredFromSailing() {
++        return Boolean.FALSE.equals(spotCheckPassed);
++    }
+ }

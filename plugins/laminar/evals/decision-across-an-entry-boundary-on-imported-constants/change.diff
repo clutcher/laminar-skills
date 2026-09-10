@@ -1,0 +1,108 @@
+diff --git a/hiker-web/src/hut/HutCard.tsx b/hiker-web/src/hut/HutCard.tsx
+--- a/hiker-web/src/hut/HutCard.tsx
++++ b/hiker-web/src/hut/HutCard.tsx
+@@ -1,10 +1,16 @@
+ import { HutSummary } from "./HutSummary";
++import { ALPINE_REGION } from "../shared/constants";
+ 
+ export function HutCard({ hut }: { hut: HutSummary }) {
++  const shownGear = hut.valley.region === ALPINE_REGION ? hut.avalancheGear : [];
+   return (
+     <article className="hut-card">
+       <h3>{hut.name}</h3>
+       <p>{hut.valley.displayName}</p>
++      <p className="free-beds">{hut.freeBeds} beds free tonight</p>
++      <ul className="avalanche-gear">
++        {shownGear.map(gearItem => <li key={gearItem.label}>{gearItem.label}</li>)}
++      </ul>
+     </article>
+   );
+ }
+diff --git a/hiker-web/src/hut/HutSummary.ts b/hiker-web/src/hut/HutSummary.ts
+--- a/hiker-web/src/hut/HutSummary.ts
++++ b/hiker-web/src/hut/HutSummary.ts
+@@ -5,8 +5,14 @@
+   region: Region;
+ }
+ 
++export interface GearItemSummary {
++  label: string;
++}
++
+ export interface HutSummary {
+   id: string;
+   name: string;
+   valley: ValleySummary;
++  avalancheGear: GearItemSummary[];
++  freeBeds: number;
+ }
+diff --git a/hiker-web/src/hut/hutsInValley.graphql b/hiker-web/src/hut/hutsInValley.graphql
+--- a/hiker-web/src/hut/hutsInValley.graphql
++++ b/hiker-web/src/hut/hutsInValley.graphql
+@@ -6,5 +6,9 @@
+       displayName
+       region
+     }
++    avalancheGear {
++      label
++    }
++    freeBeds
+   }
+ }
+diff --git a/hut-api/src/main/java/org/huts/lodge/web/HutFields.java b/hut-api/src/main/java/org/huts/lodge/web/HutFields.java
+new file mode 100644
+--- /dev/null
++++ b/hut-api/src/main/java/org/huts/lodge/web/HutFields.java
+@@ -0,0 +1,32 @@
++package org.huts.lodge.web;
++
++import java.util.List;
++import org.huts.lodge.hut.GearItem;
++import org.huts.lodge.hut.GearStore;
++import org.huts.lodge.hut.Hut;
++import org.huts.lodge.hut.LodgeConstants;
++import org.springframework.graphql.data.method.annotation.SchemaMapping;
++import org.springframework.stereotype.Controller;
++
++@Controller
++public class HutFields {
++
++    private final GearStore gearStore;
++
++    public HutFields(GearStore gearStore) {
++        this.gearStore = gearStore;
++    }
++
++    @SchemaMapping(typeName = "Hut")
++    public List<GearItem> avalancheGear(Hut hut) {
++        if (hut.valley().region() != LodgeConstants.AVALANCHE_GEAR_REGION) {
++            return List.of();
++        }
++        return gearStore.getGearItemsForHut(hut.id());
++    }
++
++    @SchemaMapping(typeName = "Hut")
++    public int freeBeds(Hut hut) {
++        return hut.bedsLeftTonight();
++    }
++}
+diff --git a/hut-api/src/main/resources/graphql/lodge.graphqls b/hut-api/src/main/resources/graphql/lodge.graphqls
+--- a/hut-api/src/main/resources/graphql/lodge.graphqls
++++ b/hut-api/src/main/resources/graphql/lodge.graphqls
+@@ -6,6 +6,8 @@
+   id: ID!
+   name: String!
+   valley: Valley!
++  avalancheGear: [GearItem!]!
++  freeBeds: Int!
+ }
+ 
+ type Valley {
+@@ -19,3 +21,7 @@
+   LAKELAND
+   FOREST
+ }
++
++type GearItem {
++  label: String!
++}

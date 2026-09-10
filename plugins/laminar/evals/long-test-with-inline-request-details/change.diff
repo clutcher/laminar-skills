@@ -1,0 +1,23 @@
+diff --git a/box-office/test/refunds.test.ts b/box-office/test/refunds.test.ts
+new file mode 100644
+--- /dev/null
++++ b/box-office/test/refunds.test.ts
+@@ -0,0 +1,18 @@
++import { describe, expect, it } from "vitest";
++import { clock } from "./support/clock";
++import { ordersStore } from "./support/ordersStore";
++import { refundsApi } from "./support/refundsApi";
++
++describe("refunds", () => {
++  it("refuses the refund of a concert that already took place", async () => {
++    clock.setNow(new Date("2026-06-20T09:00:00Z"));
++    const order = await ordersStore.save({ number: "ORD-4471", concert: "Riverside Jazz Night", playedOn: "2026-06-14", price: 45 });
++    const credentials = Buffer.from("box-office:harbour-lights").toString("base64");
++    const headers = { Authorization: `Basic ${credentials}`, "Content-Type": "application/json", Accept: "application/json" };
++    const body = JSON.stringify({ orderNumber: order.number, reason: "Could not attend" });
++    const response = await fetch(`${refundsApi.baseUrl}/v1/refunds`, { method: "POST", headers, body });
++    const payload = await response.json();
++    expect(response.status).toBe(422);
++    expect(payload.reason).toBe("CONCERT_ALREADY_PLAYED");
++  });
++});

@@ -1,0 +1,18 @@
+diff --git a/harbour/src/main/java/com/example/harbour/sailings/domain/SailingTimetableCompletion.java b/harbour/src/main/java/com/example/harbour/sailings/domain/SailingTimetableCompletion.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/sailings/domain/SailingTimetableCompletion.java
+@@ -0,0 +1,13 @@
++package com.example.harbour.sailings.domain;
++
++import java.util.List;
++
++public class SailingTimetableCompletion {
++
++    // The harbour office sends no sailing at all for a berth it has closed for the day.
++    public SailingTimetable withCancelledSailingsForClosedBerths(List<Berth> plannedBerths, SailingTimetable officeTimetable) {
++        List<Berth> closedBerths = officeTimetable.findBerthsWithoutSailing(plannedBerths);
++        List<Sailing> cancelledSailings = Sailing.createCancelledSailings(closedBerths);
++        return officeTimetable.addSailings(cancelledSailings);
++    }
++}

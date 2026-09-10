@@ -1,0 +1,183 @@
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/BikeShareApplication.java b/bikeshare/src/main/java/com/example/bikeshare/BikeShareApplication.java
+new file mode 100644
+index 0000000..5cf604c
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/BikeShareApplication.java
+@@ -0,0 +1,12 @@
++package com.example.bikeshare;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class BikeShareApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(BikeShareApplication.class, args);
++    }
++}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RideDuration.java b/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RideDuration.java
+new file mode 100644
+index 0000000..80677cf
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RideDuration.java
+@@ -0,0 +1,4 @@
++package com.example.bikeshare.pricing.internal;
++
++public record RideDuration(int minutes) {
++}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RidePriceCalculator.java b/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RidePriceCalculator.java
+new file mode 100644
+index 0000000..6ad351b
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/RidePriceCalculator.java
+@@ -0,0 +1,23 @@
++package com.example.bikeshare.pricing.internal;
++
++import org.springframework.stereotype.Component;
++
++import java.time.LocalDate;
++
++@Component
++public final class RidePriceCalculator {
++
++    private final SeasonalRateTable seasonalRates;
++
++    RidePriceCalculator(SeasonalRateTable seasonalRates) {
++        this.seasonalRates = seasonalRates;
++    }
++
++    public int priceInCentsFor(RideDuration ridden, LocalDate rideDate) {
++        return ridden.minutes() * seasonalRates.centsPerMinuteOn(rideDate);
++    }
++
++    public int longRideDiscountInCentsFor(RideDuration ridden) {
++        return ridden.minutes() >= 60 ? seasonalRates.longRideDiscountInCents() : 0;
++    }
++}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/SeasonalRateTable.java b/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/SeasonalRateTable.java
+new file mode 100644
+index 0000000..343450a
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/pricing/internal/SeasonalRateTable.java
+@@ -0,0 +1,26 @@
++package com.example.bikeshare.pricing.internal;
++
++import org.springframework.stereotype.Component;
++
++import java.time.LocalDate;
++import java.time.Month;
++
++@Component
++class SeasonalRateTable {
++
++    private static final int SUMMER_CENTS_PER_MINUTE = 18;
++
++    private static final int WINTER_CENTS_PER_MINUTE = 11;
++
++    private static final int LONG_RIDE_DISCOUNT_IN_CENTS = 250;
++
++    int centsPerMinuteOn(LocalDate rideDate) {
++        Month month = rideDate.getMonth();
++        boolean summer = month.getValue() >= Month.MAY.getValue() && month.getValue() <= Month.SEPTEMBER.getValue();
++        return summer ? SUMMER_CENTS_PER_MINUTE : WINTER_CENTS_PER_MINUTE;
++    }
++
++    int longRideDiscountInCents() {
++        return LONG_RIDE_DISCOUNT_IN_CENTS;
++    }
++}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/pricing/package-info.java b/bikeshare/src/main/java/com/example/bikeshare/pricing/package-info.java
+new file mode 100644
+index 0000000..fa60649
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/pricing/package-info.java
+@@ -0,0 +1,2 @@
++@org.springframework.modulith.ApplicationModule
++package com.example.bikeshare.pricing;
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/station/events/StationClosed.java b/bikeshare/src/main/java/com/example/bikeshare/station/events/StationClosed.java
+new file mode 100644
+index 0000000..90275d3
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/station/events/StationClosed.java
+@@ -0,0 +1,6 @@
++package com.example.bikeshare.station.events;
++
++import java.time.Instant;
++
++public record StationClosed(String stationId, Instant closedAt) {
++}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/station/events/package-info.java b/bikeshare/src/main/java/com/example/bikeshare/station/events/package-info.java
+new file mode 100644
+index 0000000..2a7f348
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/station/events/package-info.java
+@@ -0,0 +1,2 @@
++@org.springframework.modulith.NamedInterface("station.events")
++package com.example.bikeshare.station.events;
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectory.java b/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectory.java
+new file mode 100644
+index 0000000..8c4154e
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectory.java
+@@ -0,0 +1,8 @@
++package com.example.bikeshare.station.internal;
++
++import java.util.Optional;
++
++public interface StationDirectory {
++
++    Optional<String> stationNameFor(String stationId);
++}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectoryUsingMemory.java b/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectoryUsingMemory.java
+new file mode 100644
+index 0000000..ea561ae
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectoryUsingMemory.java
+@@ -0,0 +1,20 @@
++package com.example.bikeshare.station.internal;
++
++import org.springframework.stereotype.Component;
++
++import java.util.Map;
++import java.util.Optional;
++
++@Component
++class StationDirectoryUsingMemory implements StationDirectory {
++
++    private static final Map<String, String> STATION_NAMES_BY_ID = Map.of(
++        "ST-0114", "Harbour Gate",
++        "ST-0231", "Old Mill Bridge",
++        "ST-0347", "Linden Park North");
++
++    @Override
++    public Optional<String> stationNameFor(String stationId) {
++        return Optional.ofNullable(STATION_NAMES_BY_ID.get(stationId));
++    }
++}
+diff --git a/bikeshare/src/main/java/com/example/bikeshare/station/package-info.java b/bikeshare/src/main/java/com/example/bikeshare/station/package-info.java
+new file mode 100644
+index 0000000..f8e5f5b
+--- /dev/null
++++ b/bikeshare/src/main/java/com/example/bikeshare/station/package-info.java
+@@ -0,0 +1,2 @@
++@org.springframework.modulith.ApplicationModule
++package com.example.bikeshare.station;
+diff --git a/bikeshare/src/test/java/com/example/bikeshare/BikeShareModulesTest.java b/bikeshare/src/test/java/com/example/bikeshare/BikeShareModulesTest.java
+new file mode 100644
+index 0000000..8b948c5
+--- /dev/null
++++ b/bikeshare/src/test/java/com/example/bikeshare/BikeShareModulesTest.java
+@@ -0,0 +1,12 @@
++package com.example.bikeshare;
++
++import org.junit.jupiter.api.Test;
++import org.springframework.modulith.core.ApplicationModules;
++
++class BikeShareModulesTest {
++
++    @Test
++    void shouldKeepEveryModuleBoundaryWhenTheApplicationIsVerified() {
++        ApplicationModules.of(BikeShareApplication.class).verify();
++    }
++}

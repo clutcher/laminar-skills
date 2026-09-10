@@ -1,0 +1,31 @@
+diff --git a/harbour/src/main/java/com/example/harbour/fees/FeeQuoteService.java b/harbour/src/main/java/com/example/harbour/fees/FeeQuoteService.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/fees/FeeQuoteService.java
+@@ -0,0 +1,26 @@
++package com.example.harbour.fees;
++
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++
++public class FeeQuoteService {
++
++    private final TariffBook tariffBook;
++
++    public FeeQuoteService(TariffBook tariffBook) {
++        this.tariffBook = tariffBook;
++    }
++
++    public FeeQuote quote(FeeRequest request) {
++        return addMissingTariffLineForEveryVesselWithoutAPricedLine(request, tariffBook.price(request));
++    }
++
++    private static FeeQuote addMissingTariffLineForEveryVesselWithoutAPricedLine(FeeRequest request, FeeQuote pricedQuote) {
++        Map<FeeRequest.Vessel, FeeQuote.Line> lines = new LinkedHashMap<>(pricedQuote.lines());
++        request.vessels().forEach(vessel -> lines.computeIfAbsent(
++            vessel,
++            unused -> FeeQuote.Line.builder().problems(List.of(new MissingTariffProblem(vessel.flagState()))).build()));
++        return pricedQuote.toBuilder().lines(lines).build();
++    }
++}

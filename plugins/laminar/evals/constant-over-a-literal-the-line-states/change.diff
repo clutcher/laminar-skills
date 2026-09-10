@@ -1,0 +1,16 @@
+diff --git a/ferry/src/booking/crossingFare.ts b/ferry/src/booking/crossingFare.ts
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/booking/crossingFare.ts
+@@ -0,0 +1,11 @@
++import { Ticket } from "./ticket";
++
++const STARTING_TOTAL = 0;
++
++export function sumTicketFaresInCents(tickets: Ticket[]): number {
++  let totalFareInCents = STARTING_TOTAL;
++  for (const ticket of tickets) {
++    totalFareInCents += ticket.fareInCents;
++  }
++  return totalFareInCents;
++}

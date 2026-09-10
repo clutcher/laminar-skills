@@ -1,0 +1,17 @@
+diff --git a/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleService.kt b/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleService.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/berths/BerthScheduleService.kt
+@@ -0,0 +1,12 @@
++package com.example.marina.berths
++
++class BerthScheduleService(private val harbourMaster: HarbourMaster) {
++
++    fun schedule(request: BerthRequest): BerthSchedule =
++        addOverflowSlotsForUnplacedVessels(request, harbourMaster.scheduleFor(request.harbour))
++
++    private fun addOverflowSlotsForUnplacedVessels(request: BerthRequest, schedule: BerthSchedule): BerthSchedule {
++        val unplacedVessels = request.vessels.filter { vessel -> vessel !in schedule.slots }
++        return schedule.copy(slots = schedule.slots + unplacedVessels.map { vessel -> "overflow-$vessel" })
++    }
++}

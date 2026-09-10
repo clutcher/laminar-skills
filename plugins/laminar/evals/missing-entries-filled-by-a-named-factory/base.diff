@@ -1,0 +1,112 @@
+diff --git a/harbour/pom.xml b/harbour/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/harbour/pom.xml
+@@ -0,0 +1,6 @@
++<project>
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example</groupId>
++    <artifactId>harbour</artifactId>
++    <version>1.0.0</version>
++</project>
+diff --git a/harbour/src/main/java/com/example/harbour/fees/FeeQuote.java b/harbour/src/main/java/com/example/harbour/fees/FeeQuote.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/fees/FeeQuote.java
+@@ -0,0 +1,62 @@
++package com.example.harbour.fees;
++
++import java.util.List;
++import java.util.Map;
++
++public record FeeQuote(String port, Map<FeeRequest.Vessel, Line> lines) {
++
++    public Builder toBuilder() {
++        return new Builder().port(port).lines(lines);
++    }
++
++    public record Line(long cents, List<MissingTariffProblem> problems) {
++
++        public static Line missingTariff(FeeRequest.Vessel vessel) {
++            return new Line(0, List.of(new MissingTariffProblem(vessel.flagState())));
++        }
++
++        public static LineBuilder builder() {
++            return new LineBuilder();
++        }
++    }
++
++    public static class LineBuilder {
++
++        private long cents;
++        private List<MissingTariffProblem> problems = List.of();
++
++        public LineBuilder cents(long cents) {
++            this.cents = cents;
++            return this;
++        }
++
++        public LineBuilder problems(List<MissingTariffProblem> problems) {
++            this.problems = problems;
++            return this;
++        }
++
++        public Line build() {
++            return new Line(cents, problems);
++        }
++    }
++
++    public static class Builder {
++
++        private String port;
++        private Map<FeeRequest.Vessel, Line> lines = Map.of();
++
++        public Builder port(String port) {
++            this.port = port;
++            return this;
++        }
++
++        public Builder lines(Map<FeeRequest.Vessel, Line> lines) {
++            this.lines = lines;
++            return this;
++        }
++
++        public FeeQuote build() {
++            return new FeeQuote(port, lines);
++        }
++    }
++}
+diff --git a/harbour/src/main/java/com/example/harbour/fees/FeeRequest.java b/harbour/src/main/java/com/example/harbour/fees/FeeRequest.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/fees/FeeRequest.java
+@@ -0,0 +1,9 @@
++package com.example.harbour.fees;
++
++import java.util.List;
++
++public record FeeRequest(String port, List<Vessel> vessels) {
++
++    public record Vessel(String name, String flagState) {
++    }
++}
+diff --git a/harbour/src/main/java/com/example/harbour/fees/MissingTariffProblem.java b/harbour/src/main/java/com/example/harbour/fees/MissingTariffProblem.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/fees/MissingTariffProblem.java
+@@ -0,0 +1,4 @@
++package com.example.harbour.fees;
++
++public record MissingTariffProblem(String flagState) {
++}
+diff --git a/harbour/src/main/java/com/example/harbour/fees/TariffBook.java b/harbour/src/main/java/com/example/harbour/fees/TariffBook.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/fees/TariffBook.java
+@@ -0,0 +1,6 @@
++package com.example.harbour.fees;
++
++public interface TariffBook {
++
++    FeeQuote price(FeeRequest request);
++}

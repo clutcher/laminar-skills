@@ -1,0 +1,129 @@
+diff --git a/shop/src/main/java/com/example/shop/order/Order.java b/shop/src/main/java/com/example/shop/order/Order.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/Order.java
+@@ -0,0 +1,36 @@
++package com.example.shop.order;
++
++import jakarta.persistence.Entity;
++import jakarta.persistence.Id;
++import jakarta.persistence.Transient;
++import java.util.List;
++
++@Entity
++public class Order {
++
++    @Id
++    private String id;
++    private Status status;
++    @Transient
++    private List<OrderItem> items;
++    @Transient
++    private List<Payment> payments;
++    @Transient
++    private List<OrderHistoryEntry> history;
++
++    public Status getStatus() {
++        return status;
++    }
++
++    public void setItems(List<OrderItem> items) {
++        this.items = items;
++    }
++
++    public void setPayments(List<Payment> payments) {
++        this.payments = payments;
++    }
++
++    public void setHistory(List<OrderHistoryEntry> history) {
++        this.history = history;
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/order/OrderFacade.java b/shop/src/main/java/com/example/shop/order/OrderFacade.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderFacade.java
+@@ -0,0 +1,22 @@
++package com.example.shop.order;
++
++import lombok.RequiredArgsConstructor;
++import org.springframework.stereotype.Component;
++
++@Component
++@RequiredArgsConstructor
++public class OrderFacade {
++
++    private final OrderRepository orderRepository;
++    private final OrderItemRepository orderItemRepository;
++    private final PaymentRepository paymentRepository;
++    private final OrderHistoryRepository orderHistoryRepository;
++
++    public Order getFullOrder(String id) {
++        Order order = orderRepository.findById(id).orElseThrow(() -> new OrderNotFoundException(id));
++        order.setItems(orderItemRepository.findByOrderId(id));
++        order.setPayments(paymentRepository.findByOrderId(id));
++        order.setHistory(orderHistoryRepository.findByOrderId(id));
++        return order;
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/order/OrderHistoryRepository.java b/shop/src/main/java/com/example/shop/order/OrderHistoryRepository.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderHistoryRepository.java
+@@ -0,0 +1,9 @@
++package com.example.shop.order;
++
++import java.util.List;
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface OrderHistoryRepository extends JpaRepository<OrderHistoryEntry, Long> {
++
++    List<OrderHistoryEntry> findByOrderId(String orderId);
++}
+diff --git a/shop/src/main/java/com/example/shop/order/OrderItemRepository.java b/shop/src/main/java/com/example/shop/order/OrderItemRepository.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderItemRepository.java
+@@ -0,0 +1,9 @@
++package com.example.shop.order;
++
++import java.util.List;
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
++
++    List<OrderItem> findByOrderId(String orderId);
++}
+diff --git a/shop/src/main/java/com/example/shop/order/OrderRepository.java b/shop/src/main/java/com/example/shop/order/OrderRepository.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderRepository.java
+@@ -0,0 +1,6 @@
++package com.example.shop.order;
++
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface OrderRepository extends JpaRepository<Order, String> {
++}
+diff --git a/shop/src/main/java/com/example/shop/order/PaymentRepository.java b/shop/src/main/java/com/example/shop/order/PaymentRepository.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/PaymentRepository.java
+@@ -0,0 +1,9 @@
++package com.example.shop.order;
++
++import java.util.List;
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface PaymentRepository extends JpaRepository<Payment, Long> {
++
++    List<Payment> findByOrderId(String orderId);
++}
+diff --git a/shop/src/main/java/com/example/shop/order/Status.java b/shop/src/main/java/com/example/shop/order/Status.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/Status.java
+@@ -0,0 +1,3 @@
++package com.example.shop.order;
++
++public enum Status { PLACED, PAID, SHIPPED, DELIVERED, CANCELLED }

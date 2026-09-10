@@ -1,0 +1,28 @@
+diff --git a/shop/src/main/java/com/example/shop/order/Helper.java b/shop/src/main/java/com/example/shop/order/Helper.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/Helper.java
+@@ -0,0 +1,23 @@
++package com.example.shop.order;
++
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class Helper {
++
++    private final OrderRepository orderRepository;
++
++    public void validateOrder(Order order) {
++        if (order.getLineItems().isEmpty()) {
++            throw new InvalidOrderException(order.getNumber());
++        }
++    }
++
++    public String formatOrderTotal(Order order) {
++        return String.format("%.2f %s", order.getTotal(), order.getCurrencyCode());
++    }
++
++    public Order saveOrder(Order order) {
++        return orderRepository.save(order);
++    }
++}

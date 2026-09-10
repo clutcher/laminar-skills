@@ -1,0 +1,223 @@
+diff --git a/bikes/package.json b/bikes/package.json
+new file mode 100644
+index 0000000..ea21be2
+--- /dev/null
++++ b/bikes/package.json
+@@ -0,0 +1,10 @@
++{
++  "name": "bikes",
++  "version": "1.0.0",
++  "dependencies": {
++    "express": "4.19.2"
++  },
++  "devDependencies": {
++    "typescript": "5.4.5"
++  }
++}
+diff --git a/bikes/src/invoicing/app/api/invoice-rider.ts b/bikes/src/invoicing/app/api/invoice-rider.ts
+new file mode 100644
+index 0000000..b3768ef
+--- /dev/null
++++ b/bikes/src/invoicing/app/api/invoice-rider.ts
+@@ -0,0 +1,3 @@
++export interface InvoiceRider {
++  invoiceOf(riderId: string): Promise<number>;
++}
+diff --git a/bikes/src/invoicing/app/domain/invoice-service.ts b/bikes/src/invoicing/app/domain/invoice-service.ts
+new file mode 100644
+index 0000000..53d3d37
+--- /dev/null
++++ b/bikes/src/invoicing/app/domain/invoice-service.ts
+@@ -0,0 +1,11 @@
++import { InvoiceRider } from "../api/invoice-rider";
++import { RiderRentals } from "../spi/rider-rentals";
++
++export class InvoiceService implements InvoiceRider {
++  constructor(private readonly riderRentals: RiderRentals) {}
++
++  async invoiceOf(riderId: string): Promise<number> {
++    const rentals = await this.riderRentals.rentalCountOf(riderId);
++    return rentals * 250;
++  }
++}
+diff --git a/bikes/src/invoicing/app/spi/rider-rentals.ts b/bikes/src/invoicing/app/spi/rider-rentals.ts
+new file mode 100644
+index 0000000..720ae16
+--- /dev/null
++++ b/bikes/src/invoicing/app/spi/rider-rentals.ts
+@@ -0,0 +1,3 @@
++export interface RiderRentals {
++  rentalCountOf(riderId: string): Promise<number>;
++}
+diff --git a/bikes/src/invoicing/index.ts b/bikes/src/invoicing/index.ts
+new file mode 100644
+index 0000000..47465fc
+--- /dev/null
++++ b/bikes/src/invoicing/index.ts
+@@ -0,0 +1 @@
++export type { InvoiceRider } from "./app/api/invoice-rider";
+diff --git a/bikes/src/invoicing/out/modules/rider-rentals-using-rental-module.ts b/bikes/src/invoicing/out/modules/rider-rentals-using-rental-module.ts
+new file mode 100644
+index 0000000..18f9ee5
+--- /dev/null
++++ b/bikes/src/invoicing/out/modules/rider-rentals-using-rental-module.ts
+@@ -0,0 +1,10 @@
++import { RentalLookup } from "../../../rental";
++import { RiderRentals } from "../../app/spi/rider-rentals";
++
++export class RiderRentalsUsingRentalModule implements RiderRentals {
++  constructor(private readonly rentalLookup: RentalLookup) {}
++
++  async rentalCountOf(riderId: string): Promise<number> {
++    return (await this.rentalLookup.rentalsOfRider(riderId)).length;
++  }
++}
+diff --git a/bikes/src/rental/app/api/rent-bike.ts b/bikes/src/rental/app/api/rent-bike.ts
+new file mode 100644
+index 0000000..b468fab
+--- /dev/null
++++ b/bikes/src/rental/app/api/rent-bike.ts
+@@ -0,0 +1,3 @@
++export interface RentBike {
++  rent(bikeId: string, riderId: string): Promise<string>;
++}
+diff --git a/bikes/src/rental/app/domain/model/rental.ts b/bikes/src/rental/app/domain/model/rental.ts
+new file mode 100644
+index 0000000..b624abc
+--- /dev/null
++++ b/bikes/src/rental/app/domain/model/rental.ts
+@@ -0,0 +1,12 @@
++export class Rental {
++  constructor(
++    readonly rentalId: string,
++    readonly bikeId: string,
++    readonly riderId: string,
++    readonly startedAt: Date,
++  ) {}
++
++  minutesUntil(endedAt: Date): number {
++    return Math.ceil((endedAt.getTime() - this.startedAt.getTime()) / 60000);
++  }
++}
+diff --git a/bikes/src/rental/app/domain/rental-service.ts b/bikes/src/rental/app/domain/rental-service.ts
+new file mode 100644
+index 0000000..3d48c31
+--- /dev/null
++++ b/bikes/src/rental/app/domain/rental-service.ts
+@@ -0,0 +1,13 @@
++import { RentBike } from "../api/rent-bike";
++import { BikeStore } from "../spi/bike-store";
++import { Rental } from "./model/rental";
++
++export class RentalService implements RentBike {
++  constructor(private readonly bikeStore: BikeStore) {}
++
++  async rent(bikeId: string, riderId: string): Promise<string> {
++    const rental = new Rental(`${bikeId}-${Date.now()}`, bikeId, riderId, new Date());
++    await this.bikeStore.saveRental(rental);
++    return rental.rentalId;
++  }
++}
+diff --git a/bikes/src/rental/app/spi/bike-store.ts b/bikes/src/rental/app/spi/bike-store.ts
+new file mode 100644
+index 0000000..f63179b
+--- /dev/null
++++ b/bikes/src/rental/app/spi/bike-store.ts
+@@ -0,0 +1,6 @@
++import { Rental } from "../domain/model/rental";
++
++export interface BikeStore {
++  saveRental(rental: Rental): Promise<void>;
++  rentalsOfRider(riderId: string): Promise<Rental[]>;
++}
+diff --git a/bikes/src/rental/in/http/rental-routes.ts b/bikes/src/rental/in/http/rental-routes.ts
+new file mode 100644
+index 0000000..d6cf87d
+--- /dev/null
++++ b/bikes/src/rental/in/http/rental-routes.ts
+@@ -0,0 +1,10 @@
++import { Router } from "express";
++import { RentBike } from "../../app/api/rent-bike";
++
++export function rentalRoutes(rentBike: RentBike): Router {
++  const router = Router();
++  router.post("/rentals", async (request, response) => {
++    response.json({ rentalId: await rentBike.rent(request.body.bikeId, request.body.riderId) });
++  });
++  return router;
++}
+diff --git a/bikes/src/rental/in/modules/public-rental.ts b/bikes/src/rental/in/modules/public-rental.ts
+new file mode 100644
+index 0000000..f321595
+--- /dev/null
++++ b/bikes/src/rental/in/modules/public-rental.ts
+@@ -0,0 +1,5 @@
++export interface PublicRental {
++  rentalId: string;
++  bikeId: string;
++  startedAt: string;
++}
+diff --git a/bikes/src/rental/in/modules/rental-lookup.ts b/bikes/src/rental/in/modules/rental-lookup.ts
+new file mode 100644
+index 0000000..3d456ad
+--- /dev/null
++++ b/bikes/src/rental/in/modules/rental-lookup.ts
+@@ -0,0 +1,11 @@
++import { BikeStore } from "../../app/spi/bike-store";
++import { PublicRental } from "./public-rental";
++
++export class RentalLookup {
++  constructor(private readonly bikeStore: BikeStore) {}
++
++  async rentalsOfRider(riderId: string): Promise<PublicRental[]> {
++    const rentals = await this.bikeStore.rentalsOfRider(riderId);
++    return rentals.map(rental => ({ rentalId: rental.rentalId, bikeId: rental.bikeId, startedAt: rental.startedAt.toISOString() }));
++  }
++}
+diff --git a/bikes/src/rental/index.ts b/bikes/src/rental/index.ts
+new file mode 100644
+index 0000000..e401528
+--- /dev/null
++++ b/bikes/src/rental/index.ts
+@@ -0,0 +1,3 @@
++export type { RentBike } from "./app/api/rent-bike";
++export type { PublicRental } from "./in/modules/public-rental";
++export { RentalLookup } from "./in/modules/rental-lookup";
+diff --git a/bikes/src/rental/out/db/bike-store-using-sql.ts b/bikes/src/rental/out/db/bike-store-using-sql.ts
+new file mode 100644
+index 0000000..1a3e22b
+--- /dev/null
++++ b/bikes/src/rental/out/db/bike-store-using-sql.ts
+@@ -0,0 +1,19 @@
++import { Rental } from "../../app/domain/model/rental";
++import { BikeStore } from "../../app/spi/bike-store";
++
++export interface SqlClient {
++  query(sql: string, values: unknown[]): Promise<Record<string, unknown>[]>;
++}
++
++export class BikeStoreUsingSql implements BikeStore {
++  constructor(private readonly sql: SqlClient) {}
++
++  async saveRental(rental: Rental): Promise<void> {
++    await this.sql.query("insert into rental values ($1, $2, $3, $4)", [rental.rentalId, rental.bikeId, rental.riderId, rental.startedAt]);
++  }
++
++  async rentalsOfRider(riderId: string): Promise<Rental[]> {
++    const rows = await this.sql.query("select * from rental where rider_id = $1", [riderId]);
++    return rows.map(row => new Rental(String(row.rental_id), String(row.bike_id), riderId, new Date(String(row.started_at))));
++  }
++}
+diff --git a/bikes/tsconfig.json b/bikes/tsconfig.json
+new file mode 100644
+index 0000000..e0fb830
+--- /dev/null
++++ b/bikes/tsconfig.json
+@@ -0,0 +1,7 @@
++{
++  "compilerOptions": {
++    "strict": true,
++    "module": "commonjs",
++    "target": "es2022"
++  }
++}

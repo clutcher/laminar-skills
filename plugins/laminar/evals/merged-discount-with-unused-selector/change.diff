@@ -1,0 +1,44 @@
+diff --git a/shop/src/main/java/com/example/shop/pricing/BulkDiscount.java b/shop/src/main/java/com/example/shop/pricing/BulkDiscount.java
+deleted file mode 100644
+--- a/shop/src/main/java/com/example/shop/pricing/BulkDiscount.java
++++ /dev/null
+@@ -1,7 +0,0 @@
+-package com.example.shop.pricing;
+-
+-class BulkDiscount {
+-    double apply(double price) {
+-        return price * 0.9;
+-    }
+-}
+diff --git a/shop/src/main/java/com/example/shop/pricing/Discount.java b/shop/src/main/java/com/example/shop/pricing/Discount.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/pricing/Discount.java
+@@ -0,0 +1,7 @@
++package com.example.shop.pricing;
++
++class Discount {
++    double apply(double price, DiscountType type) {
++        return price * 0.9;
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/pricing/DiscountType.java b/shop/src/main/java/com/example/shop/pricing/DiscountType.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/pricing/DiscountType.java
+@@ -0,0 +1,3 @@
++package com.example.shop.pricing;
++
++enum DiscountType { LOYALTY, BULK }
+diff --git a/shop/src/main/java/com/example/shop/pricing/LoyaltyDiscount.java b/shop/src/main/java/com/example/shop/pricing/LoyaltyDiscount.java
+deleted file mode 100644
+--- a/shop/src/main/java/com/example/shop/pricing/LoyaltyDiscount.java
++++ /dev/null
+@@ -1,7 +0,0 @@
+-package com.example.shop.pricing;
+-
+-class LoyaltyDiscount {
+-    double apply(double price) {
+-        return price * 0.9;
+-    }
+-}

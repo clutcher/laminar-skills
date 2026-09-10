@@ -1,0 +1,214 @@
+diff --git a/hiker-web/package.json b/hiker-web/package.json
+new file mode 100644
+--- /dev/null
++++ b/hiker-web/package.json
+@@ -0,0 +1,7 @@
++{
++  "name": "hiker-web",
++  "private": true,
++  "dependencies": {
++    "react": "18.3.1"
++  }
++}
+diff --git a/hiker-web/src/hut/HutCard.tsx b/hiker-web/src/hut/HutCard.tsx
+new file mode 100644
+--- /dev/null
++++ b/hiker-web/src/hut/HutCard.tsx
+@@ -0,0 +1,10 @@
++import { HutSummary } from "./HutSummary";
++
++export function HutCard({ hut }: { hut: HutSummary }) {
++  return (
++    <article className="hut-card">
++      <h3>{hut.name}</h3>
++      <p>{hut.valley.displayName}</p>
++    </article>
++  );
++}
+diff --git a/hiker-web/src/hut/HutSummary.ts b/hiker-web/src/hut/HutSummary.ts
+new file mode 100644
+--- /dev/null
++++ b/hiker-web/src/hut/HutSummary.ts
+@@ -0,0 +1,12 @@
++export type Region = "ALPINE" | "LAKELAND" | "FOREST";
++
++export interface ValleySummary {
++  displayName: string;
++  region: Region;
++}
++
++export interface HutSummary {
++  id: string;
++  name: string;
++  valley: ValleySummary;
++}
+diff --git a/hiker-web/src/hut/hutsInValley.graphql b/hiker-web/src/hut/hutsInValley.graphql
+new file mode 100644
+--- /dev/null
++++ b/hiker-web/src/hut/hutsInValley.graphql
+@@ -0,0 +1,10 @@
++query HutsInValley($valleyId: ID!) {
++  hutsInValley(valleyId: $valleyId) {
++    id
++    name
++    valley {
++      displayName
++      region
++    }
++  }
++}
+diff --git a/hiker-web/src/shared/constants.ts b/hiker-web/src/shared/constants.ts
+new file mode 100644
+--- /dev/null
++++ b/hiker-web/src/shared/constants.ts
+@@ -0,0 +1,4 @@
++import { Region } from "../hut/HutSummary";
++
++export const ALPINE_REGION: Region = "ALPINE";
++export const SUPPORT_EMAIL = "huts@example.org";
+diff --git a/hut-api/build.gradle.kts b/hut-api/build.gradle.kts
+new file mode 100644
+--- /dev/null
++++ b/hut-api/build.gradle.kts
+@@ -0,0 +1,7 @@
++plugins {
++    java
++}
++
++dependencies {
++    implementation("org.springframework.boot:spring-boot-starter-graphql:3.3.4")
++}
+diff --git a/hut-api/src/main/java/org/huts/lodge/hut/GearItem.java b/hut-api/src/main/java/org/huts/lodge/hut/GearItem.java
+new file mode 100644
+--- /dev/null
++++ b/hut-api/src/main/java/org/huts/lodge/hut/GearItem.java
+@@ -0,0 +1,4 @@
++package org.huts.lodge.hut;
++
++public record GearItem(String label) {
++}
+diff --git a/hut-api/src/main/java/org/huts/lodge/hut/GearStore.java b/hut-api/src/main/java/org/huts/lodge/hut/GearStore.java
+new file mode 100644
+--- /dev/null
++++ b/hut-api/src/main/java/org/huts/lodge/hut/GearStore.java
+@@ -0,0 +1,8 @@
++package org.huts.lodge.hut;
++
++import java.util.List;
++
++public interface GearStore {
++
++    List<GearItem> getGearItemsForHut(String hutId);
++}
+diff --git a/hut-api/src/main/java/org/huts/lodge/hut/Hut.java b/hut-api/src/main/java/org/huts/lodge/hut/Hut.java
+new file mode 100644
+--- /dev/null
++++ b/hut-api/src/main/java/org/huts/lodge/hut/Hut.java
+@@ -0,0 +1,4 @@
++package org.huts.lodge.hut;
++
++public record Hut(String id, String name, Valley valley, int bedsLeftTonight) {
++}
+diff --git a/hut-api/src/main/java/org/huts/lodge/hut/HutDirectory.java b/hut-api/src/main/java/org/huts/lodge/hut/HutDirectory.java
+new file mode 100644
+--- /dev/null
++++ b/hut-api/src/main/java/org/huts/lodge/hut/HutDirectory.java
+@@ -0,0 +1,8 @@
++package org.huts.lodge.hut;
++
++import java.util.List;
++
++public interface HutDirectory {
++
++    List<Hut> getHutsInValley(String valleyId);
++}
+diff --git a/hut-api/src/main/java/org/huts/lodge/hut/LodgeConstants.java b/hut-api/src/main/java/org/huts/lodge/hut/LodgeConstants.java
+new file mode 100644
+--- /dev/null
++++ b/hut-api/src/main/java/org/huts/lodge/hut/LodgeConstants.java
+@@ -0,0 +1,10 @@
++package org.huts.lodge.hut;
++
++public final class LodgeConstants {
++
++    public static final Region AVALANCHE_GEAR_REGION = Region.ALPINE;
++    public static final int CHECK_IN_HOUR = 16;
++
++    private LodgeConstants() {
++    }
++}
+diff --git a/hut-api/src/main/java/org/huts/lodge/hut/Region.java b/hut-api/src/main/java/org/huts/lodge/hut/Region.java
+new file mode 100644
+--- /dev/null
++++ b/hut-api/src/main/java/org/huts/lodge/hut/Region.java
+@@ -0,0 +1,7 @@
++package org.huts.lodge.hut;
++
++public enum Region {
++    ALPINE,
++    LAKELAND,
++    FOREST
++}
+diff --git a/hut-api/src/main/java/org/huts/lodge/hut/Valley.java b/hut-api/src/main/java/org/huts/lodge/hut/Valley.java
+new file mode 100644
+--- /dev/null
++++ b/hut-api/src/main/java/org/huts/lodge/hut/Valley.java
+@@ -0,0 +1,4 @@
++package org.huts.lodge.hut;
++
++public record Valley(String id, String displayName, Region region) {
++}
+diff --git a/hut-api/src/main/java/org/huts/lodge/web/HutQueries.java b/hut-api/src/main/java/org/huts/lodge/web/HutQueries.java
+new file mode 100644
+--- /dev/null
++++ b/hut-api/src/main/java/org/huts/lodge/web/HutQueries.java
+@@ -0,0 +1,23 @@
++package org.huts.lodge.web;
++
++import java.util.List;
++import org.huts.lodge.hut.Hut;
++import org.huts.lodge.hut.HutDirectory;
++import org.springframework.graphql.data.method.annotation.Argument;
++import org.springframework.graphql.data.method.annotation.QueryMapping;
++import org.springframework.stereotype.Controller;
++
++@Controller
++public class HutQueries {
++
++    private final HutDirectory hutDirectory;
++
++    public HutQueries(HutDirectory hutDirectory) {
++        this.hutDirectory = hutDirectory;
++    }
++
++    @QueryMapping
++    public List<Hut> hutsInValley(@Argument String valleyId) {
++        return hutDirectory.getHutsInValley(valleyId);
++    }
++}
+diff --git a/hut-api/src/main/resources/graphql/lodge.graphqls b/hut-api/src/main/resources/graphql/lodge.graphqls
+new file mode 100644
+--- /dev/null
++++ b/hut-api/src/main/resources/graphql/lodge.graphqls
+@@ -0,0 +1,21 @@
++type Query {
++  hutsInValley(valleyId: ID!): [Hut!]!
++}
++
++type Hut {
++  id: ID!
++  name: String!
++  valley: Valley!
++}
++
++type Valley {
++  id: ID!
++  displayName: String!
++  region: Region!
++}
++
++enum Region {
++  ALPINE
++  LAKELAND
++  FOREST
++}

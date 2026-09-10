@@ -1,0 +1,38 @@
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/BoardingPassIssuer.java b/ferry/src/main/java/com/example/ferry/boarding/BoardingPassIssuer.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/BoardingPassIssuer.java
+@@ -0,0 +1,33 @@
++package com.example.ferry.boarding;
++
++import com.example.ferry.booking.Booking;
++import com.example.ferry.booking.Passenger;
++import com.example.ferry.booking.Seat;
++import com.example.ferry.crossing.Crossing;
++import java.util.ArrayList;
++import java.util.Comparator;
++import java.util.List;
++
++public class BoardingPassIssuer {
++
++    public List<BoardingPass> issueBoardingPasses(Crossing crossing) {
++        List<BoardingPass> boardingPasses = new ArrayList<>();
++        for (Booking booking : crossing.bookings()) {
++            if (booking.isPaid()) {
++                boardingPasses.addAll(booking.passengers().stream()
++                        .filter(Passenger::hasCheckedIn)
++                        .sorted(Comparator.comparing(Passenger::seat))
++                        .map(passenger -> {
++                            Seat seat = passenger.seat();
++                            return new BoardingPass(
++                                    crossing.departure(),
++                                    passenger.name(),
++                                    seat.deck(),
++                                    seat.number());
++                        })
++                        .toList());
++            }
++        }
++        return boardingPasses;
++    }
++}

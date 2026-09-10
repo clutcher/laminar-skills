@@ -1,0 +1,19 @@
+diff --git a/harbour/src/main/java/com/example/harbour/berth/BerthPlanner.java b/harbour/src/main/java/com/example/harbour/berth/BerthPlanner.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/berth/BerthPlanner.java
+@@ -0,0 +1,14 @@
++package com.example.harbour.berth;
++
++import java.util.Comparator;
++import java.util.List;
++
++public class BerthPlanner {
++
++    public Berth pickBerth(List<Berth> berths, Stay stay) {
++        return berths.stream()
++            .filter(berth -> !berth.isUnderMaintenanceDuring(stay))
++            .min(Comparator.comparing(Berth::dailyRate))
++            .orElseThrow(NoBerthAvailable::new);
++    }
++}

@@ -1,0 +1,31 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/crossing/CrossingStatus.java b/ferry/src/main/java/com/example/harbourferry/crossing/CrossingStatus.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/crossing/CrossingStatus.java
+@@ -0,0 +1,7 @@
++package com.example.harbourferry.crossing;
++
++public enum CrossingStatus {
++    SCHEDULED,
++    BOARDING,
++    DEPARTED
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/crossing/DepartureBoard.java b/ferry/src/main/java/com/example/harbourferry/crossing/DepartureBoard.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/crossing/DepartureBoard.java
+@@ -0,0 +1,14 @@
++package com.example.harbourferry.crossing;
++
++public class DepartureBoard {
++
++    public String noticeFor(CrossingStatus status) {
++        if (status == CrossingStatus.SCHEDULED) {
++            return "Boarding opens 45 minutes before departure";
++        }
++        if (status == CrossingStatus.BOARDING) {
++            return "Boarding now at the vehicle ramp";
++        }
++        return "This crossing has departed";
++    }
++}

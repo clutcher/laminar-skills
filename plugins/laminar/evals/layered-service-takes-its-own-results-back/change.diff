@@ -1,0 +1,107 @@
+diff --git a/tour-booking/src/main/java/com/example/tours/controller/ItineraryPriceController.java b/tour-booking/src/main/java/com/example/tours/controller/ItineraryPriceController.java
+--- a/tour-booking/src/main/java/com/example/tours/controller/ItineraryPriceController.java
++++ b/tour-booking/src/main/java/com/example/tours/controller/ItineraryPriceController.java
+@@ -3,12 +3,11 @@
+ import static java.util.function.Function.identity;
+ import static java.util.stream.Collectors.toMap;
+ 
+-import com.example.tours.service.StopPrice;
++import com.example.tours.service.PriceNotice;
+ import com.example.tours.service.TourPrice;
++import com.example.tours.service.TourPriceMergingService;
+ import com.example.tours.service.TourPriceService;
+-import com.example.tours.service.TourStop;
+ import java.math.BigDecimal;
+-import java.util.Collection;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
+@@ -25,11 +24,14 @@
+ public class ItineraryPriceController {
+ 
+     private final TourPriceService tourPriceService;
++    private final TourPriceMergingService tourPriceMergingService;
+ 
+-    public ItineraryPriceController(TourPriceService tourPriceService, BatchLoaderRegistry batchLoaderRegistry) {
++    public ItineraryPriceController(TourPriceService tourPriceService, TourPriceMergingService tourPriceMergingService,
++            BatchLoaderRegistry batchLoaderRegistry) {
+         this.tourPriceService = tourPriceService;
+-        batchLoaderRegistry.forTypePair(ItineraryStop.class, StopPrice.class)
+-                .registerMappedBatchLoader((itineraryStops, environment) -> Mono.just(stopPricesOf(itineraryStops)));
++        this.tourPriceMergingService = tourPriceMergingService;
++        batchLoaderRegistry.forTypePair(ItineraryStop.class, TourPrice.class)
++                .registerMappedBatchLoader((itineraryStops, environment) -> Mono.just(stopTourPricesOf(itineraryStops)));
+     }
+ 
+     @QueryMapping
+@@ -37,22 +39,23 @@
+         return new Itinerary(stops);
+     }
+ 
+-    @SchemaMapping(typeName = "Itinerary", field = "price")
+-    public TourPrice price(Itinerary itinerary) {
+-        return tourPriceService.priceOf(tourStopsOf(itinerary.stops()));
++    @SchemaMapping(typeName = "Itinerary", field = "total")
++    public CompletableFuture<BigDecimal> total(Itinerary itinerary, DataLoader<ItineraryStop, TourPrice> stopTourPrices) {
++        return stopTourPrices.loadMany(itinerary.stops()).thenApply(tourPriceMergingService::totalOf);
+     }
+ 
+-    @SchemaMapping(typeName = "ItineraryStop", field = "price")
+-    public CompletableFuture<BigDecimal> stopPrice(ItineraryStop itineraryStop, DataLoader<ItineraryStop, StopPrice> stopPrices) {
+-        return stopPrices.load(itineraryStop).thenApply(StopPrice::price);
++    @SchemaMapping(typeName = "Itinerary", field = "notices")
++    public CompletableFuture<List<PriceNotice>> notices(Itinerary itinerary, DataLoader<ItineraryStop, TourPrice> stopTourPrices) {
++        return stopTourPrices.loadMany(itinerary.stops()).thenApply(tourPriceMergingService::noticesOf);
+     }
+ 
+-    private Map<ItineraryStop, StopPrice> stopPricesOf(Set<ItineraryStop> itineraryStops) {
+-        TourPrice tourPrice = tourPriceService.priceOf(tourStopsOf(itineraryStops));
+-        return itineraryStops.stream().collect(toMap(identity(), itineraryStop -> tourPrice.priceFor(itineraryStop.stopCode())));
++    @SchemaMapping(typeName = "ItineraryStop", field = "price")
++    public CompletableFuture<BigDecimal> stopPrice(ItineraryStop itineraryStop, DataLoader<ItineraryStop, TourPrice> stopTourPrices) {
++        return stopTourPrices.load(itineraryStop).thenApply(TourPrice::total);
+     }
+ 
+-    private static List<TourStop> tourStopsOf(Collection<ItineraryStop> itineraryStops) {
+-        return itineraryStops.stream().map(ItineraryStop::tourStop).toList();
++    private Map<ItineraryStop, TourPrice> stopTourPricesOf(Set<ItineraryStop> itineraryStops) {
++        return itineraryStops.stream()
++                .collect(toMap(identity(), itineraryStop -> tourPriceService.priceOf(List.of(itineraryStop.tourStop()))));
+     }
+ }
+diff --git a/tour-booking/src/main/java/com/example/tours/service/TourPriceMergingService.java b/tour-booking/src/main/java/com/example/tours/service/TourPriceMergingService.java
+new file mode 100644
+--- /dev/null
++++ b/tour-booking/src/main/java/com/example/tours/service/TourPriceMergingService.java
+@@ -0,0 +1,31 @@
++package com.example.tours.service;
++
++import java.math.BigDecimal;
++import java.util.List;
++import java.util.Objects;
++import org.springframework.stereotype.Service;
++
++@Service
++public class TourPriceMergingService {
++
++    private final PriceNoticeRules priceNoticeRules;
++
++    public TourPriceMergingService(PriceNoticeRules priceNoticeRules) {
++        this.priceNoticeRules = priceNoticeRules;
++    }
++
++    public BigDecimal totalOf(List<TourPrice> stopTourPrices) {
++        return stopTourPrices.stream()
++                .filter(Objects::nonNull)
++                .map(TourPrice::total)
++                .reduce(BigDecimal.ZERO, BigDecimal::add);
++    }
++
++    public List<PriceNotice> noticesOf(List<TourPrice> stopTourPrices) {
++        List<StopPrice> stopPrices = stopTourPrices.stream()
++                .filter(Objects::nonNull)
++                .map(stopTourPrice -> stopTourPrice.stopPrices().get(0))
++                .toList();
++        return priceNoticeRules.noticesFor(stopPrices, totalOf(stopTourPrices));
++    }
++}

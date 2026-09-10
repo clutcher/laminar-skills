@@ -1,0 +1,311 @@
+diff --git a/company-website/consignment/exposed/ConsignmentSearchService.java b/company-website/consignment/exposed/ConsignmentSearchService.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/consignment/exposed/ConsignmentSearchService.java
+@@ -0,0 +1,20 @@
++package com.example.website.consignment.exposed;
++
++import com.example.website.consignment.internal.ConsignmentRepository;
++import java.util.Optional;
++import org.springframework.stereotype.Service;
++
++@Service
++public class ConsignmentSearchService {
++
++    private final ConsignmentRepository consignmentRepository;
++
++    public ConsignmentSearchService(ConsignmentRepository consignmentRepository) {
++        this.consignmentRepository = consignmentRepository;
++    }
++
++    public Optional<PublicConsignment> findById(Long id) {
++        return consignmentRepository.findById(id)
++                .map(consignment -> new PublicConsignment(consignment.getId(), consignment.getOrderId(), consignment.getWarehouseId()));
++    }
++}
+diff --git a/company-website/consignment/exposed/PublicConsignment.java b/company-website/consignment/exposed/PublicConsignment.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/consignment/exposed/PublicConsignment.java
+@@ -0,0 +1,4 @@
++package com.example.website.consignment.exposed;
++
++public record PublicConsignment(Long id, Long orderId, Long warehouseId) {
++}
+diff --git a/company-website/consignment/internal/Consignment.java b/company-website/consignment/internal/Consignment.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/consignment/internal/Consignment.java
+@@ -0,0 +1,33 @@
++package com.example.website.consignment.internal;
++
++import jakarta.persistence.Entity;
++import jakarta.persistence.Id;
++
++@Entity
++public class Consignment {
++
++    @Id
++    private Long id;
++    private Long orderId;
++    private Long warehouseId;
++
++    protected Consignment() {
++    }
++
++    public Consignment(Long orderId, Long warehouseId) {
++        this.orderId = orderId;
++        this.warehouseId = warehouseId;
++    }
++
++    public Long getId() {
++        return id;
++    }
++
++    public Long getOrderId() {
++        return orderId;
++    }
++
++    public Long getWarehouseId() {
++        return warehouseId;
++    }
++}
+diff --git a/company-website/consignment/internal/ConsignmentController.java b/company-website/consignment/internal/ConsignmentController.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/consignment/internal/ConsignmentController.java
+@@ -0,0 +1,20 @@
++package com.example.website.consignment.internal;
++
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class ConsignmentController {
++
++    private final SplitConsignmentService splitConsignmentService;
++
++    public ConsignmentController(SplitConsignmentService splitConsignmentService) {
++        this.splitConsignmentService = splitConsignmentService;
++    }
++
++    @PostMapping("/orders/{orderId}/consignments")
++    public java.util.List<Consignment> splitOrder(@PathVariable Long orderId) {
++        return splitConsignmentService.splitIntoConsignments(orderId);
++    }
++}
+diff --git a/company-website/consignment/internal/ConsignmentRepository.java b/company-website/consignment/internal/ConsignmentRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/consignment/internal/ConsignmentRepository.java
+@@ -0,0 +1,6 @@
++package com.example.website.consignment.internal;
++
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface ConsignmentRepository extends JpaRepository<Consignment, Long> {
++}
+diff --git a/company-website/consignment/internal/SplitConsignmentService.java b/company-website/consignment/internal/SplitConsignmentService.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/consignment/internal/SplitConsignmentService.java
+@@ -0,0 +1,22 @@
++package com.example.website.consignment.internal;
++
++import java.util.List;
++import org.springframework.stereotype.Service;
++
++@Service
++public class SplitConsignmentService {
++
++    private final ConsignmentRepository consignmentRepository;
++    private final WarehouseRepository warehouseRepository;
++
++    public SplitConsignmentService(ConsignmentRepository consignmentRepository, WarehouseRepository warehouseRepository) {
++        this.consignmentRepository = consignmentRepository;
++        this.warehouseRepository = warehouseRepository;
++    }
++
++    public List<Consignment> splitIntoConsignments(Long orderId) {
++        return warehouseRepository.findAll().stream()
++                .map(warehouse -> consignmentRepository.save(new Consignment(orderId, warehouse.getId())))
++                .toList();
++    }
++}
+diff --git a/company-website/consignment/internal/Warehouse.java b/company-website/consignment/internal/Warehouse.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/consignment/internal/Warehouse.java
+@@ -0,0 +1,16 @@
++package com.example.website.consignment.internal;
++
++import jakarta.persistence.Entity;
++import jakarta.persistence.Id;
++
++@Entity
++public class Warehouse {
++
++    @Id
++    private Long id;
++    private String city;
++
++    public Long getId() {
++        return id;
++    }
++}
+diff --git a/company-website/consignment/internal/WarehouseRepository.java b/company-website/consignment/internal/WarehouseRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/consignment/internal/WarehouseRepository.java
+@@ -0,0 +1,6 @@
++package com.example.website.consignment.internal;
++
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
++}
+diff --git a/company-website/order/exposed/OrderSearchService.java b/company-website/order/exposed/OrderSearchService.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/exposed/OrderSearchService.java
+@@ -0,0 +1,19 @@
++package com.example.website.order.exposed;
++
++import com.example.website.order.internal.OrderRepository;
++import java.util.Optional;
++import org.springframework.stereotype.Service;
++
++@Service
++public class OrderSearchService {
++
++    private final OrderRepository orderRepository;
++
++    public OrderSearchService(OrderRepository orderRepository) {
++        this.orderRepository = orderRepository;
++    }
++
++    public Optional<PublicOrder> findById(Long id) {
++        return orderRepository.findById(id).map(order -> new PublicOrder(order.getId(), order.getCustomerId()));
++    }
++}
+diff --git a/company-website/order/exposed/PublicOrder.java b/company-website/order/exposed/PublicOrder.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/exposed/PublicOrder.java
+@@ -0,0 +1,4 @@
++package com.example.website.order.exposed;
++
++public record PublicOrder(Long id, Long customerId) {
++}
+diff --git a/company-website/order/internal/Order.java b/company-website/order/internal/Order.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/internal/Order.java
+@@ -0,0 +1,20 @@
++package com.example.website.order.internal;
++
++import jakarta.persistence.Entity;
++import jakarta.persistence.Id;
++
++@Entity
++public class Order {
++
++    @Id
++    private Long id;
++    private Long customerId;
++
++    public Long getId() {
++        return id;
++    }
++
++    public Long getCustomerId() {
++        return customerId;
++    }
++}
+diff --git a/company-website/order/internal/OrderController.java b/company-website/order/internal/OrderController.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/internal/OrderController.java
+@@ -0,0 +1,20 @@
++package com.example.website.order.internal;
++
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class OrderController {
++
++    private final PlaceOrderService placeOrderService;
++
++    public OrderController(PlaceOrderService placeOrderService) {
++        this.placeOrderService = placeOrderService;
++    }
++
++    @PostMapping("/orders")
++    public Order placeOrder(@RequestBody Order order) {
++        return placeOrderService.placeOrder(order);
++    }
++}
+diff --git a/company-website/order/internal/OrderRepository.java b/company-website/order/internal/OrderRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/internal/OrderRepository.java
+@@ -0,0 +1,6 @@
++package com.example.website.order.internal;
++
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface OrderRepository extends JpaRepository<Order, Long> {
++}
+diff --git a/company-website/order/internal/PlaceOrderService.java b/company-website/order/internal/PlaceOrderService.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/internal/PlaceOrderService.java
+@@ -0,0 +1,17 @@
++package com.example.website.order.internal;
++
++import org.springframework.stereotype.Service;
++
++@Service
++public class PlaceOrderService {
++
++    private final OrderRepository orderRepository;
++
++    public PlaceOrderService(OrderRepository orderRepository) {
++        this.orderRepository = orderRepository;
++    }
++
++    public Order placeOrder(Order order) {
++        return orderRepository.save(order);
++    }
++}
+diff --git a/company-website/order/internal/Product.java b/company-website/order/internal/Product.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/internal/Product.java
+@@ -0,0 +1,12 @@
++package com.example.website.order.internal;
++
++import jakarta.persistence.Entity;
++import jakarta.persistence.Id;
++
++@Entity
++public class Product {
++
++    @Id
++    private Long id;
++    private String name;
++}
+diff --git a/company-website/order/internal/ProductRepository.java b/company-website/order/internal/ProductRepository.java
+new file mode 100644
+--- /dev/null
++++ b/company-website/order/internal/ProductRepository.java
+@@ -0,0 +1,6 @@
++package com.example.website.order.internal;
++
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface ProductRepository extends JpaRepository<Product, Long> {
++}

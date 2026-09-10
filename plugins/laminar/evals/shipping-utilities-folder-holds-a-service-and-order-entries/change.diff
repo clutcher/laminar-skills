@@ -1,0 +1,54 @@
+diff --git a/bakery-orders/src/main/java/com/example/bakery/order/util/shipping/ShippingLabelUtils.java b/bakery-orders/src/main/java/com/example/bakery/order/util/shipping/ShippingLabelUtils.java
+new file mode 100644
+--- /dev/null
++++ b/bakery-orders/src/main/java/com/example/bakery/order/util/shipping/ShippingLabelUtils.java
+@@ -0,0 +1,11 @@
++package com.example.bakery.order.util.shipping;
++
++public final class ShippingLabelUtils {
++
++    private ShippingLabelUtils() {
++    }
++
++    public static String formatRecipientLine(String recipientName, String postcode) {
++        return recipientName.toUpperCase() + " " + postcode;
++    }
++}
+diff --git a/bakery-orders/src/main/java/com/example/bakery/order/util/shipping/OrderEntryUtils.java b/bakery-orders/src/main/java/com/example/bakery/order/util/shipping/OrderEntryUtils.java
+new file mode 100644
+--- /dev/null
++++ b/bakery-orders/src/main/java/com/example/bakery/order/util/shipping/OrderEntryUtils.java
+@@ -0,0 +1,11 @@
++package com.example.bakery.order.util.shipping;
++
++public final class OrderEntryUtils {
++
++    private OrderEntryUtils() {
++    }
++
++    public static int countLoaves(int loavesPerTray, int trays) {
++        return loavesPerTray * trays;
++    }
++}
+diff --git a/bakery-orders/src/main/java/com/example/bakery/order/util/shipping/ShippingService.java b/bakery-orders/src/main/java/com/example/bakery/order/util/shipping/ShippingService.java
+new file mode 100644
+--- /dev/null
++++ b/bakery-orders/src/main/java/com/example/bakery/order/util/shipping/ShippingService.java
+@@ -0,0 +1,17 @@
++package com.example.bakery.order.util.shipping;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class ShippingService {
++
++    private final List<String> dispatchedOrderIds = new ArrayList<>();
++
++    public void dispatchOrder(String orderId) {
++        dispatchedOrderIds.add(orderId);
++    }
++
++    public boolean isDispatched(String orderId) {
++        return dispatchedOrderIds.contains(orderId);
++    }
++}

@@ -1,0 +1,457 @@
+diff --git a/records/src/main/java/org/example/dental/records/export/app/api/ApiForRecordExport.java b/records/src/main/java/org/example/dental/records/export/app/api/ApiForRecordExport.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/api/ApiForRecordExport.java
+@@ -0,0 +1,14 @@
++package org.example.dental.records.export.app.api;
++
++import org.example.dental.records.export.app.domain.model.export.ExportFormat;
++import org.example.dental.records.export.app.domain.model.export.ExportedFile;
++import org.example.dental.records.export.app.domain.model.export.RecordKind;
++import org.example.dental.records.export.app.domain.model.export.RecordSelection;
++
++public interface ApiForRecordExport {
++    ExportedFile createExport(
++        ExportFormat format,
++        RecordKind recordKind,
++        RecordSelection selection
++    );
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/model/exceptions/ExportCreationException.java b/records/src/main/java/org/example/dental/records/export/app/domain/model/exceptions/ExportCreationException.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/model/exceptions/ExportCreationException.java
+@@ -0,0 +1,8 @@
++package org.example.dental.records.export.app.domain.model.exceptions;
++
++public class ExportCreationException extends RuntimeException {
++
++    public ExportCreationException(String message) {
++        super(message);
++    }
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/model/export/ArchivePart.java b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/ArchivePart.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/ArchivePart.java
+@@ -0,0 +1,8 @@
++package org.example.dental.records.export.app.domain.model.export;
++
++public record ArchivePart(
++    String fileName,
++    ExportFormat partFormat,
++    RecordSelection selection
++) {
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/model/export/ExportFormat.java b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/ExportFormat.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/ExportFormat.java
+@@ -0,0 +1,33 @@
++package org.example.dental.records.export.app.domain.model.export;
++
++import lombok.Builder;
++import lombok.With;
++
++@Builder
++@With
++public record ExportFormat(
++        FileType fileType,
++        Layout layout
++) {
++
++    public enum FileType {
++        SPREADSHEET("xlsx"),
++        PDF("pdf"),
++        ARCHIVE("zip");
++
++        private final String extension;
++
++        FileType(String extension) {
++            this.extension = extension;
++        }
++
++        public String extension() {
++            return extension;
++        }
++    }
++
++    public enum Layout {
++        STANDARD,
++        PATIENT_LETTER
++    }
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/model/export/ExportedFile.java b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/ExportedFile.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/ExportedFile.java
+@@ -0,0 +1,9 @@
++package org.example.dental.records.export.app.domain.model.export;
++
++import java.io.InputStream;
++
++public record ExportedFile(
++    String filename,
++    InputStream content
++) {
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/model/export/PatientRef.java b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/PatientRef.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/PatientRef.java
+@@ -0,0 +1,4 @@
++package org.example.dental.records.export.app.domain.model.export;
++
++public record PatientRef(String patientNumber, String practiceId) {
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/model/export/RecordKind.java b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/RecordKind.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/RecordKind.java
+@@ -0,0 +1,8 @@
++package org.example.dental.records.export.app.domain.model.export;
++
++public enum RecordKind {
++    TREATMENT_PLAN,
++    XRAY_REPORT,
++    INVOICE,
++    APPOINTMENT_LIST
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/model/export/RecordSelection.java b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/RecordSelection.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/RecordSelection.java
+@@ -0,0 +1,22 @@
++package org.example.dental.records.export.app.domain.model.export;
++
++import lombok.Builder;
++import lombok.With;
++
++import java.util.List;
++
++@Builder
++@With
++public record RecordSelection(
++    List<RecordFilter> filters,
++    List<PatientRef> patients,
++    String dentistId
++) {
++
++    @Builder
++    public record RecordFilter(
++            String field,
++            String value
++    ) {
++    }
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/services/RecordExportService.java b/records/src/main/java/org/example/dental/records/export/app/domain/services/RecordExportService.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/services/RecordExportService.java
+@@ -0,0 +1,85 @@
++package org.example.dental.records.export.app.domain.services;
++
++import org.example.dental.records.export.app.api.ApiForRecordExport;
++import org.example.dental.records.export.app.domain.model.exceptions.ExportCreationException;
++import org.example.dental.records.export.app.domain.model.export.ArchivePart;
++import org.example.dental.records.export.app.domain.model.export.ExportFormat;
++import org.example.dental.records.export.app.domain.model.export.ExportedFile;
++import org.example.dental.records.export.app.domain.model.export.RecordKind;
++import org.example.dental.records.export.app.domain.model.export.RecordSelection;
++import org.example.dental.records.export.app.domain.services.validators.ArchiveKindValidator;
++import org.example.dental.records.export.app.domain.services.zip.ZipBundler;
++import org.example.dental.records.export.app.spi.RecordExporter;
++import org.springframework.stereotype.Service;
++
++import java.io.InputStream;
++import java.util.EnumMap;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++
++@Service
++public class RecordExportService implements ApiForRecordExport {
++
++    private final Map<RecordKind, RecordExporter> exportersByKind;
++    private final ExportFileNaming fileNaming;
++
++    public RecordExportService(
++        List<RecordExporter> exporters,
++        ExportFileNaming fileNaming
++    ) {
++        this.exportersByKind = new EnumMap<>(RecordKind.class);
++        exporters.forEach(exporter -> exportersByKind.put(exporter.supportedKind(), exporter));
++        this.fileNaming = fileNaming;
++    }
++
++    @Override
++    public ExportedFile createExport(
++        ExportFormat format,
++        RecordKind recordKind,
++        RecordSelection selection
++    ) {
++        ArchiveKindValidator.validate(format, recordKind);
++
++        RecordExporter exporter = findExporter(recordKind);
++        if (exporter.shouldBeArchive(format, selection)) {
++            return createArchive(exporter, format, recordKind, selection);
++        }
++
++        ExportFormat completeFormat = withDefaultFileType(format, exporter);
++        InputStream content = exporter.export(completeFormat, selection);
++        String filename = fileNaming.nameFor(recordKind, completeFormat, selection);
++        return new ExportedFile(filename, content);
++    }
++
++    private ExportedFile createArchive(
++        RecordExporter exporter,
++        ExportFormat format,
++        RecordKind recordKind,
++        RecordSelection selection
++    ) {
++        Map<String, InputStream> contentByFileName = new LinkedHashMap<>();
++        for (ArchivePart part : exporter.splitForArchive(format, selection)) {
++            contentByFileName.put(part.fileName(), exporter.export(part.partFormat(), part.selection()));
++        }
++        ExportFormat archiveFormat = format.withFileType(ExportFormat.FileType.ARCHIVE);
++        String filename = fileNaming.nameFor(recordKind, archiveFormat, selection);
++        return new ExportedFile(filename, ZipBundler.bundle(contentByFileName));
++    }
++
++    private RecordExporter findExporter(RecordKind recordKind) {
++        RecordExporter exporter = exportersByKind.get(recordKind);
++        if (exporter == null) {
++            throw new ExportCreationException("No exporter is registered for record kind: " + recordKind);
++        }
++        return exporter;
++    }
++
++    private ExportFormat withDefaultFileType(ExportFormat format, RecordExporter exporter) {
++        if (format.fileType() != null) {
++            return format;
++        }
++        return format.withFileType(exporter.defaultFileType(format.layout()));
++    }
++
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/services/validators/ArchiveKindValidator.java b/records/src/main/java/org/example/dental/records/export/app/domain/services/validators/ArchiveKindValidator.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/services/validators/ArchiveKindValidator.java
+@@ -0,0 +1,25 @@
++package org.example.dental.records.export.app.domain.services.validators;
++
++import org.example.dental.records.export.app.domain.model.export.ExportFormat;
++import org.example.dental.records.export.app.domain.model.export.RecordKind;
++
++import static org.example.dental.records.export.app.domain.model.export.RecordKind.INVOICE;
++import static org.example.dental.records.export.app.domain.model.export.RecordKind.XRAY_REPORT;
++
++public class ArchiveKindValidator {
++
++    public static void validate(
++        ExportFormat format,
++        RecordKind recordKind
++    ) {
++        if (format.fileType() == null) {
++            return;
++        }
++        if (format.fileType() != ExportFormat.FileType.ARCHIVE) {
++            return;
++        }
++        if (recordKind != XRAY_REPORT && recordKind != INVOICE) {
++            throw new IllegalArgumentException("An archive cannot be exported for record kind: " + recordKind);
++        }
++    }
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/spi/RecordExporter.java b/records/src/main/java/org/example/dental/records/export/app/spi/RecordExporter.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/spi/RecordExporter.java
+@@ -0,0 +1,32 @@
++package org.example.dental.records.export.app.spi;
++
++import org.example.dental.records.export.app.domain.model.export.ArchivePart;
++import org.example.dental.records.export.app.domain.model.export.ExportFormat;
++import org.example.dental.records.export.app.domain.model.export.RecordKind;
++import org.example.dental.records.export.app.domain.model.export.RecordSelection;
++
++import java.io.InputStream;
++import java.util.List;
++
++public interface RecordExporter {
++    RecordKind supportedKind();
++
++    InputStream export(ExportFormat format, RecordSelection selection);
++
++    default boolean shouldBeArchive(ExportFormat format, RecordSelection selection) {
++        if (format == null) {
++            return false;
++        }
++        return format.fileType() == ExportFormat.FileType.ARCHIVE;
++    }
++
++    default List<ArchivePart> splitForArchive(ExportFormat format, RecordSelection selection) {
++        throw new UnsupportedOperationException(
++            "Record kind " + supportedKind() + " cannot be split into an archive"
++        );
++    }
++
++    default ExportFormat.FileType defaultFileType(ExportFormat.Layout layout) {
++        return ExportFormat.FileType.PDF;
++    }
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/in/rest/RecordExportController.java b/records/src/main/java/org/example/dental/records/export/in/rest/RecordExportController.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/in/rest/RecordExportController.java
+@@ -0,0 +1,56 @@
++package org.example.dental.records.export.in.rest;
++
++import org.example.dental.records.export.app.api.ApiForRecordExport;
++import org.example.dental.records.export.app.domain.model.export.ExportFormat;
++import org.example.dental.records.export.app.domain.model.export.ExportedFile;
++import org.example.dental.records.export.app.domain.model.export.RecordKind;
++import org.example.dental.records.export.app.domain.model.export.RecordSelection;
++import org.example.dental.records.export.in.rest.dto.RecordExportRequest;
++import org.example.dental.records.export.in.rest.mappers.RecordExportRequestMapper;
++import jakarta.validation.Valid;
++import org.springframework.core.io.InputStreamResource;
++import org.springframework.core.io.Resource;
++import org.springframework.http.ContentDisposition;
++import org.springframework.http.HttpHeaders;
++import org.springframework.http.MediaType;
++import org.springframework.http.ResponseEntity;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++@RequestMapping("/records/exports")
++public class RecordExportController {
++
++    private final ApiForRecordExport apiForRecordExport;
++
++    public RecordExportController(ApiForRecordExport apiForRecordExport) {
++        this.apiForRecordExport = apiForRecordExport;
++    }
++
++    @PostMapping(produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
++    public ResponseEntity<Resource> export(@Valid @RequestBody RecordExportRequest exportRequest) {
++        RecordKind recordKind = RecordExportRequestMapper.INSTANCE.toRecordKind(exportRequest.recordKind());
++        ExportFormat format = RecordExportRequestMapper.INSTANCE.toFormat(exportRequest);
++        RecordSelection selection = RecordExportRequestMapper.INSTANCE.toSelection(exportRequest);
++
++        ExportedFile exportedFile = apiForRecordExport.createExport(
++            format,
++            recordKind,
++            selection
++        );
++
++        return ResponseEntity.ok()
++            .headers(attachmentHeaders(exportedFile.filename()))
++            .contentType(MediaType.APPLICATION_OCTET_STREAM)
++            .body(new InputStreamResource(exportedFile.content()));
++    }
++
++    private static HttpHeaders attachmentHeaders(String filename) {
++        HttpHeaders headers = new HttpHeaders();
++        headers.setContentDisposition(ContentDisposition.attachment().filename(filename).build());
++        return headers;
++    }
++
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/in/rest/dto/RecordExportRequest.java b/records/src/main/java/org/example/dental/records/export/in/rest/dto/RecordExportRequest.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/in/rest/dto/RecordExportRequest.java
+@@ -0,0 +1,52 @@
++package org.example.dental.records.export.in.rest.dto;
++
++import jakarta.validation.constraints.NotNull;
++import lombok.Builder;
++
++import java.util.List;
++
++@Builder
++public record RecordExportRequest(
++        FileType fileType,
++
++        Layout layout,
++
++        @NotNull(message = "recordKind is required")
++        RecordKind recordKind,
++
++        List<RecordFilter> filters,
++        List<Patient> patients,
++        String dentistId
++) {
++    public enum FileType {
++        SPREADSHEET,
++        PDF,
++        ARCHIVE
++    }
++
++    public enum Layout {
++        STANDARD,
++        PATIENT_LETTER
++    }
++
++    public enum RecordKind {
++        TREATMENT_PLAN,
++        XRAY_REPORT,
++        INVOICE,
++        APPOINTMENT_LIST
++    }
++
++    @Builder
++    public record RecordFilter(
++            String field,
++            String value
++    ) {
++    }
++
++    @Builder
++    public record Patient(
++            String patientNumber,
++            String practiceId
++    ) {
++    }
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/in/rest/mappers/RecordExportRequestMapper.java b/records/src/main/java/org/example/dental/records/export/in/rest/mappers/RecordExportRequestMapper.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/in/rest/mappers/RecordExportRequestMapper.java
+@@ -0,0 +1,31 @@
++package org.example.dental.records.export.in.rest.mappers;
++
++import org.example.dental.records.export.app.domain.model.export.ExportFormat;
++import org.example.dental.records.export.app.domain.model.export.PatientRef;
++import org.example.dental.records.export.app.domain.model.export.RecordKind;
++import org.example.dental.records.export.app.domain.model.export.RecordSelection;
++import org.example.dental.records.export.in.rest.dto.RecordExportRequest;
++import org.mapstruct.Mapper;
++import org.mapstruct.Mapping;
++import org.mapstruct.factory.Mappers;
++
++import java.util.List;
++
++@Mapper
++public interface RecordExportRequestMapper {
++
++    RecordExportRequestMapper INSTANCE = Mappers.getMapper(RecordExportRequestMapper.class);
++
++    List<PatientRef> toPatientRefs(List<RecordExportRequest.Patient> patients);
++
++    RecordKind toRecordKind(RecordExportRequest.RecordKind recordKind);
++
++    @Mapping(target = "fileType", source = "fileType")
++    @Mapping(target = "layout", source = "layout", defaultValue = "STANDARD")
++    ExportFormat toFormat(RecordExportRequest request);
++
++    @Mapping(target = "filters", source = "filters")
++    @Mapping(target = "patients", source = "patients")
++    @Mapping(target = "dentistId", source = "dentistId")
++    RecordSelection toSelection(RecordExportRequest request);
++}

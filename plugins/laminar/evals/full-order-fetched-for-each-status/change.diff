@@ -1,0 +1,45 @@
+diff --git a/shop/src/main/java/com/example/shop/order/OrderStatusController.java b/shop/src/main/java/com/example/shop/order/OrderStatusController.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderStatusController.java
+@@ -0,0 +1,29 @@
++package com.example.shop.order;
++
++import java.util.ArrayList;
++import java.util.List;
++import lombok.RequiredArgsConstructor;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++@RequiredArgsConstructor
++public class OrderStatusController {
++
++    private final OrderFacade orderFacade;
++
++    @GetMapping("/orders/statuses")
++    public Response orderStatuses(@RequestParam List<String> orderIds) {
++        List<Status> statuses = new ArrayList<>();
++        for (String id : orderIds) {
++            Order order = orderFacade.getFullOrder(id);
++            statuses.add(order.getStatus());
++        }
++        return createResponse(statuses);
++    }
++
++    private Response createResponse(List<Status> statuses) {
++        return new Response(statuses);
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/order/Response.java b/shop/src/main/java/com/example/shop/order/Response.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/Response.java
+@@ -0,0 +1,6 @@
++package com.example.shop.order;
++
++import java.util.List;
++
++public record Response(List<Status> statuses) {
++}

@@ -1,0 +1,34 @@
+diff --git a/workshop/src/test/java/com/example/workshop/service/ServicePlanTest.java b/workshop/src/test/java/com/example/workshop/service/ServicePlanTest.java
+new file mode 100644
+--- /dev/null
++++ b/workshop/src/test/java/com/example/workshop/service/ServicePlanTest.java
+@@ -0,0 +1,29 @@
++package com.example.workshop.service;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.mockito.Mockito.when;
++
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.extension.ExtendWith;
++import org.mockito.InjectMocks;
++import org.mockito.Mock;
++import org.mockito.junit.jupiter.MockitoExtension;
++
++@ExtendWith(MockitoExtension.class)
++class ServicePlanTest {
++
++    private static final RiderId RIDER_WITH_TEN_SERVICES_THIS_YEAR = RiderId.of("R-2041");
++
++    @Mock
++    private ServiceHistory serviceHistory;
++
++    @InjectMocks
++    private ServicePlan servicePlan;
++
++    @Test
++    void shouldGiveTheLoyaltyDiscountWhenTheRiderHadTenServicesThisYear() {
++        when(serviceHistory.servicesThisYearOf(RIDER_WITH_TEN_SERVICES_THIS_YEAR)).thenReturn(10);
++        Money annualPrice = servicePlan.annualPriceFor(RIDER_WITH_TEN_SERVICES_THIS_YEAR);
++        assertThat(annualPrice).isEqualTo(Money.euros("108.00"));
++    }
++}

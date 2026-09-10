@@ -1,0 +1,192 @@
+diff --git a/crossing-schedule/build.gradle.kts b/crossing-schedule/build.gradle.kts
+new file mode 100644
+--- /dev/null
++++ b/crossing-schedule/build.gradle.kts
+@@ -0,0 +1,7 @@
++plugins {
++    java
++}
++
++dependencies {
++    implementation("org.springframework.boot:spring-boot-starter-graphql:3.3.4")
++}
+diff --git a/crossing-schedule/src/main/java/org/harbour/crossingschedule/notice/CrossingNotices.java b/crossing-schedule/src/main/java/org/harbour/crossingschedule/notice/CrossingNotices.java
+new file mode 100644
+--- /dev/null
++++ b/crossing-schedule/src/main/java/org/harbour/crossingschedule/notice/CrossingNotices.java
+@@ -0,0 +1,17 @@
++package org.harbour.crossingschedule.notice;
++
++import java.util.List;
++
++public class CrossingNotices {
++
++    public List<PassengerNotice> forDelay(int minutesLate) {
++        if (minutesLate <= 0) {
++            return List.of();
++        }
++        return List.of(new PassengerNotice(PassengerNoticeSeverity.WARN, "The crossing leaves " + minutesLate + " minutes late"));
++    }
++
++    public List<PassengerNotice> forCancellation() {
++        return List.of(new PassengerNotice(PassengerNoticeSeverity.ERROR, "The crossing is cancelled"));
++    }
++}
+diff --git a/crossing-schedule/src/main/java/org/harbour/crossingschedule/notice/PassengerNotice.java b/crossing-schedule/src/main/java/org/harbour/crossingschedule/notice/PassengerNotice.java
+new file mode 100644
+--- /dev/null
++++ b/crossing-schedule/src/main/java/org/harbour/crossingschedule/notice/PassengerNotice.java
+@@ -0,0 +1,4 @@
++package org.harbour.crossingschedule.notice;
++
++public record PassengerNotice(PassengerNoticeSeverity severity, String text) {
++}
+diff --git a/crossing-schedule/src/main/java/org/harbour/crossingschedule/notice/PassengerNoticeSeverity.java b/crossing-schedule/src/main/java/org/harbour/crossingschedule/notice/PassengerNoticeSeverity.java
+new file mode 100644
+--- /dev/null
++++ b/crossing-schedule/src/main/java/org/harbour/crossingschedule/notice/PassengerNoticeSeverity.java
+@@ -0,0 +1,7 @@
++package org.harbour.crossingschedule.notice;
++
++public enum PassengerNoticeSeverity {
++    INFO,
++    WARN,
++    ERROR
++}
+diff --git a/crossing-schedule/src/main/resources/graphql/crossing-schedule.graphqls b/crossing-schedule/src/main/resources/graphql/crossing-schedule.graphqls
+new file mode 100644
+--- /dev/null
++++ b/crossing-schedule/src/main/resources/graphql/crossing-schedule.graphqls
+@@ -0,0 +1,23 @@
++extend schema
++  @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key", "@shareable"])
++
++type Query {
++  crossing(id: ID!): Crossing
++}
++
++type Crossing @key(fields: "id") {
++  id: ID!
++  departsAt: String!
++  notices: [PassengerNotice!]!
++}
++
++type PassengerNotice @shareable {
++  severity: PassengerNoticeSeverity!
++  text: String!
++}
++
++enum PassengerNoticeSeverity {
++  INFO
++  WARN
++  ERROR
++}
+diff --git a/settings.gradle.kts b/settings.gradle.kts
+new file mode 100644
+--- /dev/null
++++ b/settings.gradle.kts
+@@ -0,0 +1,3 @@
++rootProject.name = "harbour-ferry"
++
++include("ticket-office", "crossing-schedule")
+diff --git a/ticket-office/build.gradle.kts b/ticket-office/build.gradle.kts
+new file mode 100644
+--- /dev/null
++++ b/ticket-office/build.gradle.kts
+@@ -0,0 +1,7 @@
++plugins {
++    java
++}
++
++dependencies {
++    implementation("org.springframework.boot:spring-boot-starter-graphql:3.3.4")
++}
+diff --git a/ticket-office/src/main/java/org/harbour/ticketoffice/notice/BookingNotices.java b/ticket-office/src/main/java/org/harbour/ticketoffice/notice/BookingNotices.java
+new file mode 100644
+--- /dev/null
++++ b/ticket-office/src/main/java/org/harbour/ticketoffice/notice/BookingNotices.java
+@@ -0,0 +1,21 @@
++package org.harbour.ticketoffice.notice;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class BookingNotices {
++
++    private static final int FEW_SEATS_LEFT = 10;
++
++    public List<PassengerNotice> afterBooking(int seatsLeftOnCrossing) {
++        List<PassengerNotice> notices = new ArrayList<>();
++        if (seatsLeftOnCrossing < FEW_SEATS_LEFT) {
++            notices.add(new PassengerNotice(PassengerNoticeSeverity.INFO, "Few seats are left on this crossing"));
++        }
++        return notices;
++    }
++
++    public List<PassengerNotice> whenRefused(String reason) {
++        return List.of(new PassengerNotice(PassengerNoticeSeverity.ERROR, reason));
++    }
++}
+diff --git a/ticket-office/src/main/java/org/harbour/ticketoffice/notice/PassengerNotice.java b/ticket-office/src/main/java/org/harbour/ticketoffice/notice/PassengerNotice.java
+new file mode 100644
+--- /dev/null
++++ b/ticket-office/src/main/java/org/harbour/ticketoffice/notice/PassengerNotice.java
+@@ -0,0 +1,4 @@
++package org.harbour.ticketoffice.notice;
++
++public record PassengerNotice(PassengerNoticeSeverity severity, String text) {
++}
+diff --git a/ticket-office/src/main/java/org/harbour/ticketoffice/notice/PassengerNoticeSeverity.java b/ticket-office/src/main/java/org/harbour/ticketoffice/notice/PassengerNoticeSeverity.java
+new file mode 100644
+--- /dev/null
++++ b/ticket-office/src/main/java/org/harbour/ticketoffice/notice/PassengerNoticeSeverity.java
+@@ -0,0 +1,7 @@
++package org.harbour.ticketoffice.notice;
++
++public enum PassengerNoticeSeverity {
++    INFO,
++    WARN,
++    ERROR
++}
+diff --git a/ticket-office/src/main/resources/graphql/ticket-office.graphqls b/ticket-office/src/main/resources/graphql/ticket-office.graphqls
+new file mode 100644
+--- /dev/null
++++ b/ticket-office/src/main/resources/graphql/ticket-office.graphqls
+@@ -0,0 +1,37 @@
++extend schema
++  @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key", "@shareable"])
++
++type Query {
++  ticket(id: ID!): Ticket
++}
++
++type Mutation {
++  bookTicket(input: BookTicketInput!): BookTicketPayload!
++}
++
++input BookTicketInput {
++  crossingId: ID!
++  passengerName: String!
++}
++
++type BookTicketPayload {
++  ticket: Ticket
++  notices: [PassengerNotice!]!
++}
++
++type Ticket @key(fields: "id") {
++  id: ID!
++  crossingId: ID!
++  passengerName: String!
++}
++
++type PassengerNotice @shareable {
++  severity: PassengerNoticeSeverity!
++  text: String!
++}
++
++enum PassengerNoticeSeverity {
++  INFO
++  WARN
++  ERROR
++}

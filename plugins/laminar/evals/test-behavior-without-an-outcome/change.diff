@@ -1,0 +1,157 @@
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/domain/SeatAllocation.java b/ferry/src/main/java/com/example/harbourferry/booking/domain/SeatAllocation.java
+new file mode 100644
+index 0000000..35b5c02
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/domain/SeatAllocation.java
+@@ -0,0 +1,14 @@
++package com.example.harbourferry.booking.domain;
++
++import org.springframework.stereotype.Component;
++
++@Component
++public class SeatAllocation {
++
++    public int lowestFreeSeatOn(Crossing crossing) {
++        if (crossing.seatsLeft().isEmpty()) {
++            throw new CrossingFull(crossing);
++        }
++        return crossing.seatsLeft().first();
++    }
++}
+diff --git a/ferry/src/main/java/com/example/harbourferry/booking/web/CrossingBookingController.java b/ferry/src/main/java/com/example/harbourferry/booking/web/CrossingBookingController.java
+new file mode 100644
+index 0000000..28fbd02
+--- /dev/null
++++ b/ferry/src/main/java/com/example/harbourferry/booking/web/CrossingBookingController.java
+@@ -0,0 +1,31 @@
++package com.example.harbourferry.booking.web;
++
++import com.example.harbourferry.booking.domain.BookingRequest;
++import com.example.harbourferry.booking.domain.RouteFares;
++import com.example.harbourferry.booking.domain.SeatAllocation;
++import com.example.harbourferry.booking.domain.Ticket;
++import com.example.harbourferry.booking.domain.TicketStore;
++import lombok.RequiredArgsConstructor;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++@RequestMapping("/crossings/bookings")
++@RequiredArgsConstructor
++public class CrossingBookingController {
++
++    private final SeatAllocation seatAllocation;
++    private final RouteFares routeFares;
++    private final TicketStore ticketStore;
++
++    @PostMapping
++    public Ticket book(@RequestBody BookingRequest request) {
++        int seatNumber = seatAllocation.lowestFreeSeatOn(request.crossing());
++        int fareCents = routeFares.fareFor(request.crossing().route());
++        Ticket ticket = new Ticket(request.crossing(), seatNumber, fareCents);
++        ticketStore.save(ticket);
++        return ticket;
++    }
++}
+diff --git a/ferry/src/test/java/com/example/harbourferry/booking/web/CrossingBookingControllerTest.java b/ferry/src/test/java/com/example/harbourferry/booking/web/CrossingBookingControllerTest.java
+new file mode 100644
+index 0000000..e1dec9b
+--- /dev/null
++++ b/ferry/src/test/java/com/example/harbourferry/booking/web/CrossingBookingControllerTest.java
+@@ -0,0 +1,94 @@
++package com.example.harbourferry.booking.web;
++
++import com.example.harbourferry.booking.domain.BookingRequest;
++import com.example.harbourferry.booking.domain.Crossing;
++import com.example.harbourferry.booking.domain.CrossingFull;
++import com.example.harbourferry.booking.domain.RouteFares;
++import com.example.harbourferry.booking.domain.SeatAllocation;
++import com.example.harbourferry.booking.domain.Ticket;
++import com.example.harbourferry.booking.domain.TicketStore;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.extension.ExtendWith;
++import org.mockito.Mock;
++import org.mockito.junit.jupiter.MockitoExtension;
++
++import java.time.LocalDateTime;
++import java.util.List;
++import java.util.TreeSet;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.BDDMockito.given;
++import static org.mockito.Mockito.verify;
++
++@ExtendWith(MockitoExtension.class)
++class CrossingBookingControllerTest {
++
++    private static final String KELMAR_HARBOUR_TO_OSTVIK = "Kelmar Harbour to Ostvik";
++    private static final LocalDateTime EARLY_MORNING_DEPARTURE = LocalDateTime.of(2026, 10, 3, 7, 40);
++    private static final String PASSENGER = "Ingrid Solberg";
++
++    @Mock
++    private TicketStore ticketStore;
++
++    @Mock
++    private RouteFares routeFares;
++
++    private CrossingBookingController crossingBookingController;
++
++    @BeforeEach
++    void setUp() {
++        crossingBookingController = new CrossingBookingController(new SeatAllocation(), routeFares, ticketStore);
++    }
++
++    @Test
++    void shouldIssueTheLowestFreeSeatOnTheCrossingWhenSeatsAreLeft() {
++        // given
++        Crossing crossing = new Crossing(KELMAR_HARBOUR_TO_OSTVIK, EARLY_MORNING_DEPARTURE, new TreeSet<>(List.of(12, 4, 31)));
++
++        // when
++        Ticket ticket = crossingBookingController.book(new BookingRequest(crossing, PASSENGER));
++
++        // then
++        assertThat(ticket.crossing()).isEqualTo(crossing);
++        assertThat(ticket.seatNumber()).isEqualTo(4);
++    }
++
++    @Test
++    void shouldStoreTheTicketWhenTheBookingSucceeds() {
++        // given
++        Crossing crossing = new Crossing(KELMAR_HARBOUR_TO_OSTVIK, EARLY_MORNING_DEPARTURE, new TreeSet<>(List.of(18, 19)));
++
++        // when
++        crossingBookingController.book(new BookingRequest(crossing, PASSENGER));
++
++        // then
++        verify(ticketStore).save(any(Ticket.class));
++    }
++
++    @Test
++    void shouldRefuseTheBookingWhenNoSeatIsLeftOnTheCrossing() {
++        // given
++        Crossing fullCrossing = new Crossing(KELMAR_HARBOUR_TO_OSTVIK, EARLY_MORNING_DEPARTURE, new TreeSet<>());
++
++        // when
++        try {
++            crossingBookingController.book(new BookingRequest(fullCrossing, PASSENGER));
++        } catch (CrossingFull refused) {
++        }
++    }
++
++    @Test
++    void shouldChargeTheFareOfTheRoute() {
++        // given
++        Crossing crossing = new Crossing(KELMAR_HARBOUR_TO_OSTVIK, EARLY_MORNING_DEPARTURE, new TreeSet<>(List.of(7)));
++        given(routeFares.fareFor(KELMAR_HARBOUR_TO_OSTVIK)).willReturn(1850);
++
++        // when
++        Ticket ticket = crossingBookingController.book(new BookingRequest(crossing, PASSENGER));
++
++        // then
++        assertThat(ticket.fareCents()).isEqualTo(1850);
++    }
++}

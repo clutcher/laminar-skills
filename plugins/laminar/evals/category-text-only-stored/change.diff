@@ -1,0 +1,56 @@
+diff --git a/bookshop/catalogue/book.py b/bookshop/catalogue/book.py
+new file mode 100644
+--- /dev/null
++++ b/bookshop/catalogue/book.py
+@@ -0,0 +1,8 @@
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class Book:
++    isbn: str
++    title: str
++    genre: str
+diff --git a/bookshop/catalogue/book_store.py b/bookshop/catalogue/book_store.py
+new file mode 100644
+--- /dev/null
++++ b/bookshop/catalogue/book_store.py
+@@ -0,0 +1,10 @@
++from bookshop.catalogue.book import Book
++
++
++class BookStore:
++
++    def __init__(self):
++        self.books_by_isbn: dict[str, Book] = {}
++
++    def save(self, book: Book) -> None:
++        self.books_by_isbn[book.isbn] = book
+diff --git a/bookshop/catalogue/shelf_label.py b/bookshop/catalogue/shelf_label.py
+new file mode 100644
+--- /dev/null
++++ b/bookshop/catalogue/shelf_label.py
+@@ -0,0 +1,5 @@
++from bookshop.catalogue.book import Book
++
++
++def format_shelf_label(book: Book) -> str:
++    return f"{book.title} · {book.genre}"
+diff --git a/bookshop/catalogue/supplier_feed_import.py b/bookshop/catalogue/supplier_feed_import.py
+new file mode 100644
+--- /dev/null
++++ b/bookshop/catalogue/supplier_feed_import.py
+@@ -0,0 +1,13 @@
++from bookshop.catalogue.book import Book
++from bookshop.catalogue.book_store import BookStore
++
++
++class SupplierFeedImport:
++
++    def __init__(self, store: BookStore):
++        self.store = store
++
++    def import_rows(self, rows: list[dict]) -> int:
++        for row in rows:
++            self.store.save(Book(isbn=row["isbn"], title=row["title"], genre=row["genre"]))
++        return len(rows)

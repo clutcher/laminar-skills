@@ -1,0 +1,253 @@
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/assignment/Assignment.java b/lockers/src/main/java/org/lockerpost/lockers/assignment/Assignment.java
+new file mode 100644
+index 0000000..176c3b2
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/assignment/Assignment.java
+@@ -0,0 +1,4 @@
++package org.lockerpost.lockers.assignment;
++
++public record Assignment(String trackingCode, String lockerCode, int slotNumber) {
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/assignment/LockerAssignmentService.java b/lockers/src/main/java/org/lockerpost/lockers/assignment/LockerAssignmentService.java
+new file mode 100644
+index 0000000..7d172b5
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/assignment/LockerAssignmentService.java
+@@ -0,0 +1,16 @@
++package org.lockerpost.lockers.assignment;
++
++import org.lockerpost.lockers.slot.SlotReservation;
++
++public class LockerAssignmentService {
++
++    private final SlotReservation slotReservation;
++
++    public LockerAssignmentService(SlotReservation slotReservation) {
++        this.slotReservation = slotReservation;
++    }
++
++    public Assignment assign(Parcel parcel) {
++        return slotReservation.reserveFor(parcel);
++    }
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/assignment/Parcel.java b/lockers/src/main/java/org/lockerpost/lockers/assignment/Parcel.java
+new file mode 100644
+index 0000000..7c421cf
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/assignment/Parcel.java
+@@ -0,0 +1,6 @@
++package org.lockerpost.lockers.assignment;
++
++import org.lockerpost.lockers.slot.SlotSize;
++
++public record Parcel(String trackingCode, SlotSize size, int weightGrams) {
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/intake/ParcelIntake.java b/lockers/src/main/java/org/lockerpost/lockers/intake/ParcelIntake.java
+new file mode 100644
+index 0000000..888bd89
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/intake/ParcelIntake.java
+@@ -0,0 +1,17 @@
++package org.lockerpost.lockers.intake;
++
++import org.lockerpost.lockers.assignment.Parcel;
++import org.lockerpost.lockers.slot.SlotWeightLimitCache;
++
++public class ParcelIntake {
++
++    private final SlotWeightLimitCache weightLimits;
++
++    public ParcelIntake(SlotWeightLimitCache weightLimits) {
++        this.weightLimits = weightLimits;
++    }
++
++    public boolean accepts(Parcel parcel) {
++        return parcel.weightGrams() <= weightLimits.get(parcel.size());
++    }
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/LockerSlot.java b/lockers/src/main/java/org/lockerpost/lockers/slot/LockerSlot.java
+new file mode 100644
+index 0000000..215fa11
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/LockerSlot.java
+@@ -0,0 +1,4 @@
++package org.lockerpost.lockers.slot;
++
++public record LockerSlot(String lockerCode, int number, SlotSize size, boolean occupied) {
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/LockerSlotRepository.java b/lockers/src/main/java/org/lockerpost/lockers/slot/LockerSlotRepository.java
+new file mode 100644
+index 0000000..23d2c7a
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/LockerSlotRepository.java
+@@ -0,0 +1,10 @@
++package org.lockerpost.lockers.slot;
++
++import java.util.Optional;
++
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public interface LockerSlotRepository extends JpaRepository<LockerSlot, Long> {
++
++    Optional<LockerSlot> findFirstBySizeAndOccupiedFalse(SlotSize size);
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/NoFreeSlotException.java b/lockers/src/main/java/org/lockerpost/lockers/slot/NoFreeSlotException.java
+new file mode 100644
+index 0000000..2a46a26
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/NoFreeSlotException.java
+@@ -0,0 +1,8 @@
++package org.lockerpost.lockers.slot;
++
++public class NoFreeSlotException extends RuntimeException {
++
++    public NoFreeSlotException(SlotSize size) {
++        super("No free " + size + " slot");
++    }
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/SlotAvailability.java b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotAvailability.java
+new file mode 100644
+index 0000000..06f4cc3
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotAvailability.java
+@@ -0,0 +1,12 @@
++package org.lockerpost.lockers.slot;
++
++import java.util.List;
++
++public class SlotAvailability {
++
++    public long freeSlotsOf(SlotSize size, List<LockerSlot> slots) {
++        return slots.stream()
++                .filter(SlotCriteria.select().whereSize(size).whereFree().build())
++                .count();
++    }
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/SlotCriteria.java b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotCriteria.java
+new file mode 100644
+index 0000000..165a897
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotCriteria.java
+@@ -0,0 +1,26 @@
++package org.lockerpost.lockers.slot;
++
++import java.util.function.Predicate;
++
++public class SlotCriteria {
++
++    private Predicate<LockerSlot> condition = slot -> true;
++
++    public static SlotCriteria select() {
++        return new SlotCriteria();
++    }
++
++    public SlotCriteria whereSize(SlotSize size) {
++        condition = condition.and(slot -> slot.size() == size);
++        return this;
++    }
++
++    public SlotCriteria whereFree() {
++        condition = condition.and(slot -> !slot.occupied());
++        return this;
++    }
++
++    public Predicate<LockerSlot> build() {
++        return condition;
++    }
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/SlotFinder.java b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotFinder.java
+new file mode 100644
+index 0000000..fa2b15b
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotFinder.java
+@@ -0,0 +1,6 @@
++package org.lockerpost.lockers.slot;
++
++public interface SlotFinder {
++
++    LockerSlot freeSlotOf(SlotSize size);
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/SlotReservation.java b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotReservation.java
+new file mode 100644
+index 0000000..6e6797a
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotReservation.java
+@@ -0,0 +1,18 @@
++package org.lockerpost.lockers.slot;
++
++import org.lockerpost.lockers.assignment.Assignment;
++import org.lockerpost.lockers.assignment.Parcel;
++
++public class SlotReservation {
++
++    private final SlotFinder slotFinder;
++
++    public SlotReservation(SlotFinder slotFinder) {
++        this.slotFinder = slotFinder;
++    }
++
++    public Assignment reserveFor(Parcel parcel) {
++        LockerSlot slot = slotFinder.freeSlotOf(parcel.size());
++        return new Assignment(parcel.trackingCode(), slot.lockerCode(), slot.number());
++    }
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/SlotSize.java b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotSize.java
+new file mode 100644
+index 0000000..61b1c69
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotSize.java
+@@ -0,0 +1,7 @@
++package org.lockerpost.lockers.slot;
++
++public enum SlotSize {
++    SMALL,
++    MEDIUM,
++    LARGE
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/SlotWeightLimitCache.java b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotWeightLimitCache.java
+new file mode 100644
+index 0000000..64c173c
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotWeightLimitCache.java
+@@ -0,0 +1,19 @@
++package org.lockerpost.lockers.slot;
++
++import java.util.EnumMap;
++import java.util.Map;
++
++public class SlotWeightLimitCache {
++
++    private final Map<SlotSize, Integer> limitGrams = new EnumMap<>(SlotSize.class);
++
++    public SlotWeightLimitCache() {
++        limitGrams.put(SlotSize.SMALL, 5_000);
++        limitGrams.put(SlotSize.MEDIUM, 15_000);
++        limitGrams.put(SlotSize.LARGE, 30_000);
++    }
++
++    public int get(SlotSize size) {
++        return limitGrams.get(size);
++    }
++}
+diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/StoredSlotFinder.java b/lockers/src/main/java/org/lockerpost/lockers/slot/StoredSlotFinder.java
+new file mode 100644
+index 0000000..4fee93a
+--- /dev/null
++++ b/lockers/src/main/java/org/lockerpost/lockers/slot/StoredSlotFinder.java
+@@ -0,0 +1,16 @@
++package org.lockerpost.lockers.slot;
++
++public class StoredSlotFinder implements SlotFinder {
++
++    private final LockerSlotRepository lockerSlots;
++
++    public StoredSlotFinder(LockerSlotRepository lockerSlots) {
++        this.lockerSlots = lockerSlots;
++    }
++
++    @Override
++    public LockerSlot freeSlotOf(SlotSize size) {
++        return lockerSlots.findFirstBySizeAndOccupiedFalse(size)
++                .orElseThrow(() -> new NoFreeSlotException(size));
++    }
++}

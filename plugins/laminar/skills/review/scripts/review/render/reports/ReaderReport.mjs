@@ -1,0 +1,81 @@
+import { formatItem, formatPlaceName, formatSentence } from "../sections/ItemText.mjs";
+import { readTrackRank } from "../../../checks/CheckWords.mjs";
+
+const LIMITS = [
+  "The review judges 3 qualities of the code: simplicity, from how people read the code; correctness, by the errors its design prevents and the paths its tests run; and performance, by the work it wastes.",
+  "The review does not find logic errors. A wrong tax formula is written exactly like a correct one, so reading the code cannot tell them apart.",
+  "The review does not judge speed. The one performance question it answers is whether the code moves data a known alternative avoids.",
+  "The review does not report what a compiler, a linter or a type checker reports, judged against the configuration the repository holds.",
+];
+
+const NOTHING_WAS_FOUND = "Nothing was found.";
+
+const formatChangeLine = changeSummary => formatSentence(changeSummary);
+
+const PRODUCTION_CODE = "Production code";
+
+const TEST_CODE = "Test code";
+
+const chooseKindWord = finding => finding.isTest ? TEST_CODE : PRODUCTION_CODE;
+
+const DETECTION = "Correctness · Detection";
+
+const ALREADY_COVERED = "### Already covered";
+
+const UNNAMED = "a place the review could not name";
+
+const NOT_VERIFIED_MARK = " (not verified: the second read did not finish, so this is as its judge wrote it)";
+
+const formatCoveredLine = covered => `- ${formatPlaceName(covered.abstractionPlace) || UNNAMED} by ${formatPlaceName(covered.test) || UNNAMED}${covered.notVerified ? NOT_VERIFIED_MARK : ""}`;
+
+const formatCoveredSection = covered => [ALREADY_COVERED, covered.map(formatCoveredLine).join("\n")];
+
+const comesAfterDetection = track => readTrackRank(track) > readTrackRank(DETECTION);
+
+const buildTrackSections = items => {
+  const sections = [];
+  items.forEach((item, order) => {
+    const track = item.lead.group;
+    const kind = chooseKindWord(item.lead);
+    let section = sections[sections.length - 1];
+    if (!section || section.track !== track) { section = { track, kind: "", lines: [`## ${track}`] }; sections.push(section); }
+    if (kind !== section.kind) { section.lines.push(`### ${kind}`); section.kind = kind; }
+    section.lines.push(formatItem(item.findings, order + 1));
+  });
+  return sections;
+};
+
+const addCoveredPaths = (sections, covered) => {
+  if (!covered.length) return sections;
+  const detection = sections.find(section => section.track === DETECTION);
+  if (detection) { detection.lines.push(...formatCoveredSection(covered)); return sections; }
+  const own = { track: DETECTION, lines: [`## ${DETECTION}`, ...formatCoveredSection(covered)] };
+  const after = sections.findIndex(section => comesAfterDetection(section.track));
+  return after < 0 ? [...sections, own] : [...sections.slice(0, after), own, ...sections.slice(after)];
+};
+
+const listUnderHeaders = (items, covered) => addCoveredPaths(buildTrackSections(items), covered).flatMap(section => section.lines);
+
+const buildFindingSections = (items, covered) => items.length
+  ? listUnderHeaders(items, covered)
+  : ["## Findings", NOTHING_WAS_FOUND, ...listUnderHeaders([], covered)];
+
+export const TO_CONSIDER = "To consider";
+
+const buildConsiderationSection = (considerations, firstNumber) => considerations.length
+  ? [`## ${TO_CONSIDER}`, ...considerations.map((item, order) => formatItem(item.findings, firstNumber + order))]
+  : [];
+
+export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered }) {
+  const considerations = settled.considerations || [];
+  return [
+    banner,
+    ...(scopeLine ? [scopeLine] : []),
+    ...(acrossApplicationsLine ? [acrossApplicationsLine] : []),
+    formatChangeLine(changeSummary),
+    ...buildFindingSections(settled.items, covered || []),
+    ...buildConsiderationSection(considerations, settled.items.length + 1),
+    "## Limits",
+    LIMITS.join("\n"),
+  ].join("\n\n") + "\n";
+}

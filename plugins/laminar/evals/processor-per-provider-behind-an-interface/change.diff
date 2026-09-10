@@ -1,0 +1,101 @@
+diff --git a/shop/src/main/java/com/example/shop/payment/CyberSourcePaymentProcessor.java b/shop/src/main/java/com/example/shop/payment/CyberSourcePaymentProcessor.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/payment/CyberSourcePaymentProcessor.java
+@@ -0,0 +1,22 @@
++package com.example.shop.payment;
++
++import com.example.shop.order.Order;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++class CyberSourcePaymentProcessor implements PaymentProcessor {
++
++    private final CyberSourceClient cybersource;
++
++    public boolean supports(PaymentProvider provider) {
++        return provider == PaymentProvider.CYBERSOURCE;
++    }
++
++    public void charge(Order order) {
++        cybersource.createPayment(order.getNumber(), order.getTotal());
++    }
++
++    public void refund(Order order, double amount) {
++        cybersource.refundPayment(order.getTransactionId(), amount);
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/payment/PayPalPaymentProcessor.java b/shop/src/main/java/com/example/shop/payment/PayPalPaymentProcessor.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/payment/PayPalPaymentProcessor.java
+@@ -0,0 +1,22 @@
++package com.example.shop.payment;
++
++import com.example.shop.order.Order;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++class PayPalPaymentProcessor implements PaymentProcessor {
++
++    private final PayPalClient paypal;
++
++    public boolean supports(PaymentProvider provider) {
++        return provider == PaymentProvider.PAYPAL;
++    }
++
++    public void charge(Order order) {
++        paypal.captureOrder(order.getPaypalOrderId());
++    }
++
++    public void refund(Order order, double amount) {
++        paypal.refundCapture(order.getCaptureId(), amount);
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/payment/PaymentProcessor.java b/shop/src/main/java/com/example/shop/payment/PaymentProcessor.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/payment/PaymentProcessor.java
+@@ -0,0 +1,9 @@
++package com.example.shop.payment;
++
++import com.example.shop.order.Order;
++
++interface PaymentProcessor {
++    boolean supports(PaymentProvider provider);
++    void charge(Order order);
++    void refund(Order order, double amount);
++}
+diff --git a/shop/src/main/java/com/example/shop/payment/PaymentService.java b/shop/src/main/java/com/example/shop/payment/PaymentService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/payment/PaymentService.java
+@@ -0,0 +1,28 @@
++package com.example.shop.payment;
++
++import com.example.shop.order.Order;
++import java.util.List;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class PaymentService {
++
++    private final List<PaymentProcessor> processors;
++
++    public void chargePayment(Order order) {
++        findProcessor(order.getPaymentProvider()).charge(order);
++    }
++
++    public void refundPayment(Order order, double amount) {
++        findProcessor(order.getPaymentProvider()).refund(order, amount);
++    }
++
++    PaymentProcessor findProcessor(PaymentProvider provider) {
++        for (PaymentProcessor processor : processors) {
++            if (processor.supports(provider)) {
++                return processor;
++            }
++        }
++        throw new UnsupportedPaymentProviderException(provider);
++    }
++}

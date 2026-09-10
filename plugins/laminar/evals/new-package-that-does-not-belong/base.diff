@@ -1,0 +1,97 @@
+diff --git a/order-service/pom.xml b/order-service/pom.xml
+new file mode 100644
+index 0000000..23cbd69
+--- /dev/null
++++ b/order-service/pom.xml
+@@ -0,0 +1,6 @@
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.shop</groupId>
++    <artifactId>order-service</artifactId>
++    <version>1.0.0</version>
++</project>
+diff --git a/order-service/src/main/java/com/shop/order/checkout/CheckoutService.java b/order-service/src/main/java/com/shop/order/checkout/CheckoutService.java
+new file mode 100644
+index 0000000..6f44e0b
+--- /dev/null
++++ b/order-service/src/main/java/com/shop/order/checkout/CheckoutService.java
+@@ -0,0 +1,18 @@
++package com.shop.order.checkout;
++
++import com.shop.order.payment.PaymentService;
++
++import java.math.BigDecimal;
++
++public class CheckoutService {
++
++    private final PaymentService paymentService;
++
++    public CheckoutService(PaymentService paymentService) {
++        this.paymentService = paymentService;
++    }
++
++    public String placeOrder(String orderId, BigDecimal orderTotal) {
++        return paymentService.chargeOrder(orderId, orderTotal);
++    }
++}
+diff --git a/order-service/src/main/java/com/shop/order/payment/PaymentService.java b/order-service/src/main/java/com/shop/order/payment/PaymentService.java
+new file mode 100644
+index 0000000..b1ea878
+--- /dev/null
++++ b/order-service/src/main/java/com/shop/order/payment/PaymentService.java
+@@ -0,0 +1,10 @@
++package com.shop.order.payment;
++
++import java.math.BigDecimal;
++
++public class PaymentService {
++
++    public String chargeOrder(String orderId, BigDecimal amount) {
++        return "PAY-" + orderId + "-" + amount;
++    }
++}
+diff --git a/order-service/src/main/java/com/shop/order/payment/RefundService.java b/order-service/src/main/java/com/shop/order/payment/RefundService.java
+new file mode 100644
+index 0000000..e7095a8
+--- /dev/null
++++ b/order-service/src/main/java/com/shop/order/payment/RefundService.java
+@@ -0,0 +1,10 @@
++package com.shop.order.payment;
++
++import java.math.BigDecimal;
++
++public class RefundService {
++
++    public String refundPayment(String paymentId, BigDecimal amount) {
++        return "REF-" + paymentId + "-" + amount;
++    }
++}
+diff --git a/order-service/src/main/java/com/shop/order/shipping/ShippingService.java b/order-service/src/main/java/com/shop/order/shipping/ShippingService.java
+new file mode 100644
+index 0000000..229c254
+--- /dev/null
++++ b/order-service/src/main/java/com/shop/order/shipping/ShippingService.java
+@@ -0,0 +1,8 @@
++package com.shop.order.shipping;
++
++public class ShippingService {
++
++    public String shipOrder(String orderId, String deliveryAddress) {
++        return "SHIP-" + orderId + "-" + deliveryAddress;
++    }
++}
+diff --git a/scripts/export-orders.py b/scripts/export-orders.py
+new file mode 100644
+index 0000000..fcdab25
+--- /dev/null
++++ b/scripts/export-orders.py
+@@ -0,0 +1,9 @@
++import csv
++import sys
++
++
++def export_orders(orders):
++    writer = csv.writer(sys.stdout)
++    writer.writerow(["order_id", "customer_id", "order_total"])
++    for order in orders:
++        writer.writerow([order["order_id"], order["customer_id"], order["order_total"]])

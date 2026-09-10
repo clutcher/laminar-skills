@@ -1,0 +1,18 @@
+# availability-input-widened-with-pricing-values
+
+## Design
+
+### Production code
+
+1. Class `storefront-api:AvailabilityInput`
+   - Scoped Parameters
+
+## Must not appear
+
+Class `AvailabilityInput`, Scoped Parameters, at most 1 at High confidence
+Class `storefront-api:AvailabilityInput` or Class `AvailabilityInput`, Prediction Failure, at most 2 at High confidence
+Class `storefront-api:AvailabilityInput` or Class `AvailabilityInput`, Unnamed Part Failure, at most 2 at High confidence
+Class `storefront-api:PriceInput`, Scoped Parameters
+Class `storefront-api:PriceInput`, Prediction Failure
+Class `storefront-api:AvailabilityInput`, Incomplete Mental Model
+Class `storefront-api:PriceInput`, Incomplete Mental Model

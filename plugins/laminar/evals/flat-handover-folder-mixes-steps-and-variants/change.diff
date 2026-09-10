@@ -1,0 +1,109 @@
+diff --git a/courier-desk/src/handover/CardForNeighbourHandover.ts b/courier-desk/src/handover/CardForNeighbourHandover.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/handover/CardForNeighbourHandover.ts
+@@ -0,0 +1,8 @@
++export class CardForNeighbourHandover {
++  private readonly cardsLeft: string[] = [];
++
++  leaveCard(parcelId: string, neighbourAddress: string): string {
++    this.cardsLeft.push(parcelId);
++    return `card-left:${parcelId}:with ${neighbourAddress}`;
++  }
++}
+diff --git a/courier-desk/src/handover/CardIdentityCheck.ts b/courier-desk/src/handover/CardIdentityCheck.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/handover/CardIdentityCheck.ts
+@@ -0,0 +1,8 @@
++export class CardIdentityCheck {
++  private readonly minimumAgeByParcel = new Map<string, number>();
++
++  isOldEnough(parcelId: string, recipientBirthYear: number): boolean {
++    const minimumAge = this.minimumAgeByParcel.get(parcelId) ?? 0;
++    return new Date().getFullYear() - recipientBirthYear >= minimumAge;
++  }
++}
+diff --git a/courier-desk/src/handover/CardPaymentOnHandover.ts b/courier-desk/src/handover/CardPaymentOnHandover.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/handover/CardPaymentOnHandover.ts
+@@ -0,0 +1,7 @@
++export class CardPaymentOnHandover {
++  private readonly paidCentsByParcel = new Map<string, number>();
++
++  takePayment(parcelId: string, amountDueInCents: number): void {
++    this.paidCentsByParcel.set(parcelId, amountDueInCents);
++  }
++}
+diff --git a/courier-desk/src/handover/HandoverStep.ts b/courier-desk/src/handover/HandoverStep.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/handover/HandoverStep.ts
+@@ -0,0 +1,29 @@
++import { RecipientSignature } from "./RecipientSignature";
++import { SafePlaceChoice } from "./SafePlaceChoice";
++import { NeighbourHandover } from "./NeighbourHandover";
++import { CardForNeighbourHandover } from "./CardForNeighbourHandover";
++import { CardPaymentOnHandover } from "./CardPaymentOnHandover";
++import { CardIdentityCheck } from "./CardIdentityCheck";
++
++export class HandoverStep {
++  constructor(
++    private readonly recipientSignature: RecipientSignature,
++    private readonly safePlaceChoice: SafePlaceChoice,
++    private readonly neighbourHandover: NeighbourHandover,
++    private readonly cardForNeighbourHandover: CardForNeighbourHandover,
++    private readonly cardPaymentOnHandover: CardPaymentOnHandover,
++    private readonly cardIdentityCheck: CardIdentityCheck,
++  ) {}
++
++  handOverParcel(parcelId: string, recipientIsHome: boolean, amountDueInCents: number, recipientBirthYear: number, neighbourAddress: string): string {
++    if (recipientIsHome) {
++      if (!this.cardIdentityCheck.isOldEnough(parcelId, recipientBirthYear)) return `refused:${parcelId}`;
++      if (amountDueInCents > 0) this.cardPaymentOnHandover.takePayment(parcelId, amountDueInCents);
++      return this.recipientSignature.collectSignature(parcelId);
++    }
++    const safePlace = this.safePlaceChoice.findSafePlace(parcelId);
++    if (safePlace) return safePlace;
++    this.neighbourHandover.recordNeighbour(parcelId, neighbourAddress);
++    return this.cardForNeighbourHandover.leaveCard(parcelId, neighbourAddress);
++  }
++}
+diff --git a/courier-desk/src/handover/NeighbourHandover.ts b/courier-desk/src/handover/NeighbourHandover.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/handover/NeighbourHandover.ts
+@@ -0,0 +1,7 @@
++export class NeighbourHandover {
++  private readonly neighbourByParcel = new Map<string, string>();
++
++  recordNeighbour(parcelId: string, neighbourAddress: string): void {
++    this.neighbourByParcel.set(parcelId, neighbourAddress);
++  }
++}
+diff --git a/courier-desk/src/handover/RecipientSignature.ts b/courier-desk/src/handover/RecipientSignature.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/handover/RecipientSignature.ts
+@@ -0,0 +1,8 @@
++export class RecipientSignature {
++  private readonly signedParcels = new Set<string>();
++
++  collectSignature(parcelId: string): string {
++    this.signedParcels.add(parcelId);
++    return `signed:${parcelId}`;
++  }
++}
+diff --git a/courier-desk/src/handover/SafePlaceChoice.ts b/courier-desk/src/handover/SafePlaceChoice.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/handover/SafePlaceChoice.ts
+@@ -0,0 +1,7 @@
++export class SafePlaceChoice {
++  private readonly safePlacesByParcel = new Map<string, string>();
++
++  findSafePlace(parcelId: string): string | undefined {
++    return this.safePlacesByParcel.get(parcelId);
++  }
++}

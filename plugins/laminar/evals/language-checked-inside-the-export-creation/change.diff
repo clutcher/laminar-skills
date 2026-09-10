@@ -1,0 +1,154 @@
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/model/exceptions/LanguageNotOfferedException.java b/records/src/main/java/org/example/dental/records/export/app/domain/model/exceptions/LanguageNotOfferedException.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/model/exceptions/LanguageNotOfferedException.java
+@@ -0,0 +1,10 @@
++package org.example.dental.records.export.app.domain.model.exceptions;
++
++import java.util.Locale;
++
++public class LanguageNotOfferedException extends RuntimeException {
++
++    public LanguageNotOfferedException(Locale language) {
++        super("language '" + language.toLanguageTag() + "' is not offered for patient records");
++    }
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/model/export/RecordSelection.java b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/RecordSelection.java
+--- a/records/src/main/java/org/example/dental/records/export/app/domain/model/export/RecordSelection.java
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/model/export/RecordSelection.java
+@@ -4,13 +4,15 @@
+ import lombok.With;
+ 
+ import java.util.List;
++import java.util.Locale;
+ 
+ @Builder
+ @With
+ public record RecordSelection(
+     List<RecordFilter> filters,
+     List<PatientRef> patients,
+-    String dentistId
++    String dentistId,
++    Locale language
+ ) {
+ 
+     @Builder
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/services/RecordExportService.java b/records/src/main/java/org/example/dental/records/export/app/domain/services/RecordExportService.java
+--- a/records/src/main/java/org/example/dental/records/export/app/domain/services/RecordExportService.java
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/services/RecordExportService.java
+@@ -8,7 +8,9 @@
+ import org.example.dental.records.export.app.domain.model.export.RecordKind;
+ import org.example.dental.records.export.app.domain.model.export.RecordSelection;
+ import org.example.dental.records.export.app.domain.services.validators.ArchiveKindValidator;
++import org.example.dental.records.export.app.domain.services.validators.SupportedLanguageValidator;
+ import org.example.dental.records.export.app.domain.services.zip.ZipBundler;
++import org.example.dental.records.export.app.spi.LanguageCatalogue;
+ import org.example.dental.records.export.app.spi.RecordExporter;
+ import org.springframework.stereotype.Service;
+ 
+@@ -23,14 +25,17 @@
+ 
+     private final Map<RecordKind, RecordExporter> exportersByKind;
+     private final ExportFileNaming fileNaming;
++    private final SupportedLanguageValidator supportedLanguageValidator;
+ 
+     public RecordExportService(
+         List<RecordExporter> exporters,
+-        ExportFileNaming fileNaming
++        ExportFileNaming fileNaming,
++        LanguageCatalogue languageCatalogue
+     ) {
+         this.exportersByKind = new EnumMap<>(RecordKind.class);
+         exporters.forEach(exporter -> exportersByKind.put(exporter.supportedKind(), exporter));
+         this.fileNaming = fileNaming;
++        this.supportedLanguageValidator = new SupportedLanguageValidator(languageCatalogue);
+     }
+ 
+     @Override
+@@ -40,6 +45,7 @@
+         RecordSelection selection
+     ) {
+         ArchiveKindValidator.validate(format, recordKind);
++        supportedLanguageValidator.validate(selection.language());
+ 
+         RecordExporter exporter = findExporter(recordKind);
+         if (exporter.shouldBeArchive(format, selection)) {
+diff --git a/records/src/main/java/org/example/dental/records/export/app/domain/services/validators/SupportedLanguageValidator.java b/records/src/main/java/org/example/dental/records/export/app/domain/services/validators/SupportedLanguageValidator.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/domain/services/validators/SupportedLanguageValidator.java
+@@ -0,0 +1,21 @@
++package org.example.dental.records.export.app.domain.services.validators;
++
++import org.example.dental.records.export.app.domain.model.exceptions.LanguageNotOfferedException;
++import org.example.dental.records.export.app.spi.LanguageCatalogue;
++
++import java.util.Locale;
++
++public class SupportedLanguageValidator {
++
++    private final LanguageCatalogue languageCatalogue;
++
++    public SupportedLanguageValidator(LanguageCatalogue languageCatalogue) {
++        this.languageCatalogue = languageCatalogue;
++    }
++
++    public void validate(Locale requestedLanguage) {
++        if (requestedLanguage != null && !languageCatalogue.offers(requestedLanguage)) {
++            throw new LanguageNotOfferedException(requestedLanguage);
++        }
++    }
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/app/spi/LanguageCatalogue.java b/records/src/main/java/org/example/dental/records/export/app/spi/LanguageCatalogue.java
+new file mode 100644
+--- /dev/null
++++ b/records/src/main/java/org/example/dental/records/export/app/spi/LanguageCatalogue.java
+@@ -0,0 +1,8 @@
++package org.example.dental.records.export.app.spi;
++
++import java.util.Locale;
++
++public interface LanguageCatalogue {
++
++    boolean offers(Locale language);
++}
+diff --git a/records/src/main/java/org/example/dental/records/export/in/rest/dto/RecordExportRequest.java b/records/src/main/java/org/example/dental/records/export/in/rest/dto/RecordExportRequest.java
+--- a/records/src/main/java/org/example/dental/records/export/in/rest/dto/RecordExportRequest.java
++++ b/records/src/main/java/org/example/dental/records/export/in/rest/dto/RecordExportRequest.java
+@@ -16,7 +16,10 @@
+ 
+         List<RecordFilter> filters,
+         List<Patient> patients,
+-        String dentistId
++        String dentistId,
++
++        @NotNull(message = "language is required")
++        String language
+ ) {
+     public enum FileType {
+         SPREADSHEET,
+diff --git a/records/src/main/java/org/example/dental/records/export/in/rest/mappers/RecordExportRequestMapper.java b/records/src/main/java/org/example/dental/records/export/in/rest/mappers/RecordExportRequestMapper.java
+--- a/records/src/main/java/org/example/dental/records/export/in/rest/mappers/RecordExportRequestMapper.java
++++ b/records/src/main/java/org/example/dental/records/export/in/rest/mappers/RecordExportRequestMapper.java
+@@ -10,6 +10,7 @@
+ import org.mapstruct.factory.Mappers;
+ 
+ import java.util.List;
++import java.util.Locale;
+ 
+ @Mapper
+ public interface RecordExportRequestMapper {
+@@ -27,5 +28,13 @@
+     @Mapping(target = "filters", source = "filters")
+     @Mapping(target = "patients", source = "patients")
+     @Mapping(target = "dentistId", source = "dentistId")
++    @Mapping(target = "language", source = "language")
+     RecordSelection toSelection(RecordExportRequest request);
++
++    default Locale toLanguage(String language) {
++        if (language == null) {
++            return null;
++        }
++        return Locale.forLanguageTag(language);
++    }
+ }

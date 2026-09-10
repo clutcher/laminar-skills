@@ -1,0 +1,35 @@
+diff --git a/shop/src/main/java/com/example/shop/customer/CustomerRegistrationService.java b/shop/src/main/java/com/example/shop/customer/CustomerRegistrationService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/customer/CustomerRegistrationService.java
+@@ -0,0 +1,30 @@
++package com.example.shop.customer;
++
++import jakarta.servlet.http.HttpServletRequest;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class CustomerRegistrationService {
++
++    private final CustomerRepository customerRepository;
++
++    public void registerCustomer(HttpServletRequest request) {
++        String firstName = request.getParameter("firstName");
++        String lastName = request.getParameter("lastName");
++        String email = request.getParameter("email");
++        if (firstName == null || firstName.trim().isEmpty()) {
++            throw new ValidationException("First name is required");
++        }
++        if (lastName == null || lastName.trim().isEmpty()) {
++            throw new ValidationException("Last name is required");
++        }
++        if (email == null || !email.contains("@")) {
++            throw new ValidationException("Valid email is required");
++        }
++        Customer customer = new Customer();
++        customer.setFirstName(firstName.trim());
++        customer.setLastName(lastName.trim());
++        customer.setEmail(email.trim().toLowerCase());
++        customerRepository.save(customer);
++    }
++}

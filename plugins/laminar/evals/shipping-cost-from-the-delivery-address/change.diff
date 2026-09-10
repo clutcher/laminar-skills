@@ -1,0 +1,18 @@
+diff --git a/shop/src/main/java/com/example/shop/shipping/ShippingCalculator.java b/shop/src/main/java/com/example/shop/shipping/ShippingCalculator.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/shipping/ShippingCalculator.java
+@@ -0,0 +1,13 @@
++package com.example.shop.shipping;
++
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class ShippingCalculator {
++
++    private final ShippingProvider shippingProvider;
++
++    public ShippingCost calculateShipping(Address deliveryAddress) {
++        return shippingProvider.rateFor(deliveryAddress);
++    }
++}

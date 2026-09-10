@@ -1,0 +1,95 @@
+diff --git a/courier-desk/src/label-formats/DhlLabelFormat.ts b/courier-desk/src/label-formats/DhlLabelFormat.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/label-formats/DhlLabelFormat.ts
+@@ -0,0 +1,9 @@
++import { LabelFormat } from "./LabelFormat";
++
++export class DhlLabelFormat implements LabelFormat {
++  readonly carrierCode = "DHL";
++
++  formatLabel(parcelId: string, postalCode: string): string {
++    return `DHL|${postalCode}|${parcelId}`;
++  }
++}
+diff --git a/courier-desk/src/label-formats/DpdLabelFormat.ts b/courier-desk/src/label-formats/DpdLabelFormat.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/label-formats/DpdLabelFormat.ts
+@@ -0,0 +1,9 @@
++import { LabelFormat } from "./LabelFormat";
++
++export class DpdLabelFormat implements LabelFormat {
++  readonly carrierCode = "DPD";
++
++  formatLabel(parcelId: string, postalCode: string): string {
++    return `DPD|${postalCode}|${parcelId}`;
++  }
++}
+diff --git a/courier-desk/src/label-formats/FedexLabelFormat.ts b/courier-desk/src/label-formats/FedexLabelFormat.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/label-formats/FedexLabelFormat.ts
+@@ -0,0 +1,9 @@
++import { LabelFormat } from "./LabelFormat";
++
++export class FedexLabelFormat implements LabelFormat {
++  readonly carrierCode = "FEDEX";
++
++  formatLabel(parcelId: string, postalCode: string): string {
++    return `FEDEX|${postalCode}|${parcelId}`;
++  }
++}
+diff --git a/courier-desk/src/label-formats/GlsLabelFormat.ts b/courier-desk/src/label-formats/GlsLabelFormat.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/label-formats/GlsLabelFormat.ts
+@@ -0,0 +1,9 @@
++import { LabelFormat } from "./LabelFormat";
++
++export class GlsLabelFormat implements LabelFormat {
++  readonly carrierCode = "GLS";
++
++  formatLabel(parcelId: string, postalCode: string): string {
++    return `GLS|${postalCode}|${parcelId}`;
++  }
++}
+diff --git a/courier-desk/src/label-formats/LabelFormat.ts b/courier-desk/src/label-formats/LabelFormat.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/label-formats/LabelFormat.ts
+@@ -0,0 +1,4 @@
++export interface LabelFormat {
++  readonly carrierCode: string;
++  formatLabel(parcelId: string, postalCode: string): string;
++}
+diff --git a/courier-desk/src/label-formats/LabelFormatChooser.ts b/courier-desk/src/label-formats/LabelFormatChooser.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/label-formats/LabelFormatChooser.ts
+@@ -0,0 +1,11 @@
++import { LabelFormat } from "./LabelFormat";
++
++export class LabelFormatChooser {
++  constructor(private readonly labelFormats: LabelFormat[]) {}
++
++  chooseLabelFormat(carrierCode: string): LabelFormat {
++    const chosen = this.labelFormats.find(labelFormat => labelFormat.carrierCode === carrierCode);
++    if (!chosen) throw new Error(`No label format for carrier ${carrierCode}`);
++    return chosen;
++  }
++}
+diff --git a/courier-desk/src/label-formats/UpsLabelFormat.ts b/courier-desk/src/label-formats/UpsLabelFormat.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/label-formats/UpsLabelFormat.ts
+@@ -0,0 +1,9 @@
++import { LabelFormat } from "./LabelFormat";
++
++export class UpsLabelFormat implements LabelFormat {
++  readonly carrierCode = "UPS";
++
++  formatLabel(parcelId: string, postalCode: string): string {
++    return `UPS|${postalCode}|${parcelId}`;
++  }
++}

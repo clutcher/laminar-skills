@@ -1,0 +1,16 @@
+diff --git a/bakery-orders/orders/pre_order_service.py b/bakery-orders/orders/pre_order_service.py
+new file mode 100644
+--- /dev/null
++++ b/bakery-orders/orders/pre_order_service.py
+@@ -0,0 +1,11 @@
++class PreOrderService:
++    def __init__(self, pre_order_store):
++        self.pre_order_store = pre_order_store
++
++    def place_pre_order(self, customer_code, loaf_name, pickup_day):
++        pre_order = {"customer": customer_code, "loaf": loaf_name, "pickup_day": pickup_day}
++        self.pre_order_store.save(pre_order)
++        return pre_order
++
++    def cancel_pre_order(self, customer_code, pickup_day):
++        self.pre_order_store.remove(customer_code, pickup_day)

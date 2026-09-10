@@ -1,0 +1,116 @@
+diff --git a/bakery/package.json b/bakery/package.json
+new file mode 100644
+index 0000000..3708b5c
+--- /dev/null
++++ b/bakery/package.json
+@@ -0,0 +1,10 @@
++{
++  "name": "bakery",
++  "version": "1.0.0",
++  "dependencies": {
++    "express": "4.19.2"
++  },
++  "devDependencies": {
++    "typescript": "5.4.5"
++  }
++}
+diff --git a/bakery/src/preorder/app/api/place-preorder.ts b/bakery/src/preorder/app/api/place-preorder.ts
+new file mode 100644
+index 0000000..cc8d360
+--- /dev/null
++++ b/bakery/src/preorder/app/api/place-preorder.ts
+@@ -0,0 +1,5 @@
++import { Preorder } from "../domain/model/preorder";
++
++export interface PlacePreorder {
++  place(customerId: string, items: string[], pickupSlot: string): Promise<Preorder>;
++}
+diff --git a/bakery/src/preorder/app/domain/model/preorder.ts b/bakery/src/preorder/app/domain/model/preorder.ts
+new file mode 100644
+index 0000000..3bf7a60
+--- /dev/null
++++ b/bakery/src/preorder/app/domain/model/preorder.ts
+@@ -0,0 +1,9 @@
++export class Preorder {
++  constructor(
++    readonly preorderId: string,
++    readonly customerId: string,
++    readonly items: string[],
++    readonly pickupSlot: string,
++    readonly depositCents: number,
++  ) {}
++}
+diff --git a/bakery/src/preorder/app/domain/preorder-service.ts b/bakery/src/preorder/app/domain/preorder-service.ts
+new file mode 100644
+index 0000000..b97c21a
+--- /dev/null
++++ b/bakery/src/preorder/app/domain/preorder-service.ts
+@@ -0,0 +1,13 @@
++import { PlacePreorder } from "../api/place-preorder";
++import { PreorderStore } from "../spi/preorder-store";
++import { Preorder } from "./model/preorder";
++
++export class PreorderService implements PlacePreorder {
++  constructor(private readonly store: PreorderStore) {}
++
++  async place(customerId: string, items: string[], pickupSlot: string): Promise<Preorder> {
++    const preorder = new Preorder(`${customerId}-${pickupSlot}`, customerId, items, pickupSlot, 0);
++    await this.store.save(preorder);
++    return preorder;
++  }
++}
+diff --git a/bakery/src/preorder/app/spi/preorder-store.ts b/bakery/src/preorder/app/spi/preorder-store.ts
+new file mode 100644
+index 0000000..dee857e
+--- /dev/null
++++ b/bakery/src/preorder/app/spi/preorder-store.ts
+@@ -0,0 +1,5 @@
++import { Preorder } from "../domain/model/preorder";
++
++export interface PreorderStore {
++  save(preorder: Preorder): Promise<void>;
++}
+diff --git a/bakery/src/preorder/in/http/preorder-controller.ts b/bakery/src/preorder/in/http/preorder-controller.ts
+new file mode 100644
+index 0000000..97bcb46
+--- /dev/null
++++ b/bakery/src/preorder/in/http/preorder-controller.ts
+@@ -0,0 +1,11 @@
++import { Request, Response } from "express";
++import { PlacePreorder } from "../../app/api/place-preorder";
++
++export class PreorderController {
++  constructor(private readonly placePreorder: PlacePreorder) {}
++
++  async placeOrder(request: Request, response: Response): Promise<void> {
++    const preorder = await this.placePreorder.place(request.body.customerId, request.body.items, request.body.pickupSlot);
++    response.status(201).json({ preorderId: preorder.preorderId });
++  }
++}
+diff --git a/bakery/src/preorder/index.ts b/bakery/src/preorder/index.ts
+new file mode 100644
+index 0000000..65bde9e
+--- /dev/null
++++ b/bakery/src/preorder/index.ts
+@@ -0,0 +1 @@
++export type { PlacePreorder } from "./app/api/place-preorder";
+diff --git a/bakery/src/preorder/out/db/preorder-store-using-sql.ts b/bakery/src/preorder/out/db/preorder-store-using-sql.ts
+new file mode 100644
+index 0000000..a0beef7
+--- /dev/null
++++ b/bakery/src/preorder/out/db/preorder-store-using-sql.ts
+@@ -0,0 +1,14 @@
++import { Preorder } from "../../app/domain/model/preorder";
++import { PreorderStore } from "../../app/spi/preorder-store";
++
++export interface SqlClient {
++  query(sql: string, values: unknown[]): Promise<void>;
++}
++
++export class PreorderStoreUsingSql implements PreorderStore {
++  constructor(private readonly sql: SqlClient) {}
++
++  async save(preorder: Preorder): Promise<void> {
++    await this.sql.query("insert into preorder values ($1, $2, $3, $4)", [preorder.preorderId, preorder.customerId, preorder.pickupSlot, preorder.depositCents]);
++  }
++}

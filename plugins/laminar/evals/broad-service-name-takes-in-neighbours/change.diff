@@ -1,0 +1,57 @@
+diff --git a/shop/src/main/java/com/example/shop/catalog/ProductService.java b/shop/src/main/java/com/example/shop/catalog/ProductService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/catalog/ProductService.java
+@@ -0,0 +1,52 @@
++package com.example.shop.catalog;
++
++import com.example.shop.pricing.DateRange;
++import com.example.shop.pricing.Price;
++import com.example.shop.pricing.PriceRepository;
++import com.example.shop.pricing.PricingHistory;
++import com.example.shop.pricing.ScheduledPrice;
++import com.example.shop.pricing.ScheduledPriceRepository;
++import com.example.shop.review.ProductReview;
++import com.example.shop.review.ReviewRepository;
++import java.time.LocalDate;
++import java.util.List;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class ProductService {
++
++    private final ProductRepository productRepository;
++    private final ReviewRepository reviewRepository;
++    private final PriceRepository priceRepository;
++    private final ScheduledPriceRepository scheduledPriceRepository;
++
++    public Product createProduct(ProductData data) {
++        return productRepository.save(Product.from(data));
++    }
++
++    public Product updateProduct(Long productId, ProductData data) {
++        return productRepository.save(productRepository.getById(productId).updatedWith(data));
++    }
++
++    public void deactivateProduct(Long productId) {
++        productRepository.save(productRepository.getById(productId).deactivated());
++    }
++
++    public ProductReview getReview(Long productId) {
++        return reviewRepository.findLatestByProductId(productId);
++    }
++
++    public List<Product> loadProductsWithReviews(List<Product> products) {
++        return products.stream()
++                .map(product -> product.withReviews(reviewRepository.findByProductId(product.getId())))
++                .toList();
++    }
++
++    public PricingHistory calculatePriceHistory(Long productId, DateRange range) {
++        return new PricingHistory(priceRepository.findByProductIdAndValidFromBetween(productId, range.start(), range.end()));
++    }
++
++    public void schedulePriceChange(Long productId, Price price, LocalDate effective) {
++        scheduledPriceRepository.save(new ScheduledPrice(productId, price, effective));
++    }
++}

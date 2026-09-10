@@ -1,0 +1,50 @@
+diff --git a/shop/src/main/java/com/example/shop/order/PlaceOrderPostprocessor.java b/shop/src/main/java/com/example/shop/order/PlaceOrderPostprocessor.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/PlaceOrderPostprocessor.java
+@@ -0,0 +1,45 @@
++package com.example.shop.order;
++
++import com.example.shop.consignment.Consignment;
++import com.example.shop.consignment.TrackingNumbers;
++import com.example.shop.customer.Customer;
++import java.util.List;
++import java.util.Map;
++import java.util.stream.Collectors;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++class PlaceOrderPostprocessor {
++
++    private final TrackingNumbers trackingNumbers;
++
++    void execute(Order order) {
++        splitIntoConsignments(order);
++        updateCustomerRewards(order);
++    }
++
++    List<Consignment> splitIntoConsignments(Order order) {
++        List<Consignment> consignments = groupByWarehouse(order.getItems());
++        return assignTrackingNumbers(consignments);
++    }
++
++    void updateCustomerRewards(Order order) {
++        Customer customer = order.getCustomer();
++        customer.addLoyaltyPoints(order.getPointsValue());
++        customer.updatePurchaseHistory(order);
++    }
++
++    private List<Consignment> groupByWarehouse(List<LineItem> items) {
++        Map<String, List<LineItem>> lineItemsByWarehouseCodeMap = items.stream()
++                .collect(Collectors.groupingBy(LineItem::getWarehouseCode));
++        return lineItemsByWarehouseCodeMap.entrySet().stream()
++                .map(entry -> new Consignment(entry.getKey(), entry.getValue()))
++                .toList();
++    }
++
++    private List<Consignment> assignTrackingNumbers(List<Consignment> consignments) {
++        return consignments.stream()
++                .map(consignment -> consignment.withTrackingNumber(trackingNumbers.next()))
++                .toList();
++    }
++}

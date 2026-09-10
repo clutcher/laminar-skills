@@ -1,0 +1,48 @@
+diff --git a/shop/src/main/java/com/example/shop/account/AccountService.java b/shop/src/main/java/com/example/shop/account/AccountService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/account/AccountService.java
+@@ -0,0 +1,20 @@
++package com.example.shop.account;
++
++import com.example.shop.customer.Customer;
++import com.example.shop.customer.CustomerRepository;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class AccountService {
++
++    private final CustomerRepository customerRepository;
++
++    public void closeAccount(Customer customer, boolean hardDelete) {
++        if (hardDelete) {
++            customerRepository.delete(customer);
++        } else {
++            customer.deactivate();
++            customerRepository.save(customer);
++        }
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/account/CustomerOffboarding.java b/shop/src/main/java/com/example/shop/account/CustomerOffboarding.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/account/CustomerOffboarding.java
+@@ -0,0 +1,18 @@
++package com.example.shop.account;
++
++import com.example.shop.customer.Customer;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class CustomerOffboarding {
++
++    private final AccountService accountService;
++
++    public void eraseOnRequest(Customer customer) {
++        accountService.closeAccount(customer, true);
++    }
++
++    public void closeAfterInactivity(Customer customer) {
++        accountService.closeAccount(customer, false);
++    }
++}

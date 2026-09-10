@@ -1,0 +1,95 @@
+diff --git a/shop/src/main/java/com/example/shop/notification/NotificationService.java b/shop/src/main/java/com/example/shop/notification/NotificationService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/notification/NotificationService.java
+@@ -0,0 +1,33 @@
++package com.example.shop.notification;
++
++import com.example.shop.mail.EmailService;
++import com.example.shop.user.NotificationPreferences;
++import com.example.shop.user.User;
++import com.example.shop.user.UserRepository;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++class NotificationService {
++    private final UserRepository userRepository;
++    private final EmailService emailService;
++
++    public boolean notifyUser(long userId, String message) {
++        User user = userRepository.findById(userId);
++        if (user == null) {
++            return false;
++        }
++
++        NotificationPreferences notificationPreferences = user.getPreferences();
++        if (notificationPreferences == null
++                || !notificationPreferences.isEmailEnabled()) {
++            return false;
++        }
++
++        String emailAddress = user.getEmailAddress();
++        if (emailAddress == null || emailAddress.isBlank()) {
++            return false;
++        }
++
++        return emailService.send(emailAddress, message);
++    }
++}
+diff --git a/shop/src/test/java/com/example/shop/notification/NotificationServiceTest.java b/shop/src/test/java/com/example/shop/notification/NotificationServiceTest.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/test/java/com/example/shop/notification/NotificationServiceTest.java
+@@ -0,0 +1,52 @@
++package com.example.shop.notification;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.mockito.ArgumentMatchers.anyString;
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.verify;
++import static org.mockito.Mockito.when;
++
++import com.example.shop.mail.EmailService;
++import com.example.shop.user.NotificationPreferences;
++import com.example.shop.user.User;
++import com.example.shop.user.UserRepository;
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.extension.ExtendWith;
++import org.mockito.InjectMocks;
++import org.mockito.Mock;
++import org.mockito.junit.jupiter.MockitoExtension;
++
++@ExtendWith(MockitoExtension.class)
++class NotificationServiceTest {
++
++    @Mock
++    private UserRepository userRepository;
++
++    @Mock
++    private EmailService emailService;
++
++    @InjectMocks
++    private NotificationService notificationService;
++
++    @Test
++    void shouldSendEmailWhenPreferencesAllow() {
++        // given
++        User user = mock(User.class);
++        NotificationPreferences notificationPreferences = mock(
++                NotificationPreferences.class
++        );
++
++        when(userRepository.findById(1L)).thenReturn(user);
++        when(user.getPreferences()).thenReturn(notificationPreferences);
++        when(notificationPreferences.isEmailEnabled()).thenReturn(true);
++        when(user.getEmailAddress()).thenReturn("test@example.com");
++        when(emailService.send(anyString(), anyString())).thenReturn(true);
++
++        // when
++        boolean result = notificationService.notifyUser(1L, "Hello");
++
++        // then
++        assertThat(result).isTrue();
++        verify(emailService).send("test@example.com", "Hello");
++    }
++}

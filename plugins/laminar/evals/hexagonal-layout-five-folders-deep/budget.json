@@ -1,0 +1,10 @@
+{
+  "wall_seconds": 38,
+  "total_tokens": 240000,
+  "new_tokens_cold": 555000,
+  "new_tokens_warm": 39000,
+  "output_tokens": 2800,
+  "cache_read_share": 0.66,
+  "agents": 12,
+  "dollars": 0.16
+}

@@ -1,0 +1,44 @@
+diff --git a/shop/src/main/java/com/example/shop/consignment/ConsignmentPlanner.java b/shop/src/main/java/com/example/shop/consignment/ConsignmentPlanner.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/consignment/ConsignmentPlanner.java
+@@ -0,0 +1,39 @@
++package com.example.shop.consignment;
++
++import com.example.shop.customer.Customer;
++import com.example.shop.order.LineItem;
++import com.example.shop.order.Order;
++import java.util.List;
++import java.util.Map;
++import java.util.stream.Collectors;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class ConsignmentPlanner {
++
++    private final TrackingNumbers trackingNumbers;
++
++    public List<Consignment> splitIntoConsignments(Order order) {
++        List<Consignment> consignments = groupByWarehouse(order.getItems());
++
++        Customer customer = order.getCustomer();
++        customer.addLoyaltyPoints(order.getPointsValue());
++        customer.updatePurchaseHistory(order);
++
++        return assignTrackingNumbers(consignments);
++    }
++
++    private List<Consignment> groupByWarehouse(List<LineItem> items) {
++        Map<String, List<LineItem>> lineItemsByWarehouseCodeMap = items.stream()
++                .collect(Collectors.groupingBy(LineItem::getWarehouseCode));
++        return lineItemsByWarehouseCodeMap.entrySet().stream()
++                .map(entry -> new Consignment(entry.getKey(), entry.getValue()))
++                .toList();
++    }
++
++    private List<Consignment> assignTrackingNumbers(List<Consignment> consignments) {
++        return consignments.stream()
++                .map(consignment -> consignment.withTrackingNumber(trackingNumbers.next()))
++                .toList();
++    }
++}

@@ -1,0 +1,330 @@
+diff --git a/quote-service/pom.xml b/quote-service/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/quote-service/pom.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <parent>
++        <groupId>org.springframework.boot</groupId>
++        <artifactId>spring-boot-starter-parent</artifactId>
++        <version>3.3.4</version>
++    </parent>
++    <groupId>com.example</groupId>
++    <artifactId>quote-service</artifactId>
++    <version>1.0.0</version>
++    <dependencies>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-graphql</artifactId>
++        </dependency>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-web</artifactId>
++        </dependency>
++    </dependencies>
++</project>
+diff --git a/quote-service/src/main/java/com/example/quote/app/api/QuoteCalculation.java b/quote-service/src/main/java/com/example/quote/app/api/QuoteCalculation.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/app/api/QuoteCalculation.java
+@@ -0,0 +1,10 @@
++package com.example.quote.app.api;
++
++import com.example.quote.app.domain.CoverLine;
++import com.example.quote.app.domain.QuoteResult;
++import java.util.List;
++
++public interface QuoteCalculation {
++
++    QuoteResult calculate(List<CoverLine> coverLines);
++}
+diff --git a/quote-service/src/main/java/com/example/quote/app/domain/CoverLine.java b/quote-service/src/main/java/com/example/quote/app/domain/CoverLine.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/app/domain/CoverLine.java
+@@ -0,0 +1,6 @@
++package com.example.quote.app.domain;
++
++import java.math.BigDecimal;
++
++public record CoverLine(String coverCode, BigDecimal insuredValue) {
++}
+diff --git a/quote-service/src/main/java/com/example/quote/app/domain/LinePremium.java b/quote-service/src/main/java/com/example/quote/app/domain/LinePremium.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/app/domain/LinePremium.java
+@@ -0,0 +1,6 @@
++package com.example.quote.app.domain;
++
++import java.math.BigDecimal;
++
++public record LinePremium(String coverCode, BigDecimal premium) {
++}
+diff --git a/quote-service/src/main/java/com/example/quote/app/domain/QuoteResult.java b/quote-service/src/main/java/com/example/quote/app/domain/QuoteResult.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/app/domain/QuoteResult.java
+@@ -0,0 +1,14 @@
++package com.example.quote.app.domain;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++public record QuoteResult(List<LinePremium> linePremiums, BigDecimal totalPremium, List<UnderwritingNotice> notices) {
++
++    public LinePremium premiumFor(String coverCode) {
++        return linePremiums.stream()
++                .filter(linePremium -> linePremium.coverCode().equals(coverCode))
++                .findFirst()
++                .orElseThrow();
++    }
++}
+diff --git a/quote-service/src/main/java/com/example/quote/app/domain/UnderwritingNotice.java b/quote-service/src/main/java/com/example/quote/app/domain/UnderwritingNotice.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/app/domain/UnderwritingNotice.java
+@@ -0,0 +1,4 @@
++package com.example.quote.app.domain;
++
++public record UnderwritingNotice(String subject, String message) {
++}
+diff --git a/quote-service/src/main/java/com/example/quote/app/services/QuoteCalculationService.java b/quote-service/src/main/java/com/example/quote/app/services/QuoteCalculationService.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/app/services/QuoteCalculationService.java
+@@ -0,0 +1,42 @@
++package com.example.quote.app.services;
++
++import com.example.quote.app.api.QuoteCalculation;
++import com.example.quote.app.domain.CoverLine;
++import com.example.quote.app.domain.LinePremium;
++import com.example.quote.app.domain.QuoteResult;
++import com.example.quote.app.spi.CoverRates;
++import java.math.BigDecimal;
++import java.math.RoundingMode;
++import java.util.List;
++import java.util.Map;
++import java.util.Set;
++import java.util.stream.Collectors;
++import org.springframework.stereotype.Service;
++
++@Service
++public class QuoteCalculationService implements QuoteCalculation {
++
++    private final CoverRates coverRates;
++    private final UnderwritingNoticeRules underwritingNoticeRules;
++
++    public QuoteCalculationService(CoverRates coverRates, UnderwritingNoticeRules underwritingNoticeRules) {
++        this.coverRates = coverRates;
++        this.underwritingNoticeRules = underwritingNoticeRules;
++    }
++
++    @Override
++    public QuoteResult calculate(List<CoverLine> coverLines) {
++        Set<String> coverCodes = coverLines.stream().map(CoverLine::coverCode).collect(Collectors.toSet());
++        Map<String, BigDecimal> annualRates = coverRates.annualRatesFor(coverCodes);
++        List<LinePremium> linePremiums = coverLines.stream()
++                .map(coverLine -> premiumOf(coverLine, annualRates.getOrDefault(coverLine.coverCode(), BigDecimal.ZERO)))
++                .toList();
++        BigDecimal totalPremium = linePremiums.stream().map(LinePremium::premium).reduce(BigDecimal.ZERO, BigDecimal::add);
++        return new QuoteResult(linePremiums, totalPremium, underwritingNoticeRules.noticesFor(linePremiums, totalPremium));
++    }
++
++    private LinePremium premiumOf(CoverLine coverLine, BigDecimal annualRate) {
++        BigDecimal premium = coverLine.insuredValue().multiply(annualRate).setScale(2, RoundingMode.HALF_UP);
++        return new LinePremium(coverLine.coverCode(), premium);
++    }
++}
+diff --git a/quote-service/src/main/java/com/example/quote/app/services/UnderwritingNoticeRules.java b/quote-service/src/main/java/com/example/quote/app/services/UnderwritingNoticeRules.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/app/services/UnderwritingNoticeRules.java
+@@ -0,0 +1,26 @@
++package com.example.quote.app.services;
++
++import com.example.quote.app.domain.LinePremium;
++import com.example.quote.app.domain.UnderwritingNotice;
++import java.math.BigDecimal;
++import java.util.ArrayList;
++import java.util.List;
++import org.springframework.stereotype.Service;
++
++@Service
++public class UnderwritingNoticeRules {
++
++    private static final BigDecimal REFERRAL_PREMIUM = new BigDecimal("25000.00");
++
++    public List<UnderwritingNotice> noticesFor(List<LinePremium> linePremiums, BigDecimal totalPremium) {
++        List<UnderwritingNotice> notices = new ArrayList<>();
++        linePremiums.stream()
++                .filter(linePremium -> linePremium.premium().signum() == 0)
++                .map(linePremium -> new UnderwritingNotice(linePremium.coverCode(), "Cover has no rate and goes to an underwriter"))
++                .forEach(notices::add);
++        if (totalPremium.compareTo(REFERRAL_PREMIUM) > 0) {
++            notices.add(new UnderwritingNotice("quote", "Quote is above the referral premium"));
++        }
++        return notices;
++    }
++}
+diff --git a/quote-service/src/main/java/com/example/quote/app/spi/CoverRates.java b/quote-service/src/main/java/com/example/quote/app/spi/CoverRates.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/app/spi/CoverRates.java
+@@ -0,0 +1,10 @@
++package com.example.quote.app.spi;
++
++import java.math.BigDecimal;
++import java.util.Map;
++import java.util.Set;
++
++public interface CoverRates {
++
++    Map<String, BigDecimal> annualRatesFor(Set<String> coverCodes);
++}
+diff --git a/quote-service/src/main/java/com/example/quote/config/QuoteConfiguration.java b/quote-service/src/main/java/com/example/quote/config/QuoteConfiguration.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/config/QuoteConfiguration.java
+@@ -0,0 +1,15 @@
++package com.example.quote.config;
++
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++import org.springframework.web.client.RestClient;
++
++@Configuration
++public class QuoteConfiguration {
++
++    @Bean
++    public RestClient ratingRestClient(@Value("${rating.base-url}") String ratingBaseUrl) {
++        return RestClient.create(ratingBaseUrl);
++    }
++}
+diff --git a/quote-service/src/main/java/com/example/quote/in/Basket.java b/quote-service/src/main/java/com/example/quote/in/Basket.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/in/Basket.java
+@@ -0,0 +1,6 @@
++package com.example.quote.in;
++
++import java.util.List;
++
++public record Basket(List<BasketLine> lines) {
++}
+diff --git a/quote-service/src/main/java/com/example/quote/in/BasketLine.java b/quote-service/src/main/java/com/example/quote/in/BasketLine.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/in/BasketLine.java
+@@ -0,0 +1,11 @@
++package com.example.quote.in;
++
++import com.example.quote.app.domain.CoverLine;
++import java.math.BigDecimal;
++
++public record BasketLine(String coverCode, BigDecimal insuredValue) {
++
++    public CoverLine coverLine() {
++        return new CoverLine(coverCode, insuredValue);
++    }
++}
+diff --git a/quote-service/src/main/java/com/example/quote/in/BasketQuoteController.java b/quote-service/src/main/java/com/example/quote/in/BasketQuoteController.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/in/BasketQuoteController.java
+@@ -0,0 +1,58 @@
++package com.example.quote.in;
++
++import static java.util.function.Function.identity;
++import static java.util.stream.Collectors.toMap;
++
++import com.example.quote.app.api.QuoteCalculation;
++import com.example.quote.app.domain.CoverLine;
++import com.example.quote.app.domain.LinePremium;
++import com.example.quote.app.domain.QuoteResult;
++import java.math.BigDecimal;
++import java.util.Collection;
++import java.util.List;
++import java.util.Map;
++import java.util.Set;
++import java.util.concurrent.CompletableFuture;
++import org.dataloader.DataLoader;
++import org.springframework.graphql.data.method.annotation.Argument;
++import org.springframework.graphql.data.method.annotation.QueryMapping;
++import org.springframework.graphql.data.method.annotation.SchemaMapping;
++import org.springframework.graphql.execution.BatchLoaderRegistry;
++import org.springframework.stereotype.Controller;
++import reactor.core.publisher.Mono;
++
++@Controller
++public class BasketQuoteController {
++
++    private final QuoteCalculation quoteCalculation;
++
++    public BasketQuoteController(QuoteCalculation quoteCalculation, BatchLoaderRegistry batchLoaderRegistry) {
++        this.quoteCalculation = quoteCalculation;
++        batchLoaderRegistry.forTypePair(BasketLine.class, LinePremium.class)
++                .registerMappedBatchLoader((basketLines, environment) -> Mono.just(linePremiumsOf(basketLines)));
++    }
++
++    @QueryMapping
++    public Basket quoteBasket(@Argument List<BasketLine> lines) {
++        return new Basket(lines);
++    }
++
++    @SchemaMapping(typeName = "Basket", field = "quote")
++    public QuoteResult quote(Basket basket) {
++        return quoteCalculation.calculate(coverLinesOf(basket.lines()));
++    }
++
++    @SchemaMapping(typeName = "BasketLine", field = "premium")
++    public CompletableFuture<BigDecimal> premium(BasketLine basketLine, DataLoader<BasketLine, LinePremium> linePremiums) {
++        return linePremiums.load(basketLine).thenApply(LinePremium::premium);
++    }
++
++    private Map<BasketLine, LinePremium> linePremiumsOf(Set<BasketLine> basketLines) {
++        QuoteResult quote = quoteCalculation.calculate(coverLinesOf(basketLines));
++        return basketLines.stream().collect(toMap(identity(), basketLine -> quote.premiumFor(basketLine.coverCode())));
++    }
++
++    private static List<CoverLine> coverLinesOf(Collection<BasketLine> basketLines) {
++        return basketLines.stream().map(BasketLine::coverLine).toList();
++    }
++}
+diff --git a/quote-service/src/main/java/com/example/quote/out/CoverRatesClient.java b/quote-service/src/main/java/com/example/quote/out/CoverRatesClient.java
+new file mode 100644
+--- /dev/null
++++ b/quote-service/src/main/java/com/example/quote/out/CoverRatesClient.java
+@@ -0,0 +1,30 @@
++package com.example.quote.out;
++
++import com.example.quote.app.spi.CoverRates;
++import java.math.BigDecimal;
++import java.util.Map;
++import java.util.Set;
++import org.springframework.stereotype.Component;
++import org.springframework.web.client.RestClient;
++
++@Component
++public class CoverRatesClient implements CoverRates {
++
++    private final RestClient ratingRestClient;
++
++    public CoverRatesClient(RestClient ratingRestClient) {
++        this.ratingRestClient = ratingRestClient;
++    }
++
++    @Override
++    public Map<String, BigDecimal> annualRatesFor(Set<String> coverCodes) {
++        CoverRateResponse response = ratingRestClient.get()
++                .uri(uri -> uri.path("/cover-rates").queryParam("codes", coverCodes).build())
++                .retrieve()
++                .body(CoverRateResponse.class);
++        return response.annualRates();
++    }
++
++    record CoverRateResponse(Map<String, BigDecimal> annualRates) {
++    }
++}

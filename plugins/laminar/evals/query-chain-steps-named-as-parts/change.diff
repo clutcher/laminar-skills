@@ -1,0 +1,56 @@
+diff --git a/Allotments/src/Allotments.Plots/PlotAllocationService.cs b/Allotments/src/Allotments.Plots/PlotAllocationService.cs
+new file mode 100644
+--- /dev/null
++++ b/Allotments/src/Allotments.Plots/PlotAllocationService.cs
+@@ -0,0 +1,51 @@
++using System.Collections.Generic;
++using System.Linq;
++using Allotments.Billing;
++using Allotments.Gardens;
++
++namespace Allotments.Plots;
++
++public class PlotAllocationService
++{
++    private readonly Tariff _tariff;
++    private readonly IPlotRepository _plotRepository;
++
++    public PlotAllocationService(Tariff tariff, IPlotRepository plotRepository)
++    {
++        _tariff = tariff;
++        _plotRepository = plotRepository;
++    }
++
++    public List<PlotInvoice> CreateInvoices(IEnumerable<Plot> plots, Season season)
++    {
++        return plots
++            .Select(plot => CreateInvoice(plot, season))
++            .ToList();
++    }
++
++    public List<Plot> GetPlotsToReallocate(Garden garden)
++    {
++        return _plotRepository.FindPlots(garden.Id)
++            .Where(garden.ShouldReallocate)
++            .ToList();
++    }
++
++    public List<PlotOffer> CreateOffers(IEnumerable<Garden> gardens)
++    {
++        return gardens
++            .SelectMany(garden => garden.GetVacantPlots())
++            .Select(CreateOffer)
++            .ToList();
++    }
++
++    private PlotInvoice CreateInvoice(Plot plot, Season season)
++    {
++        var fee = _tariff.FeeFor(plot.SizeInSquareMetres, season.Year, plot.Tenant.IsSenior);
++        return new PlotInvoice(plot.Number, plot.Tenant.Name, fee);
++    }
++
++    private PlotOffer CreateOffer(Plot plot)
++    {
++        return new PlotOffer(plot.GardenName, plot.Number, plot.SizeInSquareMetres);
++    }
++}

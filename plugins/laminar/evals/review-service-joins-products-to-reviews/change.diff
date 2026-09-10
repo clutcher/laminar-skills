@@ -1,0 +1,89 @@
+diff --git a/shop/src/main/java/com/example/shop/catalog/ProductService.java b/shop/src/main/java/com/example/shop/catalog/ProductService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/catalog/ProductService.java
+@@ -0,0 +1,21 @@
++package com.example.shop.catalog;
++
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class ProductService {
++
++    private final ProductRepository productRepository;
++
++    public Product createProduct(ProductData data) {
++        return productRepository.save(Product.from(data));
++    }
++
++    public Product updateProduct(Long productId, ProductData data) {
++        return productRepository.save(productRepository.getById(productId).updatedWith(data));
++    }
++
++    public void deactivateProduct(Long productId) {
++        productRepository.save(productRepository.getById(productId).deactivated());
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/pricing/FuturePriceService.java b/shop/src/main/java/com/example/shop/pricing/FuturePriceService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/pricing/FuturePriceService.java
+@@ -0,0 +1,14 @@
++package com.example.shop.pricing;
++
++import java.time.LocalDate;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class FuturePriceService {
++
++    private final ScheduledPriceRepository scheduledPriceRepository;
++
++    public void schedulePriceChange(Long productId, Price price, LocalDate effective) {
++        scheduledPriceRepository.save(new ScheduledPrice(productId, price, effective));
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/pricing/PriceHistoryService.java b/shop/src/main/java/com/example/shop/pricing/PriceHistoryService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/pricing/PriceHistoryService.java
+@@ -0,0 +1,13 @@
++package com.example.shop.pricing;
++
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class PriceHistoryService {
++
++    private final PriceRepository priceRepository;
++
++    public PricingHistory calculatePriceHistory(Long productId, DateRange range) {
++        return new PricingHistory(priceRepository.findByProductIdAndValidFromBetween(productId, range.start(), range.end()));
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/review/ReviewService.java b/shop/src/main/java/com/example/shop/review/ReviewService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/review/ReviewService.java
+@@ -0,0 +1,21 @@
++package com.example.shop.review;
++
++import com.example.shop.catalog.Product;
++import java.util.List;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class ReviewService {
++
++    private final ReviewRepository reviewRepository;
++
++    public ProductReview getReview(Long productId) {
++        return reviewRepository.findLatestByProductId(productId);
++    }
++
++    public List<Product> loadProductsWithReviews(List<Product> products) {
++        return products.stream()
++                .map(product -> product.withReviews(reviewRepository.findByProductId(product.getId())))
++                .toList();
++    }
++}

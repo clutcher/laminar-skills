@@ -1,0 +1,43 @@
+diff --git a/src/main/java/org/riverside/library/notice/DueDateLabel.java b/src/main/java/org/riverside/library/notice/DueDateLabel.java
+index 03186e5..db1b68e 100644
+--- a/src/main/java/org/riverside/library/notice/DueDateLabel.java
++++ b/src/main/java/org/riverside/library/notice/DueDateLabel.java
+@@ -4,7 +4,13 @@ import java.time.LocalDate;
+ 
+ public class DueDateLabel {
+ 
++    private final LongDateFormat longDateFormat;
++
++    public DueDateLabel(LongDateFormat longDateFormat) {
++        this.longDateFormat = longDateFormat;
++    }
++
+     public String labelFor(LocalDate dueDate) {
+-        return dueDate.toString();
++        return longDateFormat.render(dueDate);
+     }
+ }
+diff --git a/src/main/java/org/riverside/library/notice/TitleLabel.java b/src/main/java/org/riverside/library/notice/TitleLabel.java
+index f996d43..fe220e5 100644
+--- a/src/main/java/org/riverside/library/notice/TitleLabel.java
++++ b/src/main/java/org/riverside/library/notice/TitleLabel.java
+@@ -1,8 +1,18 @@
+ package org.riverside.library.notice;
+ 
++import org.riverside.library.catalogue.CatalogueHttpClient;
++import org.riverside.library.catalogue.CatalogueRecord;
++
+ public class TitleLabel {
+ 
++    private final CatalogueHttpClient catalogueClient;
++
++    public TitleLabel(CatalogueHttpClient catalogueClient) {
++        this.catalogueClient = catalogueClient;
++    }
++
+     public String labelFor(String isbn) {
+-        return "the item with ISBN " + isbn;
++        CatalogueRecord record = catalogueClient.recordFor(isbn);
++        return "\"" + record.title() + "\" by " + record.author();
+     }
+ }

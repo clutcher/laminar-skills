@@ -1,0 +1,267 @@
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/locker/adapter/InMemoryLockerBankDirectory.java b/parcel-locker/src/main/java/com/example/lockerpost/locker/adapter/InMemoryLockerBankDirectory.java
+new file mode 100644
+index 0000000..dd50e53
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/locker/adapter/InMemoryLockerBankDirectory.java
+@@ -0,0 +1,34 @@
++package com.example.lockerpost.locker.adapter;
++
++import com.example.lockerpost.locker.domain.DestinationZone;
++import com.example.lockerpost.locker.domain.LockerBank;
++import com.example.lockerpost.locker.domain.LockerBankDirectory;
++import com.example.lockerpost.locker.domain.PostalPrefix;
++import org.springframework.stereotype.Component;
++
++import java.util.List;
++import java.util.Map;
++import java.util.function.Function;
++import java.util.stream.Collectors;
++
++@Component
++public class InMemoryLockerBankDirectory implements LockerBankDirectory {
++
++    private static final List<LockerBank> REGISTERED_BANKS = List.of(
++        new LockerBank("LB-CITY-014", new PostalPrefix("10"), DestinationZone.CITY),
++        new LockerBank("LB-CITY-031", new PostalPrefix("31"), DestinationZone.CITY),
++        new LockerBank("LB-CITY-052", new PostalPrefix("12"), DestinationZone.CITY),
++        new LockerBank("LB-CITY-078", new PostalPrefix("78"), DestinationZone.CITY),
++        new LockerBank("LB-SUB-220", new PostalPrefix("22"), DestinationZone.SUBURBAN),
++        new LockerBank("LB-SUB-238", new PostalPrefix("23"), DestinationZone.SUBURBAN),
++        new LockerBank("LB-RUR-470", new PostalPrefix("47"), DestinationZone.RURAL),
++        new LockerBank("LB-RUR-486", new PostalPrefix("48"), DestinationZone.RURAL));
++
++    private static final Map<String, LockerBank> BANKS_BY_ID = REGISTERED_BANKS.stream()
++        .collect(Collectors.toMap(LockerBank::bankId, Function.identity()));
++
++    @Override
++    public LockerBank findBank(String bankId) {
++        return BANKS_BY_ID.get(bankId);
++    }
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/DestinationZone.java b/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/DestinationZone.java
+new file mode 100644
+index 0000000..73d9ae7
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/DestinationZone.java
+@@ -0,0 +1,7 @@
++package com.example.lockerpost.locker.domain;
++
++public enum DestinationZone {
++    CITY,
++    SUBURBAN,
++    RURAL
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/LockerBank.java b/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/LockerBank.java
+new file mode 100644
+index 0000000..0cbef1b
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/LockerBank.java
+@@ -0,0 +1,4 @@
++package com.example.lockerpost.locker.domain;
++
++public record LockerBank(String bankId, PostalPrefix postalPrefix, DestinationZone zone) {
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/LockerBankDirectory.java b/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/LockerBankDirectory.java
+new file mode 100644
+index 0000000..2629e30
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/LockerBankDirectory.java
+@@ -0,0 +1,6 @@
++package com.example.lockerpost.locker.domain;
++
++public interface LockerBankDirectory {
++
++    LockerBank findBank(String bankId);
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/PostalPrefix.java b/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/PostalPrefix.java
+new file mode 100644
+index 0000000..4093b9a
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/locker/domain/PostalPrefix.java
+@@ -0,0 +1,12 @@
++package com.example.lockerpost.locker.domain;
++
++public record PostalPrefix(String value) {
++
++    private static final String TWO_DIGITS = "\\d{2}";
++
++    public PostalPrefix {
++        if (value == null || !value.matches(TWO_DIGITS)) {
++            throw new IllegalArgumentException("a postal prefix is two digits, not " + value);
++        }
++    }
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/AdmittedShipment.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/AdmittedShipment.java
+new file mode 100644
+index 0000000..746d9db
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/AdmittedShipment.java
+@@ -0,0 +1,6 @@
++package com.example.lockerpost.shipment.domain;
++
++import com.example.lockerpost.locker.domain.LockerBank;
++
++public record AdmittedShipment(LockerBank destinationBank, ShipmentShape shape) {
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/Carrier.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/Carrier.java
+new file mode 100644
+index 0000000..06c3c03
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/Carrier.java
+@@ -0,0 +1,7 @@
++package com.example.lockerpost.shipment.domain;
++
++public enum Carrier {
++    CITY_VAN,
++    REGIONAL_ROUTE,
++    NATIONAL_PARTNER
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/DispatchPlan.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/DispatchPlan.java
+new file mode 100644
+index 0000000..5cb6744
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/DispatchPlan.java
+@@ -0,0 +1,4 @@
++package com.example.lockerpost.shipment.domain;
++
++public record DispatchPlan(String destinationBankId, Carrier carrier, LockerSize lockerSize) {
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/Handover.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/Handover.java
+new file mode 100644
+index 0000000..d034ef7
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/Handover.java
+@@ -0,0 +1,6 @@
++package com.example.lockerpost.shipment.domain;
++
++public enum Handover {
++    CODE,
++    SIGNATURE
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/LockerSize.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/LockerSize.java
+new file mode 100644
+index 0000000..b4e7081
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/LockerSize.java
+@@ -0,0 +1,6 @@
++package com.example.lockerpost.shipment.domain;
++
++public enum LockerSize {
++    SMALL,
++    LARGE
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ServiceLevel.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ServiceLevel.java
+new file mode 100644
+index 0000000..ece624a
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ServiceLevel.java
+@@ -0,0 +1,7 @@
++package com.example.lockerpost.shipment.domain;
++
++public enum ServiceLevel {
++    STANDARD,
++    NEXT_DAY,
++    SAME_DAY
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentBookingResponse.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentBookingResponse.java
+new file mode 100644
+index 0000000..7ac0c3a
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentBookingResponse.java
+@@ -0,0 +1,9 @@
++package com.example.lockerpost.shipment.domain;
++
++public record ShipmentBookingResponse(
++    LockerSize lockerSize,
++    Handover handover,
++    int totalCents,
++    Carrier carrier
++) {
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentPrice.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentPrice.java
+new file mode 100644
+index 0000000..e632914
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentPrice.java
+@@ -0,0 +1,4 @@
++package com.example.lockerpost.shipment.domain;
++
++public record ShipmentPrice(int totalCents, ServiceLevel serviceLevel) {
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentRejected.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentRejected.java
+new file mode 100644
+index 0000000..5e823b5
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentRejected.java
+@@ -0,0 +1,12 @@
++package com.example.lockerpost.shipment.domain;
++
++import org.springframework.http.HttpStatus;
++import org.springframework.web.bind.annotation.ResponseStatus;
++
++@ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
++public class ShipmentRejected extends RuntimeException {
++
++    public ShipmentRejected(String reason) {
++        super(reason);
++    }
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentRequest.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentRequest.java
+new file mode 100644
+index 0000000..863a281
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentRequest.java
+@@ -0,0 +1,9 @@
++package com.example.lockerpost.shipment.domain;
++
++public record ShipmentRequest(
++    String destinationBankId,
++    int weightGrams,
++    int declaredValueCents,
++    ServiceLevel serviceLevel
++) {
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentShape.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentShape.java
+new file mode 100644
+index 0000000..549ccae
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ShipmentShape.java
+@@ -0,0 +1,7 @@
++package com.example.lockerpost.shipment.domain;
++
++public enum ShipmentShape {
++    LIGHT_PARCEL,
++    HEAVY_PARCEL,
++    HIGH_VALUE_PARCEL
++}
+diff --git a/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ValidatedShipment.java b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ValidatedShipment.java
+new file mode 100644
+index 0000000..f835eb5
+--- /dev/null
++++ b/parcel-locker/src/main/java/com/example/lockerpost/shipment/domain/ValidatedShipment.java
+@@ -0,0 +1,25 @@
++package com.example.lockerpost.shipment.domain;
++
++import com.example.lockerpost.locker.domain.DestinationZone;
++import com.example.lockerpost.locker.domain.LockerBank;
++import com.example.lockerpost.locker.domain.PostalPrefix;
++
++public record ValidatedShipment(
++    ShipmentRequest request,
++    LockerBank destinationBank,
++    LockerSize lockerSize,
++    Handover handover
++) {
++
++    public ServiceLevel serviceLevel() {
++        return request.serviceLevel();
++    }
++
++    public PostalPrefix postalPrefix() {
++        return destinationBank.postalPrefix();
++    }
++
++    public DestinationZone zone() {
++        return destinationBank.zone();
++    }
++}

@@ -1,0 +1,48 @@
+diff --git a/shop/src/main/java/com/example/shop/shipping/ShipmentService.java b/shop/src/main/java/com/example/shop/shipping/ShipmentService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/shipping/ShipmentService.java
+@@ -0,0 +1,18 @@
++package com.example.shop.shipping;
++
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class ShipmentService {
++
++    private final RateCalculator rateCalculator;
++
++    public Shipment createShipment(String street, String city,
++            String postalCode, String country,
++            double weight, String carrier,
++            boolean isFragile) {
++        Address destination = new Address(street, city, postalCode, country);
++        ShippingRate rate = rateCalculator.calculate(destination, weight, carrier);
++        return new Shipment(destination, rate, isFragile);
++    }
++}
+diff --git a/shop/src/test/java/com/example/shop/shipping/ShipmentServiceTest.java b/shop/src/test/java/com/example/shop/shipping/ShipmentServiceTest.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/test/java/com/example/shop/shipping/ShipmentServiceTest.java
+@@ -0,0 +1,20 @@
++package com.example.shop.shipping;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import org.junit.jupiter.api.Test;
++
++class ShipmentServiceTest {
++
++    @Test
++    void shouldCreateAShipmentToTheAddressItIsGiven() {
++        // given
++        ShipmentService shipmentService = new ShipmentService(new FlatRateCalculator());
++
++        // when
++        Shipment shipment = shipmentService.createShipment("Main St", "Berlin", "10115", "DE", 2.5, "DHL", true);
++
++        // then
++        assertThat(shipment.getDestination()).isEqualTo(new Address("Main St", "Berlin", "10115", "DE"));
++    }
++}

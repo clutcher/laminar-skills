@@ -1,0 +1,234 @@
+diff --git a/courier-desk/src/route-planning/index.ts b/courier-desk/src/route-planning/index.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/index.ts
+@@ -0,0 +1,3 @@
++export { PlanRoutesStep } from "./planning/PlanRoutesStep";
++export type { Route } from "./route/Route";
++export type { RouteStop } from "./route/RouteStop";
+diff --git a/courier-desk/src/route-planning/input/depots/Depot.ts b/courier-desk/src/route-planning/input/depots/Depot.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/input/depots/Depot.ts
+@@ -0,0 +1,7 @@
++export interface Depot {
++  readonly depotCode: string;
++  readonly latitude: number;
++  readonly longitude: number;
++  readonly vanCount: number;
++  readonly opensAt: string;
++}
+diff --git a/courier-desk/src/route-planning/input/depots/DepotDirectory.ts b/courier-desk/src/route-planning/input/depots/DepotDirectory.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/input/depots/DepotDirectory.ts
+@@ -0,0 +1,11 @@
++import { Depot } from "./Depot";
++
++export class DepotDirectory {
++  constructor(private readonly depots: Depot[]) {}
++
++  findDepot(depotCode: string): Depot {
++    const depot = this.depots.find(candidate => candidate.depotCode === depotCode);
++    if (!depot) throw new Error(`No depot with code ${depotCode}`);
++    return depot;
++  }
++}
+diff --git a/courier-desk/src/route-planning/input/orders/DeliveryOrder.ts b/courier-desk/src/route-planning/input/orders/DeliveryOrder.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/input/orders/DeliveryOrder.ts
+@@ -0,0 +1,9 @@
++export interface DeliveryOrder {
++  readonly orderId: string;
++  readonly postalCode: string;
++  readonly latitude: number;
++  readonly longitude: number;
++  readonly parcelCount: number;
++  readonly deliverFrom: string;
++  readonly deliverUntil: string;
++}
+diff --git a/courier-desk/src/route-planning/input/orders/OrderReader.ts b/courier-desk/src/route-planning/input/orders/OrderReader.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/input/orders/OrderReader.ts
+@@ -0,0 +1,14 @@
++import { DeliveryOrder } from "./DeliveryOrder";
++
++export interface OrderSource {
++  findOrdersForDay(deliveryDay: string): Promise<DeliveryOrder[]>;
++}
++
++export class OrderReader {
++  constructor(private readonly orderSource: OrderSource) {}
++
++  async readOrdersForDay(deliveryDay: string): Promise<DeliveryOrder[]> {
++    const orders = await this.orderSource.findOrdersForDay(deliveryDay);
++    return orders.filter(order => order.parcelCount > 0);
++  }
++}
+diff --git a/courier-desk/src/route-planning/input/road-map/RoadMapLoader.ts b/courier-desk/src/route-planning/input/road-map/RoadMapLoader.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/input/road-map/RoadMapLoader.ts
+@@ -0,0 +1,14 @@
++import { TravelTimeTable } from "./TravelTimeTable";
++
++export interface RoadMapSource {
++  loadTravelMinutes(region: string): Promise<Array<{ from: string; to: string; minutes: number }>>;
++}
++
++export class RoadMapLoader {
++  constructor(private readonly roadMapSource: RoadMapSource) {}
++
++  async loadTravelTimes(region: string): Promise<TravelTimeTable> {
++    const travelMinutes = await this.roadMapSource.loadTravelMinutes(region);
++    return new TravelTimeTable(new Map(travelMinutes.map(entry => [`${entry.from}>${entry.to}`, entry.minutes])));
++  }
++}
+diff --git a/courier-desk/src/route-planning/input/road-map/TravelTimeTable.ts b/courier-desk/src/route-planning/input/road-map/TravelTimeTable.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/input/road-map/TravelTimeTable.ts
+@@ -0,0 +1,7 @@
++export class TravelTimeTable {
++  constructor(private readonly minutesByPostalCodePair: Map<string, number>) {}
++
++  travelMinutes(fromPostalCode: string, toPostalCode: string): number {
++    return this.minutesByPostalCodePair.get(`${fromPostalCode}>${toPostalCode}`) ?? Number.POSITIVE_INFINITY;
++  }
++}
+diff --git a/courier-desk/src/route-planning/planning/PlanRoutesStep.ts b/courier-desk/src/route-planning/planning/PlanRoutesStep.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/planning/PlanRoutesStep.ts
+@@ -0,0 +1,29 @@
++import { OrderReader } from "../input/orders/OrderReader";
++import { DepotDirectory } from "../input/depots/DepotDirectory";
++import { RoadMapLoader } from "../input/road-map/RoadMapLoader";
++import { StopClusterer } from "./clustering/StopClusterer";
++import { StopSequencer } from "./sequencing/StopSequencer";
++import { Route } from "../route/Route";
++import { RouteStop } from "../route/RouteStop";
++
++export class PlanRoutesStep {
++  constructor(
++    private readonly orderReader: OrderReader,
++    private readonly depotDirectory: DepotDirectory,
++    private readonly roadMapLoader: RoadMapLoader,
++    private readonly stopClusterer: StopClusterer,
++    private readonly stopSequencer: StopSequencer,
++  ) {}
++
++  async planRoutes(deliveryDay: string, depotCode: string, region: string): Promise<Route[]> {
++    const depot = this.depotDirectory.findDepot(depotCode);
++    const orders = await this.orderReader.readOrdersForDay(deliveryDay);
++    const travelTimes = await this.roadMapLoader.loadTravelTimes(region);
++    const clusters = this.stopClusterer.clusterByPostalArea(orders, depot.vanCount);
++    return clusters.map(cluster => {
++      const sequence = this.stopSequencer.sequenceNearestFirst(cluster, cluster.orders[0].postalCode, travelTimes);
++      const stops = sequence.map((order, index): RouteStop => ({ stopNumber: index + 1, orderId: order.orderId, postalCode: order.postalCode }));
++      return { routeNumber: cluster.clusterNumber, depotCode: depot.depotCode, deliveryDay, stops, legs: [] };
++    });
++  }
++}
+diff --git a/courier-desk/src/route-planning/planning/clustering/StopCluster.ts b/courier-desk/src/route-planning/planning/clustering/StopCluster.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/planning/clustering/StopCluster.ts
+@@ -0,0 +1,6 @@
++import { DeliveryOrder } from "../../input/orders/DeliveryOrder";
++
++export interface StopCluster {
++  readonly clusterNumber: number;
++  readonly orders: DeliveryOrder[];
++}
+diff --git a/courier-desk/src/route-planning/planning/clustering/StopClusterer.ts b/courier-desk/src/route-planning/planning/clustering/StopClusterer.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/planning/clustering/StopClusterer.ts
+@@ -0,0 +1,14 @@
++import { DeliveryOrder } from "../../input/orders/DeliveryOrder";
++import { StopCluster } from "./StopCluster";
++
++export class StopClusterer {
++  clusterByPostalArea(orders: DeliveryOrder[], vanCount: number): StopCluster[] {
++    const sortedOrders = [...orders].sort((first, second) => first.postalCode.localeCompare(second.postalCode));
++    const ordersPerVan = Math.ceil(sortedOrders.length / vanCount);
++    const clusters: StopCluster[] = [];
++    for (let start = 0; start < sortedOrders.length; start += ordersPerVan) {
++      clusters.push({ clusterNumber: clusters.length + 1, orders: sortedOrders.slice(start, start + ordersPerVan) });
++    }
++    return clusters;
++  }
++}
+diff --git a/courier-desk/src/route-planning/planning/sequencing/SequencingLimits.ts b/courier-desk/src/route-planning/planning/sequencing/SequencingLimits.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/planning/sequencing/SequencingLimits.ts
+@@ -0,0 +1,4 @@
++export interface SequencingLimits {
++  readonly maxStopsPerRoute: number;
++  readonly maxDrivingMinutes: number;
++}
+diff --git a/courier-desk/src/route-planning/planning/sequencing/StopSequencer.ts b/courier-desk/src/route-planning/planning/sequencing/StopSequencer.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/planning/sequencing/StopSequencer.ts
+@@ -0,0 +1,21 @@
++import { DeliveryOrder } from "../../input/orders/DeliveryOrder";
++import { StopCluster } from "../clustering/StopCluster";
++import { TravelTimeTable } from "../../input/road-map/TravelTimeTable";
++import { SequencingLimits } from "./SequencingLimits";
++
++export class StopSequencer {
++  constructor(private readonly limits: SequencingLimits) {}
++
++  sequenceNearestFirst(cluster: StopCluster, startPostalCode: string, travelTimes: TravelTimeTable): DeliveryOrder[] {
++    const remaining = [...cluster.orders];
++    const sequence: DeliveryOrder[] = [];
++    let currentPostalCode = startPostalCode;
++    while (remaining.length > 0 && sequence.length < this.limits.maxStopsPerRoute) {
++      remaining.sort((first, second) => travelTimes.travelMinutes(currentPostalCode, first.postalCode) - travelTimes.travelMinutes(currentPostalCode, second.postalCode));
++      const nearest = remaining.shift()!;
++      sequence.push(nearest);
++      currentPostalCode = nearest.postalCode;
++    }
++    return sequence;
++  }
++}
+diff --git a/courier-desk/src/route-planning/route/Route.ts b/courier-desk/src/route-planning/route/Route.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/route/Route.ts
+@@ -0,0 +1,10 @@
++import { RouteStop } from "./RouteStop";
++import { RouteLeg } from "./RouteLeg";
++
++export interface Route {
++  readonly routeNumber: number;
++  readonly depotCode: string;
++  readonly deliveryDay: string;
++  readonly stops: RouteStop[];
++  readonly legs: RouteLeg[];
++}
+diff --git a/courier-desk/src/route-planning/route/RouteLeg.ts b/courier-desk/src/route-planning/route/RouteLeg.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/route/RouteLeg.ts
+@@ -0,0 +1,5 @@
++export interface RouteLeg {
++  readonly fromStopNumber: number;
++  readonly toStopNumber: number;
++  readonly drivingMinutes: number;
++}
+diff --git a/courier-desk/src/route-planning/route/RouteStop.ts b/courier-desk/src/route-planning/route/RouteStop.ts
+new file mode 100644
+--- /dev/null
++++ b/courier-desk/src/route-planning/route/RouteStop.ts
+@@ -0,0 +1,5 @@
++export interface RouteStop {
++  readonly stopNumber: number;
++  readonly orderId: string;
++  readonly postalCode: string;
++}

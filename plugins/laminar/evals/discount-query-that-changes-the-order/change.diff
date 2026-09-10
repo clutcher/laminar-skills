@@ -1,0 +1,21 @@
+diff --git a/shop/src/main/java/com/example/shop/pricing/OrderDiscountService.java b/shop/src/main/java/com/example/shop/pricing/OrderDiscountService.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/pricing/OrderDiscountService.java
+@@ -0,0 +1,16 @@
++package com.example.shop.pricing;
++
++import com.example.shop.order.Order;
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class OrderDiscountService {
++
++    private final DiscountEngine discountEngine;
++
++    public double calculateDiscount(Order order) {
++        double discount = discountEngine.calculate(order);
++        order.setTotal(order.getTotal() - discount);
++        return discount;
++    }
++}

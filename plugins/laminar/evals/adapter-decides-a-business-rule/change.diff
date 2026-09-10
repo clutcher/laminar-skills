@@ -1,0 +1,17 @@
+diff --git a/bakery/src/preorder/in/http/preorder-controller.ts b/bakery/src/preorder/in/http/preorder-controller.ts
+index 97bcb46..3386f0b 100644
+--- a/bakery/src/preorder/in/http/preorder-controller.ts
++++ b/bakery/src/preorder/in/http/preorder-controller.ts
+@@ -5,6 +5,12 @@ export class PreorderController {
+   constructor(private readonly placePreorder: PlacePreorder) {}
+ 
+   async placeOrder(request: Request, response: Response): Promise<void> {
++    const totalCents: number = request.body.totalCents;
++    const isMember: boolean = request.body.member === true;
++    if (totalCents >= 4000 && !isMember) {
++      response.status(402).json({ depositCents: Math.round(totalCents * 0.2) });
++      return;
++    }
+     const preorder = await this.placePreorder.place(request.body.customerId, request.body.items, request.body.pickupSlot);
+     response.status(201).json({ preorderId: preorder.preorderId });
+   }

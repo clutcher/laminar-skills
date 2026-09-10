@@ -1,0 +1,45 @@
+diff --git a/shop/src/main/java/com/example/shop/cart/quantity/CartLineQuantityNotice.java b/shop/src/main/java/com/example/shop/cart/quantity/CartLineQuantityNotice.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/cart/quantity/CartLineQuantityNotice.java
+@@ -0,0 +1,40 @@
++package com.example.shop.cart.quantity;
++
++public final class CartLineQuantityNotice {
++
++    private CartLineQuantityNotice() {}
++
++    public static QuantityNotice noticeFor(CartLine line) {
++        if (line.hasErpNotice(ErpNotice.ADJUSTED_TO_CONTRACT)) {
++            return QuantityNotice.ADJUSTED_TO_CONTRACT;
++        }
++        if (!isRaisedAboveRequestedQuantity(line)) {
++            return QuantityNotice.NONE;
++        }
++        if (isRaisedToMinimum(line)) {
++            return QuantityNotice.RAISED_TO_MINIMUM;
++        }
++        return QuantityNotice.ROUNDED_UP_TO_PACK_SIZE;
++    }
++
++    private static boolean isRaisedAboveRequestedQuantity(CartLine line) {
++        Integer requestedQuantity = line.requestedQuantity();
++        Integer erpQuantity = line.erpQuantity();
++        if (requestedQuantity == null || erpQuantity == null) {
++            return false;
++        }
++        return erpQuantity > requestedQuantity;
++    }
++
++    private static boolean isRaisedToMinimum(CartLine line) {
++        return line.hasErpNotice(ErpNotice.RAISED_TO_MINIMUM) || reachesMinimumOrderQuantity(line);
++    }
++
++    private static boolean reachesMinimumOrderQuantity(CartLine line) {
++        Integer minimumOrderQuantity = line.minimumOrderQuantity();
++        Integer requestedQuantity = line.requestedQuantity();
++        Integer erpQuantity = line.erpQuantity();
++        return minimumOrderQuantity != null && requestedQuantity != null && erpQuantity != null
++            && requestedQuantity < minimumOrderQuantity && erpQuantity >= minimumOrderQuantity;
++    }
++}

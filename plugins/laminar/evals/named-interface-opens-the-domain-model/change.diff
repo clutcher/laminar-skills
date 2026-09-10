@@ -1,0 +1,85 @@
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/app/spi/TraysReadyToShip.java b/nursery/src/main/java/com/example/nursery/delivery/app/spi/TraysReadyToShip.java
+new file mode 100644
+index 0000000..64a61cd
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/app/spi/TraysReadyToShip.java
+@@ -0,0 +1,10 @@
++package com.example.nursery.delivery.app.spi;
++
++import com.example.nursery.delivery.app.domain.model.TrayToShip;
++
++import java.util.List;
++
++public interface TraysReadyToShip {
++
++    List<TrayToShip> readyTraysOfVariety(String variety);
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/out/modules/TraysReadyToShipUsingPlantingModule.java b/nursery/src/main/java/com/example/nursery/delivery/out/modules/TraysReadyToShipUsingPlantingModule.java
+new file mode 100644
+index 0000000..4c04025
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/delivery/out/modules/TraysReadyToShipUsingPlantingModule.java
+@@ -0,0 +1,27 @@
++package com.example.nursery.delivery.out.modules;
++
++import com.example.nursery.delivery.app.domain.model.TrayToShip;
++import com.example.nursery.delivery.app.spi.TraysReadyToShip;
++import com.example.nursery.planting.app.domain.model.Seedling;
++import com.example.nursery.planting.in.modules.SeedlingLookup;
++
++import java.time.LocalDate;
++import java.util.List;
++
++public class TraysReadyToShipUsingPlantingModule implements TraysReadyToShip {
++
++    private final SeedlingLookup seedlingLookup;
++
++    public TraysReadyToShipUsingPlantingModule(SeedlingLookup seedlingLookup) {
++        this.seedlingLookup = seedlingLookup;
++    }
++
++    @Override
++    public List<TrayToShip> readyTraysOfVariety(String variety) {
++        LocalDate today = LocalDate.now();
++        return seedlingLookup.fullSeedlingsOfVariety(variety).stream()
++                .filter((Seedling seedling) -> seedling.readyToShipOn(today))
++                .map(seedling -> new TrayToShip(seedling.variety(), seedling.trayNumber()))
++                .toList();
++    }
++}
+diff --git a/nursery/src/main/java/com/example/nursery/delivery/package-info.java b/nursery/src/main/java/com/example/nursery/delivery/package-info.java
+index 320a1e7..4997193 100644
+--- a/nursery/src/main/java/com/example/nursery/delivery/package-info.java
++++ b/nursery/src/main/java/com/example/nursery/delivery/package-info.java
+@@ -1,2 +1,2 @@
+-@org.springframework.modulith.ApplicationModule(allowedDependencies = "planting::seedling-lookup")
++@org.springframework.modulith.ApplicationModule(allowedDependencies = {"planting::seedling-lookup", "planting::seedling-model"})
+ package com.example.nursery.delivery;
+diff --git a/nursery/src/main/java/com/example/nursery/planting/app/domain/model/package-info.java b/nursery/src/main/java/com/example/nursery/planting/app/domain/model/package-info.java
+new file mode 100644
+index 0000000..01a3a91
+--- /dev/null
++++ b/nursery/src/main/java/com/example/nursery/planting/app/domain/model/package-info.java
+@@ -0,0 +1,2 @@
++@org.springframework.modulith.NamedInterface("seedling-model")
++package com.example.nursery.planting.app.domain.model;
+diff --git a/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java b/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java
+index 432e24e..06c486e 100644
+--- a/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java
++++ b/nursery/src/main/java/com/example/nursery/planting/in/modules/SeedlingLookup.java
+@@ -1,5 +1,6 @@
+ package com.example.nursery.planting.in.modules;
+ 
++import com.example.nursery.planting.app.domain.model.Seedling;
+ import com.example.nursery.planting.app.spi.TrayStore;
+ 
+ import java.util.List;
+@@ -17,4 +18,8 @@ public class SeedlingLookup {
+                 .map(seedling -> new PublicSeedling(seedling.variety(), seedling.trayNumber()))
+                 .toList();
+     }
++
++    public List<Seedling> fullSeedlingsOfVariety(String variety) {
++        return trayStore.seedlingsOfVariety(variety);
++    }
+ }

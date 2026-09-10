@@ -1,0 +1,121 @@
+diff --git a/fleet-api/src/main/java/org/bikes/fleet/web/BikeFields.java b/fleet-api/src/main/java/org/bikes/fleet/web/BikeFields.java
+new file mode 100644
+--- /dev/null
++++ b/fleet-api/src/main/java/org/bikes/fleet/web/BikeFields.java
+@@ -0,0 +1,37 @@
++package org.bikes.fleet.web;
++
++import java.util.List;
++import org.bikes.fleet.bike.Accessory;
++import org.bikes.fleet.bike.AccessoryCatalogue;
++import org.bikes.fleet.bike.Bike;
++import org.bikes.fleet.bike.Region;
++import org.springframework.graphql.data.method.annotation.SchemaMapping;
++import org.springframework.stereotype.Controller;
++
++@Controller
++public class BikeFields {
++
++    private final AccessoryCatalogue accessoryCatalogue;
++
++    public BikeFields(AccessoryCatalogue accessoryCatalogue) {
++        this.accessoryCatalogue = accessoryCatalogue;
++    }
++
++    @SchemaMapping(typeName = "Bike")
++    public List<Accessory> accessories(Bike bike) {
++        if (bike.station().region() != Region.ALPINE) {
++            return List.of();
++        }
++        return accessoryCatalogue.accessoriesRentedWith(bike.serialNumber());
++    }
++
++    @SchemaMapping(typeName = "Bike")
++    public String frameClass(Bike bike) {
++        return bike.supplierFrameRow().frameCode();
++    }
++
++    @SchemaMapping(typeName = "Bike")
++    public int batteryPercent(Bike bike) {
++        return bike.lastReportedBatteryPercent();
++    }
++}
+diff --git a/fleet-api/src/main/resources/graphql/fleet.graphqls b/fleet-api/src/main/resources/graphql/fleet.graphqls
+--- a/fleet-api/src/main/resources/graphql/fleet.graphqls
++++ b/fleet-api/src/main/resources/graphql/fleet.graphqls
+@@ -6,6 +6,9 @@
+   id: ID!
+   serialNumber: String!
+   station: Station!
++  accessories: [Accessory!]!
++  frameClass: String
++  batteryPercent: Int!
+ }
+ 
+ type Station {
+@@ -19,3 +22,7 @@
+   COASTAL
+   URBAN
+ }
++
++type Accessory {
++  label: String!
++}
+diff --git a/rider-web/src/bike/BikeCard.tsx b/rider-web/src/bike/BikeCard.tsx
+--- a/rider-web/src/bike/BikeCard.tsx
++++ b/rider-web/src/bike/BikeCard.tsx
+@@ -1,10 +1,20 @@
+-import { BikeSummary } from "./BikeSummary";
++import { BikeSummary, Region } from "./BikeSummary";
++
++const ALPINE_REGION: Region = "ALPINE";
++const CARGO_FRAME = "C";
+ 
+ export function BikeCard({ bike }: { bike: BikeSummary }) {
++  const shownAccessories = bike.station.region === ALPINE_REGION ? bike.accessories : [];
++  const isCargoBike = bike.frameClass === CARGO_FRAME;
+   return (
+     <article className="bike-card">
+       <h3>{bike.serialNumber}</h3>
+       <p>{bike.station.displayName}</p>
++      <p className="battery">{bike.batteryPercent}%</p>
++      {isCargoBike && <p className="cargo-note">Seats for 2 children</p>}
++      <ul className="accessories">
++        {shownAccessories.map(accessory => <li key={accessory.label}>{accessory.label}</li>)}
++      </ul>
+     </article>
+   );
+ }
+diff --git a/rider-web/src/bike/BikeSummary.ts b/rider-web/src/bike/BikeSummary.ts
+--- a/rider-web/src/bike/BikeSummary.ts
++++ b/rider-web/src/bike/BikeSummary.ts
+@@ -5,8 +5,15 @@
+   region: Region;
+ }
+ 
++export interface AccessorySummary {
++  label: string;
++}
++
+ export interface BikeSummary {
+   id: string;
+   serialNumber: string;
+   station: StationSummary;
++  accessories: AccessorySummary[];
++  frameClass: string | null;
++  batteryPercent: number;
+ }
+diff --git a/rider-web/src/bike/bikesAtStation.graphql b/rider-web/src/bike/bikesAtStation.graphql
+--- a/rider-web/src/bike/bikesAtStation.graphql
++++ b/rider-web/src/bike/bikesAtStation.graphql
+@@ -6,5 +6,10 @@
+       displayName
+       region
+     }
++    accessories {
++      label
++    }
++    frameClass
++    batteryPercent
+   }
+ }
