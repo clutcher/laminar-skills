@@ -1,26 +1,12 @@
 diff --git a/README.md b/README.md
 new file mode 100644
-index 0000000..563087b
+index 0000000..9cca8a1
 --- /dev/null
 +++ b/README.md
 @@ -0,0 +1,3 @@
 +# Warehouse shipment service
 +
-+Java 21, Spring Boot. Shipments of the warehouse under `com.example.warehouse.shipment`. The carrier `RestClient` bean, the `JdbcTemplate` and the database schema are configured outside this repository slice.
-diff --git a/src/main/java/com/example/warehouse/shipment/app/api/ShipmentRegistering.java b/src/main/java/com/example/warehouse/shipment/app/api/ShipmentRegistering.java
-new file mode 100644
-index 0000000..2381af2
---- /dev/null
-+++ b/src/main/java/com/example/warehouse/shipment/app/api/ShipmentRegistering.java
-@@ -0,0 +1,8 @@
-+package com.example.warehouse.shipment.app.api;
-+
-+import com.example.warehouse.shipment.app.domain.model.Shipment;
-+
-+public interface ShipmentRegistering {
-+
-+    Shipment registerPackedShipment(String orderId, int weightGrams, String destinationPostcode);
-+}
++Java 21, Spring Boot. Shipments of the warehouse under `com.example.warehouse.shipment`. The carrier `RestClient` bean, the `JdbcTemplate`, the scheduling of Spring and the database schema are configured outside this repository slice.
 diff --git a/src/main/java/com/example/warehouse/shipment/app/domain/model/Shipment.java b/src/main/java/com/example/warehouse/shipment/app/domain/model/Shipment.java
 new file mode 100644
 index 0000000..4695854
@@ -33,13 +19,12 @@ index 0000000..4695854
 +}
 diff --git a/src/main/java/com/example/warehouse/shipment/app/domain/services/ShipmentRegisteringService.java b/src/main/java/com/example/warehouse/shipment/app/domain/services/ShipmentRegisteringService.java
 new file mode 100644
-index 0000000..d35a0c9
+index 0000000..065727a
 --- /dev/null
 +++ b/src/main/java/com/example/warehouse/shipment/app/domain/services/ShipmentRegisteringService.java
-@@ -0,0 +1,25 @@
+@@ -0,0 +1,23 @@
 +package com.example.warehouse.shipment.app.domain.services;
 +
-+import com.example.warehouse.shipment.app.api.ShipmentRegistering;
 +import com.example.warehouse.shipment.app.domain.model.Shipment;
 +import com.example.warehouse.shipment.app.spi.ShipmentRepository;
 +import org.springframework.stereotype.Service;
@@ -47,7 +32,7 @@ index 0000000..d35a0c9
 +import java.util.UUID;
 +
 +@Service
-+public class ShipmentRegisteringService implements ShipmentRegistering {
++public class ShipmentRegisteringService {
 +
 +    private final ShipmentRepository shipmentRepository;
 +
@@ -55,7 +40,6 @@ index 0000000..d35a0c9
 +        this.shipmentRepository = shipmentRepository;
 +    }
 +
-+    @Override
 +    public Shipment registerPackedShipment(String orderId, int weightGrams, String destinationPostcode) {
 +        Shipment shipment = new Shipment(UUID.randomUUID().toString(), orderId, weightGrams, destinationPostcode);
 +        shipmentRepository.save(shipment);
@@ -82,14 +66,14 @@ index 0000000..d6aca30
 +}
 diff --git a/src/main/java/com/example/warehouse/shipment/in/rest/ShipmentController.java b/src/main/java/com/example/warehouse/shipment/in/rest/ShipmentController.java
 new file mode 100644
-index 0000000..d5e53dc
+index 0000000..067e19f
 --- /dev/null
 +++ b/src/main/java/com/example/warehouse/shipment/in/rest/ShipmentController.java
 @@ -0,0 +1,24 @@
 +package com.example.warehouse.shipment.in.rest;
 +
-+import com.example.warehouse.shipment.app.api.ShipmentRegistering;
 +import com.example.warehouse.shipment.app.domain.model.Shipment;
++import com.example.warehouse.shipment.app.domain.services.ShipmentRegisteringService;
 +import org.springframework.web.bind.annotation.PostMapping;
 +import org.springframework.web.bind.annotation.RequestMapping;
 +import org.springframework.web.bind.annotation.RequestParam;
@@ -99,26 +83,27 @@ index 0000000..d5e53dc
 +@RequestMapping("/shipments")
 +public class ShipmentController {
 +
-+    private final ShipmentRegistering shipmentRegistering;
++    private final ShipmentRegisteringService shipmentRegisteringService;
 +
-+    public ShipmentController(ShipmentRegistering shipmentRegistering) {
-+        this.shipmentRegistering = shipmentRegistering;
++    public ShipmentController(ShipmentRegisteringService shipmentRegisteringService) {
++        this.shipmentRegisteringService = shipmentRegisteringService;
 +    }
 +
 +    @PostMapping
 +    public Shipment registerPackedShipment(@RequestParam String orderId, @RequestParam int weightGrams, @RequestParam String destinationPostcode) {
-+        return shipmentRegistering.registerPackedShipment(orderId, weightGrams, destinationPostcode);
++        return shipmentRegisteringService.registerPackedShipment(orderId, weightGrams, destinationPostcode);
 +    }
 +}
-diff --git a/src/main/java/com/example/warehouse/shipment/out/carrier/batching/BatchSender.java b/src/main/java/com/example/warehouse/shipment/out/carrier/batching/BatchSender.java
+diff --git a/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/BatchSender.java b/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/BatchSender.java
 new file mode 100644
-index 0000000..0ab9051
+index 0000000..fc96be8
 --- /dev/null
-+++ b/src/main/java/com/example/warehouse/shipment/out/carrier/batching/BatchSender.java
-@@ -0,0 +1,34 @@
-+package com.example.warehouse.shipment.out.carrier.batching;
++++ b/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/BatchSender.java
+@@ -0,0 +1,35 @@
++package com.example.warehouse.shipment.out.carrier.dispatch;
 +
 +import com.example.warehouse.shipment.app.domain.model.Shipment;
++import com.example.warehouse.shipment.out.carrier.dispatch.batching.ShipmentBatch;
 +import org.springframework.stereotype.Component;
 +import org.springframework.web.client.RestClient;
 +
@@ -150,13 +135,13 @@ index 0000000..0ab9051
 +    private record ManifestParcel(String reference, int weightGrams, String postcode) {
 +    }
 +}
-diff --git a/src/main/java/com/example/warehouse/shipment/out/carrier/batching/BatchWindow.java b/src/main/java/com/example/warehouse/shipment/out/carrier/batching/BatchWindow.java
+diff --git a/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/batching/BatchWindow.java b/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/batching/BatchWindow.java
 new file mode 100644
-index 0000000..7b6ab48
+index 0000000..7f0dcdd
 --- /dev/null
-+++ b/src/main/java/com/example/warehouse/shipment/out/carrier/batching/BatchWindow.java
++++ b/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/batching/BatchWindow.java
 @@ -0,0 +1,15 @@
-+package com.example.warehouse.shipment.out.carrier.batching;
++package com.example.warehouse.shipment.out.carrier.dispatch.batching;
 +
 +import java.time.Duration;
 +import java.time.Instant;
@@ -171,13 +156,13 @@ index 0000000..7b6ab48
 +        return !moment.isBefore(closesAt());
 +    }
 +}
-diff --git a/src/main/java/com/example/warehouse/shipment/out/carrier/batching/ShipmentBatch.java b/src/main/java/com/example/warehouse/shipment/out/carrier/batching/ShipmentBatch.java
+diff --git a/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/batching/ShipmentBatch.java b/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/batching/ShipmentBatch.java
 new file mode 100644
-index 0000000..3f5d82f
+index 0000000..cd63751
 --- /dev/null
-+++ b/src/main/java/com/example/warehouse/shipment/out/carrier/batching/ShipmentBatch.java
++++ b/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/batching/ShipmentBatch.java
 @@ -0,0 +1,37 @@
-+package com.example.warehouse.shipment.out.carrier.batching;
++package com.example.warehouse.shipment.out.carrier.dispatch.batching;
 +
 +import com.example.warehouse.shipment.app.domain.model.Shipment;
 +
@@ -251,5 +236,52 @@ index 0000000..4611cfa
 +        jdbcTemplate.update(
 +                "insert into shipment (shipment_id, order_id, weight_grams, destination_postcode) values (?, ?, ?, ?)",
 +                shipment.shipmentId(), shipment.orderId(), shipment.weightGrams(), shipment.destinationPostcode());
++    }
++}
+diff --git a/src/test/java/com/example/warehouse/shipment/app/domain/services/ShipmentRegisteringServiceTest.java b/src/test/java/com/example/warehouse/shipment/app/domain/services/ShipmentRegisteringServiceTest.java
+new file mode 100644
+index 0000000..0546ff1
+--- /dev/null
++++ b/src/test/java/com/example/warehouse/shipment/app/domain/services/ShipmentRegisteringServiceTest.java
+@@ -0,0 +1,41 @@
++package com.example.warehouse.shipment.app.domain.services;
++
++import com.example.warehouse.shipment.app.domain.model.Shipment;
++import com.example.warehouse.shipment.app.spi.ShipmentRepository;
++import org.junit.jupiter.api.Test;
++
++import java.util.HashMap;
++import java.util.Map;
++import java.util.Optional;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++class ShipmentRegisteringServiceTest {
++
++    private final Map<String, Shipment> savedShipments = new HashMap<>();
++    private final ShipmentRepository shipmentRepository = new ShipmentRepository() {
++        @Override
++        public Optional<Shipment> findById(String shipmentId) {
++            return Optional.ofNullable(savedShipments.get(shipmentId));
++        }
++
++        @Override
++        public void save(Shipment shipment) {
++            savedShipments.put(shipment.shipmentId(), shipment);
++        }
++    };
++    private final ShipmentRegisteringService shipmentRegisteringService = new ShipmentRegisteringService(shipmentRepository);
++
++    @Test
++    void shouldFindThePackedShipmentByItsIdWhenItWasRegistered() {
++        // given
++        String orderId = "ORD-2041";
++
++        // when
++        Shipment registered = shipmentRegisteringService.registerPackedShipment(orderId, 1850, "80331");
++
++        // then
++        assertThat(shipmentRepository.findById(registered.shipmentId()))
++                .contains(new Shipment(registered.shipmentId(), "ORD-2041", 1850, "80331"));
 +    }
 +}
