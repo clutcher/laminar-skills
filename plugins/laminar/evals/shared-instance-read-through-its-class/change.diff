@@ -1,0 +1,56 @@
+diff --git a/apiary/src/main/java/com/example/apiary/inspections/OccupiedFrameCounter.java b/apiary/src/main/java/com/example/apiary/inspections/OccupiedFrameCounter.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/inspections/OccupiedFrameCounter.java
+@@ -0,0 +1,13 @@
++package com.example.apiary.inspections;
++
++public final class OccupiedFrameCounter {
++
++    public static final OccupiedFrameCounter INSTANCE = new OccupiedFrameCounter();
++
++    private OccupiedFrameCounter() {
++    }
++
++    public int occupiedFramesOf(HiveInspection inspection) {
++        return inspection.broodFrames() + inspection.honeyFrames();
++    }
++}
+diff --git a/apiary/src/main/java/com/example/apiary/inspections/ApiaryReport.java b/apiary/src/main/java/com/example/apiary/inspections/ApiaryReport.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/inspections/ApiaryReport.java
+@@ -0,0 +1,14 @@
++package com.example.apiary.inspections;
++
++import java.util.List;
++
++public class ApiaryReport {
++
++    public int totalOccupiedFrames(List<HiveInspection> inspections) {
++        int totalOccupiedFrames = 0;
++        for (HiveInspection inspection : inspections) {
++            totalOccupiedFrames += OccupiedFrameCounter.INSTANCE.occupiedFramesOf(inspection);
++        }
++        return totalOccupiedFrames;
++    }
++}
+diff --git a/apiary/src/main/java/com/example/apiary/inspections/HiveSpaceAlert.java b/apiary/src/main/java/com/example/apiary/inspections/HiveSpaceAlert.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/inspections/HiveSpaceAlert.java
+@@ -0,0 +1,14 @@
++package com.example.apiary.inspections;
++
++public class HiveSpaceAlert {
++
++    private final int framesPerBox;
++
++    public HiveSpaceAlert(int framesPerBox) {
++        this.framesPerBox = framesPerBox;
++    }
++
++    public boolean needsAnotherBox(HiveInspection inspection) {
++        return OccupiedFrameCounter.INSTANCE.occupiedFramesOf(inspection) >= framesPerBox;
++    }
++}

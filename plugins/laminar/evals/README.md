@@ -229,6 +229,9 @@ It reaches a finding whose second place is outside the change.
 | `note-of-work-that-names-its-ticket` | A | clean: where the same note names its ticket | set from `defended-comment-in-one-short-line`, not measured |
 | `value-named-by-a-single-letter` | A | a new Java method of an allotment harvest ledger whose total is held in a value named by a single letter, a Prediction Failure the script raises | set from `defended-comment-in-one-short-line`, not measured |
 | `value-named-for-what-it-holds` | A | clean: where the same value is named for what it holds | set from `defended-comment-in-one-short-line`, not measured |
+| `shared-instance-read-through-its-class` | A | clean: a new Java class of an apiary declares a constant that holds its 1 shared object, named for that role alone, and 2 new classes read it only through the class name, which with the class name predicts the value | set from `value-named-for-what-it-holds`, not measured |
+| `shared-instance-read-through-its-companion-in-kotlin` | A | clean: the same shape in Kotlin, a marina tide class whose companion object holds its 1 shared object, read only through the class name | set from `value-named-for-what-it-holds`, not measured |
+| `general-word-field-whose-type-names-no-purpose` | A | a new Java field of an apiary swarm watch named by a general word, whose map type does not say what it holds either, a Prediction Failure | set from `value-named-by-a-single-letter`, not measured |
 | `late-fee-rule-cut-into-arithmetic-fragments` | B | a new late fee calculation of a tool library whose rule is cut into 2 private methods of 1 operation each, whose results mean nothing until the caller checks and combines them, Over-Extraction on the calculation | set from `schedule-rebuilt-with-overflow-slots-in-the-service`, not measured |
 
 `mispredicting-names-inside-a-change` has a base state holding the 3 files the change touches as they were before it, because 2 of its must-not lines rest on tests that sit above the change and a patch cannot carry them.
@@ -510,6 +513,10 @@ The script schedules Compression Failure only on a test whose body holds a phase
 
 `test-name-with-no-outcome-in-python`, `phase-comments-in-production-code`, `production-code-grouped-by-blank-lines`, `note-of-work-left-in-the-code`, `note-of-work-that-names-its-ticket`, `value-named-by-a-single-letter`, `value-named-for-what-it-holds` and `late-fee-rule-cut-into-arithmetic-fragments` are written fresh, in fictional tool-library, greenhouse and allotment domains, in Python, TypeScript, Go and Java.
 Writing them fresh is what makes them publishable.
+
+`shared-instance-read-through-its-class`, `shared-instance-read-through-its-companion-in-kotlin` and `general-word-field-whose-type-names-no-purpose` are written fresh in fictional apiary and marina domains, in Java and Kotlin, after the section *How Naming Makes Boundaries Work*, in the chapter *The Encapsulation Principle*, where the book reads a call site as 2 names together: "when the outside already names the purpose, the inside does not need to repeat it".
+Writing them fresh is what makes them publishable.
+They measure that a constant a type declares to hold its 1 shared object, read only through the name of that type, is not a name built on a general word, beside a field whose name and type both leave its purpose unsaid, which is.
 
 Every case whose row names the book comes by the second route: its code is a listing from the book *Laminar Software Design*, and its expectation is the verdict the book's own text states on that listing.
 The book is published, so its listings may be published as fixtures.

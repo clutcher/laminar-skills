@@ -1,0 +1,22 @@
+diff --git a/apiary/src/main/java/com/example/apiary/swarming/SwarmWatch.java b/apiary/src/main/java/com/example/apiary/swarming/SwarmWatch.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/swarming/SwarmWatch.java
+@@ -0,0 +1,17 @@
++package com.example.apiary.swarming;
++
++import java.util.HashMap;
++import java.util.Map;
++
++public class SwarmWatch {
++
++    private final Map<String, Integer> data = new HashMap<>();
++
++    public void recordQueenCells(String hiveName, int queenCells) {
++        data.put(hiveName, queenCells);
++    }
++
++    public boolean isLikelyToSwarm(String hiveName) {
++        return data.getOrDefault(hiveName, 0) > 0;
++    }
++}

@@ -1,0 +1,48 @@
+diff --git a/marina/src/main/kotlin/com/example/marina/tides/HighWaterEstimator.kt b/marina/src/main/kotlin/com/example/marina/tides/HighWaterEstimator.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/tides/HighWaterEstimator.kt
+@@ -0,0 +1,13 @@
++package com.example.marina.tides
++
++import java.time.Duration
++import java.time.LocalTime
++
++class HighWaterEstimator private constructor(private val lowToHighWater: Duration) {
++
++    fun highWaterAfter(lowWaterTime: LocalTime): LocalTime = lowWaterTime.plus(lowToHighWater)
++
++    companion object {
++        val INSTANCE = HighWaterEstimator(Duration.ofHours(6).plusMinutes(12))
++    }
++}
+diff --git a/marina/src/main/kotlin/com/example/marina/berths/BerthDepartureWindow.kt b/marina/src/main/kotlin/com/example/marina/berths/BerthDepartureWindow.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/berths/BerthDepartureWindow.kt
+@@ -0,0 +1,10 @@
++package com.example.marina.berths
++
++import com.example.marina.tides.HighWaterEstimator
++import java.time.LocalTime
++
++class BerthDepartureWindow(private val lowWaterTime: LocalTime) {
++
++    fun latestDeparture(): LocalTime =
++        HighWaterEstimator.INSTANCE.highWaterAfter(lowWaterTime)
++}
+diff --git a/marina/src/main/kotlin/com/example/marina/berths/HarbourEntryBoard.kt b/marina/src/main/kotlin/com/example/marina/berths/HarbourEntryBoard.kt
+new file mode 100644
+--- /dev/null
++++ b/marina/src/main/kotlin/com/example/marina/berths/HarbourEntryBoard.kt
+@@ -0,0 +1,10 @@
++package com.example.marina.berths
++
++import com.example.marina.tides.HighWaterEstimator
++import java.time.LocalTime
++
++class HarbourEntryBoard {
++
++    fun nextFullDepthEntry(lowWaterTime: LocalTime): LocalTime =
++        HighWaterEstimator.INSTANCE.highWaterAfter(lowWaterTime)
++}
