@@ -34,7 +34,7 @@ In an integration test, run all the code of the application up to its exit bound
 Write unit tests for logic whose branches multiply the outcomes past what the integration tests take. Once a class has unit tests, cover all its branches there. Do not write unit tests for every class by default. For logic that selects values from a table, test the calculation once and the edge cases of the lookup, not 1 test per row.
 
 - Book (*What Testing Means*, *How to Distribute Tests*): "Unit tests belong where combinatorial logic demands them, not as a default practice applied to every function or class" · "Once a class gets unit tests, the unit suite covers all its branches, not only the ones integration misses." · "Path count drives unit tests, not data count, so a two-hundred-row table generates one calculation test plus a few lookup edge cases."
-- Limits: a class whose branches the integration tests already take needs no unit tests.
+- Limits: a class whose branches the integration tests already take needs no unit tests. Checks that run one after another, each with 1 condition that rejects or passes, add their outcomes and do not multiply them, so the integration tests that reach each rejection cover them; an edge value of 1 check, such as a limit reached exactly, is a case of an integration test, not a reason for a unit test class.
 
 ## 6. Expected values from the requirement
 

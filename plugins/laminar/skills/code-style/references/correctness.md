@@ -49,7 +49,7 @@ Where an input is unusual but not wrong, such as a missing value or an empty lis
 
 ## 7. No hidden dependencies
 
-Write a calculation so it reads only its inputs and changes nothing outside itself. Most languages do not check this, so you keep it by hand. A function that reads state that another part can change depends on that part, and its signature does not show it; the order of calls or of threads can then change its result. This is the design decision *Remove Hidden Dependencies*.
+Write a calculation so it reads only its inputs and changes nothing outside itself. Most languages do not check this, so you keep it by hand. A function that reads state that another part can change depends on that part, and its signature does not show it; the order of calls or of threads can then change its result. A value the code draws from the world outside its inputs, such as the current time or a new random identifier, is such a dependency: take it from a parameter or from a source the class receives, as you take a clock. This is the design decision *Remove Hidden Dependencies*.
 
 - Book (*What Correctness Means*, *Remove Hidden Dependencies*): "When a function reads state that another part of the system can change, it depends on that part, but its signature cannot show that link." · "A pure function reads only its inputs and changes nothing outside itself, so it never touches state that other code shares."
 
