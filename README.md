@@ -143,7 +143,7 @@ A Simplicity or Design finding leads with one of the six cognitive failures of t
 
 ## The eval suite
 
-The evaluation cases are published under [`plugins/laminar/evals/`](plugins/laminar/evals/README.md), each as the diff a review is given, the findings the review is expected to raise and the ones it may not, written in the shape of the review's own reader file, and the cost the run is allowed, with `grade.mjs` beside them to build a case and grade a run on both. The private evaluation set, the other fixture repositories and the checkers that audit the skill's own text are kept privately.
+The evaluation cases are published under [`plugins/laminar/evals/`](plugins/laminar/evals/README.md): the cases of the review under `review/`, each as the diff a review is given, the findings the review is expected to raise and the ones it may not, written in the shape of the review's own reader file, and the cost the run is allowed, with `grade.mjs` beside them to build a case and grade a run on both, and the cases of the coding style skill under `code-style/`. The private evaluation set, the other fixture repositories and the checkers that audit the skill's own text are kept privately.
 
 ## Licence
 

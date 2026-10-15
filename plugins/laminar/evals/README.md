@@ -1,6 +1,6 @@
-# Evaluation cases for the review skill
+# Evaluation cases
 
-A case is a diff to review and the reader's file the review is expected to produce.
+The cases of the review skill stand under `review/`, 1 folder each. A case is a diff to review and the reader's file the review is expected to produce. The cases of the coding style skill stand under `code-style/`, where its own README says how they run. `grade.mjs` builds and grades the cases of both, because both end in a review's reader file.
 
 The `claude plugin eval` runner cannot run this skill, because a review is 5 session steps, 2 of them Workflow calls, and the Workflow tool is not one the runner can grant.
 So a case is built, reviewed and graded from a session instead, and a case holds none of the runner's own files, a `prompt.md`, a `case.yaml`, a `fixture.sh` or a `graders/` folder, because they grade nothing.
@@ -302,7 +302,7 @@ A must-not line may also name second places, as `<Kind> \`name\`, <Lead word>, a
 
 ## Running a case
 
-From a session, with `<case>` the case folder and `<dir>` a scratch folder outside this repository:
+From a session, with `<case>` the case folder, such as `evals/review/<name>`, and `<dir>` a scratch folder outside this repository:
 
 ```bash
 node evals/grade.mjs --build <dir> <case>
