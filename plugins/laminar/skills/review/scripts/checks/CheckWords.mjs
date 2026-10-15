@@ -70,7 +70,7 @@ export const DIRECTION_BY_CHECK_MAP = Object.freeze({
 
 export const DIRECTION_BY_JUDGE_TYPE_MAP = Object.freeze({
   [JUDGE_TYPE_BY_TRACK_MAP[TRACKS.COMMENT]]: Object.freeze({
-    S2: createDirection(PRINCIPLES.ENCAPSULATION, "Self-Documenting Code", "let a name say it, and keep only what no name can", "Comments earn their place only when they carry knowledge that no name or structure can express"),
+    S2: createDirection(PRINCIPLES.ENCAPSULATION, "Self-Documenting Code", "put what the comment says into a name, or keep only the why", "Comments earn their place only when they carry knowledge that no name or structure can express"),
     S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Self-Documenting Code", "name the commented block, or drop a comment the code already says", "The fix is to extract each commented block into a named method, so the name communicates the intent that the comment carried."),
   }),
   [JUDGE_TYPE_BY_TRACK_MAP[TRACKS.TEST_METHOD]]: Object.freeze({
