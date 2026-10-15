@@ -34,7 +34,7 @@ const readTheElementTypeTexts = typeText => {
 
 const WILDCARD_OR_VARIANCE_PATTERN = /^(?:\?\s*(?:extends|super)\s+|(?:out|in)\s+)/;
 
-const namesTheTypeOrItsElement = (typeText, typeName, steps = 0) => {
+export const namesTheTypeOrItsElement = (typeText, typeName, steps = 0) => {
   const cleaned = cleanTheTypeText(typeText).replace(WILDCARD_OR_VARIANCE_PATTERN, "");
   const type = parseType(cleaned);
   if (type && !type.collection && type.simple === typeName) return true;

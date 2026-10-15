@@ -44,6 +44,8 @@ const leadsANearTwinPair = (one, other) => one !== other
   && areNearTwins(one.members, other.members)
   && standForTheSameThing(one.type.name, other.type.name);
 
+const NO_EVIDENCE = Object.freeze({ readTheEvidenceOfThePair: () => ({}) });
+
 const isADeclaredTypeInSource = type => isADeclaredType(type) && isPlacedInSource(type);
 
 const buildTypesByPlace = codeGraph => new Map(codeGraph.listAbstractionsAt(Scale.CLASS)
@@ -51,9 +53,10 @@ const buildTypesByPlace = codeGraph => new Map(codeGraph.listAbstractionsAt(Scal
   .map(type => [`${type.place.file}:${type.place.startLine}`, type]));
 
 export class NearTwinTypeSearch {
-  constructor(codeGraph, linesOf) {
+  constructor(codeGraph, linesOf, evidence = NO_EVIDENCE) {
     this.readFileLines = filePath => linesOf(filePath) || [];
     this.typesByPlaceMap = buildTypesByPlace(codeGraph);
+    this.evidence = evidence;
   }
 
   findTypeOfTheAbstraction(abstraction) {
@@ -80,6 +83,7 @@ export class NearTwinTypeSearch {
       shared: sharedNames.length,
       members: twin.members.length,
       places: this.readTheSharedMemberPlaces(twin, sharedNames),
+      ...this.evidence.readTheEvidenceOfThePair(lead, twin),
     };
   }
 

@@ -1,0 +1,90 @@
+diff --git a/warehouse/src/warehouse/inventory/api.py b/warehouse/src/warehouse/inventory/api.py
+new file mode 100644
+--- /dev/null
++++ b/warehouse/src/warehouse/inventory/api.py
+@@ -0,0 +1,19 @@
++from warehouse.inventory.bin_store import BinStore
++from warehouse.inventory.models import Bin
++from warehouse.inventory.summaries import BinSummary
++
++
++def bins_in_aisle(store: BinStore, aisle: str) -> list[BinSummary]:
++    return [summary_of(bin_) for bin_ in store.bins_in_aisle(aisle)]
++
++
++def record_bin(store: BinStore, summary: BinSummary) -> None:
++    store.save(bin_of(summary))
++
++
++def summary_of(bin_: Bin) -> BinSummary:
++    return BinSummary(code=bin_.code, aisle=bin_.aisle, capacity=bin_.capacity, stored_units=bin_.stored_units)
++
++
++def bin_of(summary: BinSummary) -> Bin:
++    return Bin(code=summary.code, aisle=summary.aisle, capacity=summary.capacity, stored_units=summary.stored_units)
+diff --git a/warehouse/src/warehouse/inventory/bin_store.py b/warehouse/src/warehouse/inventory/bin_store.py
+new file mode 100644
+--- /dev/null
++++ b/warehouse/src/warehouse/inventory/bin_store.py
+@@ -0,0 +1,12 @@
++from warehouse.inventory.models import Bin
++
++
++class BinStore:
++    def __init__(self):
++        self._bins: dict[str, Bin] = {}
++
++    def save(self, bin_: Bin) -> None:
++        self._bins[bin_.code] = bin_
++
++    def bins_in_aisle(self, aisle: str) -> list[Bin]:
++        return [bin_ for bin_ in self._bins.values() if bin_.aisle == aisle]
+diff --git a/warehouse/src/warehouse/inventory/models.py b/warehouse/src/warehouse/inventory/models.py
+new file mode 100644
+--- /dev/null
++++ b/warehouse/src/warehouse/inventory/models.py
+@@ -0,0 +1,12 @@
++from dataclasses import dataclass
++
++
++@dataclass
++class Bin:
++    code: str
++    aisle: str
++    capacity: int
++    stored_units: int
++
++    def free_units(self) -> int:
++        return self.capacity - self.stored_units
+diff --git a/warehouse/src/warehouse/inventory/summaries.py b/warehouse/src/warehouse/inventory/summaries.py
+new file mode 100644
+--- /dev/null
++++ b/warehouse/src/warehouse/inventory/summaries.py
+@@ -0,0 +1,9 @@
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class BinSummary:
++    code: str
++    aisle: str
++    capacity: int
++    stored_units: int
+diff --git a/warehouse/src/warehouse/shipping/picking.py b/warehouse/src/warehouse/shipping/picking.py
+new file mode 100644
+--- /dev/null
++++ b/warehouse/src/warehouse/shipping/picking.py
+@@ -0,0 +1,13 @@
++from warehouse.inventory.summaries import BinSummary
++
++
++def units_to_pick(summaries: list[BinSummary], wanted_units: int) -> list[tuple[str, int]]:
++    picks = []
++    remaining_units = wanted_units
++    for summary in summaries:
++        if remaining_units == 0:
++            break
++        taken_units = min(summary.stored_units, remaining_units)
++        picks.append((summary.code, taken_units))
++        remaining_units -= taken_units
++    return picks

@@ -79,6 +79,11 @@ export class TypeAbstractions {
     return findTheTypeDeclarationsInScope(typeDeclarations, { path: filePath, folder: readFolderPath(filePath), importedPaths }).map(typeDeclaration => typeDeclaration.type);
   }
 
+  isTheOnlyTypeOfItsName(declaredType) {
+    const family = readLanguageFamily(declaredType.path);
+    return (this.typesByNameMap.get(declaredType.name) || []).filter(type => readLanguageFamily(type.place.file) === family).length === 1;
+  }
+
   isTheTypeInScopeAt(declaredType, filePath) {
     const inScope = this.findTheTypesInScope(declaredType.name, filePath);
     return inScope.length === 1 && inScope[0].place.file === declaredType.path && inScope[0].place.startLine === declaredType.from;

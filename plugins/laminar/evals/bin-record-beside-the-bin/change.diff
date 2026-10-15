@@ -1,0 +1,64 @@
+diff --git a/warehouse/src/warehouse/inventory/bin_store.py b/warehouse/src/warehouse/inventory/bin_store.py
+new file mode 100644
+--- /dev/null
++++ b/warehouse/src/warehouse/inventory/bin_store.py
+@@ -0,0 +1,10 @@
++from typing import Protocol
++
++from warehouse.inventory.models import Bin
++from warehouse.inventory.records import BinRecord
++
++
++class BinStore(Protocol):
++    def save(self, bin_: Bin) -> None: ...
++
++    def records_in_aisle(self, aisle: str) -> list[BinRecord]: ...
+diff --git a/warehouse/src/warehouse/inventory/models.py b/warehouse/src/warehouse/inventory/models.py
+new file mode 100644
+--- /dev/null
++++ b/warehouse/src/warehouse/inventory/models.py
+@@ -0,0 +1,12 @@
++from dataclasses import dataclass
++
++
++@dataclass
++class Bin:
++    code: str
++    aisle: str
++    capacity: int
++    stored_units: int
++
++    def free_units(self) -> int:
++        return self.capacity - self.stored_units
+diff --git a/warehouse/src/warehouse/inventory/records.py b/warehouse/src/warehouse/inventory/records.py
+new file mode 100644
+--- /dev/null
++++ b/warehouse/src/warehouse/inventory/records.py
+@@ -0,0 +1,9 @@
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class BinRecord:
++    code: str
++    aisle: str
++    capacity: int
++    stored_units: int
+diff --git a/warehouse/src/warehouse/inventory/stock.py b/warehouse/src/warehouse/inventory/stock.py
+new file mode 100644
+--- /dev/null
++++ b/warehouse/src/warehouse/inventory/stock.py
+@@ -0,0 +1,13 @@
++from warehouse.inventory.bin_store import BinStore
++from warehouse.inventory.models import Bin
++
++
++class StockService:
++    def __init__(self, store: BinStore):
++        self._store = store
++
++    def add_bin(self, code: str, aisle: str, capacity: int, stored_units: int) -> None:
++        self._store.save(Bin(code=code, aisle=aisle, capacity=capacity, stored_units=stored_units))
++
++    def units_in_aisle(self, aisle: str) -> int:
++        return sum(record.stored_units for record in self._store.records_in_aisle(aisle))

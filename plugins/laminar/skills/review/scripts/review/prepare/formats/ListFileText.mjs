@@ -95,13 +95,38 @@ const markAsListed = (places, listed) => {
   for (const place of places) listed.add(formatPlaceKey(place));
 };
 
+const formatLeftOutLines = (leftOut, singular, plural) => (leftOut ? [`Left out: ${formatCountedWord(leftOut, singular, plural)}`] : []);
+
+const formatEvidenceGroupLines = (head, lines, leftOutLines) => (lines.length ? [`${head}:`, ...lines, ...leftOutLines] : [`${head}: none`]);
+
+const formatNamingFilesLines = ({ typeName, places, leftOut }, formatWords) => formatEvidenceGroupLines(
+  `Named in other modules · \`${typeName}\``,
+  places.map(place => `- ${formatWords(place)} · ${place.path}:${place.line}: ${place.text}`),
+  formatLeftOutLines(leftOut, "file", "files"));
+
+const formatMappingLines = ({ head, built }, formatWords) => [
+  `- ${formatWords(head)} · ${head.path}:${head.line}: ${head.text}`,
+  ...(built ? [`${LINE_INDENT}${built.line}: ${built.text}`] : []),
+];
+
+const formatMappedLines = ({ names, mappings, leftOut }, formatWords) => formatEvidenceGroupLines(
+  `Mapped between ${names.map(name => `\`${name}\``).join(" and ")}`,
+  mappings.flatMap(mapping => formatMappingLines(mapping, formatWords)),
+  formatLeftOutLines(leftOut, "mapping", "mappings"));
+
+const formatTwinEvidenceLines = (occurrence, formatWords) => [
+  ...(occurrence.namedInOtherModules || []).flatMap(naming => formatNamingFilesLines(naming, formatWords)),
+  ...(occurrence.mapped ? formatMappedLines(occurrence.mapped, formatWords) : []),
+];
+
 const formatOccurrenceLines = (occurrence, fresh, homeRoot, applicationWordsOf) => {
   if (!fresh.length && !occurrence.stopped) return [];
   const head = formatHeadOfTheOccurrence(occurrence);
   const stopped = occurrence.stopped ? [STOPPED_AT_THE_LINE_LIMIT] : [];
   const formatWords = place => formatPlaceWords(place, homeRoot, applicationWordsOf);
   const grouped = [...groupPlacesByFileWithTheCopiesFolded(fresh)].flatMap(([path, file]) => formatFileGroupLines(path, file, formatWords));
-  return fresh.length ? [`${head}:`, ...grouped, ...stopped] : [`${head}: listed above`, ...stopped];
+  const evidence = formatTwinEvidenceLines(occurrence, formatWords);
+  return fresh.length ? [`${head}:`, ...grouped, ...stopped, ...evidence] : [`${head}: listed above`, ...stopped, ...evidence];
 };
 
 const formatScopeLine = scope => scope

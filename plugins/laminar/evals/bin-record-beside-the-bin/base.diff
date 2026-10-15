@@ -1,0 +1,32 @@
+diff --git a/warehouse/pyproject.toml b/warehouse/pyproject.toml
+new file mode 100644
+--- /dev/null
++++ b/warehouse/pyproject.toml
+@@ -0,0 +1,5 @@
++[project]
++name = "warehouse"
++version = "1.0.0"
++requires-python = ">=3.12"
++dependencies = []
+diff --git a/warehouse/src/warehouse/__init__.py b/warehouse/src/warehouse/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/warehouse/src/warehouse/inventory/__init__.py b/warehouse/src/warehouse/inventory/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/warehouse/src/warehouse/shipping/__init__.py b/warehouse/src/warehouse/shipping/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/warehouse/src/warehouse/shipping/parcels.py b/warehouse/src/warehouse/shipping/parcels.py
+new file mode 100644
+--- /dev/null
++++ b/warehouse/src/warehouse/shipping/parcels.py
+@@ -0,0 +1,8 @@
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class Parcel:
++    tracking_code: str
++    weight_grams: int
++    destination_postcode: str
