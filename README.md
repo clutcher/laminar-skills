@@ -112,6 +112,14 @@ There is no severity, no ranking and no cap. Every finding is a must, or it is n
 
 Against a repository the review reads callers, folders, tests and the build configuration. Against a bare patch it cannot, and the report says so: the mode is stated in the first line, the test checks read only the tests the patch carries, a finding that a test is needed has low confidence, and a check the patch cannot complete says in its own confidence what would confirm it.
 
+## Coding style
+
+The plugin also holds `laminar:code-style`, the same book's design directions for code that is written or changed: a new feature, a bug fix, a pull request comment or the fix of a review finding. Each direction gives its reason, the cognitive failure it prevents or its correctness or performance reason, so the code an agent writes is code the review accepts. It loads when Claude Code writes code, and you can ask for it by name.
+
+Its core is short and holds the order of work, the qualities, the cognitive failures, the 2 principles, the rules for when 2 directions pull against each other and the common pitfalls. Reference files per area, such as names, methods, classes, modules, tests and performance, hold the full directions with the book's sentences. A few rules of the author are narrower than the book, such as a verb at the start of every method name, and the skill marks each of them. Files under `conventions/` hold the rules of 1 language or framework; they apply to code in that language, and a project's own conventions win on those matters.
+
+It is not a review: it reports nothing, and the review stays the check of the result.
+
 ## What this review is not
 
 It does not find logic errors. A wrong tax formula is written exactly like a correct one, so reading the code cannot tell them apart. Only running the code reaches such an error.

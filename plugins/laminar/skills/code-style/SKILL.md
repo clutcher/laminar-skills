@@ -1,0 +1,95 @@
+---
+name: code-style
+description: Gives the design directions of the book Laminar Software Design, each with its reason, for any code that is written or changed, whatever the reason for the change, such as a new feature, a bug fix, a pull request comment, the fix of a review finding, or a refactor. It covers names, method bodies, classes, modules, types that hold state, entry boundaries, tests, I/O and comments, and gives for each direction the cognitive failure it prevents or its correctness or performance reason. Use it whenever code is written or changed, in any language. It is not a review. It reports no findings and judges no existing code on its own, and it shapes the code while it is written.
+---
+
+# Laminar code style
+
+These are the design directions of the book *Laminar Software Design* for any code you write or change. Each direction gives its reason, so you can apply it to a case it does not name. This skill is not a review. It shapes the code while you write it.
+
+Contents: 1. The scope of the change · 2. The order of work · 3. The qualities and their order · 4. The 6 cognitive failures · 5. The 2 principles · 6. When 2 directions pull against each other · 7. The common pitfalls · 8. The reference files
+
+## 1. The scope of the change
+
+Deliver the change that was asked, at the scope that was asked. A new feature adds what the feature needs. A bug fix changes the behavior that the bug report names. The fix of 1 review finding or 1 pull request comment changes what that finding or comment names, and nothing around it. Before you write, read the code around the change. The book: "When a developer receives a requirement, the first step is understanding the surrounding code: its structure, its boundaries, and the decisions that shaped them." Where an abstraction already owns the decision you need, call it, and do not write a second copy of the decision.
+
+1 case widens the scope: the decision you change also lives in other places. Then the change covers every place, because "a failure in one place can be fixed there, while a decision in many places needs a single home." Move the decision into 1 abstraction and let every place call it. A change to 1 copy leaves the other copies with the old rule, and nothing tells the next reader.
+
+Where you see another problem in code that the change does not touch, leave that code as it is, and name the problem when you report the change. The directions hold for every language. Where a language or a framework has a direct form of a direction, such as a closed set of values, an immutable type or module visibility, use that form. A form that these directions reject is wrong even where the code around it uses it: do not copy local style that breaks them.
+
+## 2. The order of work
+
+Decide the abstractions and their boundaries first, write all the production code next, and write the tests last: "confirming requires something to confirm, so design precedes code and code precedes tests." While you design and write, do not build or run the code: "During this phase, the developer does not run, build, or validate the code: the work is thinking and writing." Where writing shows a design problem, change the decision and then the code. Build and run once the tests are written, and fix what they show.
+
+## 3. The qualities and their order
+
+High-quality code is "simple, correct, and fast enough". Work on them in this order: "Readability first, then Flexibility, then Performance." "Correctness runs alongside this sequence rather than competing in it, because types and design prevent errors as you design and write, while tests verify behavior at the end."
+
+Prepare code for change only where change is expected: "do not optimize for flexibility before variation appears in the code or on the roadmap." Avoid wasted I/O while you write, because the better form costs no simplicity; build the batch operation where none exists. Tune computation only where a measurement against a threshold shows the need. When 2 qualities seem to conflict, first look for a better place for the boundary: "Most conflicts you run into are not real conflicts between qualities." Where outside pressure, such as a deadline or a measured hot path, forces you to lower a quality, put the lowered code inside its own abstraction and write the reason in a comment, because a reader cannot learn that reason from the code.
+
+## 4. The 6 cognitive failures
+
+Code is simple when a reader can build a complete model of it within the limits of working memory, and predict what it does from its names. The book names 6 ways in which this fails. Every direction of this skill gives 1 of them as its reason, or a correctness or performance reason. The book orders the failures "from most damaging to least":
+
+1. Incomplete mental model: the same decision lives in many places, so a change in 1 place misses the others. Its damage: "Causes wrong changes with high confidence".
+2. Prediction failure: a name predicts behavior that the code does not have. Its damage: "Forces model revision after reading".
+3. Working memory overload: there are too many visible items to hold at once, such as many parameters, or many fields that a method reads. Its damage: "Slows comprehension and blocks reasoning".
+4. Compression failure: the lines share no known shape and no purpose, so each line stays a separate item. Its damage: "Keeps operations as separate items".
+5. Unnamed part failure: a detail sits among the parts, and the part it belongs to has no name. Its damage: "Drops compression to the slow path".
+6. Open construct overload: conditions, loops, error blocks and functions passed to calls nest deep, and each one holds a slot of memory until it closes. Its damage: "Takes memory slots that cannot be freed".
+
+When you choose between 2 shapes of code, prefer the shape whose remaining failure stands lower in this list. A shape that removes 1 failure and adds a higher one is worse than the code before it.
+
+## 5. The 2 principles
+
+Encapsulation is, in the book's words, "a process of separating a part from others and hiding its details from them." For each new method, class or module, decide first what it hides: "what should this boundary hide from callers?" Expose only what callers need. The name is the boundary that callers read, so it must promise all that the code does, and nothing more.
+
+Single level of abstraction: "everything inside an abstraction is a part of what the name describes, and nothing is a detail of one of those parts." When you write new code, start from the name and list its parts. Name each part, and write each detail inside the part it belongs to. When you change existing code, ask of each operation whether it belongs to what the name describes. Where the answer names something more specific, the operation is a detail of that more specific part.
+
+The stopping rule: "The rule, then, is to extract while parts and details mix and to stop once every operation is a part." A line count does not set the size: "Size follows from consistency rather than from line count rules, because line counts measure a symptom while consistency addresses the cause." A long method of parts has the right size. A short method that mixes parts and details does not. Add a boundary only where it removes a failure. Every boundary adds depth that a reader must cross, so "over-extraction is itself a simplicity failure". Extract only a piece of work that is worth a name: a step a reader recognizes, or a choice with more than 1 answer. A helper, an interface or a factory for 1 operation that does not vary adds depth and hides nothing. The api and spi interfaces of the hexagonal shape are not this case: they are the boundary of the application, which is an abstraction itself.
+
+When new behavior is not a part of what an existing method, class or module names, give it a new abstraction, and do not add it to the nearest one. The book: "existing abstractions grow because the new abstractions that should exist are never created." The same principles hold at every scale: a variable, a method, a class, a module, an application.
+
+## 6. When 2 directions pull against each other
+
+- Extract or stop. Extract while a detail sits among the parts, and stop once every operation is a part. Inside a method that holds only parts, separate the groups with blank lines, not with new methods.
+- A private method or a new class. Where the part you extract works with the same fields and collaborators as the rest of the class, a private method serves the whole and helps the reader: "Each helper method isolates its own dependencies from the others, which means changing one piece does not require understanding the rest of the method at all." Where the part brings a field or a collaborator that no public method of the class uses, it is a part with its own state: give it its own class, named after the part, because "Methods that use a completely different set of objects to do their work belong behind different boundaries." Private methods grouped around such a field stay beside every change of the class, and "dependencies are working memory items during modification".
+- A helper in each caller or 1 home. Where the same decision appears in several callers, a private helper in each caller fixes each method but keeps every copy: "An extraction that fixes an unnamed part failure can leave the same decision duplicated in dozens of places, which trades an understanding problem for an incomplete mental model." Give the decision 1 owner that every caller calls.
+- 1 home or keep apart. Code that looks the same is not always 1 decision: "whether code that looks similar represents one business rule or many determines whether extraction helps or hurts." Keep 2 different business rules apart, also where a tool reports a duplicate.
+- Rename or reshape. Where a name is wrong, write a precise name. Where no short honest name fits, or the honest name lists 2 jobs, the abstraction groups unrelated behavior, and the behavior must move: "A naming problem needs a more precise name, while an abstraction problem needs the behavior redistributed across different abstractions."
+- Narrow or grouped parameters. "parameters should match what the method name describes, not sit above or below it." Values that travel together through several signatures, or that a method groups into 1 object as soon as it starts, get a type with a name. A method that uses 1 field of a large object takes that field. Parameters do not compress, so each one is a separate item at every call site: "Because parameters resist compression, the raw count matters", and the book's advice is "Aim for four parameters or fewer".
+- Normal result, check at the entry, or fail fast. An input that is unusual but has a natural answer, such as an empty list, gets a normal result. Data from outside is checked once, at the entry boundary. A state that is truly invalid stops the code and signals the failure: "Some inputs are just wrong, and no change to what an operation means can turn them into a normal result, so the code must check them somewhere." The domain decides which inputs are truly invalid.
+- A copy inside 1 application or across applications. 1 decision in 2 modules of 1 application is a copy: it is "one design decision that shows up in several modules and must stay the same in each for the system to stay correct", so give it 1 owner. In 2 applications that deploy apart, a copy can be a deliberate choice, to save a remote call or to check on both sides. Make that choice on purpose, and name it when you report the change.
+- Flexibility or readability. Add an interface, a factory or an extension point only where variation is seen in the code or on the roadmap: "Even where change is expected, check whether the minimum fix already solves the cognitive failure."
+
+Where a rule seems to forbid a shape that reads well, ask which of the 6 failures the shape causes. Where it causes none, the shape is fine, because "the detection questions, not the wording of any rule, decide each case".
+
+## 7. The common pitfalls
+
+The everyday fixes of the book's chapter *The Common Pitfalls*, for every change. The reference files give their limits.
+
+- *Self-Documenting Code*: where a block needs a comment that says what it does, extract it into a method named for its intent. Start every method name with a verb that states its work. No comment by default, no TODO.
+- *Context-Aware Constants*: name a constant, and every other value, for its business purpose, kind last, such as days or rate; 1 constant per rule, private where used.
+- *Guard Clauses*: put each precondition at the top and leave early, and move the checks that together say the input is ready behind 1 named check.
+- *Visual Separation*: keep the lines of each group together, with a blank line between groups and after the preconditions; while a detail sits among the parts, extract instead.
+- *Enums Over Boolean Flags*: give a category 1 closed set of named values for each exclusive dimension, not booleans or free text, which allow values the domain forbids.
+- *Boolean Parameter Splitting*: a flag that chooses 2 operations becomes 2 named methods, and a flag that picks a variant becomes a named value.
+- *Scoped Parameters*: give values that travel together, or that a method groups at once, a named type; pass 1 field, not a large object; keep the count low, because "the raw count matters".
+- *Builder*: where parts of an object depend on each other or on an order, put those rules in 1 place that checks the object before use.
+- *Single-Level Fields*: move fields that always appear together and that the business treats as 1 whole into their own type, not a copy of the storage table.
+- *Single-Level Methods*: add a public method only where it serves the class name and shares the types of its neighbours; a method that combines 2 abstractions goes to a caller above.
+
+## 8. The reference files
+
+Each file holds the full directions of 1 area, with the book's sentences and the limits of each direction. A rule marked narrower than the book is a rule of this skill that holds in every language; follow it as you follow the book. Read the files for the code your change touches. A change usually needs 2 or 3 of them.
+
+- `${CLAUDE_SKILL_DIR}/references/naming.md`: read when you add or change the name of a variable, a constant, a method, a class or a module.
+- `${CLAUDE_SKILL_DIR}/references/methods.md`: read when you write or change the body or the parameters of a method or a function.
+- `${CLAUDE_SKILL_DIR}/references/classes.md`: read when you create a class or a file of functions, or add a public method or a field.
+- `${CLAUDE_SKILL_DIR}/references/modules.md`: read when you create, move or split a file or a folder, or when a call crosses a module or an application.
+- `${CLAUDE_SKILL_DIR}/references/correctness.md`: read when you write a type that holds state, an entry boundary, a check of input or an error path.
+- `${CLAUDE_SKILL_DIR}/references/tests.md`: read when you write or change a test.
+- `${CLAUDE_SKILL_DIR}/references/performance.md`: read when you write an I/O call, a loop that reaches I/O, a cache or an expensive resource.
+- `${CLAUDE_SKILL_DIR}/references/comments.md`: read when you want to write a comment, or when you receive generated code with comments.
+
+Read `${CLAUDE_SKILL_DIR}/conventions/java.md`, `typescript.md` or `python.md` whenever you write code in that language, and `spring.md` only where the code already uses Spring. They hold rules of 1 language or framework; where the project's own CLAUDE.md or documented conventions say otherwise on such a matter, follow the project there; that override never reaches the directions above.

@@ -1,0 +1,44 @@
+# Spring
+
+Contents: 1. Constructor injection · 2. Inject by the interface · 3. Markers in the domain · 4. Configuration classes and properties · 5. Names of classes by role · 6. Strategies collected into a map · 7. Validation markers at the entry · 8. Executors and caches · 9. Tests with the framework
+
+These are rules of this skill for Spring, narrower than the book. Read this file only where the code already uses Spring, together with java.md. Where the project's own CLAUDE.md or its documented conventions say otherwise on a Spring matter, follow the project: that override holds for the rules of this file only, never for the directions of the main set. Each rule keeps to the directions of the main set; where they seem to pull apart, the main set wins.
+
+## 1. Constructor injection
+
+Inject every dependency through the constructor, into a private final field. Write no field injection, no setter injection, and no Autowired marker on a class with 1 constructor. Never ask the application context for a bean in code: that is a hidden dependency the signature does not show (correctness, section 7). A configuration value comes in as a constructor parameter with its Value marker.
+
+## 2. Inject by the interface
+
+Where a dependency has an interface, such as an api or spi interface of the application, declare the field with that interface and never with the class that implements it. Do not add an interface only to inject by it (classes, section 8).
+
+## 3. Markers in the domain
+
+A stereotype marker such as Component or Service, and a Value marker on a constructor parameter, may stay on a domain class: they only describe the class and do nothing when the logic runs (classes, section 10). Behavior that the framework runs on its own, such as a transaction around a method or logic on save, stays out of the domain class.
+
+## 4. Configuration classes and properties
+
+A configuration class takes its properties as constructor parameters and has no getters and no fields bound by markers. Split the property files by concern, such as executors, clients and caches, and write keys in the form of the framework, words in lower case joined by hyphens, grouped like the keys of the framework itself. Each key with children holds only keys that belong to what it names, as the fields of a class do (classes, section 5). Never commit a file of local overrides.
+
+## 5. Names of classes by role
+
+End a class name with the word for its role where it has one, such as Service, Repository, Controller, Mapper, Validator, Factory, Builder or Exception, after a business word that says which (naming, section 2). Name the types of a web interface for the call with Request and Response, and an entry of a list in them with RequestItem or ResponseItem; these words stay out of the domain (modules, section 5).
+
+## 6. Strategies collected into a map
+
+Where cases keep arriving and each has its own class (classes, section 8), let each strategy state the key it supports, collect the strategies into a map by that key in the constructor, fail at start where 2 strategies claim 1 key, and give a fallback strategy where one is right for every other key. Never choose a strategy by a naming convention of the beans.
+
+## 7. Validation markers at the entry
+
+Put validation markers, such as NotNull and Valid, on the types of an entry boundary and on the parameters of its method, and nowhere inside (correctness, section 8).
+
+## 8. Executors and caches
+
+Build an executor from the factory the framework gives, and set only the values you change, so the framework keeps handling virtual threads. Let a cache drop its entries under memory pressure, read its time to live from a property, and never store a missing value.
+
+## 9. Tests with the framework
+
+- An integration test starts the application and calls its entry boundary as a real caller does, such as through a web test client, and replaces only what lies past the exit boundary with a substitute bean of the framework, never a plain substitute that the context does not know (tests, sections 3 and 4).
+- Assert on the content of the response with concrete values; capture an argument sent to a substitute only for an effect that leaves no trace in the response (tests, section 3).
+- Test pure logic without the framework context (java.md, section 11).
+- Give a test a property through the property support of the test framework or through the constructor, never by setting a field by reflection.
