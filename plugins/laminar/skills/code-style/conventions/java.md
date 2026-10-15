@@ -2,7 +2,7 @@
 
 Contents: 1. Records for values · 2. Null for a missing item, and no Optional · 3. Streams only where they read better than a loop · 4. A closed switch over a sealed type or an enum · 5. Failures as unchecked exceptions with an error kind · 6. Fields, constructor, methods in a fixed order · 7. Explicit imports · 8. Small forms of the language · 9. A class of static functions · 10. Libraries: Lombok, MapStruct, multimaps · 11. Tests: JUnit and Mockito
 
-These are rules of this skill for Java, narrower than the book. Read this file whenever you write Java. Where the project's own CLAUDE.md or its documented conventions say otherwise on a Java matter, follow the project: that override holds for the rules of this file only, never for the directions of the main set. Each rule keeps to the directions of the main set; where they seem to pull apart, the main set wins.
+These are rules of this skill for Java, narrower than the book. Read this file whenever you write Java. Each rule keeps to the directions of the main set; where they seem to pull apart, the main set wins.
 
 ## 1. Records for values
 
@@ -50,7 +50,7 @@ A class that holds only static functions is final and has a private constructor.
 
 Read this section only where the code already uses the library.
 
-- Lombok: on a record, use the builder and the with methods of Lombok, and the builder of an existing value to change 1 field in a copy. Keep the form of builder steps the project already uses (naming, section 3). Declare a logger by hand as a private static final field, not through a Lombok annotation.
+- Lombok: on a record, use the builder and the with methods of Lombok, and the builder of an existing value to change 1 field in a copy. Declare a logger by hand as a private static final field, not through a Lombok annotation.
 - MapStruct: map between the types of 2 boundaries in a MapStruct mapper, not field by field in a controller or a service, and use its built-in support for maps and collections. Name each mapper method with a verb, such as map or convert, and never starting with to or from (naming, section 3). Map only at a boundary between modules or at an entry boundary, never into a second storage copy of a domain object (classes, section 11).
 - Multimaps: where code keeps several values for 1 key, use the multimap of the library the project has, not a map of lists or parallel lists that it fills by hand.
 

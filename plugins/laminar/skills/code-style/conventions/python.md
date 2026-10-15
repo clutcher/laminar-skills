@@ -2,7 +2,7 @@
 
 Contents: 1. Type hints everywhere · 2. Names and test names
 
-These are rules of this skill for Python, narrower than the book. Read this file whenever you write Python. Where the project's own CLAUDE.md or its documented conventions say otherwise on a Python matter, follow the project: that override holds for the rules of this file only, never for the directions of the main set.
+These are rules of this skill for Python, narrower than the book. Read this file whenever you write Python.
 
 ## 1. Type hints everywhere
 

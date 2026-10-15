@@ -2,7 +2,7 @@
 
 Contents: 1. Constructor injection · 2. Inject by the interface · 3. Markers in the domain · 4. Configuration classes and properties · 5. Names of classes by role · 6. Strategies collected into a map · 7. Validation markers at the entry · 8. Executors and caches · 9. Tests with the framework
 
-These are rules of this skill for Spring, narrower than the book. Read this file only where the code already uses Spring, together with java.md. Where the project's own CLAUDE.md or its documented conventions say otherwise on a Spring matter, follow the project: that override holds for the rules of this file only, never for the directions of the main set. Each rule keeps to the directions of the main set; where they seem to pull apart, the main set wins.
+These are rules of this skill for Spring, narrower than the book. Read this file only where the code already uses Spring, together with java.md. Each rule keeps to the directions of the main set; where they seem to pull apart, the main set wins.
 
 ## 1. Constructor injection
 

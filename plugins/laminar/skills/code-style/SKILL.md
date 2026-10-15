@@ -92,4 +92,4 @@ Each file holds the full directions of 1 area, with the book's sentences and the
 - `${CLAUDE_SKILL_DIR}/references/performance.md`: read when you write an I/O call, a loop that reaches I/O, a cache or an expensive resource.
 - `${CLAUDE_SKILL_DIR}/references/comments.md`: read when you want to write a comment, or when you receive generated code with comments.
 
-Read `${CLAUDE_SKILL_DIR}/conventions/java.md`, `typescript.md` or `python.md` whenever you write code in that language, and `spring.md` only where the code already uses Spring. They hold rules of 1 language or framework; where the project's own CLAUDE.md or documented conventions say otherwise on such a matter, follow the project there; that override never reaches the directions above.
+Read `${CLAUDE_SKILL_DIR}/conventions/java.md`, `typescript.md` or `python.md` whenever you write code in that language, and `spring.md` only where the code already uses Spring. They hold rules of 1 language or framework.
