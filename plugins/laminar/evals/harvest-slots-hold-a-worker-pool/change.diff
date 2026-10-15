@@ -1,0 +1,80 @@
+diff --git a/orchard/packhouse/harvest_slot_planner.py b/orchard/packhouse/harvest_slot_planner.py
+new file mode 100644
+--- /dev/null
++++ b/orchard/packhouse/harvest_slot_planner.py
+@@ -0,0 +1,75 @@
++from concurrent.futures import Executor, Future
++
++from orchard.packhouse.client import PackhouseAnswer, PackhouseClient, PackhouseLine
++from orchard.packhouse.slots import HarvestSlot, OrchardKey, Picking
++
++
++class HarvestSlotPlanner:
++    def __init__(self, pool: Executor, packhouse_client: PackhouseClient, pickings_per_request: int):
++        self._pool = pool
++        self._packhouse_client = packhouse_client
++        self._pickings_per_request = pickings_per_request
++
++    def plan_slots(self, pickings: list[Picking]) -> list[HarvestSlot]:
++        graded_pickings = self._without_samples(pickings)
++        chunks = self._chunk(self._split_by_orchard(graded_pickings))
++        futures = self._submit_all(chunks)
++        slots = []
++        for future in futures:
++            slots.extend(future.result())
++        return slots
++
++    def _without_samples(self, pickings: list[Picking]) -> list[Picking]:
++        return [picking for picking in pickings if not picking.is_sample]
++
++    def _split_by_orchard(self, pickings: list[Picking]) -> dict[OrchardKey, list[Picking]]:
++        pickings_by_orchard = {}
++        for picking in pickings:
++            key = OrchardKey(picking.orchard_code, picking.block_code)
++            pickings_by_orchard.setdefault(key, []).append(picking)
++        return pickings_by_orchard
++
++    def _chunk(self, pickings_by_orchard: dict[OrchardKey, list[Picking]]) -> list[list[Picking]]:
++        chunks = []
++        for orchard_pickings in pickings_by_orchard.values():
++            for start in range(0, len(orchard_pickings), self._pickings_per_request):
++                chunks.append(orchard_pickings[start:start + self._pickings_per_request])
++        return chunks
++
++    def _submit_all(self, chunks: list[list[Picking]]) -> list[Future]:
++        futures = []
++        for chunk in chunks:
++            try:
++                futures.append(self._pool.submit(self._plan_chunk, chunk))
++            except RuntimeError:
++                futures.append(self._finished(self._plan_chunk(chunk)))
++        return futures
++
++    def _finished(self, slots: list[HarvestSlot]) -> Future:
++        future = Future()
++        future.set_result(slots)
++        return future
++
++    def _plan_chunk(self, chunk: list[Picking]) -> list[HarvestSlot]:
++        answers = self._packhouse_client.plan_lines(self._to_packhouse_lines(chunk))
++        slots = []
++        for answer in answers:
++            picking = chunk[answer.line_number - 1]
++            slots.append(HarvestSlot(picking.picking_id, answer.slot_opens, answer.slot_closes, self._find_late_crates(picking, answer)))
++        return slots
++
++    def _to_packhouse_lines(self, chunk: list[Picking]) -> list[PackhouseLine]:
++        return [self._to_packhouse_line(picking, index + 1) for index, picking in enumerate(chunk)]
++
++    def _to_packhouse_line(self, picking: Picking, line_number: int) -> PackhouseLine:
++        return PackhouseLine(line_number, picking.block_code, picking.picked_at, self._resolve_crate_count(picking))
++
++    def _resolve_crate_count(self, picking: Picking) -> int:
++        if picking.grower.counts_crates_at_the_row:
++            return picking.row_crates
++        if picking.weighed_crates > 0:
++            return picking.weighed_crates
++        return picking.booked_crates
++
++    def _find_late_crates(self, picking: Picking, answer: PackhouseAnswer) -> int:
++        return max(0, self._resolve_crate_count(picking) - answer.first_grader_capacity)

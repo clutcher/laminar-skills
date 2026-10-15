@@ -1,0 +1,36 @@
+diff --git a/harbour/src/main/java/com/example/harbour/arrival/ArrivalNoticeService.java b/harbour/src/main/java/com/example/harbour/arrival/ArrivalNoticeService.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/arrival/ArrivalNoticeService.java
+@@ -0,0 +1,31 @@
++package com.example.harbour.arrival;
++
++public class ArrivalNoticeService {
++
++    private final HarbourAuthorityClient harbourAuthorityClient;
++    private final ArrivalNoticeMapper arrivalNoticeMapper;
++
++    public ArrivalNoticeService(HarbourAuthorityClient harbourAuthorityClient, ArrivalNoticeMapper arrivalNoticeMapper) {
++        this.harbourAuthorityClient = harbourAuthorityClient;
++        this.arrivalNoticeMapper = arrivalNoticeMapper;
++    }
++
++    public NoticeStatus fileNotice(ArrivalNotice notice) {
++        AuthorityNotice filed = harbourAuthorityClient.file(arrivalNoticeMapper.toAuthorityNotice(notice));
++        return arrivalNoticeMapper.toNoticeStatus(filed);
++    }
++
++    public NoticeStatus amendNotice(ArrivalNotice notice) {
++        AuthorityNotice amended = harbourAuthorityClient.amend(notice.noticeCode(), arrivalNoticeMapper.toAuthorityNotice(notice));
++        return arrivalNoticeMapper.toNoticeStatus(amended);
++    }
++
++    public NoticeStatus withdrawNotice(ArrivalNotice notice) {
++        return withdrawByReference(notice.noticeCode());
++    }
++
++    private NoticeStatus withdrawByReference(String reference) {
++        AuthorityNotice withdrawn = harbourAuthorityClient.withdraw(reference);
++        return arrivalNoticeMapper.toNoticeStatus(withdrawn);
++    }
++}

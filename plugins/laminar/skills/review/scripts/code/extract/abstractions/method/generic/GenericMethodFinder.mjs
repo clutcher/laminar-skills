@@ -31,6 +31,10 @@ export class GenericMethodFinder extends AbstractionFinder {
     return this.testCallbacks.includes(name);
   }
 
+  readReceiverWord() {
+    return "";
+  }
+
   findReturnTypes(before, after) {
     if (this.returnTypePlace === "before") {
       const found = RETURN_BEFORE_PATTERN.exec(String(before || "").replace(/\s+$/, ""));

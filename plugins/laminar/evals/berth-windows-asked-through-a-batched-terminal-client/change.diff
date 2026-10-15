@@ -1,0 +1,68 @@
+diff --git a/harbour/src/main/java/com/example/harbour/berth/BerthWindowEstimationService.java b/harbour/src/main/java/com/example/harbour/berth/BerthWindowEstimationService.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/berth/BerthWindowEstimationService.java
+@@ -0,0 +1,63 @@
++package com.example.harbour.berth;
++
++import com.example.harbour.terminal.BatchedTerminalPlanner;
++import com.example.harbour.terminal.SlotAnswer;
++import com.example.harbour.terminal.SlotRequest;
++import java.util.ArrayList;
++import java.util.List;
++
++public class BerthWindowEstimationService {
++
++    private final BatchedTerminalPlanner batchedTerminalPlanner;
++
++    public BerthWindowEstimationService(BatchedTerminalPlanner batchedTerminalPlanner) {
++        this.batchedTerminalPlanner = batchedTerminalPlanner;
++    }
++
++    public List<BerthWindow> estimateBerthWindows(List<VesselCall> calls) {
++        List<VesselCall> cargoCalls = withoutPilotBoats(calls);
++        List<SlotAnswer> answers = batchedTerminalPlanner.planSlotsInBatches(toSlotRequests(cargoCalls));
++        return toBerthWindows(cargoCalls, answers);
++    }
++
++    private List<VesselCall> withoutPilotBoats(List<VesselCall> calls) {
++        return calls.stream()
++                .filter(call -> !call.isPilotBoat())
++                .toList();
++    }
++
++    private List<SlotRequest> toSlotRequests(List<VesselCall> calls) {
++        List<SlotRequest> requests = new ArrayList<>();
++        for (int index = 0; index < calls.size(); index++) {
++            requests.add(toSlotRequest(calls.get(index), index + 1));
++        }
++        return requests;
++    }
++
++    private SlotRequest toSlotRequest(VesselCall call, int lineNumber) {
++        return new SlotRequest(lineNumber, call.terminalCode(), call.arrival(), resolveContainerCount(call));
++    }
++
++    private int resolveContainerCount(VesselCall call) {
++        if (call.shippingLine().declaresContainers()) {
++            return call.declaredContainers();
++        }
++        if (call.manifestedContainers() > 0) {
++            return call.manifestedContainers();
++        }
++        return call.bookedContainers();
++    }
++
++    private List<BerthWindow> toBerthWindows(List<VesselCall> calls, List<SlotAnswer> answers) {
++        List<BerthWindow> windows = new ArrayList<>();
++        for (SlotAnswer answer : answers) {
++            VesselCall call = calls.get(answer.lineNumber() - 1);
++            windows.add(new BerthWindow(call.callId(), answer.berthOpens(), answer.berthCloses(), findLateContainers(call, answer)));
++        }
++        return windows;
++    }
++
++    private int findLateContainers(VesselCall call, SlotAnswer answer) {
++        return Math.max(0, resolveContainerCount(call) - answer.firstCraneCapacity());
++    }
++}

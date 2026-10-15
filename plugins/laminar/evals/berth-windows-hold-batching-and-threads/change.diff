@@ -1,0 +1,115 @@
+diff --git a/harbour/src/main/java/com/example/harbour/berth/BerthWindowEstimationService.java b/harbour/src/main/java/com/example/harbour/berth/BerthWindowEstimationService.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/berth/BerthWindowEstimationService.java
+@@ -0,0 +1,110 @@
++package com.example.harbour.berth;
++
++import com.example.harbour.terminal.SlotAnswer;
++import com.example.harbour.terminal.SlotRequest;
++import com.example.harbour.terminal.TerminalPlanner;
++import java.util.ArrayList;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.concurrent.CompletableFuture;
++import java.util.concurrent.Executor;
++import java.util.concurrent.RejectedExecutionException;
++
++public class BerthWindowEstimationService {
++
++    private final TerminalPlanner terminalPlanner;
++    private final Executor executor;
++    private final int maxCallsPerRequest;
++
++    public BerthWindowEstimationService(TerminalPlanner terminalPlanner, Executor executor, int maxCallsPerRequest) {
++        this.terminalPlanner = terminalPlanner;
++        this.executor = executor;
++        this.maxCallsPerRequest = maxCallsPerRequest;
++    }
++
++    public List<BerthWindow> estimateBerthWindows(List<VesselCall> calls) {
++        List<VesselCall> cargoCalls = withoutPilotBoats(calls);
++        List<List<VesselCall>> batches = chunk(splitByTerminal(cargoCalls));
++        List<CompletableFuture<List<BerthWindow>>> requests = startRequests(batches);
++        CompletableFuture.allOf(requests.toArray(new CompletableFuture[0])).join();
++        List<BerthWindow> windows = new ArrayList<>();
++        for (CompletableFuture<List<BerthWindow>> request : requests) {
++            windows.addAll(request.join());
++        }
++        return windows;
++    }
++
++    private List<VesselCall> withoutPilotBoats(List<VesselCall> calls) {
++        return calls.stream()
++                .filter(call -> !call.isPilotBoat())
++                .toList();
++    }
++
++    private Map<TerminalKey, List<VesselCall>> splitByTerminal(List<VesselCall> calls) {
++        Map<TerminalKey, List<VesselCall>> callsByTerminal = new LinkedHashMap<>();
++        for (VesselCall call : calls) {
++            TerminalKey key = new TerminalKey(call.portCode(), call.terminalCode());
++            callsByTerminal.computeIfAbsent(key, ignored -> new ArrayList<>()).add(call);
++        }
++        return callsByTerminal;
++    }
++
++    private List<List<VesselCall>> chunk(Map<TerminalKey, List<VesselCall>> callsByTerminal) {
++        List<List<VesselCall>> batches = new ArrayList<>();
++        for (List<VesselCall> terminalCalls : callsByTerminal.values()) {
++            for (int start = 0; start < terminalCalls.size(); start += maxCallsPerRequest) {
++                batches.add(terminalCalls.subList(start, Math.min(start + maxCallsPerRequest, terminalCalls.size())));
++            }
++        }
++        return batches;
++    }
++
++    private List<CompletableFuture<List<BerthWindow>>> startRequests(List<List<VesselCall>> batches) {
++        List<CompletableFuture<List<BerthWindow>>> requests = new ArrayList<>();
++        for (List<VesselCall> batch : batches) {
++            try {
++                requests.add(CompletableFuture.supplyAsync(() -> estimateBatch(batch), executor));
++            } catch (RejectedExecutionException rejected) {
++                requests.add(CompletableFuture.completedFuture(estimateBatch(batch)));
++            }
++        }
++        return requests;
++    }
++
++    private List<BerthWindow> estimateBatch(List<VesselCall> batch) {
++        List<SlotAnswer> answers = terminalPlanner.planSlots(toSlotRequests(batch));
++        List<BerthWindow> windows = new ArrayList<>();
++        for (SlotAnswer answer : answers) {
++            VesselCall call = batch.get(answer.lineNumber() - 1);
++            windows.add(new BerthWindow(call.callId(), answer.berthOpens(), answer.berthCloses(), findLateContainers(call, answer)));
++        }
++        return windows;
++    }
++
++    private List<SlotRequest> toSlotRequests(List<VesselCall> batch) {
++        List<SlotRequest> requests = new ArrayList<>();
++        for (int index = 0; index < batch.size(); index++) {
++            requests.add(toSlotRequest(batch.get(index), index + 1));
++        }
++        return requests;
++    }
++
++    private SlotRequest toSlotRequest(VesselCall call, int lineNumber) {
++        return new SlotRequest(lineNumber, call.terminalCode(), call.arrival(), resolveContainerCount(call));
++    }
++
++    private int resolveContainerCount(VesselCall call) {
++        if (call.shippingLine().declaresContainers()) {
++            return call.declaredContainers();
++        }
++        if (call.manifestedContainers() > 0) {
++            return call.manifestedContainers();
++        }
++        return call.bookedContainers();
++    }
++
++    private int findLateContainers(VesselCall call, SlotAnswer answer) {
++        return Math.max(0, resolveContainerCount(call) - answer.firstCraneCapacity());
++    }
++}

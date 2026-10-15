@@ -1,0 +1,76 @@
+diff --git a/orchard/packhouse/client.py b/orchard/packhouse/client.py
+new file mode 100644
+--- /dev/null
++++ b/orchard/packhouse/client.py
+@@ -0,0 +1,23 @@
++from dataclasses import dataclass
++from datetime import datetime
++
++
++@dataclass(frozen=True)
++class PackhouseLine:
++    line_number: int
++    block_code: str
++    picked_at: datetime
++    crates: int
++
++
++@dataclass(frozen=True)
++class PackhouseAnswer:
++    line_number: int
++    slot_opens: datetime
++    slot_closes: datetime
++    first_grader_capacity: int
++
++
++class PackhouseClient:
++    def plan_lines(self, lines: list[PackhouseLine]) -> list[PackhouseAnswer]:
++        raise NotImplementedError
+diff --git a/orchard/packhouse/slots.py b/orchard/packhouse/slots.py
+new file mode 100644
+--- /dev/null
++++ b/orchard/packhouse/slots.py
+@@ -0,0 +1,35 @@
++from dataclasses import dataclass
++from datetime import datetime
++
++
++@dataclass(frozen=True)
++class Grower:
++    code: str
++    counts_crates_at_the_row: bool
++
++
++@dataclass(frozen=True)
++class Picking:
++    picking_id: str
++    orchard_code: str
++    block_code: str
++    picked_at: datetime
++    is_sample: bool
++    grower: Grower
++    row_crates: int
++    weighed_crates: int
++    booked_crates: int
++
++
++@dataclass(frozen=True)
++class HarvestSlot:
++    picking_id: str
++    opens: datetime
++    closes: datetime
++    late_crates: int
++
++
++@dataclass(frozen=True)
++class OrchardKey:
++    orchard_code: str
++    block_code: str
+diff --git a/orchard/pyproject.toml b/orchard/pyproject.toml
+new file mode 100644
+--- /dev/null
++++ b/orchard/pyproject.toml
+@@ -0,0 +1,3 @@
++[project]
++name = "orchard"
++version = "1.0.0"

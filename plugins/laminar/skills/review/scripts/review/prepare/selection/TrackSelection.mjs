@@ -16,6 +16,7 @@ export const IO_PATHS_CHECKS = Object.freeze([CHECKS_BY_ID_MAP.P1, CHECKS_BY_ID_
 export const CHAIN_GROUP_CHECKS = Object.freeze([CHECKS_BY_ID_MAP.D1]);
 export const PARAMETER_RELATION_CHECKS = Object.freeze([CHECKS_BY_ID_MAP.D2]);
 export const CORE_OPERATION_CHECKS = Object.freeze([CHECKS_BY_ID_MAP.D3]);
+export const MEMBER_GROUP_CHECKS = Object.freeze([CHECKS_BY_ID_MAP.D4]);
 export const ENTRY_BOUNDARY_CHECKS = Object.freeze([CHECKS_BY_ID_MAP.S1, CHECKS_BY_ID_MAP.CP1, CHECKS_BY_ID_MAP.D3]);
 export const BOUNDARY_PATH_CHECKS = Object.freeze([CHECKS_BY_ID_MAP.CP6]);
 

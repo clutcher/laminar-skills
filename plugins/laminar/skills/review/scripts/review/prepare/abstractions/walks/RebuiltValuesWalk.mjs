@@ -11,7 +11,7 @@ export const MAX_VALUE_TYPE_LINES = 30;
 
 const MAX_HELPER_DEPTH = 3;
 
-const CONSTRUCTOR_NAMES = new Set(["constructor", "__init__", "init", "new", "initialize", "__construct"]);
+export const CONSTRUCTOR_NAMES = new Set(["constructor", "__init__", "init", "new", "initialize", "__construct"]);
 
 const BUILDER_NAME_PATTERN = /Builder$/;
 

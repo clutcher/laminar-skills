@@ -1,0 +1,53 @@
+diff --git a/harbour/src/tides/tideTable.ts b/harbour/src/tides/tideTable.ts
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/tides/tideTable.ts
+@@ -0,0 +1,48 @@
++import { TideReading, TideWindow } from "./tideReading";
++
++export class TideTable {
++  private readonly readings: TideReading[];
++  private readonly chartDatumInCentimetres: number;
++
++  constructor(readings: TideReading[], chartDatumInCentimetres: number) {
++    this.readings = [...readings].sort((left, right) => left.at.getTime() - right.at.getTime());
++    this.chartDatumInCentimetres = chartDatumInCentimetres;
++  }
++
++  public depthAt(moment: Date): number {
++    const before = this.readingBefore(moment);
++    const after = this.readingAfter(moment);
++    return this.chartDatumInCentimetres + this.interpolate(before, after, moment);
++  }
++
++  public windowsAbove(draughtInCentimetres: number): TideWindow[] {
++    const windows: TideWindow[] = [];
++    let opens: Date | null = null;
++    for (const reading of this.readings) {
++      const deepEnough = this.chartDatumInCentimetres + reading.heightInCentimetres >= draughtInCentimetres;
++      if (deepEnough && opens === null) opens = reading.at;
++      if (!deepEnough && opens !== null) {
++        windows.push({ opens, closes: reading.at });
++        opens = null;
++      }
++    }
++    return windows;
++  }
++
++  private readingBefore(moment: Date): TideReading {
++    const earlier = this.readings.filter(reading => reading.at.getTime() <= moment.getTime());
++    return earlier.length ? earlier[earlier.length - 1] : this.readings[0];
++  }
++
++  private readingAfter(moment: Date): TideReading {
++    const later = this.readings.find(reading => reading.at.getTime() >= moment.getTime());
++    return later ?? this.readings[this.readings.length - 1];
++  }
++
++  private interpolate(before: TideReading, after: TideReading, moment: Date): number {
++    const span = after.at.getTime() - before.at.getTime();
++    if (span === 0) return before.heightInCentimetres;
++    const share = (moment.getTime() - before.at.getTime()) / span;
++    return before.heightInCentimetres + share * (after.heightInCentimetres - before.heightInCentimetres);
++  }
++}

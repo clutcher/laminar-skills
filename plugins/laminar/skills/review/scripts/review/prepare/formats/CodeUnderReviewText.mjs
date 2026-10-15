@@ -61,7 +61,7 @@ const FRICTION_WORDS = Object.freeze({
 
 const formatFrictionLine = friction => `- ${FRICTION_WORDS[friction.kind] || friction.kind} · ${friction.path}:${friction.line}: ${friction.text}`;
 
-const formatTestFriction = codeUnderReview => {
+export const formatTestFriction = codeUnderReview => {
   const found = codeUnderReview.testFriction || [];
   return found.length ? ["Test friction:", ...found.map(formatFrictionLine)].join("\n") : "";
 };
@@ -119,7 +119,7 @@ const formatPathFromTheSourceRootLine = codeUnderReview => {
   return sourceRoot === undefined ? "" : `${PATH_FROM_THE_SOURCE_ROOT}: ${readPathFromTheSourceRoot(codeUnderReview.path, sourceRoot)}`;
 };
 
-const formatSliceBlock = codeUnderReview => {
+export const formatSliceBlock = codeUnderReview => {
   const sourceRoot = readSourceRoot(codeUnderReview);
   const lines = [];
   for (const section of readSliceSections(codeUnderReview)) {

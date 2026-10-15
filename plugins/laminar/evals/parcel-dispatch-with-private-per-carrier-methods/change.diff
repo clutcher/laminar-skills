@@ -1,0 +1,62 @@
+diff --git a/depot/src/main/java/com/example/depot/dispatch/ParcelDispatchService.java b/depot/src/main/java/com/example/depot/dispatch/ParcelDispatchService.java
+new file mode 100644
+--- /dev/null
++++ b/depot/src/main/java/com/example/depot/dispatch/ParcelDispatchService.java
+@@ -0,0 +1,57 @@
++package com.example.depot.dispatch;
++
++public class ParcelDispatchService {
++
++    private final VanLineClient vanLineClient;
++    private final BikeCourierClient bikeCourierClient;
++    private final RailFreightClient railFreightClient;
++
++    public ParcelDispatchService(VanLineClient vanLineClient, BikeCourierClient bikeCourierClient, RailFreightClient railFreightClient) {
++        this.vanLineClient = vanLineClient;
++        this.bikeCourierClient = bikeCourierClient;
++        this.railFreightClient = railFreightClient;
++    }
++
++    public DispatchReceipt dispatch(Parcel parcel) {
++        return switch (parcel.carrier()) {
++            case VAN_LINE -> dispatchByVanLine(parcel);
++            case BIKE_COURIER -> dispatchByBikeCourier(parcel);
++            case RAIL_FREIGHT -> dispatchByRailFreight(parcel);
++        };
++    }
++
++    public void cancel(Parcel parcel) {
++        switch (parcel.carrier()) {
++            case VAN_LINE -> cancelWithVanLine(parcel);
++            case BIKE_COURIER -> cancelWithBikeCourier(parcel);
++            case RAIL_FREIGHT -> cancelWithRailFreight(parcel);
++        }
++    }
++
++    private DispatchReceipt dispatchByVanLine(Parcel parcel) {
++        String trackingCode = vanLineClient.bookCollection(parcel.parcelCode(), parcel.postcode(), parcel.weightInGrams());
++        return new DispatchReceipt(parcel.parcelCode(), trackingCode);
++    }
++
++    private DispatchReceipt dispatchByBikeCourier(Parcel parcel) {
++        String trackingCode = bikeCourierClient.requestRide(parcel.postcode(), parcel.parcelCode());
++        return new DispatchReceipt(parcel.parcelCode(), trackingCode);
++    }
++
++    private DispatchReceipt dispatchByRailFreight(Parcel parcel) {
++        String trackingCode = railFreightClient.reserveSpace(parcel.parcelCode(), parcel.weightInGrams());
++        return new DispatchReceipt(parcel.parcelCode(), trackingCode);
++    }
++
++    private void cancelWithVanLine(Parcel parcel) {
++        vanLineClient.cancelCollection(parcel.parcelCode());
++    }
++
++    private void cancelWithBikeCourier(Parcel parcel) {
++        bikeCourierClient.withdrawRide(parcel.parcelCode());
++    }
++
++    private void cancelWithRailFreight(Parcel parcel) {
++        railFreightClient.releaseSpace(parcel.parcelCode());
++    }
++}

@@ -1,0 +1,63 @@
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/VehicleBoardingService.java b/ferry/src/main/java/com/example/ferry/boarding/VehicleBoardingService.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/VehicleBoardingService.java
+@@ -0,0 +1,58 @@
++package com.example.ferry.boarding;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class VehicleBoardingService {
++
++    private static final int LANE_LENGTH_IN_CENTIMETRES = 1200;
++
++    private final TicketStore ticketStore;
++    private final DeckPlanStore deckPlanStore;
++    private final FareGateway fareGateway;
++    private final BoardingCardStore boardingCardStore;
++
++    public VehicleBoardingService(TicketStore ticketStore, DeckPlanStore deckPlanStore, FareGateway fareGateway, BoardingCardStore boardingCardStore) {
++        this.ticketStore = ticketStore;
++        this.deckPlanStore = deckPlanStore;
++        this.fareGateway = fareGateway;
++        this.boardingCardStore = boardingCardStore;
++    }
++
++    public BoardingCard boardVehicle(Vehicle vehicle, Sailing sailing) {
++        checkTicket(vehicle, sailing);
++        List<DeckSpace> deckSpaces = assignDeckSpaces(vehicle, sailing);
++        chargeFare(vehicle);
++        return issueBoardingCard(vehicle, sailing, deckSpaces);
++    }
++
++    private void checkTicket(Vehicle vehicle, Sailing sailing) {
++        Ticket ticket = ticketStore.findByCode(vehicle.ticketCode());
++        if (ticket.cancelled() || !ticket.sailingCode().equals(sailing.sailingCode())) {
++            throw new TicketRejectedException(vehicle.ticketCode());
++        }
++    }
++
++    private List<DeckSpace> assignDeckSpaces(Vehicle vehicle, Sailing sailing) {
++        int spacesNeeded = (vehicle.lengthInCentimetres() + LANE_LENGTH_IN_CENTIMETRES - 1) / LANE_LENGTH_IN_CENTIMETRES;
++        List<DeckSpace> assigned = new ArrayList<>();
++        for (int space = 0; space < spacesNeeded; space++) {
++            assigned.add(assignDeckSpace(vehicle, sailing));
++        }
++        return assigned;
++    }
++
++    private DeckSpace assignDeckSpace(Vehicle vehicle, Sailing sailing) {
++        DeckSpace freeSpace = deckPlanStore.findFreeSpaces(sailing.sailingCode()).get(0);
++        deckPlanStore.reserve(sailing.sailingCode(), freeSpace, vehicle.plate());
++        return freeSpace;
++    }
++
++    private void chargeFare(Vehicle vehicle) {
++        fareGateway.charge(vehicle.ticketCode(), vehicle.lengthInCentimetres());
++    }
++
++    private BoardingCard issueBoardingCard(Vehicle vehicle, Sailing sailing, List<DeckSpace> deckSpaces) {
++        return boardingCardStore.save(new BoardingCard(vehicle.plate(), sailing.sailingCode(), deckSpaces));
++    }
++}

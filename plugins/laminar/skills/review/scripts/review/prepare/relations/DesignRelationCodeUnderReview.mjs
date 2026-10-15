@@ -1,11 +1,11 @@
 import { Scale } from "../../../code/index.mjs";
 import { TRACKS } from "../../../checks/CheckCatalog.mjs";
-import { CHAIN_GROUP_CHECKS, CORE_OPERATION_CHECKS, PARAMETER_RELATION_CHECKS } from "../selection/TrackSelection.mjs";
+import { CHAIN_GROUP_CHECKS, CORE_OPERATION_CHECKS, MEMBER_GROUP_CHECKS, PARAMETER_RELATION_CHECKS } from "../selection/TrackSelection.mjs";
 import { readJudgeType } from "../../../checks/JudgeType.mjs";
-import { formatPlacedSliceLine } from "../formats/SliceFormat.mjs";
+import { formatPlacedSliceLine, listPlacesShownInSections, readSliceSections } from "../formats/SliceFormat.mjs";
 import { numberCodeUnderReviewFrom } from "../formats/CodeUnderReviewIds.mjs";
 
-export const RELATION_KINDS = Object.freeze({ CHAIN_GROUP: "chain group", PARAMETER_TYPE: "parameter type", CORE_OPERATION: "core operation", IN_OUT_OPERATION: "in or out operation", REBUILT_VALUE: "rebuilt value" });
+export const RELATION_KINDS = Object.freeze({ CHAIN_GROUP: "chain group", PARAMETER_TYPE: "parameter type", CORE_OPERATION: "core operation", IN_OUT_OPERATION: "in or out operation", REBUILT_VALUE: "rebuilt value", MEMBER_GROUPS: "member groups" });
 
 const createChecks = checks => checks.map(check => ({ id: check.id, name: check.name, fields: [] }));
 
@@ -14,6 +14,8 @@ const CHAIN_GROUP_JUDGE_TYPE = readJudgeType({ track: TRACKS.DESIGN, checks: CHA
 const PARAMETER_TYPE_JUDGE_TYPE = readJudgeType({ track: TRACKS.DESIGN, checks: PARAMETER_RELATION_CHECKS });
 
 const CORE_OPERATION_JUDGE_TYPE = readJudgeType({ track: TRACKS.DESIGN, checks: CORE_OPERATION_CHECKS });
+
+const MEMBER_GROUPS_JUDGE_TYPE = readJudgeType({ track: TRACKS.DESIGN, checks: MEMBER_GROUP_CHECKS });
 
 
 const findFirstStart = group => group.methods.find(method => method.start) || group.methods[0];
@@ -118,6 +120,36 @@ const createRebuiltValueCodeUnderReview = relation => ({
   relation: RELATION_KINDS.REBUILT_VALUE,
 });
 
+export const isAMemberGroupsRelation = designRelation => designRelation.relation === RELATION_KINDS.MEMBER_GROUPS;
+
+const findAbstractionById = (abstractions, id) => {
+  for (const abstraction of abstractions || []) {
+    if (abstraction.id === id) return abstraction;
+    const found = findAbstractionById(abstraction.children, id);
+    if (found) return found;
+  }
+  return null;
+};
+
+export const createMemberGroupsCodeUnderReview = (relation, abstractions) => {
+  const classAbstraction = findAbstractionById(abstractions, relation.abstractionIds[0]) || {};
+  return {
+    ...relation,
+    abstractionId: `member-groups:${relation.path}:${relation.from}`,
+    scale: Scale.CLASS.name,
+    track: TRACKS.DESIGN,
+    judgeType: MEMBER_GROUPS_JUDGE_TYPE,
+    checks: createChecks(MEMBER_GROUP_CHECKS),
+    isTest: false,
+    lines: { from: relation.from, to: relation.to },
+    slice: classAbstraction.slice || null,
+    testFriction: classAbstraction.testFriction || [],
+    relation: RELATION_KINDS.MEMBER_GROUPS,
+  };
+};
+
+export const buildMemberGroupsCodeUnderReview = (extracted, firstNumber = 1) => numberCodeUnderReviewFrom((extracted.memberGroups || []).map(relation => createMemberGroupsCodeUnderReview(relation, extracted.abstractions)), firstNumber);
+
 const isKeptBy = (keeps, keepsJudgeType, topIds) => designRelation => keeps(designRelation.path) && keepsJudgeType(designRelation.judgeType) && (!topIds || designRelation.abstractionIds.some(id => topIds.has(id)));
 
 const KEEPS_EVERY_JUDGE_TYPE = () => true;
@@ -145,6 +177,12 @@ export const readRelationPlaces = designRelation => {
     return [...(designRelation.methods || []), ...(designRelation.stops || [])].flatMap(method => readPlacesOfLines(method.path, method.lines));
   }
   if (isAnInOutOperation(designRelation)) return readPlacesOfLines(designRelation.path, designRelation.methodLines);
+  if (isAMemberGroupsRelation(designRelation)) {
+    return [
+      ...designRelation.fields.map(field => ({ path: designRelation.path, line: field.line, text: field.text })),
+      ...listPlacesShownInSections(designRelation.path, readSliceSections(designRelation)).map(place => ({ path: place.file, line: place.line, text: place.text })),
+    ];
+  }
   if (isARebuiltValue(designRelation)) {
     return [
       ...readPlacesOfLines(designRelation.path, designRelation.methodLines),

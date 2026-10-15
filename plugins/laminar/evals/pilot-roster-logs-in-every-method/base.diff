@@ -1,0 +1,29 @@
+diff --git a/harbour/pilots/roster.py b/harbour/pilots/roster.py
+new file mode 100644
+--- /dev/null
++++ b/harbour/pilots/roster.py
+@@ -0,0 +1,16 @@
++from dataclasses import dataclass
++from datetime import datetime
++
++
++@dataclass(frozen=True)
++class Pilot:
++    pilot_code: str
++    licensed_up_to_metres: int
++    rested_until: datetime
++
++
++@dataclass(frozen=True)
++class Boarding:
++    vessel_code: str
++    length_in_metres: int
++    boards_at: datetime
+diff --git a/harbour/pyproject.toml b/harbour/pyproject.toml
+new file mode 100644
+--- /dev/null
++++ b/harbour/pyproject.toml
+@@ -0,0 +1,3 @@
++[project]
++name = "harbour"
++version = "1.0.0"

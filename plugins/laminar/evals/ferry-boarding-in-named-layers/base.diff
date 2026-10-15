@@ -1,0 +1,119 @@
+diff --git a/ferry/pom.xml b/ferry/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/ferry/pom.xml
+@@ -0,0 +1,6 @@
++<project>
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example</groupId>
++    <artifactId>ferry</artifactId>
++    <version>1.0.0</version>
++</project>
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/BoardingCard.java b/ferry/src/main/java/com/example/ferry/boarding/BoardingCard.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/BoardingCard.java
+@@ -0,0 +1,6 @@
++package com.example.ferry.boarding;
++
++import java.util.List;
++
++public record BoardingCard(String plate, String sailingCode, List<DeckSpace> deckSpaces) {
++}
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/BoardingCardStore.java b/ferry/src/main/java/com/example/ferry/boarding/BoardingCardStore.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/BoardingCardStore.java
+@@ -0,0 +1,6 @@
++package com.example.ferry.boarding;
++
++public interface BoardingCardStore {
++
++    BoardingCard save(BoardingCard boardingCard);
++}
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/DeckPlanStore.java b/ferry/src/main/java/com/example/ferry/boarding/DeckPlanStore.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/DeckPlanStore.java
+@@ -0,0 +1,10 @@
++package com.example.ferry.boarding;
++
++import java.util.List;
++
++public interface DeckPlanStore {
++
++    List<DeckSpace> findFreeSpaces(String sailingCode);
++
++    void reserve(String sailingCode, DeckSpace deckSpace, String plate);
++}
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/DeckSpace.java b/ferry/src/main/java/com/example/ferry/boarding/DeckSpace.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/DeckSpace.java
+@@ -0,0 +1,4 @@
++package com.example.ferry.boarding;
++
++public record DeckSpace(String deckCode, int laneNumber, int positionInLane) {
++}
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/FareGateway.java b/ferry/src/main/java/com/example/ferry/boarding/FareGateway.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/FareGateway.java
+@@ -0,0 +1,6 @@
++package com.example.ferry.boarding;
++
++public interface FareGateway {
++
++    void charge(String ticketCode, int lengthInCentimetres);
++}
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/Sailing.java b/ferry/src/main/java/com/example/ferry/boarding/Sailing.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/Sailing.java
+@@ -0,0 +1,4 @@
++package com.example.ferry.boarding;
++
++public record Sailing(String sailingCode, String vesselCode) {
++}
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/Ticket.java b/ferry/src/main/java/com/example/ferry/boarding/Ticket.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/Ticket.java
+@@ -0,0 +1,4 @@
++package com.example.ferry.boarding;
++
++public record Ticket(String ticketCode, String sailingCode, boolean cancelled) {
++}
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/TicketRejectedException.java b/ferry/src/main/java/com/example/ferry/boarding/TicketRejectedException.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/TicketRejectedException.java
+@@ -0,0 +1,8 @@
++package com.example.ferry.boarding;
++
++public class TicketRejectedException extends RuntimeException {
++
++    public TicketRejectedException(String ticketCode) {
++        super(ticketCode);
++    }
++}
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/TicketStore.java b/ferry/src/main/java/com/example/ferry/boarding/TicketStore.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/TicketStore.java
+@@ -0,0 +1,6 @@
++package com.example.ferry.boarding;
++
++public interface TicketStore {
++
++    Ticket findByCode(String ticketCode);
++}
+diff --git a/ferry/src/main/java/com/example/ferry/boarding/Vehicle.java b/ferry/src/main/java/com/example/ferry/boarding/Vehicle.java
+new file mode 100644
+--- /dev/null
++++ b/ferry/src/main/java/com/example/ferry/boarding/Vehicle.java
+@@ -0,0 +1,4 @@
++package com.example.ferry.boarding;
++
++public record Vehicle(String plate, int lengthInCentimetres, String ticketCode) {
++}

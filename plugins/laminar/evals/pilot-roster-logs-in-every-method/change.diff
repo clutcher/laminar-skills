@@ -1,0 +1,40 @@
+diff --git a/harbour/pilots/pilot_roster.py b/harbour/pilots/pilot_roster.py
+new file mode 100644
+--- /dev/null
++++ b/harbour/pilots/pilot_roster.py
+@@ -0,0 +1,35 @@
++import logging
++
++from harbour.pilots.roster import Boarding, Pilot
++
++
++class PilotRoster:
++    def __init__(self, pilots: list[Pilot], logger: logging.Logger):
++        self._pilots = pilots
++        self._assigned = {}
++        self._logger = logger
++
++    def assign(self, boarding: Boarding) -> Pilot:
++        pilot = self._first_free_pilot(boarding)
++        self._assigned[boarding.vessel_code] = pilot
++        self._logger.info("pilot %s assigned to %s", pilot.pilot_code, boarding.vessel_code)
++        return pilot
++
++    def release(self, vessel_code: str) -> None:
++        pilot = self._assigned.pop(vessel_code)
++        self._logger.info("pilot %s released from %s", pilot.pilot_code, vessel_code)
++
++    def _first_free_pilot(self, boarding: Boarding) -> Pilot:
++        busy = set(pilot.pilot_code for pilot in self._assigned.values())
++        for pilot in self._pilots:
++            if pilot.pilot_code not in busy and self._may_board(pilot, boarding):
++                return pilot
++        self._logger.warning("no free pilot for %s", boarding.vessel_code)
++        raise LookupError(boarding.vessel_code)
++
++    def _may_board(self, pilot: Pilot, boarding: Boarding) -> bool:
++        rested = pilot.rested_until <= boarding.boards_at
++        licensed = pilot.licensed_up_to_metres >= boarding.length_in_metres
++        if not rested or not licensed:
++            self._logger.debug("pilot %s may not board %s", pilot.pilot_code, boarding.vessel_code)
++        return rested and licensed

@@ -1,0 +1,80 @@
+diff --git a/depot/pom.xml b/depot/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/depot/pom.xml
+@@ -0,0 +1,6 @@
++<project>
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example</groupId>
++    <artifactId>depot</artifactId>
++    <version>1.0.0</version>
++</project>
+diff --git a/depot/src/main/java/com/example/depot/dispatch/BikeCourierClient.java b/depot/src/main/java/com/example/depot/dispatch/BikeCourierClient.java
+new file mode 100644
+--- /dev/null
++++ b/depot/src/main/java/com/example/depot/dispatch/BikeCourierClient.java
+@@ -0,0 +1,8 @@
++package com.example.depot.dispatch;
++
++public interface BikeCourierClient {
++
++    String requestRide(String postcode, String parcelCode);
++
++    void withdrawRide(String parcelCode);
++}
+diff --git a/depot/src/main/java/com/example/depot/dispatch/Carrier.java b/depot/src/main/java/com/example/depot/dispatch/Carrier.java
+new file mode 100644
+--- /dev/null
++++ b/depot/src/main/java/com/example/depot/dispatch/Carrier.java
+@@ -0,0 +1,7 @@
++package com.example.depot.dispatch;
++
++public enum Carrier {
++    VAN_LINE,
++    BIKE_COURIER,
++    RAIL_FREIGHT
++}
+diff --git a/depot/src/main/java/com/example/depot/dispatch/DispatchReceipt.java b/depot/src/main/java/com/example/depot/dispatch/DispatchReceipt.java
+new file mode 100644
+--- /dev/null
++++ b/depot/src/main/java/com/example/depot/dispatch/DispatchReceipt.java
+@@ -0,0 +1,4 @@
++package com.example.depot.dispatch;
++
++public record DispatchReceipt(String parcelCode, String trackingCode) {
++}
+diff --git a/depot/src/main/java/com/example/depot/dispatch/Parcel.java b/depot/src/main/java/com/example/depot/dispatch/Parcel.java
+new file mode 100644
+--- /dev/null
++++ b/depot/src/main/java/com/example/depot/dispatch/Parcel.java
+@@ -0,0 +1,4 @@
++package com.example.depot.dispatch;
++
++public record Parcel(String parcelCode, Carrier carrier, int weightInGrams, String postcode) {
++}
+diff --git a/depot/src/main/java/com/example/depot/dispatch/RailFreightClient.java b/depot/src/main/java/com/example/depot/dispatch/RailFreightClient.java
+new file mode 100644
+--- /dev/null
++++ b/depot/src/main/java/com/example/depot/dispatch/RailFreightClient.java
+@@ -0,0 +1,8 @@
++package com.example.depot.dispatch;
++
++public interface RailFreightClient {
++
++    String reserveSpace(String parcelCode, int weightInGrams);
++
++    void releaseSpace(String parcelCode);
++}
+diff --git a/depot/src/main/java/com/example/depot/dispatch/VanLineClient.java b/depot/src/main/java/com/example/depot/dispatch/VanLineClient.java
+new file mode 100644
+--- /dev/null
++++ b/depot/src/main/java/com/example/depot/dispatch/VanLineClient.java
+@@ -0,0 +1,8 @@
++package com.example.depot.dispatch;
++
++public interface VanLineClient {
++
++    String bookCollection(String parcelCode, String postcode, int weightInGrams);
++
++    void cancelCollection(String parcelCode);
++}

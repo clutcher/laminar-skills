@@ -32,7 +32,7 @@ export { findHeadOfRevisions, ReviewWorktree, WorktreeStop } from "./inputs/work
 export { sweepUnusedReviewWorktreesBeside } from "./inputs/worktree/ReviewWorktreeSweep.mjs";
 export { ABSTRACTION_KINDS, isADeclaredType, isAFileNamedByTheLanguage, isPlacedInSource } from "./graph/abstractions/Abstraction.mjs";
 export { CHANGE_KINDS, changesTheBoundary, changesTheCode, readDeclaredMemberChangeKind } from "./inputs/change/AbstractionChange.mjs";
-export { readDescribedFields, readFoundFields, isOwnCodeAt, readOwnSpans, VISIBILITIES } from "./extract/tree/AbstractionTree.mjs";
+export { readDescribedFields, readFoundFields, isOwnCodeAt, readOwnSpans, readVisibilityOfDeclaration, VISIBILITIES } from "./extract/tree/AbstractionTree.mjs";
 export { isTestPath, countPhaseMarks, TestCode } from "./inputs/source/TestCode.mjs";
 export { TEST_KINDS, readTestKindAtTheHead, readTestHeadFactsOfTheFile, readTestKindWhere } from "./extract/abstractions/method/generic/testing/TestKinds.mjs";
 export { findClosingParenthesisAcrossLines, findParameterListAfterTheName } from "./extract/calls/scope/ParameterListText.mjs";
@@ -59,7 +59,7 @@ export { readApplicationName, findDeployableFolder, liesInAnotherApplication } f
 export { findDeployableRoots } from "./extract/abstractions/application/ApplicationDiscovery.mjs";
 export { isABuildFile } from "./extract/abstractions/application/index.mjs";
 export { isASchemaFile } from "./inputs/source/languages/graphql/GraphQLSourceText.mjs";
-export { NO_PARAMETER_TEXT, readParameterNamesOfAList, findParameterTextAfterTheName, readParameterTextOfTheHead, readSignature, readTypeTextOfParameter } from "./extract/abstractions/method/generic/signatures/MethodSignatures.mjs";
+export { NO_PARAMETER_TEXT, readParameterNamesOfAList, findParameterTextAfterTheName, readParameterTextOfTheHead, readReceiverWord, readSignature, readTypeNamesOfATypeText, readTypeTextOfParameter } from "./extract/abstractions/method/generic/signatures/MethodSignatures.mjs";
 export { findOpenConstructsAndCallArgumentFunctions } from "./extract/abstractions/method/generic/measures/OpenConstructs.mjs";
 export { findCallsInsideCallArguments } from "./extract/abstractions/method/generic/measures/CallArgumentCalls.mjs";
 export { ModuleReading } from "./extract/abstractions/module/generic/reading/ModuleReading.mjs";
@@ -73,3 +73,8 @@ export { isACallAfter, isAnAssignmentAfter } from "./extract/abstractions/method
 export { buildFieldWritePattern } from "./extract/abstractions/variable/generic/fields/FieldWrites.mjs";
 export { listHeadLineNumbers, readMemberNames } from "./extract/abstractions/variable/generic/members/TypeMembers.mjs";
 export { declaresAnUpperSnakeValueIn, buildAnyValueDeclarationPattern } from "./extract/abstractions/variable/generic/GenericVariableFinder.mjs";
+export { MethodScope } from "./extract/calls/scope/MethodScope.mjs";
+export { listLinesSpannedBy } from "./extract/calls/SourceLayout.mjs";
+export { findDeclarationInLine } from "./extract/abstractions/variable/generic/types/DeclaredTypes.mjs";
+export { readDeclarations } from "./extract/walk/SourceWalk.mjs";
+export { SourceText } from "./inputs/source/SourceText.mjs";

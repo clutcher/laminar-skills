@@ -1,0 +1,23 @@
+diff --git a/harbour/package.json b/harbour/package.json
+new file mode 100644
+--- /dev/null
++++ b/harbour/package.json
+@@ -0,0 +1,4 @@
++{
++  "name": "harbour",
++  "version": "1.0.0"
++}
+diff --git a/harbour/src/tides/tideReading.ts b/harbour/src/tides/tideReading.ts
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/tides/tideReading.ts
+@@ -0,0 +1,9 @@
++export interface TideReading {
++  readonly at: Date;
++  readonly heightInCentimetres: number;
++}
++
++export interface TideWindow {
++  readonly opens: Date;
++  readonly closes: Date;
++}

@@ -1,6 +1,6 @@
-import { formatChangedLinesLine, formatRootLine } from "../formats/CodeUnderReviewText.mjs";
+import { formatChangedLinesLine, formatRootLine, formatSliceBlock, formatTestFriction } from "../formats/CodeUnderReviewText.mjs";
 import { NO_CHANGED_LINES_TEXT } from "../formats/ChangedLinesText.mjs";
-import { isACoreOperation, isAnInOutOperation, isARebuiltValue, RELATION_KINDS, readRelationPlaces } from "./DesignRelationCodeUnderReview.mjs";
+import { isACoreOperation, isAMemberGroupsRelation, isAnInOutOperation, isARebuiltValue, RELATION_KINDS, readRelationPlaces } from "./DesignRelationCodeUnderReview.mjs";
 
 const formatSpan = span => (span.from === span.to ? `${span.from}` : `${span.from}-${span.to}`);
 
@@ -153,15 +153,54 @@ const formatRebuiltValueBlocks = rebuiltValue => [
   ...rebuiltValue.siblings.map(formatSiblingBlock),
 ];
 
+const formatTypeTexts = typeTexts => (typeTexts.length ? typeTexts.map(quoteName).join(", ") : "none");
+
+const formatFieldLine = field => `Field: ${quoteName(field.name)} · line ${field.line} · type ${field.typeText ? quoteName(field.typeText) : "not read"}`;
+
+const formatGroupWord = method => (method.group ? `member group ${method.group}` : "member group none");
+
+const formatClassMethodLine = method => [
+  `Method: ${quoteName(method.displayName)} · ${formatSpan(method)} · ${method.exposed ? "exposed" : "private"}`,
+  `reads: ${formatNamedList(method.reads)}`,
+  `writes: ${formatNamedList(method.writes)}`,
+  `takes: ${formatTypeTexts(method.takes)}`,
+  `returns: ${method.returns.length ? formatTypeTexts(method.returns) : "not read"}`,
+  `calls types: ${formatNamedList(method.callsTypes)}`,
+  `calls: ${formatNamedList(method.calls)}`,
+  `called by: ${formatNamedList(method.calledBy)}`,
+  formatGroupWord(method),
+].join(" · ");
+
+const formatCallInto = call => `${quoteName(call.from)} calls ${quoteName(call.callee)} at ${call.line}`;
+
+const formatMemberGroupLine = memberGroup => [
+  `Member group ${memberGroup.number}: methods ${formatNamedList(memberGroup.methods)}`,
+  `fields: ${formatNamedList(memberGroup.fields)}`,
+  `types: ${formatNamedList(memberGroup.types)}`,
+  `calls into: ${memberGroup.callsInto.length ? memberGroup.callsInto.map(formatCallInto).join(", ") : "none"}`,
+].join(" · ");
+
+const formatMemberGroupsBlocks = memberGroups => [
+  [
+    `Class: ${quoteName(memberGroups.displayName)} · ${memberGroups.path}:${formatSpan(memberGroups)} · ${readChangeWord(memberGroups.changeKind)}`,
+    ...memberGroups.fields.map(formatFieldLine),
+  ].join("\n"),
+  memberGroups.methods.map(formatClassMethodLine).join("\n"),
+  [`Shared by every method: ${formatNamedList(memberGroups.sharedFields)}`, ...memberGroups.memberGroups.map(formatMemberGroupLine)].join("\n"),
+  ...(formatTestFriction(memberGroups) ? [formatTestFriction(memberGroups)] : []),
+  ...(memberGroups.slice ? [formatSliceBlock(memberGroups)] : []),
+];
+
 const formatHead = designRelation => `### ${designRelation.id} · ${designRelation.relation} ${quoteName(designRelation.displayName)}`;
 
-const formatHeadLines = (designRelation, repositoryRoot) => [formatHead(designRelation), formatRootLine(repositoryRoot), ...(isACoreOperation(designRelation) || isAnInOutOperation(designRelation) || isARebuiltValue(designRelation) ? [`Path: ${designRelation.path}`] : [])];
+const formatHeadLines = (designRelation, repositoryRoot) => [formatHead(designRelation), formatRootLine(repositoryRoot), ...(isACoreOperation(designRelation) || isAnInOutOperation(designRelation) || isARebuiltValue(designRelation) || isAMemberGroupsRelation(designRelation) ? [`Path: ${designRelation.path}`] : [])];
 
 const formatRelationBlocks = designRelation => {
   if (designRelation.relation === RELATION_KINDS.CHAIN_GROUP) return formatChainGroupBlocks(designRelation);
   if (isACoreOperation(designRelation)) return formatCoreOperationBlocks(designRelation);
   if (isAnInOutOperation(designRelation)) return formatInOutOperationBlocks(designRelation);
   if (isARebuiltValue(designRelation)) return formatRebuiltValueBlocks(designRelation);
+  if (isAMemberGroupsRelation(designRelation)) return formatMemberGroupsBlocks(designRelation);
   return formatParameterTypeBlocks(designRelation);
 };
 

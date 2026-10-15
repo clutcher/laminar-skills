@@ -1,5 +1,6 @@
 import { holdsAnAddedLine, isTestPath, readLanguageFamily, formatDisplayNameOfMethod, Scale } from "../../../../code/index.mjs";
 import { MethodCallers } from "../references/MethodCallers.mjs";
+import { UnionFind } from "../../../../collections/UnionFind.mjs";
 
 export const CHAIN_DEPTH = 3;
 
@@ -7,24 +8,6 @@ const findAbstractionId = (method, abstractions) => abstractions
   .filter(abstraction => abstraction.scale === Scale.METHOD.name && abstraction.path === method.path && abstraction.name === method.name && abstraction.lines)
   .sort((left, right) => Math.abs(left.lines.from - method.line) - Math.abs(right.lines.from - method.line))
   .map(abstraction => abstraction.id)[0] || "";
-
-class UnionFind {
-  constructor() {
-    this.parentByKeyMap = new Map();
-  }
-
-  findRoot(key) {
-    if (!this.parentByKeyMap.has(key)) this.parentByKeyMap.set(key, key);
-    let rootKey = key;
-    while (this.parentByKeyMap.get(rootKey) !== rootKey) rootKey = this.parentByKeyMap.get(rootKey);
-    this.parentByKeyMap.set(key, rootKey);
-    return rootKey;
-  }
-
-  join(left, right) {
-    this.parentByKeyMap.set(this.findRoot(left), this.findRoot(right));
-  }
-}
 
 const groupByShared = (chains, keysOf) => {
   const union = new UnionFind();

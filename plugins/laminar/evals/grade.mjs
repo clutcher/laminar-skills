@@ -413,6 +413,7 @@ const JUDGES_BY_CHECK = Object.freeze({
   D1: () => ["design-over-extraction"],
   D2: () => ["design-scoped-parameters"],
   D3: () => ["design-leaked-details", "design-entry-boundary"],
+  D4: () => ["design-missing-boundary"],
   CP1: () => ["correctness-prevention", "design-entry-boundary"],
   CP3: () => ["correctness-prevention"],
   CP4: () => ["correctness-prevention"],

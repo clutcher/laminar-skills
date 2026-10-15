@@ -13,6 +13,8 @@ const findMethodFinder = diffDriver => METHOD_FINDER_REGISTRY.findWalkingFinder(
 
 export const readReturnTypes = ({ before, after, diffDriver }) => findMethodFinder(diffDriver).findReturnTypes(before, after);
 
+export const readReceiverWord = (lines, method, diffDriver) => findMethodFinder(diffDriver).readReceiverWord(String(lines[method.line - 1] || ""));
+
 const CLOSING_OF_A_LIST = { "<": ">", "[": "]" };
 const WORDS_BEFORE_A_TYPE_PARAMETER_PATTERN = /^(?:(?:typename|class|in|out|reified|const|type)\s+|[+-]\s*)+/;
 const TYPE_PARAMETER_PATTERN = /^[A-Za-z_$][\w$]*/;

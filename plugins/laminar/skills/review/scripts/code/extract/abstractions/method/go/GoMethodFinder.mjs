@@ -9,6 +9,8 @@ export function parseGoResults(after) {
   return resultTexts.map(resultText => resultText.trim().split(/\s+/).pop()).map(resultText => (resultText !== "error" && NO_RESULT.has(resultText) ? "" : resultText));
 }
 
+const RECEIVER_OF_A_METHOD_HEAD_PATTERN = /^\s*func\s*\(\s*([A-Za-z_]\w*)\s+\*?\s*[A-Za-z_]/;
+
 export class GoMethodFinder extends GenericMethodFinder {
   language = "golang";
   parameterNameIsTheFirstWord = true;
@@ -17,5 +19,9 @@ export class GoMethodFinder extends GenericMethodFinder {
 
   findReturnTypes(before, after) {
     return parseGoResults(after);
+  }
+
+  readReceiverWord(headText) {
+    return (RECEIVER_OF_A_METHOD_HEAD_PATTERN.exec(headText) || ["", ""])[1];
   }
 }

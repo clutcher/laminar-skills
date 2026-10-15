@@ -1,0 +1,71 @@
+diff --git a/harbour/pom.xml b/harbour/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/harbour/pom.xml
+@@ -0,0 +1,6 @@
++<project>
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example</groupId>
++    <artifactId>harbour</artifactId>
++    <version>1.0.0</version>
++</project>
+diff --git a/harbour/src/main/java/com/example/harbour/arrival/ArrivalNotice.java b/harbour/src/main/java/com/example/harbour/arrival/ArrivalNotice.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/arrival/ArrivalNotice.java
+@@ -0,0 +1,6 @@
++package com.example.harbour.arrival;
++
++import java.time.Instant;
++
++public record ArrivalNotice(String noticeCode, String vesselCode, Instant expectedArrival, int crewCount) {
++}
+diff --git a/harbour/src/main/java/com/example/harbour/arrival/ArrivalNoticeMapper.java b/harbour/src/main/java/com/example/harbour/arrival/ArrivalNoticeMapper.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/arrival/ArrivalNoticeMapper.java
+@@ -0,0 +1,8 @@
++package com.example.harbour.arrival;
++
++public interface ArrivalNoticeMapper {
++
++    AuthorityNotice toAuthorityNotice(ArrivalNotice notice);
++
++    NoticeStatus toNoticeStatus(AuthorityNotice notice);
++}
+diff --git a/harbour/src/main/java/com/example/harbour/arrival/AuthorityNotice.java b/harbour/src/main/java/com/example/harbour/arrival/AuthorityNotice.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/arrival/AuthorityNotice.java
+@@ -0,0 +1,4 @@
++package com.example.harbour.arrival;
++
++public record AuthorityNotice(String reference, String imoNumber, String arrivalTime, int personsOnBoard, String status) {
++}
+diff --git a/harbour/src/main/java/com/example/harbour/arrival/HarbourAuthorityClient.java b/harbour/src/main/java/com/example/harbour/arrival/HarbourAuthorityClient.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/arrival/HarbourAuthorityClient.java
+@@ -0,0 +1,10 @@
++package com.example.harbour.arrival;
++
++public interface HarbourAuthorityClient {
++
++    AuthorityNotice file(AuthorityNotice notice);
++
++    AuthorityNotice amend(String reference, AuthorityNotice notice);
++
++    AuthorityNotice withdraw(String reference);
++}
+diff --git a/harbour/src/main/java/com/example/harbour/arrival/NoticeStatus.java b/harbour/src/main/java/com/example/harbour/arrival/NoticeStatus.java
+new file mode 100644
+--- /dev/null
++++ b/harbour/src/main/java/com/example/harbour/arrival/NoticeStatus.java
+@@ -0,0 +1,7 @@
++package com.example.harbour.arrival;
++
++public enum NoticeStatus {
++    FILED,
++    AMENDED,
++    WITHDRAWN
++}

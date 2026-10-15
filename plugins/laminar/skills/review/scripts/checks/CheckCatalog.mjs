@@ -44,6 +44,7 @@ export const CHECKS_BY_ID_MAP = Object.freeze({
   D1: { id: "D1", name: "Over-Extraction", track: TRACKS.DESIGN, gate: createNoGate() },
   D2: { id: "D2", name: "Scoped Parameters", track: TRACKS.DESIGN, gate: createNoGate() },
   D3: { id: "D3", name: "Leaked Details", track: TRACKS.DESIGN, gate: createScreenGate("namesMechanism") },
+  D4: { id: "D4", name: "Missing Boundary", track: TRACKS.DESIGN, gate: createNoGate() },
   CP1: { id: "CP1", name: "Exclude Illegal States", track: TRACKS.PREVENTION, gate: createScreenGate("encodesCaseAsPrimitiveOrFallback") },
   CP3: { id: "CP3", name: "Protect the State", track: TRACKS.PREVENTION, gate: createScreenGate("changesStateBeyondTheCall") },
   CP4: { id: "CP4", name: "Remove Edge Cases", track: TRACKS.PREVENTION, gate: createScreenGate("signalsFailureAsValueOrError") },

@@ -1,0 +1,127 @@
+diff --git a/shop/pom.xml b/shop/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/shop/pom.xml
+@@ -0,0 +1,6 @@
++<project>
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example</groupId>
++    <artifactId>shop</artifactId>
++    <version>1.0.0</version>
++</project>
+diff --git a/shop/src/main/java/com/example/shop/order/Cart.java b/shop/src/main/java/com/example/shop/order/Cart.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/Cart.java
+@@ -0,0 +1,13 @@
++package com.example.shop.order;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++public interface Cart {
++
++    long getCustomerId();
++
++    List<LineItem> getLineItems();
++
++    BigDecimal getTotal();
++}
+diff --git a/shop/src/main/java/com/example/shop/order/CartValidator.java b/shop/src/main/java/com/example/shop/order/CartValidator.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/CartValidator.java
+@@ -0,0 +1,6 @@
++package com.example.shop.order;
++
++public interface CartValidator {
++
++    void validate(Cart cart);
++}
+diff --git a/shop/src/main/java/com/example/shop/order/LineItem.java b/shop/src/main/java/com/example/shop/order/LineItem.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/LineItem.java
+@@ -0,0 +1,8 @@
++package com.example.shop.order;
++
++public interface LineItem {
++
++    long getProductId();
++
++    int getQuantity();
++}
+diff --git a/shop/src/main/java/com/example/shop/order/Order.java b/shop/src/main/java/com/example/shop/order/Order.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/Order.java
+@@ -0,0 +1,6 @@
++package com.example.shop.order;
++
++import java.util.List;
++
++public record Order(long customerId, List<LineItem> lineItems) {
++}
+diff --git a/shop/src/main/java/com/example/shop/order/OrderRepository.java b/shop/src/main/java/com/example/shop/order/OrderRepository.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/order/OrderRepository.java
+@@ -0,0 +1,6 @@
++package com.example.shop.order;
++
++public interface OrderRepository {
++
++    Order save(Order order);
++}
+diff --git a/shop/src/main/java/com/example/shop/payment/PaymentGateway.java b/shop/src/main/java/com/example/shop/payment/PaymentGateway.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/payment/PaymentGateway.java
+@@ -0,0 +1,8 @@
++package com.example.shop.payment;
++
++import java.math.BigDecimal;
++
++public interface PaymentGateway {
++
++    void charge(long customerId, BigDecimal amount);
++}
+diff --git a/shop/src/main/java/com/example/shop/stock/InsufficientStockException.java b/shop/src/main/java/com/example/shop/stock/InsufficientStockException.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/stock/InsufficientStockException.java
+@@ -0,0 +1,8 @@
++package com.example.shop.stock;
++
++public class InsufficientStockException extends RuntimeException {
++
++    public InsufficientStockException(long productId) {
++        super(String.valueOf(productId));
++    }
++}
+diff --git a/shop/src/main/java/com/example/shop/stock/StockLevel.java b/shop/src/main/java/com/example/shop/stock/StockLevel.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/stock/StockLevel.java
+@@ -0,0 +1,8 @@
++package com.example.shop.stock;
++
++public interface StockLevel {
++
++    int getAvailable();
++
++    void reserve(int quantity);
++}
+diff --git a/shop/src/main/java/com/example/shop/stock/StockRepository.java b/shop/src/main/java/com/example/shop/stock/StockRepository.java
+new file mode 100644
+--- /dev/null
++++ b/shop/src/main/java/com/example/shop/stock/StockRepository.java
+@@ -0,0 +1,8 @@
++package com.example.shop.stock;
++
++public interface StockRepository {
++
++    StockLevel findByProductId(long productId);
++
++    StockLevel save(StockLevel stockLevel);
++}
