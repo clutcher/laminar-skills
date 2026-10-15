@@ -1,0 +1,50 @@
+diff --git a/ferry-terminal/src/main/java/org/example/ferry/terminal/schedule/BerthScheduleConverter.java b/ferry-terminal/src/main/java/org/example/ferry/terminal/schedule/BerthScheduleConverter.java
+new file mode 100644
+--- /dev/null
++++ b/ferry-terminal/src/main/java/org/example/ferry/terminal/schedule/BerthScheduleConverter.java
+@@ -0,0 +1,45 @@
++package org.example.ferry.terminal.schedule;
++
++import java.time.LocalDate;
++import java.time.format.DateTimeParseException;
++import java.util.HashMap;
++import java.util.Map;
++import java.util.Optional;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++
++public class BerthScheduleConverter {
++
++    private static final Logger LOG = LoggerFactory.getLogger(BerthScheduleConverter.class);
++
++    public Map<Integer, LocalDate> readArrivalDatesByBerth(BerthScheduleResponse response) {
++        Map<Integer, LocalDate> arrivalDatesByBerth = new HashMap<>();
++        for (BerthScheduleRow row : response.rows()) {
++            Optional<Integer> berthNumber = parseBerthNumber(row);
++            Optional<LocalDate> arrivalDate = parseArrivalDate(row);
++            if (berthNumber.isEmpty() || arrivalDate.isEmpty()) {
++                continue;
++            }
++            arrivalDatesByBerth.put(berthNumber.get(), arrivalDate.get());
++        }
++        return arrivalDatesByBerth;
++    }
++
++    private Optional<Integer> parseBerthNumber(BerthScheduleRow row) {
++        try {
++            return Optional.of(Integer.parseInt(row.berthNumber()));
++        } catch (NumberFormatException exception) {
++            LOG.warn("Skipping the schedule row of vessel {}: berth number '{}' is not a number", row.vesselName(), row.berthNumber());
++            return Optional.empty();
++        }
++    }
++
++    private Optional<LocalDate> parseArrivalDate(BerthScheduleRow row) {
++        try {
++            return Optional.of(LocalDate.parse(row.arrivalDate()));
++        } catch (DateTimeParseException exception) {
++            LOG.warn("Skipping the schedule row of vessel {}: arrival date '{}' is not a date", row.vesselName(), row.arrivalDate());
++            return Optional.empty();
++        }
++    }
++}

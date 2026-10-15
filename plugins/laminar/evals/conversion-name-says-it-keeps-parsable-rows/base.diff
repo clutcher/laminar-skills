@@ -1,0 +1,20 @@
+diff --git a/ferry-terminal/src/main/java/org/example/ferry/terminal/schedule/BerthScheduleResponse.java b/ferry-terminal/src/main/java/org/example/ferry/terminal/schedule/BerthScheduleResponse.java
+new file mode 100644
+--- /dev/null
++++ b/ferry-terminal/src/main/java/org/example/ferry/terminal/schedule/BerthScheduleResponse.java
+@@ -0,0 +1,6 @@
++package org.example.ferry.terminal.schedule;
++
++import java.util.List;
++
++public record BerthScheduleResponse(String terminalCode, List<BerthScheduleRow> rows) {
++}
+diff --git a/ferry-terminal/src/main/java/org/example/ferry/terminal/schedule/BerthScheduleRow.java b/ferry-terminal/src/main/java/org/example/ferry/terminal/schedule/BerthScheduleRow.java
+new file mode 100644
+--- /dev/null
++++ b/ferry-terminal/src/main/java/org/example/ferry/terminal/schedule/BerthScheduleRow.java
+@@ -0,0 +1,4 @@
++package org.example.ferry.terminal.schedule;
++
++public record BerthScheduleRow(String vesselName, String berthNumber, String arrivalDate) {
++}

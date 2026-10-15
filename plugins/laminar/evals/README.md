@@ -244,6 +244,8 @@ It reaches a finding whose second place is outside the change.
 | `tide-table-reads-one-set-of-fields` | B | clean: a new tide table in TypeScript whose methods all work on its 1 list of readings and its chart datum | set from `late-fee-rule-cut-into-arithmetic-fragments`, not measured |
 | `pilot-roster-logs-in-every-method` | B | clean: a new pilot roster in Python whose every method writes to the same logger beside 1 set of pilots and assignments | set from `late-fee-rule-cut-into-arithmetic-fragments`, not measured |
 | `inventory-reservation-below-order-placement` | B | clean: the book's `placeOrder` after the stock check was extracted at every step, where each private step reads the store or the gateway of its own step and `reserveInventory` names the step that reserving the stock sits below | set from `late-fee-rule-cut-into-arithmetic-fragments`, not measured |
+| `conversion-name-hides-the-rows-it-drops` | B | a new Java method of a ferry terminal named `readArrivalDatesByBerth`, which turns the rows of a berth schedule response into arrival dates by berth number and skips every row whose berth number or arrival date its 2 parsers cannot read, while each parser logs a warning; the name starts with a verb, so the Prediction Failure is for the rows the name does not say are dropped | set from `predicate-name-drops-a-condition`, not measured |
+| `conversion-name-says-it-keeps-parsable-rows` | B | clean: the twin of the case above, the same code under the name `collectParsableArrivalDatesByBerth`, which says it keeps only the rows it can read | set from `predicate-name-drops-a-condition`, not measured |
 
 `mispredicting-names-inside-a-change` has a base state holding the 3 files the change touches as they were before it, because 2 of its must-not lines rest on tests that sit above the change and a patch cannot carry them.
 The base state also holds the enum of quote failures and the test factory of quote lines, so the review reads what `MEMBER_VOUCHER` and `MEMBER_REFUND_RATE` mean in the member refund test that 1 must-not line rests on.
@@ -499,13 +501,13 @@ Writing them fresh is what makes them publishable.
 They measure that 2 domain types of 1 module with the same members are 1 fact in 2 places to consider, while a type that 1 module exposes to other modules and maps to and from its own domain type is no copy of that domain type.
 They are tier B, because the decision search reads the types of the repository.
 
-`comment-above-a-wrapped-method-head`, `comment-added-above-an-unchanged-method`, `missing-entries-filled-by-a-nested-builder-function`, `missing-entries-filled-by-a-named-factory`, `functions-nested-in-call-arguments`, `defended-comment-that-narrates-the-code`, `defended-comment-in-one-short-line` and `comment-beside-a-misnamed-method` are written fresh in the fictional harbour-ferry domain, in Java.
-The comment cases follow the subsection *Self-Documenting Code* of the section *How Naming Goes Wrong*, in the chapter *The Common Pitfalls*, where a defended comment must be short, direct and compressed; the function cases follow the section *What Limits Understanding* of the chapter *What Simple Means*, where each step of a chained call that takes a function is a part of its method.
 `bin-summary-mapped-to-and-from-the-bin` and its twin `bin-record-beside-the-bin` are written fresh, in a fictional warehouse domain, in Python, after the same subsection.
 Writing them fresh is what makes them publishable.
 They measure the same rule with no word in a name and no folder that says a type is exposed, so only the mapping and the import of the second package show the boundary.
 They are tier B, because the decision search reads the types of the repository.
 
+`comment-above-a-wrapped-method-head`, `comment-added-above-an-unchanged-method`, `missing-entries-filled-by-a-nested-builder-function`, `missing-entries-filled-by-a-named-factory`, `functions-nested-in-call-arguments`, `defended-comment-that-narrates-the-code`, `defended-comment-in-one-short-line` and `comment-beside-a-misnamed-method` are written fresh in the fictional harbour-ferry domain, in Java.
+The comment cases follow the subsection *Self-Documenting Code* of the section *How Naming Goes Wrong*, in the chapter *The Common Pitfalls*, where a defended comment must be short, direct and compressed; the function cases follow the section *What Limits Understanding* of the chapter *What Simple Means*, where each step of a chained call that takes a function is a part of its method.
 
 `schedule-rebuilt-with-overflow-slots-in-the-service`, `schedule-gains-pilot-slots-from-a-roster-it-takes` and `overflow-slots-added-by-a-schedule-builder` are written fresh in a fictional marina domain, in Kotlin, after the subsection *Scoped Parameters* of the section *How Types Go Wrong*, in the chapter *The Common Pitfalls*, where the methods that work mostly on the fields of a parameter object belong on that class.
 Writing them fresh is what makes them publishable.
@@ -539,6 +541,11 @@ The judge type `design-missing-boundary` that their `judges.txt` names lands in 
 `shared-instance-read-through-its-class`, `shared-instance-read-through-its-companion-in-kotlin` and `general-word-field-whose-type-names-no-purpose` are written fresh in fictional apiary and marina domains, in Java and Kotlin, after the section *How Naming Makes Boundaries Work*, in the chapter *The Encapsulation Principle*, where the book reads a call site as 2 names together: "when the outside already names the purpose, the inside does not need to repeat it".
 Writing them fresh is what makes them publishable.
 They measure that a constant a type declares to hold its 1 shared object, read only through the name of that type, is not a name built on a general word, beside a field whose name and type both leave its purpose unsaid, which is.
+
+`conversion-name-hides-the-rows-it-drops` and its clean twin `conversion-name-says-it-keeps-parsable-rows` are written fresh in a fictional ferry terminal domain, in Java.
+Writing them fresh is what makes them publishable.
+They measure that a conversion whose name predicts that every row becomes an entry, while the rows it cannot read vanish, is a Prediction Failure for the drop, and that a name which says it keeps only what it can read is not.
+They are tier B, because the response and row types the method reads are not changed.
 
 Every case whose row names the book comes by the second route: its code is a listing from the book *Laminar Software Design*, and its expectation is the verdict the book's own text states on that listing.
 The book is published, so its listings may be published as fixtures.
