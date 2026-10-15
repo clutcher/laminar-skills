@@ -15,6 +15,7 @@
     "./agents/review/correctness/judge-validate-at-the-boundary.md",
     "./agents/review/design/judge-entry-boundary.md",
     "./agents/review/design/judge-leaked-details.md",
+    "./agents/review/design/judge-missing-boundary.md",
     "./agents/review/design/judge-over-extraction.md",
     "./agents/review/design/judge-scoped-parameters.md",
     "./agents/review/performance/judge-abstraction.md",

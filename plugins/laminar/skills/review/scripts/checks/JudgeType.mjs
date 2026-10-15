@@ -12,6 +12,7 @@ export const JUDGE_TYPE_BY_DESIGN_CHECK_MAP = Object.freeze({
   D1: "judge-design-over-extraction",
   D2: "judge-design-scoped-parameters",
   D3: "judge-design-leaked-details",
+  D4: "judge-design-missing-boundary",
 });
 
 export const DESIGN_JUDGE_TYPES = Object.freeze(Object.values(JUDGE_TYPE_BY_DESIGN_CHECK_MAP));

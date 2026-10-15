@@ -1,1 +1,1 @@
-simplicity-method,simplicity-class
+simplicity-method,simplicity-class,design-missing-boundary

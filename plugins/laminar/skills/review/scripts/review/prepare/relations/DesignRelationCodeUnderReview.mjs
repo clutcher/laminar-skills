@@ -161,6 +161,7 @@ export function buildDesignCodeUnderReview(extracted, { keeps, keepsJudgeType = 
     ...(extracted.coreOperations || []).map(createCoreOperationCodeUnderReview),
     ...(extracted.inOutOperations || []).map(createInOutOperationCodeUnderReview),
     ...(extracted.rebuiltValues || []).map(createRebuiltValueCodeUnderReview),
+    ...(extracted.memberGroups || []).map(relation => createMemberGroupsCodeUnderReview(relation, extracted.abstractions)),
   ].filter(isKeptBy(keeps, keepsJudgeType, topIds));
   return numberCodeUnderReviewFrom(designCodeUnderReview, firstNumber);
 }

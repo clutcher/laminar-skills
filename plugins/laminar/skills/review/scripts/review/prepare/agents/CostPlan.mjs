@@ -39,6 +39,7 @@ export const ROLE_BY_JUDGE_TYPE_MAP = Object.freeze({
   "judge-design-scoped-parameters": "simplicity-decision",
   "judge-design-leaked-details": "simplicity-decision",
   "judge-design-entry-boundary": "simplicity-decision",
+  "judge-design-missing-boundary": "simplicity-class",
 });
 
 export const ESTIMATED_FROM_A_NEAR_ROLE = Object.freeze(Object.fromEntries(Object.entries(ROLE_BY_JUDGE_TYPE_MAP)

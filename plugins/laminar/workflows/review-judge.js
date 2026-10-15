@@ -3,7 +3,7 @@ export const meta = {
   description: 'Laminar Code Review: screen the abstractions a prepared run folder holds, then judge one abstraction, design relation, boundary path, application or end method per call and return the possible findings',
   phases: [
     { title: 'Screen', detail: 'one agent per batch of abstractions answers the presence questions, and the workflow reads the answers against the checks each code under review holds; beside it, one agent writes the I/O rules from the summary of the end calls by type and module, one more call answers the groups of the summary that hold an end call no rule covers, where there are any, and the workflow applies the rules to every end call; no presence screen runs where no code under review holds a check it gates, and no I/O screen runs where the script listed no end call or the cache holds the rules' },
-    { title: 'Judge', detail: 'one agent per abstraction and judge type reads its own file of the code under review and returns the findings of that abstraction, the 3 design judges each read 1 relation of 2 or more abstractions per call, the entry boundary judge reads the entry boundaries of 1 schema type or 1 controller with their callers in other applications per call, the boundary judge reads 1 changed abstraction with the entry methods that reach it and the calls between them per call, and the test plan call returns the paths a test already covers beside them; a call with no check a screen gates starts beside the screens, the others wait for the presence answers, and the I/O paths judge waits for the I/O rules and runs once for each end method that holds an end call a rule marks io' },
+    { title: 'Judge', detail: 'one agent per abstraction and judge type reads its own file of the code under review and returns the findings of that abstraction, the 4 design judges each read 1 relation of 2 or more abstractions per call, the entry boundary judge reads the entry boundaries of 1 schema type or 1 controller with their callers in other applications per call, the boundary judge reads 1 changed abstraction with the entry methods that reach it and the calls between them per call, and the test plan call returns the paths a test already covers beside them; a call with no check a screen gates starts beside the screens, the others wait for the presence answers, and the I/O paths judge waits for the I/O rules and runs once for each end method that holds an end call a rule marks io' },
   ],
 }
 
@@ -33,6 +33,7 @@ const DEFAULT_MODELS = {
   'judge-design-scoped-parameters': 'sonnet',
   'judge-design-leaked-details': 'sonnet',
   'judge-design-entry-boundary': 'sonnet',
+  'judge-design-missing-boundary': 'sonnet',
   'judge-correctness-prevention': 'sonnet',
   'judge-correctness-validate-at-the-boundary': 'sonnet',
   'judge-correctness-simplicity-test-method': 'sonnet',
@@ -54,6 +55,7 @@ const DEFAULT_EFFORT = {
   'judge-design-scoped-parameters': 'low',
   'judge-design-leaked-details': 'low',
   'judge-design-entry-boundary': 'low',
+  'judge-design-missing-boundary': 'low',
   'judge-correctness-prevention': 'low',
   'judge-correctness-validate-at-the-boundary': 'low',
   'judge-correctness-simplicity-test-method': 'low',
@@ -322,6 +324,7 @@ const CHECKS_BY_JUDGE_TYPE = {
   'judge-design-scoped-parameters': ['D2'],
   'judge-design-leaked-details': ['D3'],
   'judge-design-entry-boundary': ['S1', 'CP1', 'D3'],
+  'judge-design-missing-boundary': ['D4'],
   'judge-correctness-prevention': ['CP1', 'CP3', 'CP4', 'CP5', 'CP7'],
   'judge-correctness-validate-at-the-boundary': ['CP6'],
   'judge-correctness-simplicity-test-method': ['S2', 'S4', 'S5', 'CD2'],
@@ -407,6 +410,7 @@ const SCHEMA_OF_ANY_CHECK_BY_JUDGE_TYPE = {
   'judge-design-scoped-parameters': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE } })),
   'judge-design-leaked-details': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE } })),
   'judge-design-entry-boundary': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE } })),
+  'judge-design-missing-boundary': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE }, ...THE_BELONGING_ANSWERS })),
   'judge-correctness-prevention': judgeSchemaOf(findingOf({ decision: A_TEXT, established: A_TEXT, alsoAt: { type: 'array', items: A_SECOND_PLACE } }, ['decision'])),
   'judge-correctness-validate-at-the-boundary': judgeSchemaOf(findingOf({ alsoAt: { type: 'array', items: A_SECOND_PLACE } }, ['alsoAt'])),
   'judge-correctness-simplicity-test-method': judgeSchemaOf(findingOf({ ...THE_PREDICTION, ...THE_BELONGING_ANSWERS, established: A_TEXT })),
