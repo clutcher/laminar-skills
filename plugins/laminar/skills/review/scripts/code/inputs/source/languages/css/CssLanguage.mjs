@@ -12,6 +12,7 @@ function readCssDeclaration(head) {
 
 export const CssLanguage = Object.freeze({
   diffDriver: "css",
+  holdsPresentationOnly: true,
   extensions: [".css", ".scss", ".less"],
   commentForms: createForms(["//"], [SLASH_STAR]),
   readDeclaration: readCssDeclaration,

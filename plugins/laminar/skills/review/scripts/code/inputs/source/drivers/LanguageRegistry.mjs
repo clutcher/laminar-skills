@@ -1,7 +1,7 @@
 import { GenericDriver } from "./generic/GenericDriver.mjs";
 import { GraphQLDriver } from "../languages/graphql/GraphQLDriver.mjs";
 import { ProseDriver } from "./generic/ProseDriver.mjs";
-import { DIFF_DRIVER_BY_EXTENSION_MAP, readExtension, findLanguage } from "../Languages.mjs";
+import { DIFF_DRIVER_BY_EXTENSION_MAP, findDiffDriver, readExtension, findLanguage } from "../Languages.mjs";
 
 export { findDiffDriver, readExtension, isOfTheFamilyOf, readLanguageFamily } from "../Languages.mjs";
 
@@ -17,6 +17,11 @@ const driverByDiffDriverMap = new Map();
 export const findDriver = filePath => findDriverForExtension(readExtension(filePath));
 
 export const holdsProseAt = filePath => Boolean(findDriver(filePath)?.holdsProse);
+
+export const holdsCodeAt = filePath => {
+  const diffDriver = findDiffDriver(filePath);
+  return Boolean(findDriver(filePath)) && !holdsProseAt(filePath) && !(diffDriver && findLanguage(diffDriver).holdsPresentationOnly);
+};
 
 export const isATypesOnlyFile = filePath => Boolean(findDriver(filePath)?.fileHoldsTypesOnly);
 

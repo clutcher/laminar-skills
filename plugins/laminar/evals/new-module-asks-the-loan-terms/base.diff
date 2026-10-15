@@ -1,0 +1,58 @@
+diff --git a/library/src/main/java/com/example/library/loans/app/domain/LoanTerms.java b/library/src/main/java/com/example/library/loans/app/domain/LoanTerms.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loans/app/domain/LoanTerms.java
+@@ -0,0 +1,13 @@
++package com.example.library.loans.app.domain;
++
++public record LoanTerms(
++    String loanId,
++    boolean renewalAllowed,
++    int requestedDays,
++    int grantedDays
++) {
++
++    public int lendingDays() {
++        return renewalAllowed ? requestedDays : grantedDays;
++    }
++}
+diff --git a/library/src/main/java/com/example/library/loans/out/catalog/CatalogLoanResponse.java b/library/src/main/java/com/example/library/loans/out/catalog/CatalogLoanResponse.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loans/out/catalog/CatalogLoanResponse.java
+@@ -0,0 +1,4 @@
++package com.example.library.loans.out.catalog;
++
++public record CatalogLoanResponse(String loanId, String renewalCode, int requestedDays, int grantedDays) {
++}
+diff --git a/library/src/main/java/com/example/library/loans/out/catalog/CatalogLoanMapper.java b/library/src/main/java/com/example/library/loans/out/catalog/CatalogLoanMapper.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loans/out/catalog/CatalogLoanMapper.java
+@@ -0,0 +1,11 @@
++package com.example.library.loans.out.catalog;
++
++import com.example.library.loans.app.domain.LoanTerms;
++
++public final class CatalogLoanMapper {
++
++    public LoanTerms toLoanTerms(CatalogLoanResponse response) {
++        boolean renewalAllowed = response.renewalCode() != null && !response.renewalCode().isBlank();
++        return new LoanTerms(response.loanId(), renewalAllowed, response.requestedDays(), response.grantedDays());
++    }
++}
+diff --git a/library/src/main/java/com/example/library/loans/app/LoanStatistics.java b/library/src/main/java/com/example/library/loans/app/LoanStatistics.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/loans/app/LoanStatistics.java
+@@ -0,0 +1,10 @@
++package com.example.library.loans.app;
++
++import com.example.library.loans.app.domain.LoanTerms;
++
++public class LoanStatistics {
++
++    public boolean wasShortened(LoanTerms terms) {
++        return terms.grantedDays() < terms.requestedDays();
++    }
++}

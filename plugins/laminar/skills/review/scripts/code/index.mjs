@@ -10,10 +10,11 @@ export { findAddedLinesOfTheFile, countChangedBranches, ChangedLines, holdsAnAdd
 export { FILE_STATUS, holdsANonBlankLine } from "./inputs/change/Hunk.mjs";
 export { CONTROL_WORD_PATTERN_SOURCE } from "./inputs/source/forms/FunctionNamePatterns.mjs";
 export { LanguageDriver } from "./inputs/source/drivers/LanguageDriver.mjs";
-export { findDiffDriver, findDriver, holdsProseAt, isAFileWithBehavior, isATypesOnlyFile, readLanguageFamily } from "./inputs/source/drivers/LanguageRegistry.mjs";
+export { findDiffDriver, findDriver, holdsCodeAt, holdsProseAt, isAFileWithBehavior, isATypesOnlyFile, readLanguageFamily } from "./inputs/source/drivers/LanguageRegistry.mjs";
 export { opensAnAnnotation } from "./inputs/source/lines/Annotations.mjs";
 export { COMMENT_LINE_FORMS, isACommentLine } from "./inputs/source/forms/CommentForms.mjs";
 export { isADecisionLine } from "./inputs/source/lines/DecisionLines.mjs";
+export { joinStatementLines, joinStatementTexts, readStatementAt } from "./inputs/source/lines/StatementLines.mjs";
 export { IMPORT_OR_NAMESPACE_LINE_PATTERN } from "./inputs/source/lines/ImportLines.mjs";
 export { STRING_LITERAL_PATTERN } from "./inputs/source/text/TextLiterals.mjs";
 export { findSharedStems, collectStems } from "./inputs/source/names/NameStems.mjs";

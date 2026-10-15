@@ -1,0 +1,41 @@
+diff --git a/library/src/main/java/com/example/library/reminders/app/domain/ReminderLoan.java b/library/src/main/java/com/example/library/reminders/app/domain/ReminderLoan.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/reminders/app/domain/ReminderLoan.java
+@@ -0,0 +1,4 @@
++package com.example.library.reminders.app.domain;
++
++public record ReminderLoan(String loanId, boolean renewable) {
++}
+diff --git a/library/src/main/java/com/example/library/reminders/app/ReminderPlanner.java b/library/src/main/java/com/example/library/reminders/app/ReminderPlanner.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/reminders/app/ReminderPlanner.java
+@@ -0,0 +1,11 @@
++package com.example.library.reminders.app;
++
++import com.example.library.loans.app.domain.LoanTerms;
++import java.time.LocalDate;
++
++public class ReminderPlanner {
++
++    public LocalDate reminderDateFor(LoanTerms terms, LocalDate borrowedOn) {
++        return borrowedOn.plusDays(terms.lendingDays() - 2);
++    }
++}
+diff --git a/library/src/main/java/com/example/library/reminders/out/catalog/CatalogReminderMapper.java b/library/src/main/java/com/example/library/reminders/out/catalog/CatalogReminderMapper.java
+new file mode 100644
+--- /dev/null
++++ b/library/src/main/java/com/example/library/reminders/out/catalog/CatalogReminderMapper.java
+@@ -0,0 +1,11 @@
++package com.example.library.reminders.out.catalog;
++
++import com.example.library.loans.app.domain.LoanTerms;
++import com.example.library.reminders.app.domain.ReminderLoan;
++
++public final class CatalogReminderMapper {
++
++    public ReminderLoan toReminderLoan(LoanTerms terms) {
++        return new ReminderLoan(terms.loanId(), terms.renewalAllowed());
++    }
++}

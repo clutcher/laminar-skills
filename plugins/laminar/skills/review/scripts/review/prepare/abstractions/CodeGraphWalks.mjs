@@ -170,7 +170,7 @@ export class CodeGraphWalks {
 
   placeTheSearchResults(abstraction, searched, sameDecisionAt, occurrences) {
     if (abstraction.isTest) return { sameDecisionAt: [], occurrences: mapToUses([...occurrences, ...sameDecisionAt]) };
-    return { sameDecisionAt: [...sameDecisionAt, ...this.sameDecisions.readValuePlacesOf(searched)], occurrences };
+    return { sameDecisionAt: [...sameDecisionAt, ...this.sameDecisions.readValuePlacesOf(searched), ...this.sameDecisions.findSharedReadPlaces(searched), ...this.sameDecisions.findDerivedValuePlaces(searched)], occurrences };
   }
 
   runUsesOfLiteralNames() {

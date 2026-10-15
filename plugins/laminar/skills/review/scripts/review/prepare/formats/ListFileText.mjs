@@ -16,6 +16,8 @@ const HEAD_WRITER_BY_OCCURRENCE_KIND_MAP = Object.freeze({
   LITERAL: key => `Literal \`${key}\``,
   WINDOW: key => `Window of \`${key}\``,
   READ_IDENTIFIER: key => `Identifier \`${key}\``,
+  SHARED_READS: key => `Shared reads \`${key}\``,
+  DERIVED_VALUE: key => `Derived from \`${key}\``,
   TWIN_MEMBERS: (key, occurrence) => `Near twin \`${key}\` · ${occurrence.shared} of ${occurrence.members} members shared`,
 });
 

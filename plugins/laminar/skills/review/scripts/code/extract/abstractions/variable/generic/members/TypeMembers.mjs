@@ -1,6 +1,6 @@
 import { walkParenthesesBalances } from "../../../../../inputs/source/text/Brackets.mjs";
 
-const MAX_HEAD_LINES = 12;
+const MAX_HEAD_LINES = 40;
 
 const CLASS_MEMBER_PATTERN = /\bstatic\b/;
 
