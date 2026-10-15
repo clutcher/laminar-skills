@@ -14,7 +14,7 @@ import { RunFileStop } from "./files/runFile.mjs";
 
 const SUBCOMMANDS = ["extract", "prepare", "merge", "render"];
 
-const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --diff <patch>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--top <N>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
+const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --diff <patch>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
 
 const PREPARE_RETURN_FILE = "prepare-return.json";
 
@@ -23,7 +23,7 @@ const MERGE_RETURN_FILE = "merge-return.json";
 const splitList = given => String(given || "").split(",").map(piece => piece.trim()).filter(Boolean);
 
 function parseArguments(argv) {
-  const parsed = { files: [], exclude: [], judges: [], paths: [], top: null, findings: [], verdicts: [] };
+  const parsed = { files: [], exclude: [], judges: [], paths: [], scales: [], findings: [], verdicts: [] };
   for (let index = 0; index < argv.length; index++) {
     const name = argv[index];
     if (name === "--run") parsed.run = argv[++index];
@@ -35,7 +35,7 @@ function parseArguments(argv) {
     else if (name === "--exclude") parsed.exclude = splitList(argv[++index]);
     else if (name === "--judges") parsed.judges = splitList(argv[++index]);
     else if (name === "--paths") parsed.paths = splitList(argv[++index]);
-    else if (name === "--top") parsed.top = argv[++index];
+    else if (name === "--scales") parsed.scales = splitList(argv[++index]);
     else if (name === "--files") { while (index + 1 < argv.length && !argv[index + 1].startsWith("--")) parsed.files.push(argv[++index]); }
     else { console.error(`unknown argument ${name}`); process.exit(2); }
   }
@@ -92,7 +92,7 @@ function extract(parsed) {
 
 function filterOrStop(parsed) {
   try {
-    return new ReviewFilter({ judges: parsed.judges, paths: parsed.paths, top: parsed.top });
+    return new ReviewFilter({ judges: parsed.judges, paths: parsed.paths, scales: parsed.scales });
   } catch (error) {
     if (!(error instanceof FilterStop)) throw error;
     console.error(`prepare: ${error.message}`);

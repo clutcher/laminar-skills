@@ -23,7 +23,7 @@ import { buildBoundaryPathCodeUnderReview, isABoundaryPathCodeUnderReview } from
 import { formatBoundaryPathText } from "./relations/BoundaryPathText.mjs";
 import { IoRuleCache, createRuleKey } from "./io/IoRuleCache.mjs";
 import { buildIoSummary } from "./io/IoSummary.mjs";
-import { COST_PLAN_FILE, formatCostPlanLine, FULL_COST_PLAN_FILE, buildCostPlan, estimateCostTotals, collectModuleRoots, TOP_PREVIEWS } from "./agents/CostPlan.mjs";
+import { COST_PLAN_FILE, formatCostPlanLine, FULL_COST_PLAN_FILE, buildCostPlan, estimateCostTotals, collectModuleRoots, SCALES_OF_THE_SCALES_RUN } from "./agents/CostPlan.mjs";
 import { NO_FILTER } from "./selection/ReviewFilter.mjs";
 import { isAnIoPathsCodeUnderReview, buildJudgeWaves } from "./agents/JudgeWaves.mjs";
 import { createPropertyWhenNotEmpty, writeJsonFile } from "../../files/jsonFile.mjs";
@@ -217,37 +217,36 @@ export class PrepareStep {
     this.scriptFindings = buildScriptFindings(this.walk.listEveryAbstraction().filter(abstraction => this.filter.keepsPath(abstraction.path)), this.extracted.changedLines || {}, {
       selectedAbstractions: this.walk.collectSelectedAbstractions().filter(abstraction => this.filter.keepsPath(abstraction.path)),
       keepsJudgeType: judgeType => this.filter.keepsJudgeType(judgeType),
+      keepsScale: scale => this.filter.keepsScale(scale),
     });
     const selected = this.findJudgedAbstractions();
     this.withNothingToShow = selected.map(keepTracksWithNothingToShow).filter(holdsATrack);
     const judged = selected.map(keepTracksWithSomethingToShow).filter(holdsATrack);
-    this.rankedAbstractionCount = judged.length;
-    const topIds = this.filter.findTopIds(judged.map(({ abstraction }) => abstraction));
-    const keeps = abstraction => this.filter.keepsPath(abstraction.path) && (!topIds || topIds.has(abstraction.id));
+    const keeps = abstraction => this.filter.keepsPath(abstraction.path);
     let number = 1;
-    for (const { abstraction, tracks } of judged.filter(({ abstraction }) => keeps(abstraction))) {
+    for (const { abstraction, tracks } of judged) {
       for (const { track, checks } of tracks) this.codeUnderReview.push(createCodeUnderReview(abstraction, track, checks, number++));
     }
-    const boundaries = this.keepsSystemTrack(TRACKS.TEST_PLAN) ? this.walk.findBoundariesOwingATest().filter(({ abstraction }) => keeps(abstraction)) : [];
+    const boundaries = this.keepsSystemTrack(TRACKS.TEST_PLAN) && this.filter.keepsScale(Scale.APPLICATION.name) ? this.walk.findBoundariesOwingATest().filter(({ abstraction }) => keeps(abstraction)) : [];
     for (const plan of buildTestPlans(boundaries, TEST_PLAN_SLICE_LINES)) {
       this.codeUnderReview.push(createTestPlanCodeUnderReview(plan, number++));
     }
     this.ioRuleKey = createRuleKey(this.extracted.dependencies);
     this.ioCachedRules = this.givenIoCachedRules === undefined ? this.ruleCache.read(this.ioRuleKey) : this.givenIoCachedRules;
-    const ioChainAbstractions = this.keepsSystemTrack(TRACKS.IO_PATHS) ? this.walk.findIoChainAbstractions().filter(({ abstraction }) => keeps(abstraction)) : [];
+    const ioChainAbstractions = this.keepsSystemTrack(TRACKS.IO_PATHS) && this.filter.keepsScale(Scale.METHOD.name) ? this.walk.findIoChainAbstractions().filter(({ abstraction }) => keeps(abstraction)) : [];
     this.io = buildIoPaths(ioChainAbstractions, { rules: this.ioCachedRules });
     this.ioSummary = this.io.needsAnIoRuleScreenCall ? buildIoSummary(this.io.ends, this.extracted.dependencies) : null;
     for (const ioPathsJudgeCall of this.io.judgeCalls) this.codeUnderReview.push(createIoPathsCodeUnderReview(ioPathsJudgeCall, number++));
     if (DESIGN_JUDGE_TYPES.some(judgeType => this.filter.keepsJudgeType(judgeType))) {
-      const designCodeUnderReview = buildDesignCodeUnderReview(this.extracted, { keeps: given => this.filter.keepsPath(given), keepsJudgeType: judgeType => this.filter.keepsJudgeType(judgeType), topIds, firstNumber: number });
+      const designCodeUnderReview = buildDesignCodeUnderReview(this.extracted, { keeps: given => this.filter.keepsPath(given), keepsJudgeType: judgeType => this.filter.keepsJudgeType(judgeType), keepsScale: scale => this.filter.keepsScale(scale), firstNumber: number });
       this.codeUnderReview.push(...designCodeUnderReview);
       number += designCodeUnderReview.length;
     }
-    this.entryBoundaries = buildEntryBoundaryCodeUnderReview(this.extracted, { keeps: given => this.filter.keepsPath(given), topIds, firstNumber: number, judged: this.keepsSystemTrack(TRACKS.ENTRY_BOUNDARY) });
+    this.entryBoundaries = buildEntryBoundaryCodeUnderReview(this.extracted, { keeps: given => this.filter.keepsPath(given), keepsScale: scale => this.filter.keepsScale(scale), firstNumber: number, judged: this.keepsSystemTrack(TRACKS.ENTRY_BOUNDARY) });
     this.codeUnderReview.push(...this.entryBoundaries.judgeCalls);
     number += this.entryBoundaries.judgeCalls.length;
     const selectedIds = new Set(this.walk.collectSelectedAbstractions().map(abstraction => abstraction.id));
-    this.boundaryPaths = buildBoundaryPathCodeUnderReview(this.extracted, { keeps: given => this.filter.keepsPath(given), topIds, selectedIds, firstNumber: number, judged: this.keepsSystemTrack(TRACKS.BOUNDARY) });
+    this.boundaryPaths = buildBoundaryPathCodeUnderReview(this.extracted, { keeps: given => this.filter.keepsPath(given), keepsScale: scale => this.filter.keepsScale(scale), selectedIds, firstNumber: number, judged: this.keepsSystemTrack(TRACKS.BOUNDARY) });
     this.codeUnderReview.push(...this.boundaryPaths.judgeCalls);
     this.screenBatches = buildScreenBatches(this.codeUnderReview, this.changedLines);
     this.waves = buildJudgeWaves(this.codeUnderReview, this.screenBatches, { ioRuleScreenCall: Boolean(this.ioSummary) });
@@ -256,7 +255,7 @@ export class PrepareStep {
 
   findJudgedAbstractions() {
     return this.walk.collectSelectedAbstractions()
-      .filter(abstraction => this.filter.keepsPath(abstraction.path))
+      .filter(abstraction => this.filter.keepsPath(abstraction.path) && this.filter.keepsScale(abstraction.scale))
       .map(abstraction => ({ abstraction, tracks: this.findKeptTracks(abstraction) }))
       .filter(({ tracks }) => tracks.length);
   }
@@ -279,13 +278,10 @@ export class PrepareStep {
     };
   }
 
-  buildTopPreviews(tops = TOP_PREVIEWS) {
-    return tops
-      .filter(top => top < this.rankedAbstractionCount && (this.filter.top === null || top < this.filter.top))
-      .map(top => {
-        const narrowed = new PrepareStep(this.extracted, { ruleCache: this.ruleCache, filter: this.filter.copyWithTop(top), ioCachedRules: this.ioCachedRules }).run();
-        return { top, ...estimateCostTotals(narrowed.codeUnderReview, narrowed.measureScreens()) };
-      });
+  estimateScalesRun() {
+    if (this.filter.keepsOnlyScalesAmong(SCALES_OF_THE_SCALES_RUN)) return null;
+    const narrowed = new PrepareStep(this.extracted, { ruleCache: this.ruleCache, filter: this.filter.copyWithScales(SCALES_OF_THE_SCALES_RUN), ioCachedRules: this.ioCachedRules }).run();
+    return { scales: SCALES_OF_THE_SCALES_RUN, ...estimateCostTotals(narrowed.codeUnderReview, narrowed.measureScreens()) };
   }
 
   createCostPlan() {
@@ -294,7 +290,7 @@ export class PrepareStep {
       screens: this.measureScreens(),
       moduleRoots: collectModuleRoots(this.extracted.abstractions),
       filter: this.filter.convertToFields(),
-      topPreviews: this.buildTopPreviews(),
+      scalesRun: this.estimateScalesRun(),
       waves: this.waves.length,
     });
   }
@@ -408,7 +404,6 @@ export class PrepareStep {
       mode: this.extracted.mode,
       target: this.extracted.target || "",
       filter: this.filter.convertToFields(),
-      rankedAbstractions: this.rankedAbstractionCount,
       counts: this.buildCounts(),
       notAnswered: this.listNotAnswered(),
       codeUnderReview: this.codeUnderReview,

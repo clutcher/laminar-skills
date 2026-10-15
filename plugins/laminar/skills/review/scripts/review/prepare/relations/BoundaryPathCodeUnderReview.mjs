@@ -26,9 +26,9 @@ const createBoundaryPathCodeUnderReview = found => ({
   slice: null,
 });
 
-const isKeptBy = (keeps, topIds, selectedIds) => found => keeps(found.path)
-  && selectedIds.has(found.abstractionId)
-  && (!topIds || topIds.has(found.abstractionId));
+const isKeptBy = (keeps, selectedIds) => found => keeps(found.path) && selectedIds.has(found.abstractionId);
+
+const KEEPS_EVERY_SCALE = () => true;
 
 const countPaths = (kept, judged) => ({
   paths: kept.length,
@@ -38,9 +38,9 @@ const countPaths = (kept, judged) => ({
   notJudged: kept.length - judged.length,
 });
 
-export function buildBoundaryPathCodeUnderReview(extracted, { keeps, topIds, selectedIds, firstNumber, judged = true }) {
-  const kept = (extracted.boundaryPaths || []).filter(isKeptBy(keeps, topIds, selectedIds)).sort(compareByKindThenPlace);
-  const judgedPaths = judged ? kept.slice(0, MAX_BOUNDARY_PATH_JUDGE_CALLS) : [];
+export function buildBoundaryPathCodeUnderReview(extracted, { keeps, keepsScale = KEEPS_EVERY_SCALE, selectedIds, firstNumber, judged = true }) {
+  const kept = (extracted.boundaryPaths || []).filter(isKeptBy(keeps, selectedIds)).sort(compareByKindThenPlace);
+  const judgedPaths = judged ? kept.filter(found => keepsScale(found.scale)).slice(0, MAX_BOUNDARY_PATH_JUDGE_CALLS) : [];
   return {
     judgeCalls: numberCodeUnderReviewFrom(judgedPaths.map(createBoundaryPathCodeUnderReview), firstNumber),
     counts: countPaths(kept, judgedPaths),

@@ -150,11 +150,13 @@ export const createMemberGroupsCodeUnderReview = (relation, abstractions) => {
 
 export const buildMemberGroupsCodeUnderReview = (extracted, firstNumber = 1) => numberCodeUnderReviewFrom((extracted.memberGroups || []).map(relation => createMemberGroupsCodeUnderReview(relation, extracted.abstractions)), firstNumber);
 
-const isKeptBy = (keeps, keepsJudgeType, topIds) => designRelation => keeps(designRelation.path) && keepsJudgeType(designRelation.judgeType) && (!topIds || designRelation.abstractionIds.some(id => topIds.has(id)));
+const isKeptBy = (keeps, keepsJudgeType, keepsScale) => designRelation => keeps(designRelation.path) && keepsJudgeType(designRelation.judgeType) && keepsScale(designRelation.scale);
 
 const KEEPS_EVERY_JUDGE_TYPE = () => true;
 
-export function buildDesignCodeUnderReview(extracted, { keeps, keepsJudgeType = KEEPS_EVERY_JUDGE_TYPE, topIds, firstNumber }) {
+const KEEPS_EVERY_SCALE = () => true;
+
+export function buildDesignCodeUnderReview(extracted, { keeps, keepsJudgeType = KEEPS_EVERY_JUDGE_TYPE, keepsScale = KEEPS_EVERY_SCALE, firstNumber }) {
   const designCodeUnderReview = [
     ...(extracted.chainGroups || []).map(createChainGroupCodeUnderReview),
     ...(extracted.parameterRelations || []).map(createParameterRelationCodeUnderReview),
@@ -162,7 +164,7 @@ export function buildDesignCodeUnderReview(extracted, { keeps, keepsJudgeType = 
     ...(extracted.inOutOperations || []).map(createInOutOperationCodeUnderReview),
     ...(extracted.rebuiltValues || []).map(createRebuiltValueCodeUnderReview),
     ...(extracted.memberGroups || []).map(relation => createMemberGroupsCodeUnderReview(relation, extracted.abstractions)),
-  ].filter(isKeptBy(keeps, keepsJudgeType, topIds));
+  ].filter(isKeptBy(keeps, keepsJudgeType, keepsScale));
   return numberCodeUnderReviewFrom(designCodeUnderReview, firstNumber);
 }
 

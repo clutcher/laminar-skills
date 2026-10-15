@@ -92,7 +92,7 @@ export function readConcurrentAgentCalls(environment = process.env, cpuCount = o
   return Math.max(1, Math.min(MAX_CONCURRENT_AGENT_CALLS, cpuCount - CPUS_LEFT_FREE));
 }
 
-export const TOP_PREVIEWS = Object.freeze([50, 100, 250, 500]);
+export const SCALES_OF_THE_SCALES_RUN = Object.freeze([Scale.APPLICATION.name, Scale.MODULE.name, Scale.CLASS.name]);
 
 const FOLDER_SEGMENTS = 2;
 
@@ -272,7 +272,7 @@ const summarizeIoPathsCodeUnderReview = codeUnderReview => ({
   endCalls: (codeUnderReview.calls || []).length,
 });
 
-export function buildCostPlan({ codeUnderReview, screens, moduleRoots = new Map(), filter = null, topPreviews = [], waves: waveCount = 1, concurrentAgentCalls = readConcurrentAgentCalls() }) {
+export function buildCostPlan({ codeUnderReview, screens, moduleRoots = new Map(), filter = null, scalesRun = null, waves: waveCount = 1, concurrentAgentCalls = readConcurrentAgentCalls() }) {
   const totals = estimateCostTotals(codeUnderReview, screens, concurrentAgentCalls);
   const folderKeys = collectFolderKeys(codeUnderReview, moduleRoots);
   return {
@@ -290,7 +290,7 @@ export function buildCostPlan({ codeUnderReview, screens, moduleRoots = new Map(
     byScale: groupCosts(codeUnderReview, judgeCall => judgeCall.scale, "scale"),
     byFolder: groupCosts(codeUnderReview, judgeCall => folderKeys.get(judgeCall), "folder"),
     ioPaths: codeUnderReview.filter(judgeCall => judgeCall.judgeType === "judge-performance-io-paths").map(summarizeIoPathsCodeUnderReview),
-    topByBoundaryRank: topPreviews,
+    scalesRun,
   };
 }
 
@@ -298,5 +298,14 @@ const formatThousands = count => count >= 1_000_000 ? `${(count / 1_000_000).toF
 
 const formatMinutes = seconds => `${Math.max(1, Math.round(seconds / 60))} min`;
 
+const formatScaleNames = scales => {
+  const names = scales.map(scale => scale.toLowerCase());
+  return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names.join("");
+};
+
+const formatScalesRunPhrase = scalesRun => scalesRun
+  ? ` · ${formatScaleNames(scalesRun.scales)} only: judge calls ${scalesRun.upTo.judgeCalls} up to · ${scalesRun.afterScreen.judgeCalls} after the screen · new tokens ${formatThousands(scalesRun.upTo.newTokens)} up to · ${formatThousands(scalesRun.afterScreen.newTokens)} after the screen · wall ${formatMinutes(scalesRun.upTo.wallSeconds)} up to`
+  : "";
+
 export const formatCostPlanLine = plan =>
-  `cost plan: judge calls ${plan.upTo.judgeCalls} up to · ${plan.afterScreen.judgeCalls} after the screen · refuter calls ${plan.upTo.refuterCalls} up to · verifier calls ${plan.upTo.verifierCalls} up to · new tokens ${formatThousands(plan.upTo.newTokens)} up to · ${formatThousands(plan.afterScreen.newTokens)} after the screen · wall ${formatMinutes(plan.upTo.wallSeconds)} up to · judge workflow waves ${plan.waves} · above the threshold of ${THRESHOLD.judgeCalls} calls or ${formatThousands(THRESHOLD.newTokens)} new tokens: ${plan.passesThreshold ? "yes" : "no"}${plan.filter ? " · filtered" : ""}`;
+  `cost plan: judge calls ${plan.upTo.judgeCalls} up to · ${plan.afterScreen.judgeCalls} after the screen · refuter calls ${plan.upTo.refuterCalls} up to · verifier calls ${plan.upTo.verifierCalls} up to · new tokens ${formatThousands(plan.upTo.newTokens)} up to · ${formatThousands(plan.afterScreen.newTokens)} after the screen · wall ${formatMinutes(plan.upTo.wallSeconds)} up to · judge workflow waves ${plan.waves}${formatScalesRunPhrase(plan.scalesRun)} · above the threshold of ${THRESHOLD.judgeCalls} calls or ${formatThousands(THRESHOLD.newTokens)} new tokens: ${plan.passesThreshold ? "yes" : "no"}${plan.filter ? " · filtered" : ""}`;

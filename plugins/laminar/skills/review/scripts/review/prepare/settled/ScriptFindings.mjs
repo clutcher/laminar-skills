@@ -220,14 +220,17 @@ const listSettledFacts = abstraction => SETTLED_KINDS.flatMap(kind => ((abstract
 
 const KEEPS_EVERY_JUDGE_TYPE = () => true;
 
+const KEEPS_EVERY_SCALE = () => true;
+
 const listAbstractionFactsTheScriptSettles = (selectedAbstractions, keepsJudgeType) => ABSTRACTION_KINDS
   .filter(kind => keepsJudgeType(kind.standsInFor))
   .flatMap(kind => selectedAbstractions.flatMap(abstraction => kind.listSettled(abstraction).map(settledFact => ({ abstraction, kind, settledFact }))));
 
-export function buildScriptFindings(abstractions, changedLines = {}, { selectedAbstractions = [], keepsJudgeType = KEEPS_EVERY_JUDGE_TYPE } = {}) {
-  const settledFactsOfModules = abstractions.filter(isAModule).flatMap(listSettledFacts)
+export function buildScriptFindings(abstractions, changedLines = {}, { selectedAbstractions = [], keepsJudgeType = KEEPS_EVERY_JUDGE_TYPE, keepsScale = KEEPS_EVERY_SCALE } = {}) {
+  const modulesKept = keepsScale(Scale.MODULE.name) ? abstractions.filter(isAModule) : [];
+  const settledFactsOfModules = modulesKept.flatMap(listSettledFacts)
     .map(settled => ({ ...settled, createCodeUnderReview: createCodeUnderReviewOfTheScript }));
-  const settledFactsOfAbstractions = listAbstractionFactsTheScriptSettles(selectedAbstractions, keepsJudgeType)
+  const settledFactsOfAbstractions = listAbstractionFactsTheScriptSettles(selectedAbstractions.filter(abstraction => keepsScale(abstraction.scale)), keepsJudgeType)
     .map(settled => ({ ...settled, createCodeUnderReview: createCodeUnderReviewOfAnAbstractionTheScriptSettled }));
   return [...settledFactsOfModules, ...settledFactsOfAbstractions].map(({ abstraction, kind, settledFact, createCodeUnderReview }, at) => {
     const id = `${SCRIPT_ID_MARK}${at + 1}`;

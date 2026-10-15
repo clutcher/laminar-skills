@@ -1,30 +1,7 @@
-import { BOUNDARY_RANKS } from "../../../code/index.mjs";
+import { Scale } from "../../../code/index.mjs";
 import { DESIGN_JUDGE_TYPES, JUDGE_TYPE_BY_SCALE_MAP, JUDGE_TYPE_BY_TRACK_MAP } from "../../../checks/JudgeType.mjs";
 
 export const JUDGE_TYPES = Object.freeze([...new Set([...Object.values(JUDGE_TYPE_BY_SCALE_MAP), ...DESIGN_JUDGE_TYPES, ...Object.values(JUDGE_TYPE_BY_TRACK_MAP)])]);
-
-const RANK_ORDER = Object.freeze([
-  BOUNDARY_RANKS.SYSTEM_BOUNDARY,
-  BOUNDARY_RANKS.MODULE_BOUNDARY,
-  BOUNDARY_RANKS.DOMAIN_MODEL,
-  BOUNDARY_RANKS.API_IMPLEMENTATION,
-  BOUNDARY_RANKS.OUT_CODE,
-  BOUNDARY_RANKS.IN_CODE,
-  BOUNDARY_RANKS.UNKNOWN,
-]);
-
-const readRankPlace = rank => {
-  const place = RANK_ORDER.indexOf(rank);
-  return place < 0 ? RANK_ORDER.length : place;
-};
-
-const readIdNumber = abstraction => Number(String(abstraction.id).replace(/\D/g, "")) || 0;
-
-const compareByText = (left, right) => left < right ? -1 : left > right ? 1 : 0;
-
-export const compareByBoundaryRank = (left, right) => readRankPlace(left.boundaryRank) - readRankPlace(right.boundaryRank)
-  || compareByText(String(left.path || ""), String(right.path || ""))
-  || readIdNumber(left) - readIdNumber(right);
 
 const removeEndSlash = prefix => prefix.replace(/^\.\//, "").replace(/\/+$/, "");
 
@@ -47,22 +24,23 @@ const resolveJudgeTypesNamed = name => {
   return [judgeType];
 };
 
-const parseTop = given => {
-  if (given === null || given === undefined) return null;
-  const top = Number(given);
-  if (!Number.isInteger(top) || top < 1) throw new FilterStop(`--top takes a whole number above 0, not ${given}`);
-  return top;
+const formatScaleName = scale => scale.name.toLowerCase();
+
+const resolveScaleNamed = name => {
+  const scale = Scale.findNamed(name.toUpperCase());
+  if (!scale) throw new FilterStop(`unknown scale ${name}, known: ${Scale.ALL.map(formatScaleName).join(", ")}`);
+  return scale.name;
 };
 
 export class ReviewFilter {
-  constructor({ judges = [], paths = [], top = null } = {}) {
+  constructor({ judges = [], paths = [], scales = [] } = {}) {
     this.judges = [...new Set(judges.flatMap(resolveJudgeTypesNamed))];
     this.paths = paths.map(removeEndSlash).filter(Boolean);
-    this.top = parseTop(top);
+    this.scales = [...new Set(scales.map(resolveScaleNamed))];
   }
 
   isEmpty() {
-    return !this.judges.length && !this.paths.length && this.top === null;
+    return !this.judges.length && !this.paths.length && !this.scales.length;
   }
 
   keepsJudgeType(judgeType) {
@@ -73,17 +51,20 @@ export class ReviewFilter {
     return !this.paths.length || this.paths.some(prefix => isUnder(String(given || ""), prefix));
   }
 
-  findTopIds(abstractions) {
-    if (this.top === null) return null;
-    return new Set([...abstractions].sort(compareByBoundaryRank).slice(0, this.top).map(abstraction => abstraction.id));
+  keepsScale(scale) {
+    return !this.scales.length || this.scales.includes(String(scale));
   }
 
-  copyWithTop(top) {
-    return new ReviewFilter({ judges: this.judges, paths: this.paths, top });
+  keepsOnlyScalesAmong(scales) {
+    return this.scales.length > 0 && this.scales.every(scale => scales.includes(scale));
+  }
+
+  copyWithScales(scales) {
+    return new ReviewFilter({ judges: this.judges, paths: this.paths, scales });
   }
 
   convertToFields() {
-    return this.isEmpty() ? null : { judges: this.judges, paths: this.paths, top: this.top };
+    return this.isEmpty() ? null : { judges: this.judges, paths: this.paths, scales: this.scales };
   }
 }
 

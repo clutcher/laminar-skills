@@ -2,12 +2,12 @@
 
 Read this file only where the `costPlan` line of the prepare `RESULT` ends in `yes`. Until the user answers, dispatch nothing.
 
-Read `<run>/cost-plan.json` and ask the user with 1 `AskUserQuestion` call, header `Scope`, 1 question: `This review would run <upTo.judgeCalls> judge calls, <upTo.refuterCalls> refuter calls and <upTo.verifierCalls> verifier calls, with <afterScreen.newTokens> to <upTo.newTokens> new tokens, about <upTo.wallSeconds in minutes> min. What should run?` Give 4 options, each with its cost in its description:
+Read `<run>/cost-plan.json` and ask the user with 1 `AskUserQuestion` call, header `Scope`, 1 question: `This review would run <upTo.judgeCalls> judge calls, <upTo.refuterCalls> refuter calls and <upTo.verifierCalls> verifier calls, with <afterScreen.newTokens> to <upTo.newTokens> new tokens, about <upTo.wallSeconds in minutes> min. What should run?` Give the options below, each with its cost in its description:
 
 | Option | Its cost, from `cost-plan.json` |
 |---|---|
 | `Run all` | `upTo` and `afterScreen` |
-| `Top <N> by boundary rank` | the largest entry of `topByBoundaryRank` whose `upTo.newTokens` is under 2M, or the smallest entry where none is; its `upTo` and `afterScreen` |
+| `Application, module and class only` | `upTo` and `afterScreen` of `scalesRun`; where `scalesRun` is null, leave this option out |
 | `Only some judge types or folders` | none; the next call shows it |
 | `Cancel` | nothing runs |
 
@@ -16,7 +16,7 @@ On `Only some judge types or folders`, ask 1 more `AskUserQuestion` call with 2 
 On `Run all`, go on to step 2 with the `RESULT` object you have. On `Cancel`, stop, and say in 1 line that nothing was dispatched and that the plan is in `<run>/cost-plan.json`. On any other answer, run prepare again in the same run folder with the filter the answer names, and never run extract again:
 
 ```bash
-node "<skill>/scripts/runReview.mjs" prepare --run "<run>" --top <N>
+node "<skill>/scripts/runReview.mjs" prepare --run "<run>" --scales application,module,class
 node "<skill>/scripts/runReview.mjs" prepare --run "<run>" --judges "<judgeType,...>" --paths "<folder,...>"
 ```
 

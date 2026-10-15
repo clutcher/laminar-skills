@@ -59,7 +59,7 @@ const groupByEnclosingType = boundaries => {
   return [...boundariesByEnclosingTypeMap.values()];
 };
 
-const isKeptBy = (keeps, topIds) => boundary => keeps(boundary.path) && (!topIds || (boundary.abstractionIds || []).some(id => topIds.has(id)));
+const KEEPS_EVERY_SCALE = () => true;
 
 const countBoundaries = (kept, judged) => ({
   boundaries: kept.length,
@@ -69,10 +69,10 @@ const countBoundaries = (kept, judged) => ({
   notJudged: kept.filter(hasACaller).length - judged.length,
 });
 
-export function buildEntryBoundaryCodeUnderReview(extracted, { keeps, topIds, firstNumber, judged = true }) {
-  const kept = (extracted.entryBoundaries || []).filter(isKeptBy(keeps, topIds));
+export function buildEntryBoundaryCodeUnderReview(extracted, { keeps, keepsScale = KEEPS_EVERY_SCALE, firstNumber, judged = true }) {
+  const kept = (extracted.entryBoundaries || []).filter(boundary => keeps(boundary.path));
   const everyCodeUnderReview = judged
-    ? groupByEnclosingType(kept.filter(hasACaller)).flatMap(createCodeUnderReviewOfOneEnclosingType).sort(compareByTheMostCallerApplications).slice(0, MAX_ENTRY_BOUNDARY_JUDGE_CALLS)
+    ? groupByEnclosingType(kept.filter(hasACaller)).flatMap(createCodeUnderReviewOfOneEnclosingType).filter(codeUnderReview => keepsScale(codeUnderReview.scale)).sort(compareByTheMostCallerApplications).slice(0, MAX_ENTRY_BOUNDARY_JUDGE_CALLS)
     : [];
   return {
     judgeCalls: numberCodeUnderReviewFrom(everyCodeUnderReview, firstNumber),

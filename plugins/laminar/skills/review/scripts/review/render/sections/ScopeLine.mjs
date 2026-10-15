@@ -10,8 +10,7 @@ export function buildScope(prepared, plan, fullPlan) {
   return {
     judges: filter.judges || [],
     paths: filter.paths || [],
-    top: filter.top ?? null,
-    rankedAbstractions: prepared.rankedAbstractions ?? null,
+    scales: filter.scales || [],
     judgeCallsPlanned: findJudgeCalls(fullPlan),
     judgeCallsInThisRun: findJudgeCalls(plan),
   };
@@ -21,12 +20,7 @@ const isSet = value => value !== null && !(Array.isArray(value) && !value.length
 
 export const selectScopeProperties = scope => Object.fromEntries(Object.entries(scope).filter(([, value]) => isSet(value)));
 
-const formatTopPhrase = ({ top, rankedAbstractions }) => {
-  if (top === null) return "";
-  return rankedAbstractions === null
-    ? `top ${formatCount(top)} by boundary rank`
-    : `top ${formatCount(top)} of ${formatCount(rankedAbstractions)} abstractions by boundary rank`;
-};
+const formatScalesPhrase = ({ scales }) => scales.length ? `scales: ${scales.map(scale => scale.toLowerCase()).join(", ")}` : "";
 
 const formatJudgesPhrase = ({ judges }) => judges.length ? `judges: ${judges.map(judgeType => judgeType.replace(JUDGE_TYPE_PREFIX_PATTERN, "")).join(", ")}` : "";
 
@@ -53,7 +47,5 @@ export function formatAcrossApplicationsLine(counts) {
 
 export function formatScopeLine(scope) {
   if (!scope) return "";
-  const topPhrase = formatTopPhrase(scope);
-  const head = topPhrase ? `**Scope** · filtered at the cost check: ${topPhrase}` : "**Scope** · filtered at the cost check";
-  return [head, formatJudgesPhrase(scope), formatPathsPhrase(scope), formatJudgeCallsPhrase(scope)].filter(Boolean).join(" · ");
+  return ["**Scope** · filtered at the cost check", formatScalesPhrase(scope), formatJudgesPhrase(scope), formatPathsPhrase(scope), formatJudgeCallsPhrase(scope)].filter(Boolean).join(" · ");
 }

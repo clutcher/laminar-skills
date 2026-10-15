@@ -42,7 +42,7 @@ Where a command stops with an error, show its error line to the user and stop: r
 
 ## The cost check, between step 1 and step 2
 
-The `RESULT` object of the prepare command holds `costPlan`, 1 line that ends in `above the threshold of 500 calls or 2.0M new tokens: no` or `... : yes`. Where it ends in `no`, go on to step 2 at once and ask nothing. A review of a pull request almost always ends in `no`. Where it ends in `yes`, dispatch nothing yet: read `<skill>/cost-check.md`, do what it says, and only then go on to step 2. The same line names `judge workflow waves`, the number of calls step 2 makes to the judge workflow, which is 1 for almost every review.
+The `RESULT` object of the prepare command holds `costPlan`, 1 line that ends in `above the threshold of 500 calls or 2.0M new tokens: no` or `... : yes`. Where it ends in `no`, go on to step 2 at once and ask nothing. A review of a pull request almost always ends in `no`. Where it ends in `yes`, dispatch nothing yet: read `<skill>/cost-check.md`, do what it says, and only then go on to step 2. The same line names `judge workflow waves`, the number of calls step 2 makes to the judge workflow, which is 1 for almost every review. Before the threshold words, the same line also gives the cost of a run of the application, module and class scales only, under `application, module and class only`, where the run is not already limited to those scales.
 
 ## The task output of a Workflow call
 
