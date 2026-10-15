@@ -21,7 +21,7 @@ The change created class `Crossing` and method `BelaySupervision#supervisorsNeed
 
 1. Method `BelaySupervision#supervisorsNeeded`
    - Incomplete Mental Model: supervisorsNeeded decides who counts as a beginner from the flags isBeginner and isAdvanced, and two other places decide the same from the same flags.
-   - Direction: Encapsulate: let one owner hold the decision, and every other place call it.
+   - Direction: Encapsulate: let one owner hold the decision, or drop it where nothing needs it.
    - Also in `LeadCourseBooking#book`; `RouteAdvisor#highestSuggestedGrade`.
    - Confidence: Moderate. To confirm: Confirm that the 3 places must give the same answer for the same climber.
 
@@ -31,7 +31,7 @@ The change created class `Crossing` and method `BelaySupervision#supervisorsNeed
 
 2. Class `Crossing`
    - Exclude Illegal States: Crossing holds its status as free text compared with BOARDING, DEPARTED and ARRIVED, so a caller can store any other value.
-   - Direction: Encapsulate: shape the types so an invalid state cannot be built.
+   - Direction: Encapsulate: make an invalid state impossible to build, or reject it at creation.
    - Also in `Crossing#isOpenForBoarding`; `Crossing#hasLeftPort`.
 
 ## Limits
