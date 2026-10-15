@@ -46,7 +46,12 @@ const formatOperationBlock = operation => [
   fenceLines(operation.lines),
 ].join("\n");
 
-const formatOperationsBlocks = type => [`Operations of ${quoteName(type.name)}: ${type.operations.length}`, ...type.operations.map(formatOperationBlock)];
+const formatOperationCount = type => {
+  const leftOut = type.operationsLeftOut || 0;
+  return leftOut ? `${type.operations.length + leftOut} · left out: ${leftOut}` : `${type.operations.length}`;
+};
+
+const formatOperationsBlocks = type => [`Operations of ${quoteName(type.name)}: ${formatOperationCount(type)}`, ...type.operations.map(formatOperationBlock)];
 
 const formatCarriedItem = item => `${quoteName(item.member)} as ${quoteName(item.as)} at ${item.path}:${item.line}`;
 
@@ -57,7 +62,7 @@ const formatCarrierBlocks = carrier => [
     `Read after carrying: ${formatNamedList(carrier.readAfterCarrying)}`,
     fenceLines(carrier.lines),
   ].join("\n"),
-  `Operations of ${quoteName(carrier.name)} called by the operations above: ${carrier.operations.length}`,
+  `Operations of ${quoteName(carrier.name)} called by the operations above: ${formatOperationCount(carrier)}`,
   ...carrier.operations.map(formatOperationBlock),
 ];
 

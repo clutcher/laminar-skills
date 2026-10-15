@@ -35,7 +35,9 @@ export { CHANGE_KINDS, changesTheBoundary, changesTheCode, readDeclaredMemberCha
 export { readDescribedFields, readFoundFields, isOwnCodeAt, readOwnSpans, VISIBILITIES } from "./extract/tree/AbstractionTree.mjs";
 export { isTestPath, countPhaseMarks, TestCode } from "./inputs/source/TestCode.mjs";
 export { TEST_KINDS, readTestKindAtTheHead, readTestHeadFactsOfTheFile, readTestKindWhere } from "./extract/abstractions/method/generic/testing/TestKinds.mjs";
-export { findClosingParenthesisAcrossLines } from "./extract/calls/scope/ParameterListText.mjs";
+export { findClosingParenthesisAcrossLines, findParameterListAfterTheName } from "./extract/calls/scope/ParameterListText.mjs";
+export { findTheTypeDeclarationsInScope } from "./extract/calls/resolution/DeclarationLookups.mjs";
+export { findElementType, parseType, parseTypeArguments } from "./inputs/source/text/TypeText.mjs";
 export { namesTheApiSpiTypeAsASupertype, findSupertypeNamesOfTheApiSpiType } from "./extract/calls/resolution/SupertypeWalk.mjs";
 export { findInnermostMethodAt, isARepeatedCall, formatDisplayNameOfMethod, repeatsInALoop, findTypesEnclosingTheSpanInnermostFirst } from "./extract/calls/CallGraph.mjs";
 export { buildCallGraphs } from "./extract/calls/CallGraphView.mjs";
@@ -57,7 +59,7 @@ export { readApplicationName, findDeployableFolder, liesInAnotherApplication } f
 export { findDeployableRoots } from "./extract/abstractions/application/ApplicationDiscovery.mjs";
 export { isABuildFile } from "./extract/abstractions/application/index.mjs";
 export { isASchemaFile } from "./inputs/source/languages/graphql/GraphQLSourceText.mjs";
-export { NO_PARAMETER_TEXT, readParameterNamesOfAList, findParameterTextAfterTheName, readParameterTextOfTheHead, readSignature } from "./extract/abstractions/method/generic/signatures/MethodSignatures.mjs";
+export { NO_PARAMETER_TEXT, readParameterNamesOfAList, findParameterTextAfterTheName, readParameterTextOfTheHead, readSignature, readTypeTextOfParameter } from "./extract/abstractions/method/generic/signatures/MethodSignatures.mjs";
 export { findOpenConstructsAndCallArgumentFunctions } from "./extract/abstractions/method/generic/measures/OpenConstructs.mjs";
 export { findCallsInsideCallArguments } from "./extract/abstractions/method/generic/measures/CallArgumentCalls.mjs";
 export { ModuleReading } from "./extract/abstractions/module/generic/reading/ModuleReading.mjs";

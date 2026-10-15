@@ -7,6 +7,16 @@ import { findMethodsOfTheNearestSupertype, walkSupertypeSteps } from "./Supertyp
 
 const readQualifierOfAType = type => (type.qualified.includes(".") ? type.qualified.slice(0, type.qualified.lastIndexOf(".")) : "");
 
+const NO_IMPORTED_PATHS = new Set();
+
+export const findTheTypeDeclarationsInScope = (typeDeclarations, { path: filePath, folder, importedPaths }) => {
+  const inFile = typeDeclarations.filter(typeDeclaration => typeDeclaration.path === filePath);
+  if (inFile.length) return inFile;
+  const byImport = typeDeclarations.filter(typeDeclaration => importedPaths.has(typeDeclaration.path));
+  if (byImport.length) return byImport;
+  return typeDeclarations.filter(typeDeclaration => typeDeclaration.folder === folder);
+};
+
 export const DeclarationLookups = {
   findSupertypeDeclaration(type, subtype) {
     return this.findTypesNamed(type.simple, subtype.path, subtype.folder).filter(inner => inner.name === type.simple)[0];
@@ -106,19 +116,15 @@ export const DeclarationLookups = {
   findTypesNamed(name, filePath, folder, file = null) {
     const typeDeclarations = this.findOwnTypesNamed(name);
     if (!typeDeclarations.length) return typeDeclarations;
-    const inFile = typeDeclarations.filter(typeDeclaration => typeDeclaration.path === filePath);
-    if (inFile.length) return inFile;
-    const byImport = typeDeclarations.length > 1 ? this.findDeclarationsByImport(typeDeclarations, file || this.fileByPathMap.get(filePath), name) : [];
-    if (byImport.length) return byImport;
-    const inFolder = typeDeclarations.filter(typeDeclaration => typeDeclaration.folder === folder);
-    return inFolder.length ? inFolder : typeDeclarations;
+    const importedPaths = typeDeclarations.length > 1 ? this.readPathsImportedForTheName(file || this.fileByPathMap.get(filePath), name) : NO_IMPORTED_PATHS;
+    const inScope = findTheTypeDeclarationsInScope(typeDeclarations, { path: filePath, folder, importedPaths });
+    return inScope.length ? inScope : typeDeclarations;
   },
 
-  findDeclarationsByImport(typeDeclarations, file, name) {
+  readPathsImportedForTheName(file, name) {
     const imported = file ? file.findImport(name) : null;
-    if (!imported || !this.importsFromTheRepository(file, imported)) return [];
-    const paths = this.readPathsTheImportStandsFor(file, imported);
-    return typeDeclarations.filter(typeDeclaration => paths.has(typeDeclaration.path));
+    if (!imported || !this.importsFromTheRepository(file, imported)) return NO_IMPORTED_PATHS;
+    return this.readPathsTheImportStandsFor(file, imported);
   },
 
   readPathsTheImportStandsFor(file, imported) {

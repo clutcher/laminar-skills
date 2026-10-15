@@ -85,7 +85,7 @@ const stripDefault = text => {
 export const readTypeNamesOfATypeText = (text, diffDriver) => [...new Set((String(text || "").replace(ANNOTATION_PATTERN, " ").match(/(?<![\w$])[A-Z][\w$]*/g) || [])
   .filter(name => !isInMemoryTypeName(name, diffDriver) && !WRAPPER_TYPE_NAMES.has(name)))];
 
-const readTypeTextOfParameter = (parameterText, diffDriver) => {
+export const readTypeTextOfParameter = (parameterText, diffDriver) => {
   const bare = stripDefault(parameterText.replace(ANNOTATION_PATTERN, " ").replace(/^\.\.\.|^\*{1,2}/, "").trim()).replace(MODIFIERS_PATTERN, "");
   const colon = findTopLevelColonAt(bare);
   if (colon >= 0) return bare.slice(colon + 1).trim();

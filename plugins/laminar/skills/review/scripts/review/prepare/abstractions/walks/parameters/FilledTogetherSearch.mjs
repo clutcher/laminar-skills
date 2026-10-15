@@ -4,12 +4,13 @@ import { listLinesFromTo } from "../../lookups/FileLines.mjs";
 const isInsideTheOwnSpans = (place, own) => own.some(span => span.path === place.path && doesSpanHoldLine(span, place.line));
 
 export class FilledTogetherSearch {
-  constructor(repositoryText, testCode, callGraphOf, references, fileLines) {
+  constructor(repositoryText, testCode, callGraphOf, references, fileLines, typeAbstractions) {
     this.repositoryText = repositoryText;
     this.testCode = testCode;
     this.findCallGraph = callGraphOf;
     this.references = references;
     this.fileLines = fileLines;
+    this.typeAbstractions = typeAbstractions;
   }
 
   findEnclosingMethod(place) {
@@ -18,7 +19,7 @@ export class FilledTogetherSearch {
   }
 
   findPlacesNaming(type) {
-    return this.repositoryText.listFamilies().flatMap(family => this.references.findNamingPlaces(type.name, family));
+    return this.references.findNamingPlaces(type.name, readLanguageFamily(type.path)).filter(place => this.typeAbstractions.isTheTypeInScopeAt(type, place.path));
   }
 
   findProductionPlacesOutsideTheOwnSpans(type, own) {

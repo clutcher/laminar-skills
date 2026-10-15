@@ -1,4 +1,3 @@
-import { readLanguageFamily } from "../../../../../code/index.mjs";
 import { groupBy } from "../../../../../collections/groupedLists.mjs";
 
 const readCarriedMember = (construction, carrierMembers) => (construction.name && carrierMembers.includes(construction.name)
@@ -38,12 +37,12 @@ export class CarrierTypeSearch {
   }
 
   buildTheCarrier(name, carriedPlaces, reachedFromTheType) {
-    const carrier = this.typeAbstractions.findProductionTypeNamed(name, readLanguageFamily(carriedPlaces[0].place.path));
+    const carrier = this.typeAbstractions.findTheProductionTypeInScope(name, carriedPlaces[0].place.path);
     if (!carrier) return null;
     const carried = carriedPlaces.map(({ place, construction }) => ({ member: place.member, as: readCarriedMember(construction, carrier.members), path: place.path, line: place.line }))
       .filter(item => item.as);
     if (!carried.length) return null;
-    const operations = this.reads.findOperations(carrier.name, carrier.members).filter(reachedFromTheType);
+    const operations = this.reads.findOperations(carrier).filter(reachedFromTheType);
     return { ...carrier, carried, operations, readAfterCarrying: findMembersReadAfterCarrying(carrier, carried, operations) };
   }
 }
