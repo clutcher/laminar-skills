@@ -1,4 +1,5 @@
 import { GraphQLClassFinder } from "./graphql/GraphQLClassFinder.mjs";
+import { KeyTreeClassFinder } from "./keytree/KeyTreeClassFinder.mjs";
 import { JavaClassFinder } from "./java/JavaClassFinder.mjs";
 import { KotlinClassFinder } from "./kotlin/KotlinClassFinder.mjs";
 import { CSharpClassFinder } from "./csharp/CSharpClassFinder.mjs";
@@ -37,6 +38,7 @@ export const CLASS_FINDER_REGISTRY = new FinderRegistry({
     ObjectiveCClassFinder,
     PerlClassFinder,
     GraphQLClassFinder,
+    KeyTreeClassFinder,
   ],
   generic: GenericClassFinder,
   genericRelationFinder: GenericClassRelationFinder,

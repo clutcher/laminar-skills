@@ -1,12 +1,12 @@
 import { readTrackedIndexLines } from "../TrackedFiles.mjs";
-import { findDiffDriver, readLanguageFamily } from "../../source/drivers/LanguageRegistry.mjs";
+import { findDiffDriver, holdsKeyTreesAt, readLanguageFamily } from "../../source/drivers/LanguageRegistry.mjs";
 
 const EXCLUDED_PATH_PATTERN = /(^|\/)\.|\.md$/;
 const INDEX_LINE_PATTERN = /^\d+ [0-9a-f]+ (\d)\t(.*)$/;
 
 function readIndexedPaths(repository) {
   return (readTrackedIndexLines(repository) || []).map(line => INDEX_LINE_PATTERN.exec(line)).filter(Boolean)
-    .filter(([, stage, given]) => stage === "0" && findDiffDriver(given) && !EXCLUDED_PATH_PATTERN.test(given))
+    .filter(([, stage, given]) => stage === "0" && findDiffDriver(given) && !holdsKeyTreesAt(given) && !EXCLUDED_PATH_PATTERN.test(given))
     .map(([, , given]) => given);
 }
 

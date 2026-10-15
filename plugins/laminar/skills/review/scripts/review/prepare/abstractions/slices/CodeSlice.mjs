@@ -1,10 +1,11 @@
-import { CHANGE_KINDS, liesInAnotherApplication, findDriver, FILE_STATUS, holdsANonBlankLine, findInnermostHolding, isATypesOnlyFile, liesInTheTypeOutsideItsMethods, Scale, doesSpanHoldLine, VISIBILITIES } from "../../../../code/index.mjs";
+import { CHANGE_KINDS, liesInAnotherApplication, findDriver, FILE_STATUS, holdsANonBlankLine, holdsKeyTreesAt, findInnermostHolding, isATypesOnlyFile, liesInTheTypeOutsideItsMethods, Scale, doesSpanHoldLine, VISIBILITIES } from "../../../../code/index.mjs";
 import { isAReadIdentifierOccurrence } from "../walks/decisions/SameDecisionWalk.mjs";
 import { MAX_CONTEXT_LINES, ReferenceContext } from "../references/ReferenceContext.mjs";
 import { ReferenceOrder } from "../references/ReferenceOrder.mjs";
 import { SourceRoots } from "./SourceRoots.mjs";
 import { FolderChildren } from "./FolderChildren.mjs";
 import { FieldTypeHeads } from "./FieldTypeHeads.mjs";
+import { readKeyTreeSections } from "./KeyTreeSlice.mjs";
 import { FIELD_READING_SECTIONS, FILE_LIST_SECTIONS, formatStoppedLine, isAStoppedLine, findLineNumber, numberLines, formatPlacedSliceLine, findPlaceOfSliceLine } from "../../formats/SliceFormat.mjs";
 
 
@@ -321,6 +322,8 @@ export class SliceBuilder {
         siblings: this.folderChildren.listSiblingsShown(abstraction),
       });
     }
+    const keyTreeSections = holdsKeyTreesAt(abstraction.path) ? readKeyTreeSections(abstraction, buildFileLines(this.readTextByLineMap(abstraction.path))) : null;
+    if (keyTreeSections) return cutTheSlice(abstraction, keyTreeSections);
     const lines = this.linesByPathMap.get(abstraction.path);
     const ownLines = abstraction.referenceLines.length ? abstraction.referenceLines : this.listDeclaredLines(abstraction, lines);
     return this.markTheCallingMethodsThatJoinAnotherApplication(abstraction, cutTheSlice(abstraction, {

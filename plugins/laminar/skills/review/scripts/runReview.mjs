@@ -74,10 +74,11 @@ function readChange(parsed) {
   return process.exit(2);
 }
 
-function printTheExtractSummary(runFolder, written, indexUse) {
+function printTheExtractSummary(runFolder, written, indexUse, filesWithNoLanguageDriver) {
   console.log(`run folder: ${resolveAbsolutePath(runFolder)}`);
   const byScale = Object.entries(written.counts.byScale).map(([scale, count]) => `${scale} ${count}`).join(", ");
   console.log(`extract: mode ${written.mode} because ${written.modeReason}, ${written.counts.files} file(s), ${written.counts.hunks} hunk(s), ${written.counts.abstractions} abstraction(s) (${byScale}), ${written.counts.trivialHunks} trivial hunk(s), ${written.counts.droppedAsTrivial} file(s) dropped as trivial, ${written.counts.noLanguageDriver} file(s) with no language driver, ${written.counts.buildFiles} build file(s) left out, written to ${CODE_GRAPH_FILE}`);
+  if (filesWithNoLanguageDriver.length) console.log(`extract: no language driver reads ${filesWithNoLanguageDriver.join(", ")}`);
   if (indexUse) console.log(`extract: search index read from the cache for ${indexUse.read.length} language famil${indexUse.read.length === 1 ? "y" : "ies"} and built for ${indexUse.built.length}, cache folder ${indexUse.folder}`);
 }
 
@@ -86,7 +87,7 @@ function extract(parsed) {
   const step = new ExtractStep(change);
   const tree = step.run();
   const written = new ExtractOutput(step, tree).writeAndSummarize(parsed.run);
-  printTheExtractSummary(parsed.run, written, step.cachedSourceIndex.readIndexUse());
+  printTheExtractSummary(parsed.run, written, step.cachedSourceIndex.readIndexUse(), step.listFilesWithNoLanguageDriver());
   printResult({ step: "extract", runFolder: resolveAbsolutePath(parsed.run), mode: written.mode, counts: written.counts });
 }
 

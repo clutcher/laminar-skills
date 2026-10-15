@@ -1,5 +1,5 @@
 import { CHANGE_MODES } from "../change/ChangeReader.mjs";
-import { findDiffDriver, readLanguageFamily } from "../source/drivers/LanguageRegistry.mjs";
+import { findDiffDriver, holdsKeyTreesAt, readLanguageFamily } from "../source/drivers/LanguageRegistry.mjs";
 import { splitTextIntoLines } from "../source/SourceText.mjs";
 import { readTextOf } from "./RepositoryFiles.mjs";
 import { isMinified } from "./RepositoryFileKinds.mjs";
@@ -32,7 +32,7 @@ export class RepositoryText {
     if (this.patchFiles) return this.patchFiles;
     const kept = [];
     let minified = 0;
-    for (const given of [...new Set(this.changedFiles.map(file => file.path))].filter(filePath => findDiffDriver(filePath))) {
+    for (const given of [...new Set(this.changedFiles.map(file => file.path))].filter(filePath => findDiffDriver(filePath) && !holdsKeyTreesAt(filePath))) {
       const text = this.buildPatchText(given);
       if (text === null) continue;
       if (isMinified(given, splitTextIntoLines(text))) { minified++; continue; }

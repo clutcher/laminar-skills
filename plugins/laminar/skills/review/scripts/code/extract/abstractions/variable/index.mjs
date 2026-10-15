@@ -1,4 +1,5 @@
 import { GraphQLVariableFinder } from "./graphql/GraphQLVariableFinder.mjs";
+import { KeyTreeVariableFinder } from "./keytree/KeyTreeVariableFinder.mjs";
 import { JavaVariableFinder } from "./java/JavaVariableFinder.mjs";
 import { KotlinVariableFinder } from "./kotlin/KotlinVariableFinder.mjs";
 import { ScalaVariableFinder } from "./scala/ScalaVariableFinder.mjs";
@@ -41,6 +42,7 @@ export const VARIABLE_FINDER_REGISTRY = new FinderRegistry({
     PhpVariableFinder,
     RubyVariableFinder,
     GraphQLVariableFinder,
+    KeyTreeVariableFinder,
   ],
   generic: GenericVariableFinder,
   genericRelationFinder: GenericVariableRelationFinder,

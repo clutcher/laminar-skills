@@ -32,6 +32,10 @@ export class LanguageDriver {
     return false;
   }
 
+  get holdsKeyTrees() {
+    return false;
+  }
+
   findDeclarationHeads() {
     return null;
   }

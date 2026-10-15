@@ -10,7 +10,7 @@ export { findAddedLinesOfTheFile, countChangedBranches, ChangedLines, holdsAnAdd
 export { FILE_STATUS, holdsANonBlankLine } from "./inputs/change/Hunk.mjs";
 export { CONTROL_WORD_PATTERN_SOURCE } from "./inputs/source/forms/FunctionNamePatterns.mjs";
 export { LanguageDriver } from "./inputs/source/drivers/LanguageDriver.mjs";
-export { findDiffDriver, findDriver, holdsCodeAt, holdsProseAt, isAFileWithBehavior, isATypesOnlyFile, readLanguageFamily } from "./inputs/source/drivers/LanguageRegistry.mjs";
+export { findDiffDriver, findDriver, holdsCodeAt, holdsKeyTreesAt, holdsProseAt, isAFileWithBehavior, isATypesOnlyFile, readLanguageFamily } from "./inputs/source/drivers/LanguageRegistry.mjs";
 export { opensAnAnnotation } from "./inputs/source/lines/Annotations.mjs";
 export { COMMENT_LINE_FORMS, isACommentLine } from "./inputs/source/forms/CommentForms.mjs";
 export { isADecisionLine } from "./inputs/source/lines/DecisionLines.mjs";

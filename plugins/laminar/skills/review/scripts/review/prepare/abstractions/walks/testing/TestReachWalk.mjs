@@ -1,4 +1,4 @@
-import { CHANGE_MODES, changesTheBoundary, changesTheCode, findDriver, isOwnCodeAt, isTestPath, readLanguageFamily, readOwnSpans, Scale, findSharedStems, collectStems, TEST_KINDS, readTestKindAtTheHead, readTestHeadFactsOfTheFile, buildWholeWordPattern } from "../../../../../code/index.mjs";
+import { CHANGE_MODES, changesTheBoundary, changesTheCode, findDriver, holdsKeyTreesAt, isOwnCodeAt, isTestPath, readLanguageFamily, readOwnSpans, Scale, findSharedStems, collectStems, TEST_KINDS, readTestKindAtTheHead, readTestHeadFactsOfTheFile, buildWholeWordPattern } from "../../../../../code/index.mjs";
 import { readFileStem } from "../../../../../files/paths.mjs";
 import { RepositoryAbstractions } from "../../RepositoryAbstractions.mjs";
 import { TopClassWiring, formatWiredTypeNames } from "./TopClassWiring.mjs";
@@ -28,6 +28,7 @@ const holdsAChangedMember = abstraction => (abstraction.children || [])
 
 export const owesATest = abstraction => !abstraction.isTest
   && abstraction.scale === Scale.CLASS.name
+  && !holdsKeyTreesAt(abstraction.path)
   && (changesTheBoundary(abstraction.changeKind) || holdsAChangedMember(abstraction));
 
 export const isTheTestReachKnown = abstraction => Boolean(abstraction.reachingTests && abstraction.reachingTests.known);

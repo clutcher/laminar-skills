@@ -1,4 +1,4 @@
-import { ABSTRACTION_KINDS, CHANGE_KINDS, changesTheBoundary, changesTheCode, isAFileNamedByTheLanguage, isATypesOnlyFile, Scale, TEST_KINDS } from "../../../code/index.mjs";
+import { ABSTRACTION_KINDS, CHANGE_KINDS, changesTheBoundary, changesTheCode, holdsKeyTreesAt, isAFileNamedByTheLanguage, isATypesOnlyFile, Scale, TEST_KINDS } from "../../../code/index.mjs";
 import { OCCURRENCE_KINDS } from "../abstractions/walks/decisions/SameDecisionWalk.mjs";
 import { CHECKS_BY_ID_MAP, GATE_KINDS, TRACKS } from "../../../checks/CheckCatalog.mjs";
 import { findTheSingleLetterName, listCommentsTheJudgeReads, onlyStoresItsParameters } from "../settled/ScriptSettledForms.mjs";
@@ -91,7 +91,7 @@ const isReadOnly = abstraction => abstraction.changeKind === CHANGE_KINDS.REFERE
 export function listTracks(abstraction) {
   if (abstraction.commentsOnly) return holdsAJudgedComment(abstraction) ? [TRACKS.COMMENT] : [];
   if (abstraction.isTest) return listTestTracks(abstraction);
-  if (isReadOnly(abstraction)) return [TRACKS.SIMPLICITY];
+  if (isReadOnly(abstraction) || holdsKeyTreesAt(abstraction.path)) return [TRACKS.SIMPLICITY];
   const tracks = [TRACKS.SIMPLICITY];
   if (PREVENTION_SCALES.has(abstraction.scale) && (holdsBehavior(abstraction) || !SCALES_JUDGED_FOR_PREVENTION_ONLY_WITH_BEHAVIOR.has(abstraction.scale))) tracks.push(TRACKS.PREVENTION);
   if (PERFORMANCE_SCALES.has(abstraction.scale) && holdsBehavior(abstraction)) tracks.push(TRACKS.PERFORMANCE);

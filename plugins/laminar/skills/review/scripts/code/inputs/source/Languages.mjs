@@ -18,6 +18,7 @@ import { ObjectiveCLanguage } from "./languages/objc/ObjectiveCLanguage.mjs";
 import { PascalLanguage } from "./languages/pascal/PascalLanguage.mjs";
 import { PerlLanguage } from "./languages/perl/PerlLanguage.mjs";
 import { PhpLanguage } from "./languages/php/PhpLanguage.mjs";
+import { PropertiesLanguage } from "./languages/properties/PropertiesLanguage.mjs";
 import { PythonLanguage } from "./languages/python/PythonLanguage.mjs";
 import { RubyLanguage } from "./languages/ruby/RubyLanguage.mjs";
 import { RustLanguage } from "./languages/rust/RustLanguage.mjs";
@@ -65,6 +66,7 @@ export const LANGUAGES = Object.freeze([
   ScalaLanguage,
   SqlLanguage,
   YamlLanguage,
+  PropertiesLanguage,
 ]);
 
 const LANGUAGE_BY_DIFF_DRIVER_MAP = new Map(LANGUAGES.map(language => [language.diffDriver, language]));

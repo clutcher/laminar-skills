@@ -78,7 +78,7 @@ export class CommentPlacement {
   placeTheComments(readings, parents) {
     const abstractionsByPathMap = this.groupCommentHoldingAbstractionsByPath();
     for (const { file, driver, reading } of readings) {
-      if (!driver || !reading || driver.holdsProse) continue;
+      if (!driver || !reading || driver.holdsProse || driver.holdsKeyTrees) continue;
       const abstractions = (abstractionsByPathMap.get(file.path) || []).filter(abstraction => !(driver.fileHoldsTypesOnly && isADeclaredValue(abstraction)));
       const addedLines = this.addedLinesByPathMap.get(file.path) || new Set();
       const numberedLines = file.readNumberedLines();

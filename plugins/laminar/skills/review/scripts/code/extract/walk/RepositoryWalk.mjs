@@ -17,7 +17,7 @@ import { isABuildFile } from "../abstractions/application/index.mjs";
 
 export const DECLARATIONS_SECTION = "declarations";
 
-const isWalkedAsSource = filePath => Boolean(findDriver(filePath)) && !isABuildFile(filePath);
+const isWalkedAsSource = filePath => Boolean(findDriver(filePath)) && !isABuildFile(filePath) && !findDriver(filePath).holdsKeyTrees;
 
 const CLASS_SCALE = Scale.CLASS.name;
 
@@ -110,7 +110,7 @@ export class RepositoryWalk {
   }
 
   listChangedFilesWalkedAsSource() {
-    return this.change.files.filter(file => !isABuildFile(file.path) && file.isReadableBy(findDriver(file.path)));
+    return this.change.files.filter(file => isWalkedAsSource(file.path) && file.isReadableBy(findDriver(file.path)));
   }
 
   listChangedFilesNotYetWalked() {

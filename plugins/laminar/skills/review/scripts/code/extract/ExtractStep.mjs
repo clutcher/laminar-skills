@@ -10,6 +10,9 @@ import { CHANGE_KINDS, readChangeKindFromEvents, readDeclaredMemberChangeKind, r
 import { readBoundaryRank } from "./tree/BoundaryRank.mjs";
 import { BOUNDARY_RANKS } from "../graph/abstractions/Role.mjs";
 import { ChangeMarker } from "../inputs/change/ChangeMarker.mjs";
+import { KeyTreeChange, MAX_KEY_CLASSES_PER_FILE } from "../inputs/change/KeyTreeChange.mjs";
+import { readTextAfterTheChange } from "../inputs/change/TextAroundTheChange.mjs";
+import { KEY_TREE_FAMILY } from "../inputs/source/keys/KeyPaths.mjs";
 
 import { findDriver, readLanguageFamily } from "../inputs/source/drivers/LanguageRegistry.mjs";
 import { countBranches, measureMethod } from "./abstractions/method/generic/measures/MethodMeasures.mjs";
@@ -102,6 +105,18 @@ const isTheEnclosingMethod = (child, enclosing) => child.scale === Scale.METHOD.
   && child.name === enclosing.name
   && (cannotLocateTheHead(child, enclosing) || holdsTheHeadOf(child, enclosing));
 
+const spanOfTheKey = key => {
+  const lines = key.listLines();
+  return { from: Math.min(...lines), to: Math.max(...lines) };
+};
+
+const readKeyLineTexts = (key, lines) => key.listLines().map(line => lines[line - 1] ?? "");
+
+const readChangeKindOfTheLeaves = leaves => {
+  if (leaves.every(leaf => leaf.changeKind === CHANGE_KINDS.CREATED)) return CHANGE_KINDS.CREATED;
+  return leaves.some(leaf => leaf.changeKind === CHANGE_KINDS.CREATED) ? CHANGE_KINDS.BOUNDARY_CHANGED : CHANGE_KINDS.INTERNALS_CHANGED;
+};
+
 const findDriverOfASourceFile = filePath => (isABuildFile(filePath) ? null : findDriver(filePath));
 
 export const LEFT_OUT_REASONS = Object.freeze({ BUILD_FILE: "build file", NO_LANGUAGE_DRIVER: "no language driver", PROSE: "prose", TRIVIAL: "trivial", OUTSIDE_EVERY_TYPE: "outside every type" });
@@ -163,6 +178,10 @@ export class ExtractStep {
 
   get noLanguageDriver() {
     return countLeftOutFiles(this.leftOutFiles, LEFT_OUT_REASONS.NO_LANGUAGE_DRIVER);
+  }
+
+  listFilesWithNoLanguageDriver() {
+    return this.leftOutFiles.filter(leftOutFile => leftOutFile.reason === LEFT_OUT_REASONS.NO_LANGUAGE_DRIVER).map(leftOutFile => leftOutFile.path);
   }
 
   run() {
@@ -243,12 +262,16 @@ export class ExtractStep {
   readTheChangedFiles() {
     const readings = this.change.files
       .map(file => ({ file, driver: findDriverOfASourceFile(file.path), reading: null }))
-      .map(changedFileReading => ({ ...changedFileReading, reading: changedFileReading.driver ? this.createMarker(changedFileReading.file, changedFileReading.driver) : null }));
+      .map(changedFileReading => ({ ...changedFileReading, reading: changedFileReading.driver ? this.createReading(changedFileReading.file, changedFileReading.driver) : null }));
     return readings;
   }
 
   countTheTrivialHunks(readings) {
     for (const changedFileReading of readings) this.trivialHunks += changedFileReading.reading ? changedFileReading.reading.trivialHunkCount : 0;
+  }
+
+  createReading(file, driver) {
+    return driver.holdsKeyTrees ? new KeyTreeChange(file, driver) : this.createMarker(file, driver);
   }
 
   createMarker(file, driver) {
@@ -257,7 +280,7 @@ export class ExtractStep {
 
   listFamiliesOfTheRepository() {
     const ofTheChange = this.change.files.map(file => readLanguageFamily(file.path)).filter(Boolean);
-    return [...new Set([...this.repositoryText.listFamilies(), ...ofTheChange])];
+    return [...new Set([...this.repositoryText.listFamilies(), ...ofTheChange])].filter(family => family !== KEY_TREE_FAMILY);
   }
 
   recordTheModuleFolders(modules) {
@@ -359,6 +382,7 @@ export class ExtractStep {
     const leftOutReason = findWhyTheFileIsLeftOut(changedFileReading);
     if (leftOutReason) { this.leaveOut(changedFileReading.file, leftOutReason); return; }
     const { file, driver, reading } = changedFileReading;
+    if (driver.holdsKeyTrees) { this.addKeysOfFile(changedFileReading, parents); return; }
     if (driver.fileHoldsTypesOnly && file.existsAfterTheChange) { this.addTypesOfFile({ file, driver, reading }, parents); return; }
     const kind = readFileChangeKind(file) || readChangeKindFromEvents(reading.events);
     if (!kind) { this.dropAsTrivial(file); return; }
@@ -446,6 +470,58 @@ export class ExtractStep {
     }));
     abstraction.measures = measureClass(bodyLines, 0);
     abstraction.facts = this.abstractionFacts.build(abstraction, bodyLines, enclosingType.lines, INTERACTION_LINES.ANY);
+    return abstraction;
+  }
+
+  addKeysOfFile({ file, reading }, parents) {
+    const moduleAbstraction = parents.get(readFolderPath(file.path));
+    const { classes, leafGroupsOutsideAClass, groupsLeftOut } = reading.listReviewedKeys();
+    if (!classes.length && !leafGroupsOutsideAClass.length) { this.dropAsTrivial(file); return; }
+    const lines = readTextAfterTheChange(file);
+    for (const reviewedClass of classes) {
+      const classAbstraction = this.addKeyWithChildren(moduleAbstraction, file, reviewedClass, lines);
+      if (reviewedClass.changedLeaves.length) this.addChangedLeaves(classAbstraction, file, reviewedClass.changedLeaves, lines, reviewedClass.key.path);
+    }
+    for (const leaves of leafGroupsOutsideAClass) {
+      const parentKey = leaves[0].key.parent;
+      this.addChangedLeaves(moduleAbstraction, file, leaves, lines, parentKey.segments.length ? parentKey.path : readFileName(file.path));
+    }
+    if (groupsLeftOut) this.notParsed.push(`${file.path}: ${groupsLeftOut} more changed key group(s) have no abstraction, because 1 file gives at most ${MAX_KEY_CLASSES_PER_FILE}`);
+  }
+
+  addKeyWithChildren(moduleAbstraction, file, { key, declaration, changeKind }, lines) {
+    const abstraction = moduleAbstraction.add(this.createMemberAbstraction({
+      scale: declaration.scale,
+      name: declaration.name,
+      enclosingTypeName: declaration.scope,
+      displayName: declaration.displayName,
+      path: file.path,
+      changeKind,
+      visibility: VISIBILITIES.EXPOSED,
+      boundaryRank: this.readBoundaryRankAtLine(file.path, VISIBILITIES.EXPOSED, key.line),
+      lines: spanOfTheKey(key),
+    }));
+    abstraction.measures = measureClass(readKeyLineTexts(key, lines), key.children.length);
+    abstraction.facts = AbstractionFacts.createNone();
+    return abstraction;
+  }
+
+  addChangedLeaves(parentAbstraction, file, leaves, lines, enclosingTypeName) {
+    const fields = leaves.map(({ key }) => ({ name: key.name, displayName: formatDisplayName(Scale.VARIABLE.name, key.name, enclosingTypeName), lines: spanOfTheKey(key), changedLines: spanOfTheKey(key) }));
+    const abstraction = parentAbstraction.add(this.createMemberAbstraction({
+      scale: Scale.VARIABLE.name,
+      name: fields.map(field => field.name).join(", "),
+      enclosingTypeName,
+      path: file.path,
+      changeKind: readChangeKindOfTheLeaves(leaves),
+      visibility: VISIBILITIES.EXPOSED,
+      boundaryRank: this.readBoundaryRankAtLine(file.path, VISIBILITIES.EXPOSED, leaves[0].key.line),
+      ...measureExtentOfFields(fields),
+      headLine: leaves[0].key.line,
+    }));
+    abstraction.measures = measureVariable(...leaves.flatMap(({ key }) => readKeyLineTexts(key, lines)));
+    abstraction.facts = AbstractionFacts.createNone();
+    abstraction.changedLines = joinSpans(fields.map(field => field.changedLines));
     return abstraction;
   }
 
