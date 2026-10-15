@@ -22,7 +22,7 @@ Load the data that several steps need once, at the start of the operation, and p
 
 ## 3. Only the data the operation needs
 
-Select the fields the operation uses, not whole rows or whole objects. Do not build a full object through a general conversion layer for a caller that reads 2 fields. Data that the operation drops still crosses the I/O boundary.
+Select the fields the operation uses, not whole rows or whole objects; where the operation needs only how many rows match, ask the store for the count, and do not load the rows to count them. Do not build a full object through a general conversion layer for a caller that reads 2 fields. Data that the operation drops still crosses the I/O boundary.
 
 - Book (*What Fast Enough Means*, *Avoid Waste*): "Request only the data the operation needs: select specific columns instead of entire rows, return specific fields instead of full objects, and load thumbnails instead of full-resolution images when the display requires less."
 - Book (*What Fast Enough Means*, *What Waste Means*): "Any layered architecture with a generic conversion layer produces this anti-pattern across domains and stacks."

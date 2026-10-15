@@ -69,7 +69,7 @@ Where a rule seems to forbid a shape that reads well, ask which of the 6 failure
 The everyday fixes of the book's chapter *The Common Pitfalls*, for every change. The reference files give their limits.
 
 - *Self-Documenting Code*: where a block needs a comment that says what it does, extract it into a method named for its intent. Start every method name with a verb that states its work. No comment by default, no TODO.
-- *Context-Aware Constants*: name a constant, and every other value, for its business purpose, kind last, such as days or rate; 1 constant per rule, private where used.
+- *Context-Aware Constants*: name a constant, and every other value, for its business purpose, kind last, such as days or rate; 1 constant per rule, private where used; in a test, give each value that sets up the condition the test name states a name, a constant or a local.
 - *Guard Clauses*: put each precondition at the top and leave early, and move the checks that together say the input is ready behind 1 named check.
 - *Visual Separation*: keep the lines of each group together, with a blank line between groups and after the preconditions; while a detail sits among the parts, extract instead.
 - *Enums Over Boolean Flags*: give a category 1 closed set of named values for each exclusive dimension, not booleans or free text, which allow values the domain forbids.
