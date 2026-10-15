@@ -96,7 +96,7 @@ export class RenderStep {
       excluded: this.reviewed.excluded || [],
     };
     const files = {
-      "review.md": buildReaderReport(shared),
+      "review.md": buildReaderReport({ ...shared, leftOutFiles: this.reviewed.leftOutFiles || [] }),
       "review-evidence.md": buildEvidenceReport({ ...shared, sweep: this.sweep, notAnswered: this.prepared.notAnswered || [], leftOutFiles: this.reviewed.leftOutFiles || [], io: this.readIo() }),
       "review.sarif": buildSarifReport(this.settled.kept, version, this.scope, this.acrossApplications, this.settled.considered),
     };

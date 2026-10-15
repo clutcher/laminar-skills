@@ -250,6 +250,8 @@ It reaches a finding whose second place is outside the change.
 | `pickup-slots-matched-by-invented-keys-in-python` | B | the same shape in Python: the caller keys each request by the length of a growing dictionary and looks each estimate up in it by the key the service copied | set from `routing-on-provider-in-two-methods`, not measured |
 | `pickup-slots-keyed-by-order-number` | B | clean: the twin of `pickup-slots-matched-by-invented-keys` where the caller keys each request by the order number its shipment already has, so the key has a meaning of its own | set from `routing-on-provider-in-two-methods`, not measured |
 | `pickup-slots-matched-by-position-inside-one-method` | B | clean: the caller numbers its shipments in a map and reads the map again by the position of each estimate, in 1 method, and no key crosses the call | set from `routing-on-provider-in-two-methods`, not measured |
+| `configuration-key-mixes-executor-and-reminder-settings` | A | a new YAML file of a library app puts the pool size and the queue capacity of an executor beside the days before due and the email template of the reminders, under 1 key `lending.reminders`, and a batch size inside the executor settings: the key holds a detail of a part it never names | scaled from `broad-service-name-takes-in-neighbours` by the judge calls, not measured |
+| `configuration-keys-grouped-by-concept-then-execution` | A | clean: the twin in a properties file, where the keys of the catalogue are grouped by module, then by concept, then by execution, so each key holds only what its key path names | scaled from `broad-service-name-takes-in-neighbours` by the judge calls, not measured |
 
 `mispredicting-names-inside-a-change` has a base state holding the 3 files the change touches as they were before it, because 2 of its must-not lines rest on tests that sit above the change and a patch cannot carry them.
 The base state also holds the enum of quote failures and the test factory of quote lines, so the review reads what `MEMBER_VOUCHER` and `MEMBER_REFUND_RATE` mean in the member refund test that 1 must-not line rests on.
@@ -555,6 +557,11 @@ They are tier B, because the response and row types the method reads are not cha
 Writing them fresh is what makes them publishable.
 They measure that a key a caller makes up only to match the answers to its requests, which the operation copies into its results and the caller reads back, is 1 decision in several places on the operation that takes the requests, and that neither a key with a meaning of its own nor a map that 1 method builds and reads again is.
 They are tier B, because the request types, the outside planner and the shipment sit outside the change.
+
+`configuration-key-mixes-executor-and-reminder-settings` and `configuration-keys-grouped-by-concept-then-execution` are written fresh in a fictional library app, as a YAML file and a properties file.
+Writing them fresh is what makes them publishable.
+They measure that the keys of a configuration file are read as a class that holds data: a key that holds other keys is judged like a record, its keys are its fields, and a key under it that describes another thing is a detail of a part the key never names.
+They are tier A, because each change creates its whole file.
 
 Every case whose row names the book comes by the second route: its code is a listing from the book *Laminar Software Design*, and its expectation is the verdict the book's own text states on that listing.
 The book is published, so its listings may be published as fixtures.

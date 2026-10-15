@@ -1,0 +1,14 @@
+diff --git a/lending/src/main/resources/application.yml b/lending/src/main/resources/application.yml
+new file mode 100644
+--- /dev/null
++++ b/lending/src/main/resources/application.yml
+@@ -0,0 +1,9 @@
++lending:
++  reminders:
++    days-before-due: 3
++    email-template: renewal-reminder
++    pool-size: 4
++    queue-capacity: 50
++    execution:
++      thread-name-prefix: reminder-
++      batch-size: 200

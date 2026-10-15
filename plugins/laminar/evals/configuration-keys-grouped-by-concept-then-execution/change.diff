@@ -1,0 +1,9 @@
+diff --git a/catalogue/src/main/resources/application.properties b/catalogue/src/main/resources/application.properties
+new file mode 100644
+--- /dev/null
++++ b/catalogue/src/main/resources/application.properties
+@@ -0,0 +1,4 @@
++catalogue.reindexing.batch-size=200
++catalogue.reindexing.execution.pool-size=4
++catalogue.reindexing.execution.queue-capacity=50
++catalogue.reindexing.execution.thread-name-prefix=reindexing-

@@ -1,5 +1,6 @@
 import { formatItem, findLinesOfSharedHeads, formatPlaceName, formatSentence } from "../sections/ItemText.mjs";
 import { readTrackRank } from "../../../checks/CheckWords.mjs";
+import { LEFT_OUT_REASONS } from "../../../code/index.mjs";
 
 const LIMITS = [
   "The review judges 3 qualities of the code: simplicity, from how people read the code; correctness, by the errors its design prevents and the paths its tests run; and performance, by the work it wastes.",
@@ -11,6 +12,15 @@ const LIMITS = [
 const NOTHING_WAS_FOUND = "Nothing was found.";
 
 const formatChangeLine = changeSummary => formatSentence(changeSummary);
+
+const listFilesNoDriverReads = leftOutFiles => leftOutFiles.filter(leftOutFile => leftOutFile.reason === LEFT_OUT_REASONS.NO_LANGUAGE_DRIVER).map(leftOutFile => leftOutFile.path);
+
+const formatNotReadLine = filePaths => `**Not read** · the review cannot read files of this kind: ${filePaths.map(filePath => `\`${filePath}\``).join(", ")}`;
+
+const buildNotReadLines = leftOutFiles => {
+  const filePaths = listFilesNoDriverReads(leftOutFiles);
+  return filePaths.length ? [formatNotReadLine(filePaths)] : [];
+};
 
 const PRODUCTION_CODE = "Production code";
 
@@ -66,12 +76,13 @@ const buildConsiderationSection = (considerations, firstNumber, sharedHeadLines)
   ? [`## ${TO_CONSIDER}`, ...considerations.map((item, order) => formatItem(item.findings, firstNumber + order, { sharedHeadLine: sharedHeadLines[order] }))]
   : [];
 
-export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered }) {
+export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, leftOutFiles = [] }) {
   const considerations = settled.considerations || [];
   const sharedHeadLines = findLinesOfSharedHeads([...settled.items, ...considerations].map(item => item.findings));
   return [
     banner,
     ...(scopeLine ? [scopeLine] : []),
+    ...buildNotReadLines(leftOutFiles),
     ...(acrossApplicationsLine ? [acrossApplicationsLine] : []),
     formatChangeLine(changeSummary),
     ...buildFindingSections(settled.items, covered || [], sharedHeadLines),
