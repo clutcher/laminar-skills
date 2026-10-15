@@ -246,6 +246,10 @@ It reaches a finding whose second place is outside the change.
 | `inventory-reservation-below-order-placement` | B | clean: the book's `placeOrder` after the stock check was extracted at every step, where each private step reads the store or the gateway of its own step and `reserveInventory` names the step that reserving the stock sits below | set from `late-fee-rule-cut-into-arithmetic-fragments`, not measured |
 | `conversion-name-hides-the-rows-it-drops` | B | a new Java method of a ferry terminal named `readArrivalDatesByBerth`, which turns the rows of a berth schedule response into arrival dates by berth number and skips every row whose berth number or arrival date its 2 parsers cannot read, while each parser logs a warning; the name starts with a verb, so the Prediction Failure is for the rows the name does not say are dropped | set from `predicate-name-drops-a-condition`, not measured |
 | `conversion-name-says-it-keeps-parsable-rows` | B | clean: the twin of the case above, the same code under the name `collectParsableArrivalDatesByBerth`, which says it keeps only the rows it can read | set from `predicate-name-drops-a-condition`, not measured |
+| `pickup-slots-matched-by-invented-keys` | B | in Java, a new caller in a `quotes` module keys each pickup request by the size of a growing map, the new pickup estimation service only copies that key into each estimate and also numbers its yard items for an outside planner and reads the slots back by that number, and the caller looks each estimate up in its map by the key: 1 decision, how a result finds its input, in several places | set from `routing-on-provider-in-two-methods`, not measured |
+| `pickup-slots-matched-by-invented-keys-in-python` | B | the same shape in Python: the caller keys each request by the length of a growing dictionary and looks each estimate up in it by the key the service copied | set from `routing-on-provider-in-two-methods`, not measured |
+| `pickup-slots-keyed-by-order-number` | B | clean: the twin of `pickup-slots-matched-by-invented-keys` where the caller keys each request by the order number its shipment already has, so the key has a meaning of its own | set from `routing-on-provider-in-two-methods`, not measured |
+| `pickup-slots-matched-by-position-inside-one-method` | B | clean: the caller numbers its shipments in a map and reads the map again by the position of each estimate, in 1 method, and no key crosses the call | set from `routing-on-provider-in-two-methods`, not measured |
 
 `mispredicting-names-inside-a-change` has a base state holding the 3 files the change touches as they were before it, because 2 of its must-not lines rest on tests that sit above the change and a patch cannot carry them.
 The base state also holds the enum of quote failures and the test factory of quote lines, so the review reads what `MEMBER_VOUCHER` and `MEMBER_REFUND_RATE` mean in the member refund test that 1 must-not line rests on.
@@ -546,6 +550,11 @@ They measure that a constant a type declares to hold its 1 shared object, read o
 Writing them fresh is what makes them publishable.
 They measure that a conversion whose name predicts that every row becomes an entry, while the rows it cannot read vanish, is a Prediction Failure for the drop, and that a name which says it keeps only what it can read is not.
 They are tier B, because the response and row types the method reads are not changed.
+
+`pickup-slots-matched-by-invented-keys`, `pickup-slots-matched-by-invented-keys-in-python`, `pickup-slots-keyed-by-order-number` and `pickup-slots-matched-by-position-inside-one-method` are written fresh in a fictional freight-yard domain, in Java and Python.
+Writing them fresh is what makes them publishable.
+They measure that a key a caller makes up only to match the answers to its requests, which the operation copies into its results and the caller reads back, is 1 decision in several places on the operation that takes the requests, and that neither a key with a meaning of its own nor a map that 1 method builds and reads again is.
+They are tier B, because the request types, the outside planner and the shipment sit outside the change.
 
 Every case whose row names the book comes by the second route: its code is a listing from the book *Laminar Software Design*, and its expectation is the verdict the book's own text states on that listing.
 The book is published, so its listings may be published as fixtures.

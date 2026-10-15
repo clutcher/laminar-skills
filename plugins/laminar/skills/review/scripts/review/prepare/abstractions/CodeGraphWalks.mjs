@@ -12,6 +12,7 @@ import { CallChainsWalk } from "./walks/CallChainsWalk.mjs";
 import { ScopedParameterRelationsWalk } from "./walks/parameters/ScopedParameterRelationsWalk.mjs";
 import { NearTwinTypeSearch } from "./walks/decisions/NearTwinTypeSearch.mjs";
 import { NearTwinEvidence } from "./walks/decisions/NearTwinEvidence.mjs";
+import { MatchingKeyWalk } from "./walks/decisions/MatchingKeyWalk.mjs";
 import { InOutOperationsWalk } from "./walks/InOutOperationsWalk.mjs";
 import { CoreOperationsWalk } from "./walks/core/CoreOperationsWalk.mjs";
 import { RebuiltValuesWalk } from "./walks/RebuiltValuesWalk.mjs";
@@ -106,6 +107,7 @@ export class CodeGraphWalks {
   walkEveryAbstraction() {
     this.runSearches();
     this.runNearTwins();
+    this.runMatchingKeys();
     this.runUsesOfLiteralNames();
     this.placeTheModules();
     this.runTestReach();
@@ -170,6 +172,14 @@ export class CodeGraphWalks {
     const evidence = new NearTwinEvidence({ codeGraph: this.codeGraph, repositoryText: this.repositoryText, testCode: this.testCode, callGraphOf: family => this.findCallGraph(family), references: this.references, moduleRootOf: filePath => this.moduleReading.readIdentity(readFolderPath(filePath)).root });
     const occurrencesByAbstractionMap = new NearTwinTypeSearch(this.codeGraph, filePath => this.repositoryText.readFileLines(filePath), evidence).collectOccurrencesByAbstraction(this.tree.listEveryAbstraction());
     for (const [abstraction, twinOccurrences] of occurrencesByAbstractionMap) abstraction.sameDecisionAt = [...(abstraction.sameDecisionAt || []), ...twinOccurrences];
+  }
+
+  runMatchingKeys() {
+    const matchingKeys = new MatchingKeyWalk(this.repositoryText, this.testCode, family => this.findCallGraph(family), this.references, this.codeGraph);
+    for (const abstraction of this.tree.listEveryAbstraction()) {
+      const keys = matchingKeys.findMatchingKeys(abstraction).map(({ key, places }) => ({ key, kind: OCCURRENCE_KINDS.MATCHING_KEY, places }));
+      if (keys.length) abstraction.sameDecisionAt = [...keys, ...(abstraction.sameDecisionAt || [])];
+    }
   }
 
   placeTheSearchResults(abstraction, searched, sameDecisionAt, occurrences) {

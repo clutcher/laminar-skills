@@ -1,0 +1,78 @@
+diff --git a/yard/pyproject.toml b/yard/pyproject.toml
+new file mode 100644
+index 0000000..4170f2d
+--- /dev/null
++++ b/yard/pyproject.toml
+@@ -0,0 +1,3 @@
++[project]
++name = "freight-yard"
++version = "1.0.0"
+diff --git a/yard/quotes/__init__.py b/yard/quotes/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/yard/quotes/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/yard/quotes/shipment.py b/yard/quotes/shipment.py
+new file mode 100644
+index 0000000..b84e7de
+--- /dev/null
++++ b/yard/quotes/shipment.py
+@@ -0,0 +1,9 @@
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class Shipment:
++    order_number: str
++    parcel_code: str
++    customer_code: str
++    crate_count: int
+diff --git a/yard/slots/__init__.py b/yard/slots/__init__.py
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/yard/slots/__init__.py
+@@ -0,0 +1 @@
++
+diff --git a/yard/slots/api.py b/yard/slots/api.py
+new file mode 100644
+index 0000000..0af3ff8
+--- /dev/null
++++ b/yard/slots/api.py
+@@ -0,0 +1,15 @@
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class PickupRequest:
++    request_key: str
++    parcel_code: str
++    customer_code: str
++    crate_count: int
++
++
++@dataclass(frozen=True)
++class PickupEstimate:
++    request_key: str
++    slot: str
+diff --git a/yard/slots/planner.py b/yard/slots/planner.py
+new file mode 100644
+index 0000000..a790c9e
+--- /dev/null
++++ b/yard/slots/planner.py
+@@ -0,0 +1,13 @@
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class YardItem:
++    position: int
++    parcel_code: str
++    crate_count: int
++
++
++class YardPlanner:
++    def plan_slots(self, items: list[YardItem]) -> dict[int, str]:
++        raise NotImplementedError

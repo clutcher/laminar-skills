@@ -1,5 +1,6 @@
 import { readApplicationName, liesInAnotherApplication, formatPlaceKey } from "../../../code/index.mjs";
 import { TRACKS } from "../../../checks/CheckCatalog.mjs";
+import { OCCURRENCE_KINDS } from "../abstractions/walks/decisions/SameDecisionWalk.mjs";
 
 export const LIST_PAGE_LINES = 50;
 
@@ -18,6 +19,7 @@ const HEAD_WRITER_BY_OCCURRENCE_KIND_MAP = Object.freeze({
   READ_IDENTIFIER: key => `Identifier \`${key}\``,
   SHARED_READS: key => `Shared reads \`${key}\``,
   DERIVED_VALUE: key => `Derived from \`${key}\``,
+  MATCHING_KEY: key => `Matching key \`${key}\``,
   TWIN_MEMBERS: (key, occurrence) => `Near twin \`${key}\` · ${occurrence.shared} of ${occurrence.members} members shared`,
 });
 
@@ -119,7 +121,13 @@ const formatTwinEvidenceLines = (occurrence, formatWords) => [
   ...(occurrence.mapped ? formatMappedLines(occurrence.mapped, formatWords) : []),
 ];
 
+const formatMatchingKeyLines = (occurrence, formatWords) => [
+  `${formatHeadOfTheOccurrence(occurrence)}:`,
+  ...occurrence.places.map(place => `- ${place.role} \`${place.member}\` · ${formatWords(place)} · ${place.path}:${place.line}: ${place.text}`),
+];
+
 const formatOccurrenceLines = (occurrence, fresh, homeRoot, applicationWordsOf) => {
+  if (occurrence.kind === OCCURRENCE_KINDS.MATCHING_KEY) return formatMatchingKeyLines(occurrence, place => formatPlaceWords(place, homeRoot, applicationWordsOf));
   if (!fresh.length && !occurrence.stopped) return [];
   const head = formatHeadOfTheOccurrence(occurrence);
   const stopped = occurrence.stopped ? [STOPPED_AT_THE_LINE_LIMIT] : [];

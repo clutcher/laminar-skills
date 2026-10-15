@@ -1,7 +1,7 @@
 import { IMPORT_OR_NAMESPACE_LINE_PATTERN, findDriver, buildShortenedPlace, compareByPathAndLine, CodeWindowIndex, readDeclaredAbstractions, escapeForAPattern, createFingerprint, holdsCodeAt, isADecisionLine, isALanguageWordOrAnEverydayName, isOwnCodeAt, isTestPath, joinStatementTexts, LANGUAGE_WORDS, readStatementAt, RELATION_KINDS, readLanguageFamily, formatPlaceKey, collectStems, STRING_LITERAL_PATTERN, collectTypeNames, collectWindows, Scale } from "../../../../../code/index.mjs";
 import { findDecisionPlacesNamingTheKeyOutsideTheOwnCode } from "./KeyPlaces.mjs";
 
-export const OCCURRENCE_KINDS = Object.freeze({ LITERAL: "LITERAL", IDENTIFIER: "IDENTIFIER", WINDOW: "WINDOW", NAME_STEMS: "NAME_STEMS", READ_IDENTIFIER: "READ_IDENTIFIER", SHARED_READS: "SHARED_READS", DERIVED_VALUE: "DERIVED_VALUE", TWIN_MEMBERS: "TWIN_MEMBERS" });
+export const OCCURRENCE_KINDS = Object.freeze({ LITERAL: "LITERAL", IDENTIFIER: "IDENTIFIER", WINDOW: "WINDOW", NAME_STEMS: "NAME_STEMS", READ_IDENTIFIER: "READ_IDENTIFIER", SHARED_READS: "SHARED_READS", DERIVED_VALUE: "DERIVED_VALUE", TWIN_MEMBERS: "TWIN_MEMBERS", MATCHING_KEY: "MATCHING_KEY" });
 
 const MAX_KEYS_PER_ABSTRACTION = 10;
 const MAX_USES_PER_KEY = 5;

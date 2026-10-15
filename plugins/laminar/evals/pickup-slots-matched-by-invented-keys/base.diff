@@ -1,0 +1,81 @@
+diff --git a/yard/pom.xml b/yard/pom.xml
+new file mode 100644
+index 0000000..20a2b5c
+--- /dev/null
++++ b/yard/pom.xml
+@@ -0,0 +1,6 @@
++<project>
++  <modelVersion>4.0.0</modelVersion>
++  <groupId>com.example</groupId>
++  <artifactId>freight-yard</artifactId>
++  <version>1.0.0</version>
++</project>
+diff --git a/yard/src/main/java/com/example/freightyard/quotes/Shipment.java b/yard/src/main/java/com/example/freightyard/quotes/Shipment.java
+new file mode 100644
+index 0000000..79c33d8
+--- /dev/null
++++ b/yard/src/main/java/com/example/freightyard/quotes/Shipment.java
+@@ -0,0 +1,4 @@
++package com.example.freightyard.quotes;
++
++public record Shipment(String orderNumber, String parcelCode, String customerCode, int crateCount) {
++}
+diff --git a/yard/src/main/java/com/example/freightyard/slots/api/ApiForPickupEstimation.java b/yard/src/main/java/com/example/freightyard/slots/api/ApiForPickupEstimation.java
+new file mode 100644
+index 0000000..945a724
+--- /dev/null
++++ b/yard/src/main/java/com/example/freightyard/slots/api/ApiForPickupEstimation.java
+@@ -0,0 +1,8 @@
++package com.example.freightyard.slots.api;
++
++import java.util.List;
++
++public interface ApiForPickupEstimation {
++
++    List<PickupEstimate> estimate(List<PickupRequest> requests);
++}
+diff --git a/yard/src/main/java/com/example/freightyard/slots/api/PickupEstimate.java b/yard/src/main/java/com/example/freightyard/slots/api/PickupEstimate.java
+new file mode 100644
+index 0000000..0944a75
+--- /dev/null
++++ b/yard/src/main/java/com/example/freightyard/slots/api/PickupEstimate.java
+@@ -0,0 +1,4 @@
++package com.example.freightyard.slots.api;
++
++public record PickupEstimate(String requestKey, String slot) {
++}
+diff --git a/yard/src/main/java/com/example/freightyard/slots/api/PickupRequest.java b/yard/src/main/java/com/example/freightyard/slots/api/PickupRequest.java
+new file mode 100644
+index 0000000..b9708a5
+--- /dev/null
++++ b/yard/src/main/java/com/example/freightyard/slots/api/PickupRequest.java
+@@ -0,0 +1,4 @@
++package com.example.freightyard.slots.api;
++
++public record PickupRequest(String requestKey, String parcelCode, String customerCode, int crateCount) {
++}
+diff --git a/yard/src/main/java/com/example/freightyard/slots/spi/YardItem.java b/yard/src/main/java/com/example/freightyard/slots/spi/YardItem.java
+new file mode 100644
+index 0000000..0cfe71d
+--- /dev/null
++++ b/yard/src/main/java/com/example/freightyard/slots/spi/YardItem.java
+@@ -0,0 +1,4 @@
++package com.example.freightyard.slots.spi;
++
++public record YardItem(int position, String parcelCode, int crateCount) {
++}
+diff --git a/yard/src/main/java/com/example/freightyard/slots/spi/YardPlanner.java b/yard/src/main/java/com/example/freightyard/slots/spi/YardPlanner.java
+new file mode 100644
+index 0000000..8346e20
+--- /dev/null
++++ b/yard/src/main/java/com/example/freightyard/slots/spi/YardPlanner.java
+@@ -0,0 +1,9 @@
++package com.example.freightyard.slots.spi;
++
++import java.util.List;
++import java.util.Map;
++
++public interface YardPlanner {
++
++    Map<Integer, String> planSlots(List<YardItem> items);
++}

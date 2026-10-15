@@ -1,0 +1,50 @@
+diff --git a/yard/quotes/drafting.py b/yard/quotes/drafting.py
+new file mode 100644
+index 0000000..83d343d
+--- /dev/null
++++ b/yard/quotes/drafting.py
+@@ -0,0 +1,20 @@
++from quotes.shipment import Shipment
++from slots.api import PickupRequest
++from slots.service import PickupEstimationService
++
++
++class QuoteDrafting:
++    def __init__(self, pickup_estimation: PickupEstimationService):
++        self.pickup_estimation = pickup_estimation
++
++    def draft_pickup_slots(self, shipments: list[Shipment]) -> dict[Shipment, str]:
++        shipments_by_key = {}
++        requests = []
++        for shipment in shipments:
++            request_key = str(len(shipments_by_key))
++            shipments_by_key[request_key] = shipment
++            requests.append(PickupRequest(request_key, shipment.parcel_code, shipment.customer_code, shipment.crate_count))
++        slots_by_shipment = {}
++        for estimate in self.pickup_estimation.estimate(requests):
++            slots_by_shipment[shipments_by_key[estimate.request_key]] = estimate.slot
++        return slots_by_shipment
+diff --git a/yard/slots/service.py b/yard/slots/service.py
+new file mode 100644
+index 0000000..637d679
+--- /dev/null
++++ b/yard/slots/service.py
+@@ -0,0 +1,18 @@
++from slots.api import PickupEstimate, PickupRequest
++from slots.planner import YardItem, YardPlanner
++
++
++class PickupEstimationService:
++    def __init__(self, yard_planner: YardPlanner):
++        self.yard_planner = yard_planner
++
++    def estimate(self, requests: list[PickupRequest]) -> list[PickupEstimate]:
++        items = []
++        for request in requests:
++            items.append(YardItem(len(items) + 1, request.parcel_code, request.crate_count))
++        slots_by_position = self.yard_planner.plan_slots(items)
++        estimates = []
++        for index, request in enumerate(requests):
++            slot = slots_by_position[items[index].position]
++            estimates.append(PickupEstimate(request.request_key, slot))
++        return estimates

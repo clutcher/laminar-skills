@@ -1,6 +1,6 @@
 import { groupBy } from "../../../../../collections/groupedLists.mjs";
 
-const readCarriedMember = (construction, carrierMembers) => (construction.name && carrierMembers.includes(construction.name)
+export const readCarriedMember = (construction, carrierMembers) => (construction.name && carrierMembers.includes(construction.name)
   ? construction.name
   : carrierMembers[construction.position] || "");
 

@@ -1,0 +1,80 @@
+diff --git a/yard/src/main/java/com/example/freightyard/quotes/QuoteDrafting.java b/yard/src/main/java/com/example/freightyard/quotes/QuoteDrafting.java
+new file mode 100644
+index 0000000..d0f128e
+--- /dev/null
++++ b/yard/src/main/java/com/example/freightyard/quotes/QuoteDrafting.java
+@@ -0,0 +1,33 @@
++package com.example.freightyard.quotes;
++
++import com.example.freightyard.slots.api.ApiForPickupEstimation;
++import com.example.freightyard.slots.api.PickupEstimate;
++import com.example.freightyard.slots.api.PickupRequest;
++import java.util.ArrayList;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
++
++public class QuoteDrafting {
++
++    private final ApiForPickupEstimation pickupEstimation;
++
++    public QuoteDrafting(ApiForPickupEstimation pickupEstimation) {
++        this.pickupEstimation = pickupEstimation;
++    }
++
++    public Map<Shipment, String> draftPickupSlots(List<Shipment> shipments) {
++        Map<String, Shipment> shipmentsByKey = new HashMap<>();
++        List<PickupRequest> requests = new ArrayList<>();
++        for (Shipment shipment : shipments) {
++            String orderNumber = shipment.orderNumber();
++            shipmentsByKey.put(orderNumber, shipment);
++            requests.add(new PickupRequest(orderNumber, shipment.parcelCode(), shipment.customerCode(), shipment.crateCount()));
++        }
++        Map<Shipment, String> slotsByShipment = new HashMap<>();
++        for (PickupEstimate estimate : pickupEstimation.estimate(requests)) {
++            slotsByShipment.put(shipmentsByKey.get(estimate.orderNumber()), estimate.slot());
++        }
++        return slotsByShipment;
++    }
++}
+diff --git a/yard/src/main/java/com/example/freightyard/slots/app/PickupEstimationService.java b/yard/src/main/java/com/example/freightyard/slots/app/PickupEstimationService.java
+new file mode 100644
+index 0000000..b71effe
+--- /dev/null
++++ b/yard/src/main/java/com/example/freightyard/slots/app/PickupEstimationService.java
+@@ -0,0 +1,35 @@
++package com.example.freightyard.slots.app;
++
++import com.example.freightyard.slots.api.ApiForPickupEstimation;
++import com.example.freightyard.slots.api.PickupEstimate;
++import com.example.freightyard.slots.api.PickupRequest;
++import com.example.freightyard.slots.spi.YardItem;
++import com.example.freightyard.slots.spi.YardPlanner;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Map;
++
++public class PickupEstimationService implements ApiForPickupEstimation {
++
++    private final YardPlanner yardPlanner;
++
++    public PickupEstimationService(YardPlanner yardPlanner) {
++        this.yardPlanner = yardPlanner;
++    }
++
++    @Override
++    public List<PickupEstimate> estimate(List<PickupRequest> requests) {
++        List<YardItem> items = new ArrayList<>();
++        for (PickupRequest request : requests) {
++            items.add(new YardItem(items.size() + 1, request.parcelCode(), request.crateCount()));
++        }
++        Map<Integer, String> slotsByPosition = yardPlanner.planSlots(items);
++        List<PickupEstimate> estimates = new ArrayList<>();
++        for (int index = 0; index < requests.size(); index++) {
++            PickupRequest request = requests.get(index);
++            String slot = slotsByPosition.get(items.get(index).position());
++            estimates.add(new PickupEstimate(request.orderNumber(), slot));
++        }
++        return estimates;
++    }
++}
