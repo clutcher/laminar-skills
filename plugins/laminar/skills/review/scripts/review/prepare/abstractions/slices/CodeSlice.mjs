@@ -4,6 +4,7 @@ import { MAX_CONTEXT_LINES, ReferenceContext } from "../references/ReferenceCont
 import { ReferenceOrder } from "../references/ReferenceOrder.mjs";
 import { SourceRoots } from "./SourceRoots.mjs";
 import { FolderChildren } from "./FolderChildren.mjs";
+import { FieldTypeHeads } from "./FieldTypeHeads.mjs";
 import { FIELD_READING_SECTIONS, FILE_LIST_SECTIONS, formatStoppedLine, isAStoppedLine, findLineNumber, numberLines, formatPlacedSliceLine, findPlaceOfSliceLine } from "../../formats/SliceFormat.mjs";
 
 
@@ -29,6 +30,7 @@ export const SLICE_NEEDS = Object.freeze({
 const MAX_SLICE_BYTES = 8000;
 const MAX_REFERENCE_LINES = 12;
 const MAX_TYPE_HEADS = 40;
+const MAX_FIELD_TYPE_HEAD_LINES = 24;
 const MAX_SHOWN_MEMBER_LINES = 6;
 const MAX_SIBLINGS = 40;
 const MAX_TREE_LINES = 120;
@@ -60,6 +62,8 @@ export function needFor(abstraction) {
 
 const THE_FIELD_READINGS = Object.values(FIELD_READING_SECTIONS);
 
+export const FIELD_TYPE_HEADS = "fieldTypeHeads";
+
 export const MODULE_BOUNDARY_FACT_SECTIONS = Object.freeze({
   MODULE_SHAPE: "moduleShape",
   EXPOSED_DOMAIN_TYPES: "exposedDomainTypes",
@@ -83,10 +87,10 @@ const buildModuleBoundaryFactSections = module => ({
 });
 
 const SECTIONS_BY_NEED_MAP = Object.freeze({
-  [SLICE_NEEDS.THE_MEMBER_AND_ITS_TYPE_HEADS]: ["ownLines", "typeHeads", ...THE_FIELD_READINGS, "callingMethods", "calledBodies"],
+  [SLICE_NEEDS.THE_MEMBER_AND_ITS_TYPE_HEADS]: ["ownLines", "typeHeads", ...THE_FIELD_READINGS, "callingMethods", "calledBodies", FIELD_TYPE_HEADS],
   [SLICE_NEEDS.THE_MEMBER_AND_ITS_CALLERS_IN_FILE]: ["ownLines", "typeHeads", "callersInFile", "callingMethods", "calledBodies"],
   [SLICE_NEEDS.THE_MEMBER_AND_EVERY_REFERENCE]: ["ownLines", "typeHeads", "references", "callingMethods", "calledBodies"],
-  [SLICE_NEEDS.THE_FILE_WHOLE]: ["ownLines", ...THE_FIELD_READINGS, "calledBodies"],
+  [SLICE_NEEDS.THE_FILE_WHOLE]: ["ownLines", ...THE_FIELD_READINGS, "calledBodies", FIELD_TYPE_HEADS],
   [SLICE_NEEDS.THE_REFERENCES_AND_TYPE_HEADS]: ["references", "typeHeads"],
   [SLICE_NEEDS.THE_TEST_METHOD_AND_THE_HEADS_UNDER_TEST]: ["ownLines", "typeHeads", "calledBodies"],
   [SLICE_NEEDS.THE_DECLARING_LINES_AND_THEIR_TYPES]: ["ownLines", "typeHeads", ...THE_FIELD_READINGS],
@@ -96,7 +100,7 @@ const SECTIONS_BY_NEED_MAP = Object.freeze({
   [SLICE_NEEDS.THE_MODULE_TREE]: ["moduleRoot", "createdSubfolders", "declaredBoundary", "verifiedBoundary", CHILD_COUNT, "moduleTree", "crossModuleReferences", ...MODULE_BOUNDARY_FACT_SECTION_NAMES],
 });
 
-const CAP_BY_SECTION_MAP = Object.freeze({ typeHeads: MAX_TYPE_HEADS, references: MAX_REFERENCE_LINES + MAX_CONTEXT_LINES, callersInFile: MAX_REFERENCE_LINES, fileList: MAX_TREE_LINES, siblings: MAX_SIBLINGS, moduleTree: MAX_TREE_LINES, crossModuleReferences: MAX_CROSS_MODULE_REFERENCES });
+const CAP_BY_SECTION_MAP = Object.freeze({ typeHeads: MAX_TYPE_HEADS, [FIELD_TYPE_HEADS]: MAX_FIELD_TYPE_HEAD_LINES, references: MAX_REFERENCE_LINES + MAX_CONTEXT_LINES, callersInFile: MAX_REFERENCE_LINES, fileList: MAX_TREE_LINES, siblings: MAX_SIBLINGS, moduleTree: MAX_TREE_LINES, crossModuleReferences: MAX_CROSS_MODULE_REFERENCES });
 
 const measureLines = lines => lines.join("\n").length;
 
@@ -249,6 +253,11 @@ const selectConstantLinesWithinRoom = (constantSpans, room) => {
 
 const CALLING_SCALES = new Set([Scale.METHOD.name, Scale.CLASS.name]);
 
+export const CALLING_METHODS_SECTION = "callingMethods";
+
+const isShapedByItsCallers = abstraction => abstraction.scale === Scale.METHOD.name
+  && (abstraction.visibility === VISIBILITIES.PRIVATE || abstraction.changeKind === CHANGE_KINDS.CREATED);
+
 const buildFileLines = textByLineMap => Array.from({ length: Math.max(0, ...textByLineMap.keys()) }, (_, offset) => textByLineMap.get(offset + 1) ?? "");
 
 const buildCallingWindow = (span, callLine) => {
@@ -257,6 +266,8 @@ const buildCallingWindow = (span, callLine) => {
 };
 
 const quoteName = name => `\`${name}\``;
+
+const formatLineOfTheOwnFile = (filePath, line, text) => numberLines([text], line)[0];
 
 const formatReferenceLine = place => formatPlacedSliceLine(place.path, place.line, place.text);
 
@@ -288,6 +299,7 @@ export class SliceBuilder {
     this.headsByPathMap = new Map();
     this.typesByPathMap = new Map();
     this.folderChildren = new FolderChildren(change, listPathsShownAfterTheChange(change));
+    this.fieldTypeHeads = new FieldTypeHeads(references);
     this.referenceContext = references.graph ? new ReferenceContext(references, change.files.map(file => file.path)) : NO_CONTEXT;
     this.referenceOrder = references.graph ? new ReferenceOrder(references, decisionSearches) : NO_ORDER;
   }
@@ -311,7 +323,7 @@ export class SliceBuilder {
     }
     const lines = this.linesByPathMap.get(abstraction.path);
     const ownLines = abstraction.referenceLines.length ? abstraction.referenceLines : this.listDeclaredLines(abstraction, lines);
-    return cutTheSlice(abstraction, {
+    return this.markTheCallingMethodsThatJoinAnotherApplication(abstraction, cutTheSlice(abstraction, {
       ownLines,
       typeHeads: this.chooseTypeHeads(abstraction, ownLines),
       calledBodies: this.listCalledBodies(abstraction, ownLines),
@@ -319,7 +331,13 @@ export class SliceBuilder {
       callingMethods: this.listCallingMethods(abstraction, lines),
       references: this.listReferenceLines(abstraction, ownLines),
       ...buildFieldReadingSections(abstraction),
-    });
+      [FIELD_TYPE_HEADS]: this.fieldTypeHeads.listLines(abstraction),
+    }));
+  }
+
+  markTheCallingMethodsThatJoinAnotherApplication(abstraction, slice) {
+    if (!this.holdsAPlaceInAnotherApplication(abstraction)) return slice;
+    return { ...slice, sections: slice.sections.map(section => (section.section === CALLING_METHODS_SECTION ? { ...section, joinsAnotherApplication: true } : section)) };
   }
 
   listReferenceLines(abstraction, ownLines) {
@@ -518,18 +536,18 @@ export class SliceBuilder {
     const liesOutsideTheAbstraction = method => !doesSpanHoldLine(abstraction.lines, method.span.from);
     const constantOf = this.createConstantFinder(abstraction.path, reading, textByLineMap, fileSpan, methods);
     const called = selectFirstCalled(methods.filter(liesOutsideTheAbstraction).map(method => ({ method, at: findFirstCallOfTheMethod(method) })));
-    return this.listBodyAndConstantLines(abstraction.path, called, textByLineMap, constantOf)
+    return this.listBodyAndConstantLines(abstraction.path, called, textByLineMap, constantOf, formatLineOfTheOwnFile)
       .filter(line => !doesSpanHoldLine(abstraction.lines, findPlaceOfSliceLine(abstraction.path, line).line));
   }
 
-  listBodyAndConstantLines(filePath, called, textByLineMap, constantOf) {
+  listBodyAndConstantLines(filePath, called, textByLineMap, constantOf, formatLine = formatPlacedSliceLine) {
     const shown = new Set();
     for (const method of called) {
       const methodLines = listNumbersWithinSpan(method.span).slice(0, MAX_CALLED_BODY_LINES);
       for (const line of [...this.listConstantLinesReadByTheMethod(filePath, methodLines, constantOf), ...methodLines]) shown.add(line);
     }
     return [...shown].filter(line => textByLineMap.has(line)).sort((left, right) => left - right)
-      .map(line => formatPlacedSliceLine(filePath, line, textByLineMap.get(line).trim()));
+      .map(line => formatLine(filePath, line, textByLineMap.get(line).trim()));
   }
 
   listConstantLinesReadByTheMethod(filePath, methodLines, constantOf) {
@@ -572,7 +590,7 @@ export class SliceBuilder {
   }
 
   showsItsCallingMethods(abstraction) {
-    return !abstraction.isTest && this.holdsAPlaceInAnotherApplication(abstraction);
+    return !abstraction.isTest && (isShapedByItsCallers(abstraction) || this.holdsAPlaceInAnotherApplication(abstraction));
   }
 
   listCallingMethods(abstraction, lines) {

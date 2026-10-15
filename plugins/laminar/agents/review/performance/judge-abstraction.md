@@ -11,7 +11,7 @@ You answer the waste checks your message lists on 1 abstraction that a change to
 
 ## What you judge
 
-Waste inside the changed abstraction. The code under review your message names holds the abstraction: its display name, its change and its code slice with the file's own line numbers. Your message lists the checks to answer and, where the screen ran, the screen's answers under `Screen answers:`.
+Waste inside the changed abstraction. The code under review your message names holds the abstraction: its display name, its change and its code slice with the file's own line numbers. Your message lists the checks to answer and, where the screen ran, the screen's answers under `Screen answers:`. The slice of a class can also hold the section `fieldTypeHeads`: for up to 6 types that its fields or components name and that another file declares, the head of each type with its fields or components, at most 8 lines a type, each line with its path.
 
 Your checks are 3 of the 4 anti-patterns across an I/O boundary, inside this abstraction: Repeated Retrieval, Excess Retrieval and Resource Recreation. Looped I/O, and the same data fetched once for each item of a loop, are judged by the I/O paths judge, which reads the loops that reach each I/O end method, so a loop gives no finding here. Movement between CPU and memory is waste by the definition, but none of your checks covers it, so it gets no finding.
 

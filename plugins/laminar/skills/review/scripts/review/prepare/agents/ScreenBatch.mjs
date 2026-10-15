@@ -1,6 +1,6 @@
 import { NO_CHANGED_LINES_TEXT } from "../formats/ChangedLinesText.mjs";
 import { listPlacesShownInSections, readSliceSections } from "../formats/SliceFormat.mjs";
-import { MODULE_BOUNDARY_FACT_SECTIONS } from "../abstractions/slices/CodeSlice.mjs";
+import { CALLING_METHODS_SECTION, FIELD_TYPE_HEADS, MODULE_BOUNDARY_FACT_SECTIONS } from "../abstractions/slices/CodeSlice.mjs";
 import { isACoreOperation, isAnInOutOperation } from "../relations/DesignRelationCodeUnderReview.mjs";
 
 export const ABSTRACTIONS_PER_SCREEN_BATCH = 12;
@@ -8,10 +8,13 @@ export const ABSTRACTIONS_PER_SCREEN_BATCH = 12;
 export const holdsAScreenedCheck = codeUnderReview => !codeUnderReview.isTest
   && (codeUnderReview.checks || []).some(check => (check.fields || []).length > 0);
 
-const SLICE_SECTIONS_THE_SCREEN_SKIPS = new Set(["calledBodies", ...Object.values(MODULE_BOUNDARY_FACT_SECTIONS)]);
+const SLICE_SECTIONS_THE_SCREEN_SKIPS = new Set(["calledBodies", FIELD_TYPE_HEADS, ...Object.values(MODULE_BOUNDARY_FACT_SECTIONS)]);
+
+const isACallingMethodInsideOneApplication = section => section.section === CALLING_METHODS_SECTION && !section.joinsAnotherApplication;
 
 const findScreenedSections = codeUnderReview => readSliceSections(codeUnderReview)
-  .filter(section => !SLICE_SECTIONS_THE_SCREEN_SKIPS.has(section.section));
+  .filter(section => !SLICE_SECTIONS_THE_SCREEN_SKIPS.has(section.section) && !isACallingMethodInsideOneApplication(section))
+  .map(({ section, lines }) => ({ section, lines }));
 
 const createScreenAbstraction = (codeUnderReview, changedLines) => {
   const sections = findScreenedSections(codeUnderReview);

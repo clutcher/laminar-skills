@@ -11,7 +11,7 @@ import { DeclarationTags } from "./DeclarationTags.mjs";
 import { LINE_BEFORE_A_DECLARATION_PATTERN } from "../source/declarations/DeclarationSpans.mjs";
 import { measureHeadIndent as indentOf } from "../source/SourceText.mjs";
 import { buildWholeWordPattern } from "../source/text/PatternText.mjs";
-import { findIndexWhereTheParenthesesBalance, NOT_BALANCED, countOpened } from "../source/text/Brackets.mjs";
+import { findIndexWhereTheParenthesesBalance, NOT_BALANCED, countOpened, ONLY_PARENTHESES } from "../source/text/Brackets.mjs";
 
 const BLOCK_END_PATTERN = /^\s*[};]/;
 
@@ -24,6 +24,20 @@ const MAX_HEAD_LINES = 40;
 const BLOCK_OPENER_ALONE_PATTERN = /^\s*\{\s*$/;
 
 const holdsTheName = (text, name) => buildWholeWordPattern(name).test(text);
+
+const LIST_SEPARATOR_AT_THE_END_PATTERN = /\s*,\s*$/;
+
+const readWithoutTheListSeparator = text => text.replace(LIST_SEPARATOR_AT_THE_END_PATTERN, "").trim();
+
+const onlyItsListSeparatorChanged = (hunk, component) => hunk.removedLines.some(text => readWithoutTheListSeparator(text) === readWithoutTheListSeparator(component.text));
+
+const opensAComponentListOnItsHead = classDeclaration => countOpened(String(classDeclaration.text || ""), ONLY_PARENTHESES) > 0;
+
+const holdsAddedLinesBelowTheHead = (hunk, classDeclaration) => {
+  const firstAddedLine = hunk.changedLineBounds.from;
+  return opensAComponentListOnItsHead(classDeclaration) && !hunk.findAddedLineAt(classDeclaration.line)
+    && classDeclaration.line < firstAddedLine && firstAddedLine - classDeclaration.line < MAX_HEAD_LINES;
+};
 
 function findFirstBodyIndent(numberedLines, headLine) {
   const below = numberedLines.find(numberedLine => numberedLine.line > headLine && numberedLine.text.trim() && !BLOCK_OPENER_ALONE_PATTERN.test(numberedLine.text));
@@ -240,12 +254,34 @@ export class ChangeMarker extends DeclarationTags {
   }
 
   addComponentsOf(hunk) {
+    this.addComponentsOfAddedHeads(hunk);
+    this.addComponentsBelowKeptHeads(hunk);
+  }
+
+  addComponentsOfAddedHeads(hunk) {
     for (const classDeclaration of this.tags.filter(tag => tag.scale === Scale.CLASS.name && hunk.findAddedLineAt(tag.line))) {
       const removedComponents = new Set(this.findComponentsRemovedFrom(hunk, classDeclaration));
       for (const component of this.findComponentsDeclaredBy(hunk, classDeclaration)) {
         if (!removedComponents.has(component.name)) this.addField(hunk, { ...component, scope: classDeclaration.name, end: component.line }, NOT_REBORN);
       }
     }
+  }
+
+  addComponentsBelowKeptHeads(hunk) {
+    for (const classDeclaration of this.tagsOfTheKnownText.filter(tag => tag.scale === Scale.CLASS.name && holdsAddedLinesBelowTheHead(hunk, tag))) {
+      const stoodBefore = this.findWhetherTheComponentStoodBefore(hunk, classDeclaration);
+      for (const component of this.findComponentsDeclaredBy(hunk, classDeclaration).filter(component => !onlyItsListSeparatorChanged(hunk, component))) {
+        this.addField(hunk, { ...component, scope: classDeclaration.name, end: component.line }, stoodBefore(component.name));
+      }
+    }
+  }
+
+  findWhetherTheComponentStoodBefore(hunk, classDeclaration) {
+    const keptLines = hunk.oldLines.filter(oldLine => !oldLine.removed);
+    const headAt = hunk.oldLines.indexOf(keptLines.find(oldLine => holdsTheName(oldLine.text, classDeclaration.name)));
+    if (headAt < 0) return name => hunk.removedLines.some(text => holdsTheName(text, name));
+    const componentsBefore = new Set(this.driver.findComponentNames(hunk.oldLines.slice(headAt, headAt + MAX_HEAD_LINES).map(oldLine => oldLine.text).join(" ")));
+    return name => componentsBefore.has(name);
   }
 
   findTheAddedClassFields(hunk) {

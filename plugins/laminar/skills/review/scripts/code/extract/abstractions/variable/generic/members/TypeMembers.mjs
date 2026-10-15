@@ -8,15 +8,16 @@ const indentOf = text => (/^[ \t]*/.exec(text) || [""])[0].length;
 
 const endsTheHead = (text, line, typeLine) => text.includes("{") || text.includes(")") || line > typeLine;
 
-const readHeadText = (lines, typeLine) => {
+export const listHeadLineNumbers = (lines, typeLine) => {
   const head = [];
   for (const { index, balance } of walkParenthesesBalances(lines, typeLine - 1, Math.min(typeLine - 1 + MAX_HEAD_LINES, lines.length))) {
-    const text = String(lines[index] || "");
-    head.push(text);
-    if (balance <= 0 && endsTheHead(text, index + 1, typeLine)) break;
+    head.push(index + 1);
+    if (balance <= 0 && endsTheHead(String(lines[index] || ""), index + 1, typeLine)) break;
   }
-  return head.join(" ");
+  return head;
 };
+
+const readHeadText = (lines, typeLine) => listHeadLineNumbers(lines, typeLine).map(line => String(lines[line - 1] || "")).join(" ");
 
 const findBodyIndent = (lines, typeLine, span) => {
   for (let line = typeLine + 1; line <= span.to; line++) {

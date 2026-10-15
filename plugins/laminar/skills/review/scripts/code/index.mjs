@@ -68,5 +68,5 @@ export { createFingerprint, collectWindows } from "./extract/abstractions/method
 export { CodeWindowIndex } from "./extract/abstractions/method/generic/measures/CodeWindowIndex.mjs";
 export { isACallAfter, isAnAssignmentAfter } from "./extract/abstractions/method/generic/references/NameReferences.mjs";
 export { buildFieldWritePattern } from "./extract/abstractions/variable/generic/fields/FieldWrites.mjs";
-export { readMemberNames } from "./extract/abstractions/variable/generic/members/TypeMembers.mjs";
+export { listHeadLineNumbers, readMemberNames } from "./extract/abstractions/variable/generic/members/TypeMembers.mjs";
 export { declaresAnUpperSnakeValueIn, buildAnyValueDeclarationPattern } from "./extract/abstractions/variable/generic/GenericVariableFinder.mjs";
