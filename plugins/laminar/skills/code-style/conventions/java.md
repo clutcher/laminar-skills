@@ -50,7 +50,7 @@ A class that holds only static functions is final and has a private constructor.
 
 Read this section only where the code already uses the library.
 
-- Lombok: on a record, use the builder and the with methods of Lombok, and the builder of an existing value to change 1 field in a copy. Where you configure a builder, give its steps the with prefix, so they follow naming, section 3. Declare a logger by hand as a private static final field, not through a Lombok annotation.
+- Lombok: on a record, use the builder and the with methods of Lombok, and the builder of an existing value to change 1 field in a copy. Keep the form of builder steps the project already uses (naming, section 3). Declare a logger by hand as a private static final field, not through a Lombok annotation.
 - MapStruct: map between the types of 2 boundaries in a MapStruct mapper, not field by field in a controller or a service, and use its built-in support for maps and collections. Name each mapper method with a verb, such as map or convert, and never starting with to or from (naming, section 3). Map only at a boundary between modules or at an entry boundary, never into a second storage copy of a domain object (classes, section 11).
 - Multimaps: where code keeps several values for 1 key, use the multimap of the library the project has, not a map of lists or parallel lists that it fills by hand.
 
