@@ -97,12 +97,16 @@ const cutOutEveryEnclosingDisplayName = displayName => {
   return enclosingDisplayName ? [enclosingDisplayName, ...cutOutEveryEnclosingDisplayName(enclosingDisplayName)] : [];
 };
 
-const encloses = (outer, inner) => cutOutEveryEnclosingDisplayName(inner[0].displayName || "").includes(outer[0].displayName);
+const encloses = (outer, inner) => cutOutEveryEnclosingDisplayName(inner.displayName || "").includes(outer.displayName);
 
-const areNested = (one, other) => one[0].file === other[0].file && (encloses(one, other) || encloses(other, one));
+const isNestedIn = (possibleFinding, other) => possibleFinding.file === other.file && (encloses(possibleFinding, other) || encloses(other, possibleFinding));
 
-const restsOnlyOnTheLinesOf = (quoting, quoted) => quoting[0].file !== quoted[0].file
-  && quoting.every(possibleFinding => (possibleFinding.quotes || []).length && possibleFinding.quotes.every(quote => quote.file === quoted[0].file));
+const areNested = (one, other) => one.some(possibleFinding => other.some(otherPossibleFinding => isNestedIn(possibleFinding, otherPossibleFinding)));
+
+const quotesOnlyTheFileOf = (quoting, quoted) => quoting.file !== quoted.file
+  && (quoting.quotes || []).length > 0 && quoting.quotes.every(quote => quote.file === quoted.file);
+
+const restsOnlyOnTheLinesOf = (quoting, quoted) => quoting.some(possibleFinding => quoted.some(other => quotesOnlyTheFileOf(possibleFinding, other)));
 
 const isOneCommentResult = result => result.every(isByTheCommentJudge);
 

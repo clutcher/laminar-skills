@@ -136,9 +136,14 @@ const createNamedPoint = (label, text) => text ? { label, text, line: `- ${label
 
 const isHigh = finding => finding.confidence === "high";
 
+const formatToConfirmClause = finding => {
+  const whatWouldConfirm = formatPhrase(finding.whatWouldConfirm);
+  return whatWouldConfirm ? ` To confirm: ${whatWouldConfirm}` : "";
+};
+
 const formatConfidenceText = finding => isHigh(finding)
   ? CONFIDENCE_WORDS.high
-  : `${CONFIDENCE_WORDS[finding.confidence] || finding.confidence}. To confirm: ${formatPhrase(finding.whatWouldConfirm) || "nothing was written."}`;
+  : `${CONFIDENCE_WORDS[finding.confidence] || finding.confidence}.${formatToConfirmClause(finding)}`;
 
 const formatSummaryLine = finding => {
   const lead = formatLeadWords(finding);
@@ -272,7 +277,19 @@ const formatPointLines = findings => {
   return ownFindings.length > 1 ? formatManyCheckPoints(ownFindings) : formatSingleCheckPoints(ownFindings[0]);
 };
 
-export const formatItem = (findings, number, tag) => [
-  `${number}.${tag ? ` [${tag}]` : ""} ${formatHead(findings[0])}${formatExistingCodeMark(findings[0])}`,
+const readAbstractionLine = finding => Number((finding.ownLines || {}).from) || Number((finding.abstractionPlace || {}).line) || 0;
+
+const buildHeadKey = finding => `${stripLeadingDotSlash(String(finding.file || ""))}::${finding.displayName || readName(finding)}`;
+
+export const findLinesOfSharedHeads = findingsOfEveryItem => {
+  const leads = findingsOfEveryItem.map(findings => findings[0]);
+  const linesUnderTheSameHead = lead => new Set(leads.filter(other => buildHeadKey(other) === buildHeadKey(lead)).map(readAbstractionLine).filter(Boolean));
+  return leads.map(lead => readAbstractionLine(lead) && linesUnderTheSameHead(lead).size > 1 ? readAbstractionLine(lead) : 0);
+};
+
+const formatSharedHeadLine = sharedHeadLine => sharedHeadLine ? ` · line ${sharedHeadLine}` : "";
+
+export const formatItem = (findings, number, { tag = "", sharedHeadLine = 0 } = {}) => [
+  `${number}.${tag ? ` [${tag}]` : ""} ${formatHead(findings[0])}${formatSharedHeadLine(sharedHeadLine)}${formatExistingCodeMark(findings[0])}`,
   ...formatPointLines(findings),
 ].filter(Boolean).map((line, order) => order ? `${SUB_POINT_INDENT}${line}` : line).join("\n");

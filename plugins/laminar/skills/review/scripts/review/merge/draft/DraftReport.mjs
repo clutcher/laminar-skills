@@ -1,4 +1,4 @@
-import { formatItem } from "../../render/sections/ItemText.mjs";
+import { formatItem, findLinesOfSharedHeads } from "../../render/sections/ItemText.mjs";
 
 const NOTHING_WAS_FOUND = "Nothing was found.";
 
@@ -8,6 +8,8 @@ const copyTheGroupChangeToItsPossibleFindings = group => group.possibleFindings.
 
 export function buildDraftReport(groups) {
   if (!groups.length) return `${HEAD}\n\n## Findings\n\n${NOTHING_WAS_FOUND}\n`;
-  const items = groups.map((group, order) => formatItem(copyTheGroupChangeToItsPossibleFindings(group), order + 1, group.id));
+  const findingsOfEveryItem = groups.map(copyTheGroupChangeToItsPossibleFindings);
+  const sharedHeadLines = findLinesOfSharedHeads(findingsOfEveryItem);
+  const items = findingsOfEveryItem.map((findings, order) => formatItem(findings, order + 1, { tag: groups[order].id, sharedHeadLine: sharedHeadLines[order] }));
   return `${HEAD}\n\n## Findings\n\n${items.join("\n\n")}\n`;
 }

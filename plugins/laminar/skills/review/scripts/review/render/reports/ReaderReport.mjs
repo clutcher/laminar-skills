@@ -1,4 +1,4 @@
-import { formatItem, formatPlaceName, formatSentence } from "../sections/ItemText.mjs";
+import { formatItem, findLinesOfSharedHeads, formatPlaceName, formatSentence } from "../sections/ItemText.mjs";
 import { readTrackRank } from "../../../checks/CheckWords.mjs";
 
 const LIMITS = [
@@ -32,7 +32,7 @@ const formatCoveredSection = covered => [ALREADY_COVERED, covered.map(formatCove
 
 const comesAfterDetection = track => readTrackRank(track) > readTrackRank(DETECTION);
 
-const buildTrackSections = items => {
+const buildTrackSections = (items, sharedHeadLines) => {
   const sections = [];
   items.forEach((item, order) => {
     const track = item.lead.group;
@@ -40,7 +40,7 @@ const buildTrackSections = items => {
     let section = sections[sections.length - 1];
     if (!section || section.track !== track) { section = { track, kind: "", lines: [`## ${track}`] }; sections.push(section); }
     if (kind !== section.kind) { section.lines.push(`### ${kind}`); section.kind = kind; }
-    section.lines.push(formatItem(item.findings, order + 1));
+    section.lines.push(formatItem(item.findings, order + 1, { sharedHeadLine: sharedHeadLines[order] }));
   });
   return sections;
 };
@@ -54,27 +54,28 @@ const addCoveredPaths = (sections, covered) => {
   return after < 0 ? [...sections, own] : [...sections.slice(0, after), own, ...sections.slice(after)];
 };
 
-const listUnderHeaders = (items, covered) => addCoveredPaths(buildTrackSections(items), covered).flatMap(section => section.lines);
+const listUnderHeaders = (items, covered, sharedHeadLines) => addCoveredPaths(buildTrackSections(items, sharedHeadLines), covered).flatMap(section => section.lines);
 
-const buildFindingSections = (items, covered) => items.length
-  ? listUnderHeaders(items, covered)
-  : ["## Findings", NOTHING_WAS_FOUND, ...listUnderHeaders([], covered)];
+const buildFindingSections = (items, covered, sharedHeadLines) => items.length
+  ? listUnderHeaders(items, covered, sharedHeadLines)
+  : ["## Findings", NOTHING_WAS_FOUND, ...listUnderHeaders([], covered, sharedHeadLines)];
 
 export const TO_CONSIDER = "To consider";
 
-const buildConsiderationSection = (considerations, firstNumber) => considerations.length
-  ? [`## ${TO_CONSIDER}`, ...considerations.map((item, order) => formatItem(item.findings, firstNumber + order))]
+const buildConsiderationSection = (considerations, firstNumber, sharedHeadLines) => considerations.length
+  ? [`## ${TO_CONSIDER}`, ...considerations.map((item, order) => formatItem(item.findings, firstNumber + order, { sharedHeadLine: sharedHeadLines[order] }))]
   : [];
 
 export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered }) {
   const considerations = settled.considerations || [];
+  const sharedHeadLines = findLinesOfSharedHeads([...settled.items, ...considerations].map(item => item.findings));
   return [
     banner,
     ...(scopeLine ? [scopeLine] : []),
     ...(acrossApplicationsLine ? [acrossApplicationsLine] : []),
     formatChangeLine(changeSummary),
-    ...buildFindingSections(settled.items, covered || []),
-    ...buildConsiderationSection(considerations, settled.items.length + 1),
+    ...buildFindingSections(settled.items, covered || [], sharedHeadLines),
+    ...buildConsiderationSection(considerations, settled.items.length + 1, sharedHeadLines.slice(settled.items.length)),
     "## Limits",
     LIMITS.join("\n"),
   ].join("\n\n") + "\n";
