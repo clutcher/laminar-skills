@@ -42,7 +42,7 @@ Where the state of an object does not need to change after creation, make it imm
 
 ## 6. An edge case as a normal result
 
-Where an input is unusual but not wrong, such as a missing value or an empty list, define the operation so it gives a normal result: an empty collection, a default, or the end state the caller wants. Then no caller needs a check or an error handler for it. This is the design decision *Remove Edge Cases*.
+Where an input is unusual but not wrong, such as a missing value or an empty list, define the operation so it gives a normal result: an empty collection, a default, or the end state the caller wants. Then no caller needs a check or a recovery step for it. This is the design decision *Remove Edge Cases*.
 
 - Book (*What Correctness Means*, *Remove Edge Cases*): "When an operation treats these as normal results rather than errors, its callers never have to check for them or handle a failure." · "A repository method that returns an empty collection when no rows match removes the exception its callers would otherwise have to check for."
 - Limits: an input that is truly wrong cannot become a normal result (sections 8 and 10).
@@ -55,7 +55,7 @@ Write a calculation so it reads only its inputs and changes nothing outside itse
 
 ## 8. Outside data checked once, at the entry
 
-Check data from outside where it enters the application: in the method that the outside actor calls, such as the handler of a request, a message or a scheduled job. Inside, do not check the same rule again, also not in the first lines of the operation that the entry calls; trust what passed the entry. A precondition inside an operation guards the rules of that operation, such as a state that the work itself can reach, and not the request data again. The entry boundary is the 1 place where the data has met no rule yet. This is the design decision *Validate at the Boundary*.
+Check data from outside where it enters the application: in the method that the outside actor calls, such as the method that receives a request or a message, or the method that a scheduled job runs. Inside, do not check the same rule again, also not in the first lines of the operation that the entry calls; trust what passed the entry. A precondition inside an operation guards the rules of that operation, such as a state that the work itself can reach, and not the request data again. The entry boundary is the 1 place where the data has met no rule yet. This is the design decision *Validate at the Boundary*.
 
 - Book (*What Correctness Means*, *Validate at the Boundary*): "That check belongs at the entry boundary, which lets every abstraction inside trust the data that passes." · "Placing the same check inside every method would add complexity without adding safety, so the error handling stays at the edge while the domain logic stays clean." · "check once at the edge, then trust what flows past it" · "Yet even a validated input can drive the abstraction into a bad state while it runs"
 - Book (*What Testing Means*, *What Testing Means*): "Application entry boundaries are where external actors invoke the application"
@@ -70,10 +70,10 @@ Treat data from outside as data that can come from an attacker. Meet the expecta
 
 ## 10. Fail fast, and handle failures in 1 place
 
-Where the code meets a truly invalid state, stop and signal the failure. Do not return in silence, and do not try to recover in place. Let 1 global handler turn failures into a response, so methods hold no recovery code. A program that runs on in a broken state gives results that look right but are wrong, and those cost far more to trace. This is the design decision *Fail Fast*.
+Where the code meets a truly invalid state, stop and signal the failure. Do not return in silence, and do not try to recover in place. Let 1 global place turn every failure into a response, so methods hold no recovery code. A program that runs on in a broken state gives results that look right but are wrong, and those cost far more to trace. This is the design decision *Fail Fast*.
 
 - Book (*What Correctness Means*, *Fail Fast*): "This means the code stops at the first sign of a bad state, rather than running past it." · "A single global exception handler makes this practical, because it gathers all failures in one place instead of spreading recovery code through every method."
-- Write the message of a failure for the developer who reads it in the log; the global handler decides what the caller sees, as it "logs the context for later review, and returns a clean error response". This rule of the skill is narrower than the book.
+- Write the message of a failure for the developer who reads it in the log; that global place decides what the caller sees, as it "logs the context for later review, and returns a clean error response". This rule of the skill is narrower than the book.
 - Limits: an unusual input with a natural answer gets a normal result (section 6), and that is not running past a bad state. "Some inputs are just wrong, and no change to what an operation means can turn them into a normal result, so the code must check them somewhere." The domain decides which inputs are truly invalid.
 
 ## 11. Where prevention stops

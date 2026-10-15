@@ -12,7 +12,7 @@ Use strict type checking, and write the parameter types and the return type of e
 
 ## 2. Names and test names
 
-Write names in camel case, in whole words, as the main set says (naming). Name a test in the form should, outcome, when, condition (tests, section 9).
+Write names in camel case, in whole words, as the main set says (naming). Name a file for the type it declares, or for the work its functions do. Never give a file a general name, such as models, schemas, types or utils, that holds unrelated things: a reader reads the file name as the name of a class, so it must predict everything the file holds (naming, section 8). Name a test in the form should, outcome, when, condition (tests, section 9).
 
 - Book (*How to Verify Correctness*, *How to Structure Tests*): "The pattern `should<Outcome>When<Condition>` captures them in a consistent format that becomes predictable across the codebase."
 

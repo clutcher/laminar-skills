@@ -20,11 +20,18 @@ A stereotype marker such as Component or Service, and a Value marker on a constr
 
 ## 4. Configuration classes and properties
 
-Put the bean wiring of a module into a config folder beside app, in and out, in 1 class named for the module and ending in ModuleConfiguration. Put setup that the whole application shares, such as executors, clients, security and a clock, into classes at the root of the application beside its start class, each named with the application and its concern and ending in Configuration (modules, section 4). A configuration class takes its properties as constructor parameters and has no getters and no fields bound by markers. Split the property files by concern, such as executors, clients and caches, and write keys in the form of the framework, words in lower case joined by hyphens, grouped like the keys of the framework itself. Each key with children holds only keys that belong to what it names, as the fields of a class do (classes, section 5). Never commit a file of local overrides.
+Put the bean wiring of a module into a config folder beside app, in and out, in 1 class named for the module and ending in ModuleConfiguration. Put setup that the whole application shares, such as executors, clients, security and a clock, into classes at the root of the application beside its start class, each named with the application and its concern and ending in Configuration (modules, section 4). A method that builds a bean starts with a verb, such as create, like every method (naming, section 3). A configuration class takes its properties as constructor parameters and has no getters and no fields bound by markers. Split the property files by concern, such as executors, clients and caches, and write keys in the form of the framework, words in lower case joined by hyphens, grouped like the keys of the framework itself. Each key with children holds only keys that belong to what it names, as the fields of a class do (classes, section 5). Never commit a file of local overrides.
 
 ## 5. Names of classes by role
 
-End a class name with the word for its role where it has one, such as Service, Repository, Controller, Mapper, Validator, Factory, Builder or Exception, after a business word that says which (naming, section 2). Name the types of a web interface for the call with Request and Response, and an entry of a list in them with RequestItem or ResponseItem; these words stay out of the domain (modules, section 5).
+End a class name with the word for its role where it has one, such as Service, Facade, Repository, Controller, Converter, Mapper, Validator, Factory, Builder, Processor or Exception, after a business word that says which, such as OrderFacade (naming, section 2). A role word never stands alone, because a general word alone, such as Helper or Mapper, gives the reader little to predict. Use each role word in 1 sense only, as the list below says; these are rules of the skill, narrower than the book. Name the types of a web interface for the call with Request and Response, and an entry of a list in them with RequestItem or ResponseItem; these words stay out of the domain (modules, section 5).
+
+- Mapper names only a MapStruct mapper; a conversion class written by hand is a Converter (java.md, section 10).
+- A Facade is the entry point that 1 kind of caller uses: it calls services and holds no business rule of its own. A controller calls facades, and facades call services.
+- A Helper is a bean, named with its subject before the word, where every method needs other beans to work. Where its methods need no bean, make them static and move them into the Utils class of the subject (java.md, section 9).
+- Processor is allowed, with its subject before it, like every role word.
+- Do not use Manager or Handler as a role word: name the class for what it does. A name that a framework fixes stays.
+- Book (*How to Verify Correctness*, *Where TDD Fits*): "starting with controller tests that mock facades, then facade tests that mock services"
 
 ## 6. Strategies collected into a map
 

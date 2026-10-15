@@ -30,7 +30,7 @@ Where a value is 1 of a closed set of cases, use a sealed interface with a recor
 
 ## 5. Failures as unchecked exceptions with an error kind
 
-Signal a failure with an exception that extends RuntimeException, and give it an enum of the kinds of error it can carry where every kind carries the same data. Where a kind carries data of its own, such as the items it rejects, give that kind an exception type of its own, so no caller reads data that its kind never has (correctness, section 2). Do not declare checked exceptions. A checked exception forces recovery code into every caller, while 1 global handler should turn failures into a response (correctness, section 10).
+Signal a failure with an exception that extends RuntimeException, and give it an enum of the kinds of error it can carry where every kind carries the same data. Where a kind carries data of its own, such as the items it rejects, give that kind an exception type of its own, so no caller reads data that its kind never has (correctness, section 2). Do not declare checked exceptions. A checked exception forces recovery code into every caller, while 1 global place should turn every failure into a response (correctness, section 10).
 
 ## 6. Fields, constructor, methods in a fixed order
 
@@ -46,7 +46,7 @@ Write a text of several lines as a text block. Where code runs several tasks at 
 
 ## 9. A class of static functions
 
-A class that holds only static functions is final and has a private constructor. Name it for the work it does, never with a general word such as utils or helper, and never for a thing it does not hold (naming, section 8).
+A class that holds only static functions is final and has a private constructor. Name it with its subject before the word Utils, such as PriceUtils, and let it hold only functions about that subject. Never use the word Utils alone, and never name the class for a thing it does not hold (naming, section 8). This rule of the skill is narrower than the book.
 
 - Book (*The Encapsulation Principle*, *How Naming Makes Boundaries Work*): "a class named `Helper` that handles validation, formatting, and persistence forces readers to examine every method"
 
@@ -55,7 +55,7 @@ A class that holds only static functions is final and has a private constructor.
 Read this section only where the code already uses the library.
 
 - Lombok: on a record, use the builder and the with methods of Lombok, and the builder of an existing value to change 1 field in a copy. Declare a logger by hand as a private static final field, not through a Lombok annotation.
-- MapStruct: map between the types of 2 boundaries in a MapStruct mapper, not field by field in a controller or a service, and use its built-in support for maps and collections. Name each mapper method with a verb, such as map or convert, and never starting with to or from (naming, section 3). Map only at a boundary between modules or at an entry boundary, never into a second storage copy of a domain object (classes, section 11).
+- MapStruct: Mapper is the role word only for a MapStruct mapper, after its subject, such as OrderMapper; a conversion class written by hand ends in Converter, such as OrderConverter. Map between the types of 2 boundaries in a MapStruct mapper, not field by field in a controller or a service, and use its built-in support for maps and collections. Name each mapper method with a verb, such as map or convert, and never starting with to or from (naming, section 3). Map only at a boundary between modules or at an entry boundary, never into a second storage copy of a domain object (classes, section 11).
 - Multimaps: where code keeps several values for 1 key, use the multimap of the library the project has, not a map of lists or parallel lists that it fills by hand.
 
 ## 11. Tests: JUnit and Mockito
