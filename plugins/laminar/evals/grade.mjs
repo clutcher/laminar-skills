@@ -387,6 +387,7 @@ function gradeAnyOtherFinding(anyOther, raisedItems, expectedItems, mustNot, lim
 const JUDGES_FILE = "judges.txt";
 
 const EXPECTED_FILE = "expected.md";
+const TASK_FILE = "task.md";
 
 const A_JUDGE_TYPE_PREFIX = /^(?:laminar-review-)?(?:judge-)?/;
 
@@ -517,6 +518,10 @@ function build(dir, caseDir) {
   git("add", "-A");
   git("commit", "--quiet", "-m", "the base state");
   git("checkout", "--quiet", "-b", "change");
+  if (!fs.existsSync(changeDiff)) {
+    console.log(path.join(caseDir, TASK_FILE));
+    return 0;
+  }
   git("apply", path.resolve(changeDiff));
   git("add", "-A");
   git("commit", "--quiet", "-m", "the change under review");

@@ -1,0 +1,99 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..bac269a
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# Library lending service
++
++Java 21, Spring Boot. Domain packages under `com.example.library`. Repositories are interfaces implemented by the persistence module (not in this repository slice).
+diff --git a/src/main/java/com/example/library/book/Book.java b/src/main/java/com/example/library/book/Book.java
+new file mode 100644
+index 0000000..3f429bf
+--- /dev/null
++++ b/src/main/java/com/example/library/book/Book.java
+@@ -0,0 +1,4 @@
++package com.example.library.book;
++
++public record Book(String isbn, String title, int copiesOwned) {
++}
+diff --git a/src/main/java/com/example/library/book/BookRepository.java b/src/main/java/com/example/library/book/BookRepository.java
+new file mode 100644
+index 0000000..ac88bdc
+--- /dev/null
++++ b/src/main/java/com/example/library/book/BookRepository.java
+@@ -0,0 +1,10 @@
++package com.example.library.book;
++
++import java.util.List;
++
++public interface BookRepository {
++
++    Book findByIsbn(String isbn);
++
++    List<Book> findAllByIsbn(List<String> isbns);
++}
+diff --git a/src/main/java/com/example/library/loan/Loan.java b/src/main/java/com/example/library/loan/Loan.java
+new file mode 100644
+index 0000000..c36f75e
+--- /dev/null
++++ b/src/main/java/com/example/library/loan/Loan.java
+@@ -0,0 +1,6 @@
++package com.example.library.loan;
++
++import java.time.LocalDate;
++
++public record Loan(String loanId, String memberId, String isbn, LocalDate borrowedOn, LocalDate dueOn, LocalDate returnedOn) {
++}
+diff --git a/src/main/java/com/example/library/loan/LoanRepository.java b/src/main/java/com/example/library/loan/LoanRepository.java
+new file mode 100644
+index 0000000..6b6d8a3
+--- /dev/null
++++ b/src/main/java/com/example/library/loan/LoanRepository.java
+@@ -0,0 +1,12 @@
++package com.example.library.loan;
++
++import java.util.List;
++
++public interface LoanRepository {
++
++    List<Loan> findOpenLoansByMember(String memberId);
++
++    List<Loan> findOpenLoansByIsbn(String isbn);
++
++    void save(Loan loan);
++}
+diff --git a/src/main/java/com/example/library/member/Member.java b/src/main/java/com/example/library/member/Member.java
+new file mode 100644
+index 0000000..a09f2aa
+--- /dev/null
++++ b/src/main/java/com/example/library/member/Member.java
+@@ -0,0 +1,4 @@
++package com.example.library.member;
++
++public record Member(String memberId, String name, MembershipTier tier) {
++}
+diff --git a/src/main/java/com/example/library/member/MemberRepository.java b/src/main/java/com/example/library/member/MemberRepository.java
+new file mode 100644
+index 0000000..621ea00
+--- /dev/null
++++ b/src/main/java/com/example/library/member/MemberRepository.java
+@@ -0,0 +1,6 @@
++package com.example.library.member;
++
++public interface MemberRepository {
++
++    Member findById(String memberId);
++}
+diff --git a/src/main/java/com/example/library/member/MembershipTier.java b/src/main/java/com/example/library/member/MembershipTier.java
+new file mode 100644
+index 0000000..d663af9
+--- /dev/null
++++ b/src/main/java/com/example/library/member/MembershipTier.java
+@@ -0,0 +1,6 @@
++package com.example.library.member;
++
++public enum MembershipTier {
++    STANDARD,
++    PREMIUM
++}
