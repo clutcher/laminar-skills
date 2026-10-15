@@ -39,46 +39,46 @@ const NO_PRACTICE = "";
 
 const OWNS_THE_IO = "all four fixes work only when an abstraction owns the I/O";
 
-const createDirection = (principle, practice, ...passages) => Object.freeze({ principle, practice, passages: Object.freeze(passages) });
+const createDirection = (principle, practice, text, ...passages) => Object.freeze({ principle, practice, text, passages: Object.freeze(passages) });
 
 export const DIRECTION_BY_CHECK_MAP = Object.freeze({
-  S1: createDirection(PRINCIPLES.ENCAPSULATION, "Have a Single Owner", "The fix is encapsulation: one abstraction owns the decision, and every caller reaches it through that boundary."),
-  S2: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "Prediction failure responds to encapsulation through naming: when the name accurately predicts what is inside, the reader trusts the boundary instead of revising a model already built.", "A naming problem needs a more precise name, while an abstraction problem needs the behavior redistributed across different abstractions."),
-  S4: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Visual Separation", "The rule, then, is to match Given-When-Then exactly, because a test that drifts loses the schema and falls back on the principles to stay simple."),
-  S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "An unnamed part failure disappears through the same consistency, because only parts remain inside the abstraction and the name predicts every one of them.", "they belong elsewhere: above as a coordinator, or below as a detail"),
-  S6: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Guard Clauses", "So the fix is to flatten the nesting, because what costs is the number of open constructs."),
-  D1: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "So the goal is consistency within each method, not the maximum number of abstractions that extraction could add."),
-  D2: createDirection(PRINCIPLES.ENCAPSULATION, "Scoped Parameters", "parameters should match what the method name describes, not sit above or below it"),
-  D3: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Single-Level Methods", "are details that leaked into the wrong abstraction, and they belong elsewhere: above as a coordinator, or below as a detail"),
-  D4: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "a missing boundary needs a new abstraction named after a part", "they belong elsewhere: above as a coordinator, or below as a detail"),
-  CP1: createDirection(PRINCIPLES.ENCAPSULATION, "Exclude Illegal States", "You define the types so the compiler rejects the invalid mix before the code runs."),
-  CP3: createDirection(PRINCIPLES.ENCAPSULATION, "Protect the State", "Prevention comes from an abstraction that protects its state and controls every transition into it."),
-  CP4: createDirection(PRINCIPLES.ENCAPSULATION, "Remove Edge Cases", "In each case the practitioner defined the operation so that the edge case became normal behavior."),
-  CP5: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "A pure function reads only its inputs and changes nothing outside itself, so it never touches state that other code shares."),
-  CP6: createDirection(PRINCIPLES.ENCAPSULATION, "Guard Clauses", "check once at the edge, then trust what flows past it"),
-  CP7: createDirection(PRINCIPLES.ENCAPSULATION, "Fail Fast", "This means the code stops at the first sign of a bad state, rather than running past it."),
-  CD2: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "So a test provides its inputs, checks the outputs, and ignores whatever happens inside the code."),
-  CD4: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "These tests exercise the main paths from entry boundary to exit boundary, verifying that the full processing chain produces correct results."),
-  CD5: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "Unit tests complement both by covering branches that integration tests do not exercise, not as a coverage device applied to every class."),
-  CD6: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "Unit tests belong where combinatorial logic demands them, not as a default practice applied to every function or class"),
-  CD7: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "Only tests that span the full path verify the outcomes users care about, which makes such tests the natural default."),
-  P1: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "Batch operations instead of issuing them in loops", OWNS_THE_IO),
-  P2: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "Fetch shared data once per operation: load it at the start and pass the result to every step that needs it, instead of refetching independently from each step.", OWNS_THE_IO),
-  P3: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "Request only the data the operation needs", OWNS_THE_IO),
-  P4: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "Pool expensive resources instead of creating them per operation", OWNS_THE_IO),
+  S1: createDirection(PRINCIPLES.ENCAPSULATION, "Have a Single Owner", "let one owner hold the decision, and every other place call it", "The fix is encapsulation: one abstraction owns the decision, and every caller reaches it through that boundary."),
+  S2: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "rename to match the content, or move the content to match the name", "Prediction failure responds to encapsulation through naming: when the name accurately predicts what is inside, the reader trusts the boundary instead of revising a model already built.", "A naming problem needs a more precise name, while an abstraction problem needs the behavior redistributed across different abstractions."),
+  S4: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Visual Separation", "split the test into exactly given, when and then", "The rule, then, is to match Given-When-Then exactly, because a test that drifts loses the schema and falls back on the principles to stay simple."),
+  S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the detail down behind its own name, or the coordination up", "An unnamed part failure disappears through the same consistency, because only parts remain inside the abstraction and the name predicts every one of them.", "they belong elsewhere: above as a coordinator, or below as a detail"),
+  S6: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Guard Clauses", "return early, or move the nested work behind a name", "So the fix is to flatten the nesting, because what costs is the number of open constructs."),
+  D1: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move steps that name no part back into their caller", "So the goal is consistency within each method, not the maximum number of abstractions that extraction could add."),
+  D2: createDirection(PRINCIPLES.ENCAPSULATION, "Scoped Parameters", "group values that travel together, or pass only what the name needs", "parameters should match what the method name describes, not sit above or below it"),
+  D3: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Single-Level Methods", "move the operation up to a coordinator, or down to a detail", "are details that leaked into the wrong abstraction, and they belong elsewhere: above as a coordinator, or below as a detail"),
+  D4: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "move the group down into a named part, or up into a coordinator", "a missing boundary needs a new abstraction named after a part", "they belong elsewhere: above as a coordinator, or below as a detail"),
+  CP1: createDirection(PRINCIPLES.ENCAPSULATION, "Exclude Illegal States", "shape the types so an invalid state cannot be built", "You define the types so the compiler rejects the invalid mix before the code runs."),
+  CP3: createDirection(PRINCIPLES.ENCAPSULATION, "Protect the State", "let the owner of the state control every change to it", "Prevention comes from an abstraction that protects its state and controls every transition into it."),
+  CP4: createDirection(PRINCIPLES.ENCAPSULATION, "Remove Edge Cases", "define the operation so the edge case is a normal result", "In each case the practitioner defined the operation so that the edge case became normal behavior."),
+  CP5: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "pass the shared state in as input, and change nothing outside", "A pure function reads only its inputs and changes nothing outside itself, so it never touches state that other code shares."),
+  CP6: createDirection(PRINCIPLES.ENCAPSULATION, "Guard Clauses", "check once at the entry boundary, then trust the data inside", "check once at the edge, then trust what flows past it"),
+  CP7: createDirection(PRINCIPLES.ENCAPSULATION, "Fail Fast", "stop at the first bad state and report it, never go on silently", "This means the code stops at the first sign of a bad state, rather than running past it."),
+  CD2: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "give inputs and check outputs, never what happens inside the code", "So a test provides its inputs, checks the outputs, and ignores whatever happens inside the code."),
+  CD4: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "add a test that runs from the entry boundary to the exit boundary", "These tests exercise the main paths from entry boundary to exit boundary, verifying that the full processing chain produces correct results."),
+  CD5: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "add a unit test for the branches that integration tests do not reach", "Unit tests complement both by covering branches that integration tests do not exercise, not as a coverage device applied to every class."),
+  CD6: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "remove the unit test where integration tests already cover its branches", "Unit tests belong where combinatorial logic demands them, not as a default practice applied to every function or class"),
+  CD7: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "extend the test to run the whole path, from entry to exit", "Only tests that span the full path verify the outcomes users care about, which makes such tests the natural default."),
+  P1: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "let the owner of the I/O batch the calls instead of looping", "Batch operations instead of issuing them in loops", OWNS_THE_IO),
+  P2: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "fetch the data once, and pass it to every step that needs it", "Fetch shared data once per operation: load it at the start and pass the result to every step that needs it, instead of refetching independently from each step.", OWNS_THE_IO),
+  P3: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "request only the data the operation needs", "Request only the data the operation needs", OWNS_THE_IO),
+  P4: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "create the resource once and reuse it, or take it from a pool", "Pool expensive resources instead of creating them per operation", OWNS_THE_IO),
 });
 
 export const DIRECTION_BY_JUDGE_TYPE_MAP = Object.freeze({
   [JUDGE_TYPE_BY_TRACK_MAP[TRACKS.COMMENT]]: Object.freeze({
-    S2: createDirection(PRINCIPLES.ENCAPSULATION, "Self-Documenting Code", "Comments earn their place only when they carry knowledge that no name or structure can express"),
-    S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Self-Documenting Code", "The fix is to extract each commented block into a named method, so the name communicates the intent that the comment carried."),
+    S2: createDirection(PRINCIPLES.ENCAPSULATION, "Self-Documenting Code", "let a name say it, and keep only what no name can", "Comments earn their place only when they carry knowledge that no name or structure can express"),
+    S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Self-Documenting Code", "move the commented block behind a name that says its intent", "The fix is to extract each commented block into a named method, so the name communicates the intent that the comment carried."),
   }),
   [JUDGE_TYPE_BY_TRACK_MAP[TRACKS.TEST_METHOD]]: Object.freeze({
-    S2: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "A good name states the expected outcome and any conditions that produce it, so reviewers can decide whether this test matches the requirement they are checking."),
+    S2: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "name the expected outcome and the condition that produces it", "A good name states the expected outcome and any conditions that produce it, so reviewers can decide whether this test matches the requirement they are checking."),
   }),
 });
 
-const NO_DIRECTION = Object.freeze({ principle: PRINCIPLES.NONE, practice: NO_PRACTICE, passages: Object.freeze([]) });
+const NO_DIRECTION = Object.freeze({ principle: PRINCIPLES.NONE, practice: NO_PRACTICE, text: "", passages: Object.freeze([]) });
 
 const buildLookupKey = text => String(text || "").trim().toUpperCase();
 
