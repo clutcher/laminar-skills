@@ -2,4 +2,4 @@
 
 ## Must not appear
 
-Any other finding, except Prediction Failure and Unnamed Part Failure
+Any other finding
