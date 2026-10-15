@@ -21,6 +21,8 @@ Where you see another problem in code that the change does not touch, leave that
 
 Decide the abstractions and their boundaries first, write all the production code next, and write the tests last: "confirming requires something to confirm, so design precedes code and code precedes tests." While you design and write, do not build or run the code: "During this phase, the developer does not run, build, or validate the code: the work is thinking and writing." Where writing shows a design problem, change the decision and then the code. Build and run once the tests are written, and fix what they show.
 
+Folders are part of the design. Before you write a file, write its whole path and read it as 1 phrase from the source root down. After the production code, and again after the tests, run the folder check (modules, section 3) on every folder the change created or added a file to, and on each folder above it up to the source root. Move every entry that does not pass before you go on, and list the folder answers when you report the change.
+
 ## 3. The qualities and their order
 
 High-quality code is "simple, correct, and fast enough". Work on them in this order: "Readability first, then Flexibility, then Performance." "Correctness runs alongside this sequence rather than competing in it, because types and design prevent errors as you design and write, while tests verify behavior at the end."

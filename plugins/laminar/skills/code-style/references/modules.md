@@ -1,6 +1,6 @@
 # Modules and applications
 
-Contents: 1. Modules named after the parts of the application · 2. What a module exposes, declared and enforced · 3. Every folder consistent inside · 4. The application, what uses it, and what it needs · 5. A domain free of infrastructure · 6. Classes that coordinate and classes that compute · 7. Another module through its exposed types · 8. Known layouts and few new folders · 9. The same names in every module · 10. The same questions for applications · 11. The entry and exit boundaries of an application · 12. Imports at the top of the file
+Contents: 1. Modules named after the parts of the application · 2. What a module exposes, declared and enforced · 3. Every folder consistent inside, and the folder check · 4. The application, what uses it, and what it needs · 5. A domain free of infrastructure · 6. Classes that coordinate and classes that compute · 7. Another module through its exposed types · 8. Known layouts and few new folders · 9. The same names in every module · 10. The same questions for applications · 11. The entry and exit boundaries of an application · 12. Imports at the top of the file
 
 A module here is a folder or a package of files with 1 name. A folder is an abstraction like a method: its name predicts what it holds.
 
@@ -16,9 +16,18 @@ Split each module into what it offers and what it hides. Let the language visibi
 
 - Book (*The Principles at Every Scale*, *Modular Monolith*): "To finish encapsulation, each module must declare which classes belong to its public contract and which stay hidden inside." · "Enforcement closes this gap by turning the convention into a rule that language tools or automated tests verify on every change." · "Even one forgotten import breaks a boundary and brings back the problem the modules solved."
 
-## 3. Every folder consistent inside
+## 3. Every folder consistent inside, and the folder check
 
 At every depth, make every file and subfolder a part of what the folder path names. Business naming or technical naming can change from 1 folder to the next, but 1 folder does not mix parts and details. A detail among the parts of a folder is the unnamed part failure, as in a method.
+
+Run this check on every folder the change created or added a file to, and on each folder above it up to the source root. A review asks the same questions of each folder.
+
+1. List the files and subfolders directly in the folder. What a subfolder holds only shows what it is for; it is not answered here.
+2. Read the whole path, from the source root down to this folder, as 1 phrase: it names 1 thing or 1 capability, and each folder narrows the one above it.
+3. Give each file, then each subfolder, 1 answer: yes, where it is a direct part of what the path names; detail of, and the more specific thing it serves; or other place, and the place it belongs. Read each name as a name of its own: the path never adds a verb or a missing word to make a name fit.
+4. A type that holds data and is a piece of the data of 1 other entry is a detail of that entry. 3 or more entries of 1 repeating shape, such as 1 for each provider, are yes where the path names what they are; an entry that chooses, builds or lists them is not 1 of them.
+5. In a module, place each file in 1 of the 3 parts of section 4. The application imports no code of its ways in or out, and an implementation of what the application needs sits in a way out, never inside the application.
+6. Move each detail into a subfolder named for what it serves, or into that entry, and each other place to its place. Repeat until every answer is yes, at every depth.
 
 - In a folder of 1 way in or 1 way out, keep at its root the class the folder exists for, and put its helpers, such as wire types, clients and mappers, into subfolders named for them. A count of files never sets where a folder splits; belonging does. This rule of the skill is narrower than the book.
 - Book (*The Principles at Every Scale*, *Modular Monolith*): "Each folder must follow SLAP, not the order of business and technical naming across folders." · "Every folder, at any depth, stays consistent inside and hides its contents behind its name, which introduces a new abstraction level."
