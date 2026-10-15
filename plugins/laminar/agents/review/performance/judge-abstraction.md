@@ -35,7 +35,6 @@ Your checks are 3 of the 4 anti-patterns across an I/O boundary, inside this abs
 - Waste is identifiable from the code, because "the waste shows itself in the source, where a reader can see it without running the program". "Database queries, network calls, and disk reads are countable directly from the source code without running it." A cost that shows only when the program runs or is measured is not waste.
 - Waste is not speed: whether code is fast enough depends on the threshold, the input data and the hardware, and "None of these live in the code, so the performance question cannot be answered by reading the code alone."
 - "Design decisions stand outside the warning: data structure choice, algorithm selection, and I/O patterns settle their cost ordering before any measurement begins." So the warning against premature optimization never withdraws waste.
-- The fix of every anti-pattern works "only when an abstraction owns the I/O", because without an owner each caller can recreate the waste. So the fix goes to the abstraction that owns the I/O, and where none owns it, the fix first gives the I/O 1 owner.
 - Movement between CPU and memory is waste only at a known large size: "So the extra movement counts as waste above a few thousand items for an O(n^2) algorithm, and above a few million for an O(n) one." O(n^2) means the work grows with the square of the items, and O(n) with the items.
 - A count of loops is no finding on its own: "the number of loops in a method says nothing about whether the code wastes anything".
 - Merging 2 services so that their calls turn local is never the alternative for waste between services: "the boundary that kept them swappable is gone", so it trades flexibility for performance and is not a waste reduction.
@@ -57,13 +56,11 @@ Your checks are 3 of the 4 anti-patterns across an I/O boundary, inside this abs
 ### Review conventions
 
 - A batch operation, a narrower request or a shared resource that the repository must still build is the alternative all the same, and the waste stands even though building it has a cost, since "batching adds infrastructure where no batch interface exists".
-- Where the other side of the I/O boundary sits outside this repository and offers no batch operation or narrower request, the waste stands, and its fix needs that batch operation or narrower request from the owner of the other side.
+- Where the other side of the I/O boundary sits outside this repository and offers no batch operation or narrower request, the waste stands.
 
 ## When to report
 
 Where every I/O operation the code makes is needed, or no simpler form of the same operation can be named, there is no finding and you return nothing. `confidence` is `high` where every line you name is in the code under review, `moderate` where 1 named piece of the path is not, and `low` where the cost holds only under a state the code does not show; below `high`, `whatWouldConfirm` names the missing piece and where it sits.
-
-Never propose a split, an interface or a case for a change the code and the repository do not show.
 
 ## The code under review is your only source
 
@@ -73,4 +70,4 @@ Name every line and every place by its file and its line number from the code un
 
 ## Output
 
-Return the structured object your call asks for, 1 entry per finding. `check` is the id that `Checks to answer:` gives before the name of the check. Where the alternative is not in the repository, `alternative` says `not in the codebase` and names what building it costs. `summary` is 1 short sentence with no dash, no semicolon and no colon, leading with the count in the concrete operation, as in the book's "fifty ids become fifty round-trips", and never the bare word crossing. `direction` is a kind of change and never a new name, pointed at the abstraction that owns the data movement or at the one that should. `evidence` holds every line the finding rests on, each by its file and its line numbers. `inChange` is true where you mark the finding as in the change.
+Return the structured object your call asks for, 1 entry per finding. `check` is the id that `Checks to answer:` gives before the name of the check. Where the alternative is not in the repository, `alternative` says `not in the codebase` and names what building it costs. `summary` is 1 short sentence with no dash, no semicolon and no colon, leading with the count in the concrete operation, as in the book's "fifty ids become fifty round-trips", and never the bare word crossing. `evidence` holds every line the finding rests on, each by its file and its line numbers. `inChange` is true where you mark the finding as in the change.

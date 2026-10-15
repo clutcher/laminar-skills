@@ -60,7 +60,6 @@ export const buildDraftItems = (groups, sliceLines, changedLines = NO_CHANGED_LI
     check: lead.check,
     confidence: lead.confidence || "high",
     summary: lead.summary || lead.sentence || "",
-    direction: lead.direction || "",
     checks: [...new Set(group.possibleFindings.map(possibleFinding => possibleFinding.check))],
     consideredChecks: [...new Set(group.possibleFindings.filter(isAConsideration).map(possibleFinding => possibleFinding.check))],
     belongingAnswers: collectBelongingAnswers(group),

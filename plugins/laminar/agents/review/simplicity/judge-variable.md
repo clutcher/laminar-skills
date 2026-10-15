@@ -35,9 +35,9 @@ A named value: a variable, a field, a parameter, a constant, a key of a configur
 
 ### Patterns
 
-- An abbreviated name, or a name built on a general word, is a prediction failure on its own, even where its weak prediction agrees with the value, because "bad names force readers to look inside at any scale": "Abbreviated names like `res`, `cfg`, or `ctx` carry meaning but give the reader little to predict from.", and "`ctx` means context, a word that names no particular thing". The direction is a name that states what the value is. This holds unless the value is a constant that a type declares to hold the 1 shared object of that same type, which the derived pattern on such a constant judges.
+- An abbreviated name, or a name built on a general word, is a prediction failure on its own, even where its weak prediction agrees with the value, because "bad names force readers to look inside at any scale": "Abbreviated names like `res`, `cfg`, or `ctx` carry meaning but give the reader little to predict from.", and "`ctx` means context, a word that names no particular thing". This holds unless the value is a constant that a type declares to hold the 1 shared object of that same type, which the derived pattern on such a constant judges.
 - A placeholder name that holds a real thing is a prediction failure on its own, even where its weak prediction agrees with the value: "A variable named `temp` that holds a customer forces readers to trace its origin".
-- A constant over a literal adds a name that says nothing where its line would state what the value means with the literal in its place: "a name helps only when the bare value hides something: either meaning the reader cannot recover, or a shared value that unrelated rules depend on". The direction is the literal where it sits.
+- A constant over a literal adds a name that says nothing where its line would state what the value means with the literal in its place: "a name helps only when the bare value hides something: either meaning the reader cannot recover, or a shared value that unrelated rules depend on".
 - A name that only repeats the literal it holds does not say what the value controls; a name says what the value means, "so readers learn what the value means rather than what the value is".
 
 ### Derived patterns
@@ -56,13 +56,11 @@ A named value: a variable, a field, a parameter, a constant, a key of a configur
 - A short form that is the usual word of the domain for a thing, such as id or URL, is a whole word and not an abbreviated name, so it is judged like any other name.
 - The single letter i or j as the index of a loop is a name every reader knows, so it is no finding. Any other single letter, and i or j for a value that is not the index of a loop, stays an abbreviated name.
 - A word is general where it names no particular kind of thing, as a word for any data, item or result does, and also where it names only a measure or a sort of thing and does not say what it measures or classifies. A word that names 1 particular part of the thing its outer name names, such as the name or the status of a customer, is not a general word. A word of the name that the type the value is declared with, or the call that fills it, names in the same line is not a general word either, because that line says which thing it is; the name still keeps each word of that call that limits which of those things the value holds, by the rule on what the name of the source established.
-- A form that goes against these rules is a finding even where other code of the repository has the same form, inside the change or outside it. Such code may be named in a finding as context, and it never clears the finding, never lowers it and never sets its direction.
+- A form that goes against these rules is a finding even where other code of the repository has the same form, inside the change or outside it. Such code may be named in a finding as context, and it never clears the finding and never lowers it.
 
 ## When to report
 
 Where the name and the value agree, return nothing, unless the name is abbreviated, or built on a general word or a placeholder, or the value is a constant over a literal whose line would state what the value means with the literal in its place. `confidence` is `high` where every line you name is in the code under review, `moderate` where 1 named piece of the path is not, and `low` where the cost holds only under a state the code does not show; below `high`, `whatWouldConfirm` names the missing piece and where it sits.
-
-Never propose a split, an interface or a case for a change the code and the repository do not show.
 
 ## The code under review is your only source
 
@@ -72,4 +70,4 @@ Name every line and every place by its file and its line number from the code un
 
 ## Output
 
-Return the structured object your call asks for, 1 entry per finding, with `check` from `Checks to answer:`: `summary` is 1 sentence under 25 words with no dash, no semicolon and no colon, saying what the name claims and what the value holds instead, or, for a constant that adds nothing, which literal it hides; `direction` is a kind of change and never a new name; `prediction` and `found` are filled on a prediction finding; `field` names the field of the finding where the item holds several fields; code outside this change with the same form, where a finding names it as context, is quoted in `established`. `evidence` holds every line the finding rests on, each by its file and its line numbers. `inChange` is true where you mark the finding as in the change.
+Return the structured object your call asks for, 1 entry per finding, with `check` from `Checks to answer:`: `summary` is 1 sentence under 25 words with no dash, no semicolon and no colon, saying what the name claims and what the value holds instead, or, for a constant that adds nothing, which literal it hides; `prediction` and `found` are filled on a prediction finding; `field` names the field of the finding where the item holds several fields; code outside this change with the same form, where a finding names it as context, is quoted in `established`. `evidence` holds every line the finding rests on, each by its file and its line numbers. `inChange` is true where you mark the finding as in the change.

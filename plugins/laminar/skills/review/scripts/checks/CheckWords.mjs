@@ -1,4 +1,6 @@
 import { Scale } from "../code/index.mjs";
+import { TRACKS } from "./CheckCatalog.mjs";
+import { JUDGE_TYPE_BY_TRACK_MAP } from "./JudgeType.mjs";
 
 export const TRACK_WORDS = Object.freeze(["Simplicity", "Design", "Correctness · Prevention", "Correctness · Detection", "Performance"]);
 
@@ -31,6 +33,53 @@ export const CHECK_WORDS = Object.freeze([
   { id: "P4", lead: "Resource Recreation", track: "Performance", check: "Resource Recreation", text: "the code creates an expensive resource for each operation instead of creating it once and reusing it across operations" },
 ]);
 
+export const PRINCIPLES = Object.freeze({ ENCAPSULATION: "encapsulation", SINGLE_LEVEL_OF_ABSTRACTION: "single level of abstraction", NONE: "" });
+
+const NO_PRACTICE = "";
+
+const OWNS_THE_IO = "all four fixes work only when an abstraction owns the I/O";
+
+const createDirection = (principle, practice, ...passages) => Object.freeze({ principle, practice, passages: Object.freeze(passages) });
+
+export const DIRECTION_BY_CHECK_MAP = Object.freeze({
+  S1: createDirection(PRINCIPLES.ENCAPSULATION, "Have a Single Owner", "The fix is encapsulation: one abstraction owns the decision, and every caller reaches it through that boundary."),
+  S2: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "Prediction failure responds to encapsulation through naming: when the name accurately predicts what is inside, the reader trusts the boundary instead of revising a model already built.", "A naming problem needs a more precise name, while an abstraction problem needs the behavior redistributed across different abstractions."),
+  S4: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Visual Separation", "The rule, then, is to match Given-When-Then exactly, because a test that drifts loses the schema and falls back on the principles to stay simple."),
+  S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "An unnamed part failure disappears through the same consistency, because only parts remain inside the abstraction and the name predicts every one of them.", "they belong elsewhere: above as a coordinator, or below as a detail"),
+  S6: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Guard Clauses", "So the fix is to flatten the nesting, because what costs is the number of open constructs."),
+  D1: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "So the goal is consistency within each method, not the maximum number of abstractions that extraction could add."),
+  D2: createDirection(PRINCIPLES.ENCAPSULATION, "Scoped Parameters", "parameters should match what the method name describes, not sit above or below it"),
+  D3: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Single-Level Methods", "are details that leaked into the wrong abstraction, and they belong elsewhere: above as a coordinator, or below as a detail"),
+  D4: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "a missing boundary needs a new abstraction named after a part", "they belong elsewhere: above as a coordinator, or below as a detail"),
+  CP1: createDirection(PRINCIPLES.ENCAPSULATION, "Exclude Illegal States", "You define the types so the compiler rejects the invalid mix before the code runs."),
+  CP3: createDirection(PRINCIPLES.ENCAPSULATION, "Protect the State", "Prevention comes from an abstraction that protects its state and controls every transition into it."),
+  CP4: createDirection(PRINCIPLES.ENCAPSULATION, "Remove Edge Cases", "In each case the practitioner defined the operation so that the edge case became normal behavior."),
+  CP5: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "A pure function reads only its inputs and changes nothing outside itself, so it never touches state that other code shares."),
+  CP6: createDirection(PRINCIPLES.ENCAPSULATION, "Guard Clauses", "check once at the edge, then trust what flows past it"),
+  CP7: createDirection(PRINCIPLES.ENCAPSULATION, "Fail Fast", "This means the code stops at the first sign of a bad state, rather than running past it."),
+  CD2: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "So a test provides its inputs, checks the outputs, and ignores whatever happens inside the code."),
+  CD4: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "These tests exercise the main paths from entry boundary to exit boundary, verifying that the full processing chain produces correct results."),
+  CD5: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "Unit tests complement both by covering branches that integration tests do not exercise, not as a coverage device applied to every class."),
+  CD6: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "Unit tests belong where combinatorial logic demands them, not as a default practice applied to every function or class"),
+  CD7: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "Only tests that span the full path verify the outcomes users care about, which makes such tests the natural default."),
+  P1: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "Batch operations instead of issuing them in loops", OWNS_THE_IO),
+  P2: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "Fetch shared data once per operation: load it at the start and pass the result to every step that needs it, instead of refetching independently from each step.", OWNS_THE_IO),
+  P3: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "Request only the data the operation needs", OWNS_THE_IO),
+  P4: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "Pool expensive resources instead of creating them per operation", OWNS_THE_IO),
+});
+
+export const DIRECTION_BY_JUDGE_TYPE_MAP = Object.freeze({
+  [JUDGE_TYPE_BY_TRACK_MAP[TRACKS.COMMENT]]: Object.freeze({
+    S2: createDirection(PRINCIPLES.ENCAPSULATION, "Self-Documenting Code", "Comments earn their place only when they carry knowledge that no name or structure can express"),
+    S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Self-Documenting Code", "The fix is to extract each commented block into a named method, so the name communicates the intent that the comment carried."),
+  }),
+  [JUDGE_TYPE_BY_TRACK_MAP[TRACKS.TEST_METHOD]]: Object.freeze({
+    S2: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "A good name states the expected outcome and any conditions that produce it, so reviewers can decide whether this test matches the requirement they are checking."),
+  }),
+});
+
+const NO_DIRECTION = Object.freeze({ principle: PRINCIPLES.NONE, practice: NO_PRACTICE, passages: Object.freeze([]) });
+
 const buildLookupKey = text => String(text || "").trim().toUpperCase();
 
 const CHECK_WORDS_BY_ID_MAP = new Map(CHECK_WORDS.map(checkWords => [buildLookupKey(checkWords.id), checkWords]));
@@ -50,3 +99,10 @@ export const readCheckRank = check => { const checkWords = findCheckWords(check)
 export const readTrackRank = track => { const at = TRACK_WORDS.indexOf(track); return at < 0 ? TRACK_WORDS.length : at; };
 
 export const readScaleRank = scale => { const at = SCALE_ORDER.indexOf(String(scale || "").toUpperCase()); return at < 0 ? SCALE_ORDER.length : at; };
+
+export const findDirection = (check, judgeType = "") => {
+  const checkWords = findCheckWords(check);
+  if (!checkWords) return NO_DIRECTION;
+  const overrides = DIRECTION_BY_JUDGE_TYPE_MAP[judgeType] || {};
+  return overrides[checkWords.id] || DIRECTION_BY_CHECK_MAP[checkWords.id] || NO_DIRECTION;
+};

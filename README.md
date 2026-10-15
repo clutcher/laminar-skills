@@ -21,7 +21,7 @@ The change created class `Crossing` and method `BelaySupervision#supervisorsNeed
 
 1. Method `BelaySupervision#supervisorsNeeded`
    - Incomplete Mental Model: supervisorsNeeded decides who counts as a beginner from the flags isBeginner and isAdvanced, and two other places decide the same from the same flags.
-   - Possible fix: Let one owner decide the climber's grade, for example one closed set of grades on Climber, and have each place ask it.
+   - Possible fix: Encapsulation. "The fix is encapsulation: one abstraction owns the decision, and every caller reaches it through that boundary."
    - Also in `LeadCourseBooking#book`; `RouteAdvisor#highestSuggestedGrade`.
    - Confidence: Moderate. To confirm: Confirm that the 3 places must give the same answer for the same climber.
 
@@ -31,7 +31,7 @@ The change created class `Crossing` and method `BelaySupervision#supervisorsNeed
 
 2. Class `Crossing`
    - Exclude Illegal States: Crossing holds its status as free text compared with BOARDING, DEPARTED and ARRIVED, so a caller can store any other value.
-   - Possible fix: Replace the text with one closed set of named cases for the status.
+   - Possible fix: Encapsulation. "You define the types so the compiler rejects the invalid mix before the code runs."
    - Also in `Crossing#isOpenForBoarding`; `Crossing#hasLeftPort`.
 
 ## Limits
@@ -42,7 +42,7 @@ The review does not judge speed. ...
 The review does not report what a compiler, a linter or a type checker reports ...
 ```
 
-Each finding names the abstraction, the check, what the review found, one possible fix and, where it is not high, its confidence with what would confirm it. A question the code cannot settle goes under `## To consider` and is not a finding. Beside `review.md` the review writes `review-evidence.md`, with the file and the line of every finding, and `review.sarif` for a tool. [`reference.md`](plugins/laminar/skills/review/reference.md) explains every section of the three files, every track and every check.
+Each finding names the abstraction, the check, what the review found, the possible fix the book states for that check, which the script prints with the principle that leads it and no agent writes, and, where it is not high, its confidence with what would confirm it. A question the code cannot settle goes under `## To consider` and is not a finding. Beside `review.md` the review writes `review-evidence.md`, with the file and the line of every finding, and `review.sarif` for a tool. [`reference.md`](plugins/laminar/skills/review/reference.md) explains every section of the three files, every track and every check.
 
 ## Requirements
 

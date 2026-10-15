@@ -1,5 +1,5 @@
 import { convertToText } from "../sections/ReturnedValueText.mjs";
-import { formatAcrossApplications, COMBINED_LEADS_SEPARATOR, EXISTING_CODE, formatHead, IN_THE_CHANGE, formatQuotedDisplayName, PLACES_LEFT_UNOPENED, formatSentence, SUB_POINT_INDENT } from "../sections/ItemText.mjs";
+import { formatAcrossApplications, formatDirectionOfTheFinding, COMBINED_LEADS_SEPARATOR, EXISTING_CODE, formatHead, IN_THE_CHANGE, formatQuotedDisplayName, PLACES_LEFT_UNOPENED, formatSentence, SUB_POINT_INDENT } from "../sections/ItemText.mjs";
 import { readCheckName, readLead, TRACK_WORDS } from "../../../checks/CheckWords.mjs";
 import { formatSweepWords } from "../../merge/draft/Sweep.mjs";
 import { buildIoEndsSection } from "../sections/IoEndsSection.mjs";
@@ -127,7 +127,7 @@ const formatSingleFinding = finding => {
   lines.push(...formatConfidenceLines(finding));
   lines.push(...formatSecondReadLines(finding));
   for (const named of finding.linesNotInTheCode || []) lines.push(`Line not in the code at \`${named.file}:${named.line}\``);
-  lines.push(`Direction: ${convertToText(finding.direction) || "not written"}`);
+  lines.push(`Direction: ${formatDirectionOfTheFinding(finding) || "none for this check"}`);
   return lines.join("\n");
 };
 
@@ -136,7 +136,7 @@ const formatCombinedFinding = finding => [
     `Combined by the verifier: ${formatCombinedChecksLine(finding)}`,
     causeLineOf(finding),
     ...formatConfidenceLines(finding),
-    `Direction: ${convertToText(finding.direction) || "not written"}`].join("\n"),
+    `Direction: ${formatDirectionOfTheFinding(finding) || "none for this check"}`].join("\n"),
   ...finding.combined.findings.map(formatSingleFinding),
 ].join("\n\n");
 

@@ -23,7 +23,6 @@ const buildExposureFindingTexts = ({ type, opening, module, users }) => {
     summary: `${typeName} sits in the hidden part of the app of ${moduleName}, yet a declaration opens it to other modules`,
     prediction: `The hidden part of the app of ${moduleName} holds classes the module keeps for itself.`,
     found: `${formatInlineCode(readFileName(opening.path))} opens ${typeName} to other modules, and ${users.length ? describeTheUsers(users) : "no other module uses it yet"}.`,
-    direction: `Give other modules a public type of ${moduleName} in place of ${typeName} and keep ${typeName} inside the app, because 2 modules cannot share the classes inside their app folders.`,
     boundary: opening.text,
   };
 };
@@ -35,7 +34,6 @@ const buildAppImportFindingTexts = ({ importLine, inOutFile, inOutImport }) => {
     summary: `${importingFileName} of the app imports ${inOutName} ${inOutImport} of its own module, so the app reaches the outside without an interface`,
     prediction: "The app predicts business logic that calls nothing outside the module except through the interfaces it declares.",
     found: `${importingFileName} imports ${inOutName} ${inOutImport}, in the folder ${formatInlineCode(readFolderName(inOutFile))}.`,
-    direction: `Let the app state what it needs as an spi interface and let ${inOutName} implement it, because the domain states what it needs as interfaces and the code that fulfills them lives outside the app.`,
   };
 };
 
@@ -46,7 +44,6 @@ const buildSpiInsideTheAppFindingTexts = ({ apiSpiTypeName: spiName, implementat
     summary: `${implementationNames} implements the spi interface ${spiText} inside the app, where the spi predicts an implementation at the edge`,
     prediction: `The spi interface ${spiText} predicts an implementation at the edge of the module, outside the app.`,
     found: `${implementationNames} implements ${spiText} inside the app.`,
-    direction: `Move the implementation of ${spiText} to \`out/\`, because what the app needs becomes an interface in \`spi/\` and an implementation at the edge.`,
   };
 };
 
@@ -84,7 +81,6 @@ const buildTestNameFindingTexts = ({ abstraction }) => {
     summary: `${testName} states no outcome in the should form, so the reader cannot tell which requirement the test verifies`,
     prediction: "A test name states the outcome the test verifies and the condition that produces it.",
     found: `${testName} holds no word should and no outcome.`,
-    direction: "Name the test by the pattern should, then the outcome it verifies, then when and the condition that produces it, so reviewers can decide whether this test matches the requirement they are checking.",
   };
 };
 
@@ -101,14 +97,12 @@ const describeThePhaseComments = places => (places.length === 1 ? `The comment a
 const buildPhaseCommentFindingTexts = ({ abstraction, places }) => ({
   summary: `${formatInlineCode(abstraction.name)} names the phases of production code in comments, which the operations of each group already show`,
   found: `${describeThePhaseComments(places)} ${listThePhaseWords(places)}.`,
-  direction: "Remove the phase comments and keep the blank lines, because the operations in each group already reveal its purpose.",
 });
 
 const buildNoteOfWorkFindingTexts = ({ abstraction, place }) => ({
   summary: `${formatInlineCode(abstraction.name)} holds a note of work left undone that names no ticket`,
   prediction: "Production code holds finished work, and work still to do lives in a task tracker.",
   found: `The comment at line ${place.line} says ${formatInlineCode(quoteTheComment(place.comment))} and names no ticket.`,
-  direction: "Move the work to the task tracker and remove the note, because a note of work left undone belongs in a task tracker rather than in the codebase.",
 });
 
 const buildSingleLetterFindingTexts = ({ abstraction }) => {
@@ -117,7 +111,6 @@ const buildSingleLetterFindingTexts = ({ abstraction }) => {
     summary: `${valueName} is a single letter, an abbreviated name that gives the reader little to predict from`,
     prediction: `${valueName} alone predicts no particular value.`,
     found: `${valueName} is declared with a single letter that is not the index of a loop.`,
-    direction: "Name the value for what it holds, because a single letter other than the index of a loop is an abbreviated name.",
   };
 };
 
@@ -217,6 +210,7 @@ const createFinding = (kind, settled, id, changedLines) => ({
   confidence: "high",
   inChange: kind.listFiles(settled).some(filePath => Boolean(changedLines[filePath])),
   scriptRaised: true,
+  ...(kind.standsInFor ? { standsInFor: kind.standsInFor } : {}),
   ...kind.buildFindingTexts(settled),
 });
 

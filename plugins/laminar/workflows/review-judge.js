@@ -336,14 +336,13 @@ const THE_FIELDS_EVERY_JUDGE_WRITES = {
   check: A_TEXT,
   evidence: { type: 'array', items: NAMED_LINES },
   summary: A_TEXT,
-  direction: A_TEXT,
   confidence: { type: 'string', enum: ['high', 'moderate', 'low'] },
   whatWouldConfirm: A_TEXT,
   consider: A_TEXT,
   inChange: { type: 'boolean' },
 }
 
-const THE_FIELDS_EVERY_JUDGE_MUST_FILL = ['check', 'evidence', 'summary', 'direction', 'confidence']
+const THE_FIELDS_EVERY_JUDGE_MUST_FILL = ['check', 'evidence', 'summary', 'confidence']
 
 const findingOf = (own, mustFill) => ({
   type: 'object',

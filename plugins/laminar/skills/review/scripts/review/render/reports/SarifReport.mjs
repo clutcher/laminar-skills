@@ -1,6 +1,6 @@
 import { CHECK_WORDS, findCheckWords } from "../../../checks/CheckWords.mjs";
 import { convertToText } from "../sections/ReturnedValueText.mjs";
-import { formatLeadWords, formatDisplayNameText } from "../sections/ItemText.mjs";
+import { formatLeadWords, formatDisplayNameText, formatDirectionText, formatDirectionOfTheFinding } from "../sections/ItemText.mjs";
 import { selectScopeProperties } from "../sections/ScopeLine.mjs";
 
 const SCHEMA_URL = "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json";
@@ -10,7 +10,12 @@ const LEVELS = Object.freeze({ FINDING: "warning", CONSIDERATION: "note" });
 
 const RANK_OF_CONFIDENCE = Object.freeze({ high: 0.9, moderate: 0.6, low: 0.3 });
 
-const sarifRules = CHECK_WORDS.map(checkWords => ({ id: checkWords.id, name: checkWords.lead, shortDescription: { text: checkWords.text } }));
+const buildHelp = checkWords => {
+  const direction = formatDirectionText(checkWords.id);
+  return direction ? { help: { text: direction } } : {};
+};
+
+const sarifRules = CHECK_WORDS.map(checkWords => ({ id: checkWords.id, name: checkWords.lead, shortDescription: { text: checkWords.text }, ...buildHelp(checkWords) }));
 
 const buildLocation = (file, line) => ({
   physicalLocation: {
@@ -38,7 +43,7 @@ const buildProperties = finding => {
     scale: String(finding.scale || abstraction.scale || ""),
     check: finding.check,
     mechanism: convertToText(finding.mechanism || finding.decision || finding.prevention),
-    direction: convertToText(finding.direction),
+    direction: formatDirectionOfTheFinding(finding),
     confidence: finding.confidence,
     what_would_confirm: finding.confidence === "high" ? "" : convertToText(finding.whatWouldConfirm),
     ...buildTestPlanProperties(finding),

@@ -63,7 +63,6 @@ const A_VERDICT = {
     inChange: { type: 'boolean' },
     checks: { type: 'array', items: { type: 'string' } },
     summary: { type: 'string' },
-    fix: { type: 'string' },
   },
   required: ['possibleFinding', 'decision', 'fact'],
 }

@@ -48,7 +48,6 @@ Your message lists the checks to answer, then under `I/O ends:` the ids of the e
 - Waste is identifiable from the code, because "the waste shows itself in the source, where a reader can see it without running the program". "Database queries, network calls, and disk reads are countable directly from the source code without running it." A cost that shows only when the program runs or is measured is not waste.
 - Waste is not speed: whether code is fast enough depends on the threshold, the input data and the hardware, and "None of these live in the code, so the performance question cannot be answered by reading the code alone."
 - "Design decisions stand outside the warning: data structure choice, algorithm selection, and I/O patterns settle their cost ordering before any measurement begins." So the warning against premature optimization never withdraws waste.
-- The fix of every anti-pattern works "only when an abstraction owns the I/O", because without an owner each caller can recreate the waste. So the fix goes to the abstraction that owns the I/O, and where none owns it, the fix first gives the I/O 1 owner.
 - A count of loops is no finding on its own: "the number of loops in a method says nothing about whether the code wastes anything".
 - Merging 2 services so that their calls turn local is never the alternative for waste between services: "the boundary that kept them swappable is gone", so it trades flexibility for performance and is not a waste reduction.
 
@@ -67,7 +66,7 @@ Your message lists the checks to answer, then under `I/O ends:` the ids of the e
 ### Review conventions
 
 - A batch operation, a narrower request or a shared resource that the repository must still build is the alternative all the same, and the waste stands even though building it has a cost, since "batching adds infrastructure where no batch interface exists".
-- Where the other side of the I/O boundary sits outside this repository and offers no batch operation or narrower request, the waste stands, and its fix needs that batch operation or narrower request from the owner of the other side.
+- Where the other side of the I/O boundary sits outside this repository and offers no batch operation or narrower request, the waste stands.
 - Looped I/O: per-item I/O is waste only where a batch form of the same operation could replace it, such as 1 query for all the ids, 1 request with every item or 1 write of the whole list. I/O that the code seems to need once for each item, such as a migration that writes each record in its own step, a command that acts on 1 item at a time by its signature, or an importer that reads each file, still gives a finding, held low, because whether each item needs its own I/O is a state the code does not show.
 - Looped I/O: per-item I/O operations that the code issues at the same time, not 1 after another, are still looped I/O, since the count of round-trips is the same.
 - Looped I/O: a chain of calls to 1 other service, where 1 composed call would return the same data in 1 round-trip, is looped I/O, and the alternative is that composed call.
@@ -75,8 +74,6 @@ Your message lists the checks to answer, then under `I/O ends:` the ids of the e
 ## When to report
 
 Where no batch form of the same operation can be named, there is no finding and you return nothing. `confidence` is `high` where every line you name is in the code under review, `moderate` where 1 named piece of the path is not, and `low` where the cost holds only under a state the code does not show; below `high`, `whatWouldConfirm` names the missing piece and where it sits. On a chain, what would confirm it names the hop or the end call a reader opens to confirm the finding. On I/O that the code seems to need once for each item, what would confirm it names what would show that each item needs its own I/O.
-
-Never propose a split, an interface or a case for a change the code and the repository do not show.
 
 ## The code under review is your only source
 
@@ -86,4 +83,4 @@ Name every line and every place by its file and its line number from the code un
 
 ## Output
 
-Return the structured object your call asks for, 1 entry per finding. Where the code under review holds more than 1 loop, `abstractionPlace` is the place the finding lands on, by its file and its line: in a chain that goes down, the line of the loop in the changed method; in a chain that goes up, the `changed call`, the line of the call the change added in the changed method. Where the alternative is not in the repository, `alternative` says `not in the codebase` and names what building it costs. `summary` is 1 short sentence with no dash, no semicolon and no colon, leading with the count in the concrete operation, as in the book's "fifty ids become fifty round-trips", and never the bare word crossing. `direction` is a kind of change and never a new name, pointed at the abstraction that owns the data movement or at the one that should. `evidence` holds every line the finding rests on, the loop, every hop of its chain that you read, the reaching call and the io end call, each by its file and its line numbers. `inChange` is true where you mark the finding as in the change.
+Return the structured object your call asks for, 1 entry per finding. Where the code under review holds more than 1 loop, `abstractionPlace` is the place the finding lands on, by its file and its line: in a chain that goes down, the line of the loop in the changed method; in a chain that goes up, the `changed call`, the line of the call the change added in the changed method. Where the alternative is not in the repository, `alternative` says `not in the codebase` and names what building it costs. `summary` is 1 short sentence with no dash, no semicolon and no colon, leading with the count in the concrete operation, as in the book's "fifty ids become fifty round-trips", and never the bare word crossing. `evidence` holds every line the finding rests on, the loop, every hop of its chain that you read, the reaching call and the io end call, each by its file and its line numbers. `inChange` is true where you mark the finding as in the change.

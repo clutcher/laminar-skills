@@ -9,8 +9,6 @@ const NO_SECOND_READ = Object.freeze({ refutation: null, verdictDecision: "", no
 
 const INTEGRATION_TEST_NEEDED = CHECKS_BY_ID_MAP.CD4.id;
 
-const DIRECTION_OF_A_PATH_TO_TEST = "add a test that enters at this entry and checks this outcome";
-
 const readTheStageNotVerified = (covered, refutation, returns) => {
   const notVerified = returns.findNotVerifiedOf(covered.number);
   if (notVerified) return String(notVerified.stage || NOT_VERIFIED_STAGES.REFUTER);
@@ -56,7 +54,6 @@ const buildPathToTest = (covered, confidence) => {
       outcome: covered.outcome || "",
       summary: covered.fact,
       evidence: covered.evidence || buildEvidence(abstractionPlace, test),
-      direction: DIRECTION_OF_A_PATH_TO_TEST,
       confidence,
       whatWouldConfirm: `the requirement behind this outcome, because the verifier found that ${formatNamedTest(test)} does not run this path`,
       coveredClaimRejected: test,

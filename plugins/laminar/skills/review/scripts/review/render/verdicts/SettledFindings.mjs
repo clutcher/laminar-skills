@@ -121,7 +121,7 @@ const findCombinedChecks = (verdict, group) => {
 
 const isAValidCombine = (verdict, group) => isACombine(verdict)
   && findCombinedChecks(verdict, group).length >= FEWEST_COMBINED_CHECKS
-  && Boolean(trimText(verdict.summary)) && Boolean(trimText(verdict.fix));
+  && Boolean(trimText(verdict.summary));
 
 const combinesOf = (group, verdicts) => {
   const taken = new Set();
@@ -182,7 +182,6 @@ const buildCombinedFinding = (combine, settledFindings) => {
     inChange: ordered.some(finding => finding.inChange),
     consider: ordered.every(isAConsideration) ? lead.consider : "",
     summary: trimText(combine.verdict.summary),
-    direction: trimText(combine.verdict.fix),
     confidence,
     loweredFrom: "",
     refutation: null,

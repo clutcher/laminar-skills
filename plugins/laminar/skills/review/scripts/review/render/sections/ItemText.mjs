@@ -1,5 +1,5 @@
 import { convertToText } from "./ReturnedValueText.mjs";
-import { readLead, findCheckWords } from "../../../checks/CheckWords.mjs";
+import { readLead, findCheckWords, findDirection } from "../../../checks/CheckWords.mjs";
 import { METHOD_MARK, stripLeadingDotSlash } from "../../merge/abstractions/AbstractionsAtPlaces.mjs";
 import { selectOwnFindings } from "./OwnFindings.mjs";
 import { isAConsideration } from "../../merge/filing/Considerations.mjs";
@@ -103,6 +103,10 @@ export const PLACES_LEFT_UNOPENED = "Other places the review did not open may ho
 
 const CONFIDENCE_WORDS = Object.freeze({ high: "High", moderate: "Moderate", low: "Low" });
 
+const FIX_LABELS = Object.freeze({ ONE: "Possible fix", MANY: "Possible fixes" });
+
+const IF_A_DEFECT = ", if this is a defect";
+
 const LABELS = Object.freeze({
   FOUND: "Found",
   PATH: "Path",
@@ -110,7 +114,7 @@ const LABELS = Object.freeze({
   INPUT: "Input",
   TAKEN_BY: "Taken by",
   UNVERIFIED: "Unverified",
-  FIX: "Possible fix",
+  FIX: FIX_LABELS.ONE,
   ALSO_IN: "Also in",
   ACROSS_APPLICATIONS: "Across applications",
   PLACES_LEFT_UNOPENED: "Places left unopened",
@@ -124,7 +128,7 @@ const POINT_ORDER = Object.freeze([
 ]);
 
 const BLOCK_LINES = Object.freeze({
-  [LABELS.FIX]: "- Possible fixes:",
+  [LABELS.FIX]: `- ${FIX_LABELS.MANY}:`,
   [LABELS.PLACES_LEFT_UNOPENED]: `- ${PLACES_LEFT_UNOPENED}`,
 });
 
@@ -200,7 +204,37 @@ const createTestPlanPoints = finding => {
   return pointsOf ? pointsOf(finding) : [];
 };
 
-const createFixPoint = finding => createLabeledPoint(LABELS.FIX, formatSentence(finding.direction) || "No direction was written.");
+const PRINTS_THE_PRACTICE = false;
+
+const formatQuotedPassages = passages => passages.map(passage => `"${passage}"`).join(" ");
+
+export const formatDirectionText = (check, judgeType = "") => {
+  const direction = findDirection(check, judgeType);
+  if (!direction.passages.length) return "";
+  const words = [direction.principle, PRINTS_THE_PRACTICE ? direction.practice : ""].filter(Boolean).join(", ");
+  return words ? `${formatSentence(words)} ${formatQuotedPassages(direction.passages)}` : formatQuotedPassages(direction.passages);
+};
+
+const readJudgeTypeOfTheDirection = finding => finding.standsInFor || finding.judgeType || "";
+
+const listDirectionsOfTheFinding = finding => (finding.combined ? finding.combined.findings : [finding])
+  .map(directedFinding => ({ lead: readLead(directedFinding.check), text: formatDirectionText(directedFinding.check, readJudgeTypeOfTheDirection(directedFinding)) }))
+  .filter(direction => direction.text);
+
+const keepTheFirstOfEachText = directions => directions.filter((direction, order) => directions.findIndex(other => other.text === direction.text) === order);
+
+export const formatDirectionOfTheFinding = finding => keepTheFirstOfEachText(listDirectionsOfTheFinding(finding)).map(direction => direction.text).join(" ");
+
+const formatDirectionLines = (directions, condition) => directions.length > 1
+  ? [`- ${FIX_LABELS.MANY}${condition}:`, ...directions.map(direction => `${NESTED_POINT_INDENT}- ${direction.lead}: ${direction.text}`)]
+  : [`- ${FIX_LABELS.ONE}${condition}: ${directions[0].text}`];
+
+const createFixPoint = finding => {
+  const directions = keepTheFirstOfEachText(listDirectionsOfTheFinding(finding));
+  if (!directions.length) return null;
+  const isConditional = isAConsideration(finding);
+  return { label: LABELS.FIX, text: formatDirectionOfTheFinding(finding), lines: formatDirectionLines(directions, isConditional ? IF_A_DEFECT : ""), isConditional };
+};
 
 const createAlsoInPoint = finding => {
   const alsoIn = formatAlsoIn(finding);
@@ -240,11 +274,11 @@ const isShownAlone = (point, finding) => point.label !== LABELS.CONFIDENCE || is
 
 const formatSingleCheckPoints = finding => [
   formatSummaryLine(finding),
-  ...pointsOf(finding).filter(point => isShownAlone(point, finding)).map(point => point.line),
+  ...pointsOf(finding).filter(point => isShownAlone(point, finding)).flatMap(point => point.lines || [point.line]),
 ];
 
 const formatNestedLine = (finding, point) => {
-  const lead = formatLeadWords(finding);
+  const lead = `${formatLeadWords(finding)}${point.isConditional ? IF_A_DEFECT : ""}`;
   return `${NESTED_POINT_INDENT}${point.text ? `- ${lead}: ${point.text}` : `- ${lead}.`}`;
 };
 
@@ -256,7 +290,16 @@ const pointsUnder = (findings, label) => findings
 
 const isAShownBlock = (label, findingPoints) => findingPoints.length && (label !== LABELS.CONFIDENCE || findingPoints.some(({ finding }) => isShownAsAConfidence(finding)));
 
+const keepTheFirstPointOfEachText = findingPoints => findingPoints.filter((findingPoint, order) => findingPoints.findIndex(other => other.point.text === findingPoint.point.text) === order);
+
+const formatFixBlock = findings => {
+  const findingPoints = keepTheFirstPointOfEachText(pointsUnder(findings, LABELS.FIX));
+  if (findingPoints.length === 1) return findingPoints[0].point.lines;
+  return findingPoints.length ? [formatBlockLine(LABELS.FIX), ...findingPoints.map(({ finding, point }) => formatNestedLine(finding, point))] : [];
+};
+
 const formatBlock = (findings, label) => {
+  if (label === LABELS.FIX) return formatFixBlock(findings);
   const findingPoints = pointsUnder(findings, label);
   return isAShownBlock(label, findingPoints) ? [formatBlockLine(label), ...findingPoints.map(({ finding, point }) => formatNestedLine(finding, point))] : [];
 };
