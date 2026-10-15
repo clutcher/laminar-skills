@@ -20,7 +20,7 @@ A stereotype marker such as Component or Service, and a Value marker on a constr
 
 ## 4. Configuration classes and properties
 
-A configuration class takes its properties as constructor parameters and has no getters and no fields bound by markers. Split the property files by concern, such as executors, clients and caches, and write keys in the form of the framework, words in lower case joined by hyphens, grouped like the keys of the framework itself. Each key with children holds only keys that belong to what it names, as the fields of a class do (classes, section 5). Never commit a file of local overrides.
+Put the bean wiring of a module into a config folder beside app, in and out, in 1 class named for the module and ending in ModuleConfiguration. Put setup that the whole application shares, such as executors, clients, security and a clock, into classes at the root of the application beside its start class, each named with the application and its concern and ending in Configuration (modules, section 4). A configuration class takes its properties as constructor parameters and has no getters and no fields bound by markers. Split the property files by concern, such as executors, clients and caches, and write keys in the form of the framework, words in lower case joined by hyphens, grouped like the keys of the framework itself. Each key with children holds only keys that belong to what it names, as the fields of a class do (classes, section 5). Never commit a file of local overrides.
 
 ## 5. Names of classes by role
 

@@ -1,6 +1,6 @@
 # Python
 
-Contents: 1. Type hints everywhere · 2. Names and test names
+Contents: 1. Type hints everywhere · 2. Names and test names · 3. Wiring of a module
 
 These are rules of this skill for Python, narrower than the book. Read this file whenever you write Python. Where the project's own CLAUDE.md or its documented conventions say otherwise on a Python matter, follow the project: that override holds for the rules of this file only, never for the directions of the main set.
 
@@ -13,3 +13,7 @@ Write type hints on every parameter and every return value. Give a record of kno
 Write names in snake case, in whole words, as the main set says (naming). Name a test in the form should, outcome, when, condition, such as a name that starts with should or with test and then should (tests, section 9).
 
 - Book (*How to Verify Correctness*, *How to Structure Tests*): "The pattern `should<Outcome>When<Condition>` captures them in a consistent format that becomes predictable across the codebase."
+
+## 3. Wiring of a module
+
+Put the wiring of a module into a container file at the module root, beside app, in and out, which builds each api implementation from the application and its ways out, and a loader file beside it, which reads the settings into the configuration types of the domain. Code inside app never reads the settings itself (modules, section 4).
