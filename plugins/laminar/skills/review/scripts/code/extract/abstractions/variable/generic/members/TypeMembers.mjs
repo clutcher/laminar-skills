@@ -1,4 +1,7 @@
-import { walkParenthesesBalances } from "../../../../../inputs/source/text/Brackets.mjs";
+import { walkParenthesesBalances, findClosingParenthesis } from "../../../../../inputs/source/text/Brackets.mjs";
+import { splitIntoTopLevelPieces } from "../../../../../inputs/source/text/TopLevelText.mjs";
+import { readCodeOfLine } from "../../../../../inputs/source/SourceText.mjs";
+import { Scale } from "../../../../../graph/abstractions/Scale.mjs";
 
 const MAX_HEAD_LINES = 40;
 
@@ -27,9 +30,36 @@ const findBodyIndent = (lines, typeLine, span) => {
   return -1;
 };
 
+const BODY_OPENER = "{";
+
+const findMembersOfABodyOnTheHeadLine = (driver, lines, typeLine) => {
+  const code = readCodeOfLine(lines[typeLine - 1]);
+  const opening = code.indexOf(BODY_OPENER);
+  const closing = opening < 0 ? -1 : findClosingParenthesis(code, opening, BODY_OPENER);
+  if (closing < 0) return [];
+  return splitIntoTopLevelPieces(code.slice(opening + 1, closing).replace(/;/g, ","))
+    .map(piece => driver.findFieldName(piece))
+    .filter(Boolean)
+    .map(name => ({ name, line: typeLine }));
+};
+
+const numberTheLines = (lines, lineNumbers) => lineNumbers.map(line => ({ line, text: String(lines[line - 1] || "") }));
+
+const listLineNumbersOfTheSpan = (span, after) => Array.from({ length: Math.max(0, span.to - after) }, (unused, offset) => after + offset + 1);
+
+const findConstructorMembers = (driver, lines, declarations, position) => declarations
+  .filter(declaration => declaration.enclosingHeadOrder === position && declaration.scale === Scale.METHOD.name && driver.isAConstructor(declaration))
+  .flatMap(constructor => {
+    const headLineNumbers = listHeadLineNumbers(lines, constructor.line);
+    const bodyLineNumbers = constructor.span ? listLineNumbersOfTheSpan(constructor.span, headLineNumbers[headLineNumbers.length - 1] || constructor.line) : [];
+    return driver.findConstructorFields({ headLines: numberTheLines(lines, headLineNumbers), bodyLines: numberTheLines(lines, bodyLineNumbers) });
+  })
+  .map(({ name, line }) => ({ name, line }));
+
 const findCodeMembers = (driver, lines, typeLine, span) => {
   const components = driver.findComponentNames(readHeadText(lines, typeLine)).map(name => ({ name, line: typeLine }));
   const indent = findBodyIndent(lines, typeLine, span);
+  if (indent < 0) return [...components, ...findMembersOfABodyOnTheHeadLine(driver, lines, typeLine)];
   const fields = [];
   for (let line = typeLine + 1; line <= span.to; line++) {
     const text = String(lines[line - 1] || "");
@@ -48,7 +78,7 @@ export function findMembersOfADeclaredType(source, declarations, position) {
   if (source.driver.fileHoldsTypesOnly) return findMembersEnclosedBy(declarations, position);
   const { line, span } = declarations[position];
   if (!source.lines || !span) return [];
-  return removeRepeatedNames(findCodeMembers(source.driver, source.lines, line, span));
+  return removeRepeatedNames([...findCodeMembers(source.driver, source.lines, line, span), ...findConstructorMembers(source.driver, source.lines, declarations, position)]);
 }
 
 export const readMemberNames = members => members.map(member => member.name);

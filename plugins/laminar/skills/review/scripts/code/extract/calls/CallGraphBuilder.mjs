@@ -12,7 +12,7 @@ import { BodilessDeclarations } from "./BodilessDeclarations.mjs";
 import { TypeParametersInScope } from "./scope/TypeParametersInScope.mjs";
 import { findCallsOnLine } from "../abstractions/method/generic/calls/CallReading.mjs";
 import { isABareTypeParameter, parseType, stripATypeParameter } from "../../inputs/source/text/TypeText.mjs";
-import { countParameters, readParameterNamesOfAList, readReturnTypes, findTypeParameters } from "../abstractions/method/generic/signatures/MethodSignatures.mjs";
+import { countParameters, readParameterNamesOfAList, readReturnTypes, findTypeParameters, readTextWrappedBeforeTheName } from "../abstractions/method/generic/signatures/MethodSignatures.mjs";
 import { isInsideAny, findLoopHolding, findLoopRegions, stopsTheLoop } from "../abstractions/method/generic/regions/LoopRegions.mjs";
 import { findOnceGuardRegions } from "../abstractions/method/generic/regions/OnceGuards.mjs";
 import { appendTo } from "../../../collections/groupedLists.mjs";
@@ -28,6 +28,7 @@ import { findDriver } from "../../inputs/source/drivers/LanguageRegistry.mjs";
 import { readFileName, readFileStem } from "../../../files/paths.mjs";
 import { buildWholeWordPattern } from "../../inputs/source/text/PatternText.mjs";
 import { endsADeclarationHead } from "../../inputs/source/declarations/DeclarationHeadReading.mjs";
+import { holdsMembersOfItsOwn } from "../../inputs/source/declarations/SourceHeads.mjs";
 
 const MAX_ANNOTATION_LINES = 6;
 
@@ -52,12 +53,14 @@ const LAST_CALL_OF_A_LINE_PATTERN = /\)\s*[?!]*\.?\s*$/;
 
 const readSavedMethod = ({ file, bodyLine, bodyCol, parameterNames, typeParameters, returnsParameter, ...kept }) => kept;
 
+const joinTheTextWrappedBefore = (wrapped, before) => (wrapped ? `${wrapped} ${before.trim()}` : before);
+
 function readHeadAroundTheName(file, index, name, parameters) {
   const text = file.code[index] || "";
   const nameAt = text.search(buildWholeWordPattern(name));
   const rest = parameters.text ? (file.code[parameters.endLine] || "").slice(parameters.endCol) : "";
   return {
-    before: nameAt < 0 ? "" : text.slice(0, nameAt),
+    before: nameAt < 0 ? "" : joinTheTextWrappedBefore(readTextWrappedBeforeTheName(file.code, index, file.diffDriver), text.slice(0, nameAt)),
     after: rest.trim() ? rest : file.code[parameters.endLine + 1] || "",
     diffDriver: file.diffDriver,
   };
@@ -117,7 +120,7 @@ class CallGraphBuilder {
   }
 
   readTypesOf(file) {
-    return file.declarations.filter(declaration => declaration.scale === Scale.CLASS.name)
+    return file.declarations.filter(declaration => declaration.scale === Scale.CLASS.name && holdsMembersOfItsOwn(declaration))
       .map((declaration, position) => this.readType(file, declaration.line - 1, declaration.name, declaration.span.to - 1, position));
   }
 

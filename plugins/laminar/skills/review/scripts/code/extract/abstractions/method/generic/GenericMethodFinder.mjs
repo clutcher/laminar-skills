@@ -3,6 +3,7 @@ import { Scale } from "../../../../graph/abstractions/Scale.mjs";
 import { findATypeWord, NO_RESULT, TYPE_PATTERN_SOURCE } from "../../../../inputs/source/text/TypeText.mjs";
 import { splitIntoTopLevelPieces } from "../../../../inputs/source/text/TopLevelText.mjs";
 import { readParameterName } from "./signatures/ParameterLists.mjs";
+import { findHeadsWrappedBeforeTheName, readHeadWrappedBeforeTheName } from "./signatures/WrappedHeads.mjs";
 
 const RETURN_BEFORE_PATTERN = new RegExp(`(${TYPE_PATTERN_SOURCE})\\s*$`);
 const RETURN_AFTER_A_COLON_PATTERN = new RegExp(`^\\s*:\\s*(${TYPE_PATTERN_SOURCE})`);
@@ -25,6 +26,16 @@ export class GenericMethodFinder extends AbstractionFinder {
     this.parameterNameIsTheFirstWord = false;
     this.parameterTypeFollowsTheName = false;
     this.testCallbacks = [];
+    this.wordsBeforeAWrappedResultType = null;
+  }
+
+  findHeadsWrappedBeforeTheName(lines) {
+    return this.wordsBeforeAWrappedResultType ? findHeadsWrappedBeforeTheName(lines, this.wordsBeforeAWrappedResultType) : [];
+  }
+
+  readTextWrappedBeforeTheName(lines, index) {
+    const wrapped = this.wordsBeforeAWrappedResultType ? readHeadWrappedBeforeTheName(lines, index, this.wordsBeforeAWrappedResultType) : null;
+    return wrapped ? wrapped.before : "";
   }
 
   isTestCallback(name) {

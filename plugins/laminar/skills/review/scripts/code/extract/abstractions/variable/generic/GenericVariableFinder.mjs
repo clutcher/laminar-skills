@@ -1,5 +1,5 @@
 import { readCodeOfLine, indentOf } from "../../../../inputs/source/SourceText.mjs";
-import { readTypeName } from "../../../../inputs/source/declarations/DeclarationHeadReading.mjs";
+import { readTypeName, readDeclaration } from "../../../../inputs/source/declarations/DeclarationHeadReading.mjs";
 
 import { readParameters } from "../../method/generic/signatures/ParameterLists.mjs";
 import { AbstractionFinder } from "../../../finders/AbstractionFinder.mjs";
@@ -29,7 +29,11 @@ function findPreviousCodeLine(lines, index) {
   return "";
 }
 
-function findHeadByBrackets(lines, lineNumber, nameAt) {
+const holdsMembersOfTheEnclosingType = (language, head) => Boolean(readDeclaration(language, head).holdsMembersOfTheEnclosingType);
+
+const SKIP_NO_HEAD = () => false;
+
+function findHeadByBrackets(lines, lineNumber, nameAt, skipsTheHead) {
   let depth = 0;
   const lowest = Math.max(0, lineNumber - 1 - MAX_LINES_TO_A_HEAD);
   for (let index = lineNumber - 1; index >= lowest; index--) {
@@ -38,8 +42,9 @@ function findHeadByBrackets(lines, lineNumber, nameAt) {
     for (let at = code.length - 1; at >= 0; at--) {
       if (CLOSERS.includes(code[at])) depth++;
       else if (OPENERS.includes(code[at])) {
-        if (depth === 0) return code.slice(0, at).trim() || findPreviousCodeLine(lines, index);
-        depth--;
+        if (depth > 0) { depth--; continue; }
+        const head = code.slice(0, at).trim() || findPreviousCodeLine(lines, index);
+        if (!skipsTheHead(head)) return head;
       }
     }
   }
@@ -111,14 +116,15 @@ export class GenericVariableFinder extends AbstractionFinder {
     const nameAt = code.search(buildWholeWordPattern(name));
     if (!forms || nameAt < 0) return null;
     const word = escapeForAPattern(name);
-    const findHead = () => (this.headByIndent ? findHeadByIndent(lines, lineNumber) : findHeadByBrackets(lines, lineNumber, nameAt));
-    if (forms.constants.some(form => form(word).test(code))) return { enclosingTypeName: readTypeName(language, findHead()) };
+    const findHead = skipsTheHead => (this.headByIndent ? findHeadByIndent(lines, lineNumber) : findHeadByBrackets(lines, lineNumber, nameAt, skipsTheHead));
+    const findTypeName = () => readTypeName(language, findHead(head => holdsMembersOfTheEnclosingType(language, head)));
+    if (forms.constants.some(form => form(word).test(code))) return { enclosingTypeName: findTypeName() };
     const item = readItem(code, nameAt);
     const members = forms.enclosingTypeForms.filter(enclosingTypeForm => enclosingTypeForm.member(word).test(code) || enclosingTypeForm.member(word).test(item));
     if (!members.length) return null;
-    const enclosingHead = findHead();
+    const enclosingHead = findHead(SKIP_NO_HEAD);
     if (!members.some(enclosingTypeForm => enclosingTypeForm.head.test(enclosingHead))) return null;
-    const enclosingTypeName = readTypeName(language, enclosingHead);
+    const enclosingTypeName = findTypeName();
     return enclosingTypeName === name ? null : { enclosingTypeName };
   }
 }

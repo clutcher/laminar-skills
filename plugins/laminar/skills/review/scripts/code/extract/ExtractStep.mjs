@@ -1,4 +1,5 @@
 import { AbstractionTree, formatDisplayName, VISIBILITIES, readVisibilityOfDeclaration } from "./tree/AbstractionTree.mjs";
+import { holdsMembersOfItsOwn } from "../inputs/source/declarations/SourceHeads.mjs";
 import { doesSpanHoldLine } from "../graph/abstractions/Place.mjs";
 import { Scale } from "../graph/abstractions/Scale.mjs";
 import { findRepositoryToRead } from "../inputs/change/ChangeReader.mjs";
@@ -379,7 +380,7 @@ export class ExtractStep {
       if (isTheFilesOwnType(reading, tag)) continue;
       const typeAbstraction = this.addCreatedType(classAbstraction, file, driver, reading, tag, changedSpan);
       this.rememberSearch(typeAbstraction, file, changedSpan.lines);
-      this.addLocals(typeAbstraction, file, driver, changedSpan);
+      if (holdsMembersOfItsOwn(tag)) this.addLocals(typeAbstraction, file, driver, changedSpan);
     }
     for (const item of groupMemberItems(reading.members, { findEnclosingType: member => member.tag.scope || "", diffDriver: driver.diffDriver })) {
       this.recordTheMember(classAbstraction, file, driver, reading, item);

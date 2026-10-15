@@ -12,14 +12,27 @@ const ASSIGNED_VALUE_PATTERN = new RegExp(`[^=!<>]${ASSIGNING_EQUALS_SIGN_PATTER
 
 const fieldsBySourceMap = new WeakMap();
 
+const findEndsOfTheBlocksHoldingMembersOfTheEnclosingType = source => new Set(listDeclarationHeads(source)
+  .filter(head => head.holdsMembersOfTheEnclosingType)
+  .map(head => source.blockEndAt(head.line))
+  .filter(Boolean));
+
+const findLinesOpeningABlockOfMembersOfTheEnclosingType = source => new Set(listDeclarationHeads(source)
+  .filter(head => head.holdsMembersOfTheEnclosingType && source.blockEndAt(head.line))
+  .map(head => head.line));
+
 function findLinesAtDepth(source, from, to, depth) {
   const found = [];
+  const openingLines = findLinesOpeningABlockOfMembersOfTheEnclosingType(source);
+  const endLines = findEndsOfTheBlocksHoldingMembersOfTheEnclosingType(source);
   let at = FILE_DEPTH;
   for (let line = from; line <= to; line++) {
     const text = String(source.lines[line - 1] ?? "");
     if (at === depth && !(depth > FILE_DEPTH && line === from)) found.push({ line, text });
     const braces = countBraces(text);
     at += braces.opened - braces.closed;
+    if (openingLines.has(line) && line !== from) at--;
+    if (endLines.has(line) && line !== to) at++;
   }
   return found;
 }
@@ -68,7 +81,7 @@ function getOrReadTheFieldsOfTheEnclosingHead(parent, source, readFields) {
 }
 
 function findFieldsIn(parent, source, fieldNameOf) {
-  if (!source.lines || (parent && parent.scale !== Scale.CLASS.name)) return [];
+  if (!source.lines || (parent && (parent.scale !== Scale.CLASS.name || parent.holdsMembersOfTheEnclosingType))) return [];
   return getOrReadTheFieldsOfTheEnclosingHead(parent, source, () => readFieldsIn(parent, source, fieldNameOf));
 }
 

@@ -110,6 +110,10 @@ export class GenericDriver extends LanguageDriver {
     return readDeclarationAt(this.diffDriver, lines, index);
   }
 
+  findHeadsWrappedBeforeTheName(lines) {
+    return METHOD_FINDER_REGISTRY.findWalkingFinder(this.context).findHeadsWrappedBeforeTheName(lines);
+  }
+
   listSupertypes(headText) {
     return this.classRelationFinder.listSupertypes(headText, this.diffDriver);
   }

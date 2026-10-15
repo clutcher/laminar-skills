@@ -61,8 +61,10 @@ class EnclosingScopes {
   }
 }
 
-const readHeadAt = (source, texts, line, valueName) =>
-  (valueName ? { scale: VARIABLE_SCALE, name: valueName, scope: null } : source.driver.findDeclarationAt(texts, line - 1));
+const readHeadAt = (source, texts, { line, valueName, wrappedText }) => {
+  if (valueName) return { scale: VARIABLE_SCALE, name: valueName, scope: null };
+  return wrappedText ? source.driver.readDeclaration(wrappedText) : source.driver.findDeclarationAt(texts, line - 1);
+};
 
 const isSkippedDeclaration = (source, text, read) =>
   !read.scale || !read.name || isAnItemOfAList(text, read.name)
@@ -72,13 +74,14 @@ function findDeclarationHeadsIn(source, numberedLines, heads, open) {
   const found = [];
   const scopes = new EnclosingScopes(open, source.driver.scopeIsFlat);
   const texts = numberedLines.map(numberedLine => numberedLine.text);
-  for (const { line, head, valueName } of addTextValueHeads(source, numberedLines, heads)) {
+  for (const headAtALine of addTextValueHeads(source, numberedLines, addHeadsWrappedBeforeTheName(source, texts, heads))) {
+    const { line, head, valueName, wrappedText } = headAtALine;
     const numberedLine = numberedLines[line - 1];
     if (!numberedLine) continue;
     if (source.cannotHoldADeclarationHeadAt(texts, line - 1, numberedLine.line)) continue;
-    const text = numberedLine.text || head;
+    const text = wrappedText || numberedLine.text || head;
     const indent = measureHeadIndent(text);
-    const read = readHeadAt(source, texts, line, valueName);
+    const read = readHeadAt(source, texts, headAtALine);
     if (isSkippedDeclaration(source, text, read)) continue;
     scopes.closeThoseEndedBy(read.scale, indent);
     const top = scopes.innermost;
@@ -92,10 +95,19 @@ function findDeclarationHeadsIn(source, numberedLines, heads, open) {
       text,
       holdsTextValue: Boolean(valueName),
       enclosingHeadOrder: top ? top.at : NO_ENCLOSING_HEAD,
+      ...(read.holdsMembersOfTheEnclosingType ? { holdsMembersOfTheEnclosingType: true } : {}),
     });
-    if (opensAScope(source, read.scale, indent, numberedLine.line)) scopes.open(read.name, indent, found.length - 1);
+    if (opensAScope(source, read, indent, numberedLine.line)) scopes.open(read.name, indent, found.length - 1);
   }
   return found;
+}
+
+function addHeadsWrappedBeforeTheName(source, texts, heads) {
+  const wrapped = source.driver.findHeadsWrappedBeforeTheName(texts);
+  if (!wrapped.length) return heads;
+  const wrappedLines = new Set(wrapped.map(head => head.line));
+  const wrappedHeads = wrapped.map(({ line, text }) => ({ line, head: text.trim(), wrappedText: text }));
+  return [...heads.filter(head => !wrappedLines.has(head.line)), ...wrappedHeads].sort((left, right) => left.line - right.line);
 }
 
 function addTextValueHeads(source, numberedLines, heads) {
@@ -112,8 +124,10 @@ export const isATopLevelVariable = declaration => declaration.scale === VARIABLE
 
 const holdsAValueOverSeveralLines = (source, line) => source.readValueEndAt(line) > line;
 
-const opensAScope = (source, scale, indent, line) =>
-  scale === CLASS_SCALE || (isATopLevelVariable({ scale, indent }) && holdsAValueOverSeveralLines(source, line));
+const opensAScope = (source, { scale, holdsMembersOfTheEnclosingType }, indent, line) => !holdsMembersOfTheEnclosingType
+  && (scale === CLASS_SCALE || (isATopLevelVariable({ scale, indent }) && holdsAValueOverSeveralLines(source, line)));
+
+export const holdsMembersOfItsOwn = declaration => !declaration.holdsMembersOfTheEnclosingType;
 
 const headsBySourceMap = new WeakMap();
 

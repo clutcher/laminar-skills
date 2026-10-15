@@ -5,6 +5,6 @@ export const isATypeDeclaration = declaration => declaration.scale === Scale.CLA
 
 export const isATypeHoldingTheLine = (declaration, line) => isATypeDeclaration(declaration) && doesSpanHoldLine(declaration.span, line);
 
-const isATypeHoldingTheLineBelowItsHead = (declaration, line) => isATypeHoldingTheLine(declaration, line) && declaration.line < line;
+const isATypeHoldingTheLineBelowItsHead = (declaration, line) => isATypeHoldingTheLine(declaration, line) && declaration.line < line && !declaration.holdsMembersOfTheEnclosingType;
 
 export const findTypeHolding = (declarations, line) => findInnermostHolding(declarations.filter(declaration => isATypeHoldingTheLineBelowItsHead(declaration, line)), line, declaration => declaration.span);

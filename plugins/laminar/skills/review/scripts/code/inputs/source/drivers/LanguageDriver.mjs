@@ -36,6 +36,10 @@ export class LanguageDriver {
     return null;
   }
 
+  findHeadsWrappedBeforeTheName() {
+    return [];
+  }
+
   findTextLines() {
     return NO_TEXT_LINES;
   }

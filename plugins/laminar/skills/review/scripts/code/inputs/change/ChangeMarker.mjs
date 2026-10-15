@@ -324,12 +324,18 @@ export class ChangeMarker extends DeclarationTags {
   findClassHoldingField(hunk, addedLine) {
     const enclosingDeclaration = this.changedFile.readTheKnownText(() => this.findPlaceAndMemberIndentInFile(addedLine.line), () => this.findPlaceAndMemberIndentShown(hunk, addedLine.line));
     if (!enclosingDeclaration || this.driver.readDeclaration(enclosingDeclaration.text).scale !== Scale.CLASS.name) return null;
-    return enclosingDeclaration.memberIndent === indentOf(addedLine.text) ? this.driver.readDeclaration(enclosingDeclaration.text).name : null;
+    return enclosingDeclaration.memberIndent === indentOf(addedLine.text) ? enclosingDeclaration.typeName : null;
   }
 
   findPlaceAndMemberIndentInFile(line) {
     const place = this.findNamedPlaceHoldingInFile(line);
-    return place ? { text: place.text, memberIndent: this.findMemberIndentInFileBelow(place) } : null;
+    return place ? { text: place.text, memberIndent: this.findMemberIndentInFileBelow(place), typeName: place.holdsMembersOfTheEnclosingType ? place.scope : this.driver.readDeclaration(place.text).name } : null;
+  }
+
+  findTheTypeNameItsMembersTake(shown) {
+    let head = shown;
+    while (head && this.driver.readDeclaration(head.text).holdsMembersOfTheEnclosingType) head = head.around;
+    return head ? this.driver.readDeclaration(head.text).name : this.chooseEnclosingTypeName(null, shown.line);
   }
 
   findNamedPlaceHoldingInFile(line) {
@@ -344,9 +350,9 @@ export class ChangeMarker extends DeclarationTags {
 
   findPlaceAndMemberIndentShown(hunk, line) {
     const shown = this.findShownHeadHolding(line);
-    if (shown) return { text: shown.text, memberIndent: findFirstBodyIndent(hunk.newLines, shown.line) };
+    if (shown) return { text: shown.text, memberIndent: findFirstBodyIndent(hunk.newLines, shown.line), typeName: this.findTheTypeNameItsMembersTake(shown) };
     const shownHeadIndents = this.readIndentsOfDeclarationHeadsShownIn(hunk);
-    return shownHeadIndents.length ? { text: hunk.context, memberIndent: Math.min(...shownHeadIndents) } : null;
+    return shownHeadIndents.length ? { text: hunk.context, memberIndent: Math.min(...shownHeadIndents), typeName: this.driver.readDeclaration(hunk.context).name } : null;
   }
 
   readIndentsOfDeclarationHeadsShownIn(hunk) {

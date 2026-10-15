@@ -9,7 +9,7 @@ import { isANamedPlaceScale } from "../../graph/abstractions/Scale.mjs";
 import { readFileStem } from "../../../files/paths.mjs";
 import { readDeclarations, readShownDeclarations } from "../../extract/walk/SourceWalk.mjs";
 import { measureSpanAmong } from "../source/declarations/DeclarationSpans.mjs";
-import { isATopLevelType, isATopLevelVariable } from "../source/declarations/SourceHeads.mjs";
+import { isATopLevelType, isATopLevelVariable, holdsMembersOfItsOwn } from "../source/declarations/SourceHeads.mjs";
 
 const TOP_LEVEL_CLOSER_PATTERN = /^}/;
 
@@ -127,7 +127,7 @@ export class DeclarationTags {
   }
 
   findTypeHoldingTheLine(line, context) {
-    const tag = findInnermostHolding(this.tags.filter(declarationTag => declarationTag.scale === Scale.CLASS.name), line, declarationTag => this.readSpan(declarationTag));
+    const tag = findInnermostHolding(this.tags.filter(declarationTag => declarationTag.scale === Scale.CLASS.name && holdsMembersOfItsOwn(declarationTag)), line, declarationTag => this.readSpan(declarationTag));
     if (tag) return { name: tag.name, text: tag.text, line: tag.line, lines: this.readSpan(tag) };
     const shownAbove = this.findTypeHeadShownAbove(line);
     if (shownAbove) return shownAbove;
@@ -155,7 +155,7 @@ export class DeclarationTags {
     for (const { line, text } of hunk.newLines) {
       while (open.length && open[open.length - 1].end && open[open.length - 1].end < line) open.pop();
       if (open.length) headByLineMap.set(line, open[open.length - 1]);
-      if (this.opensANamedPlace(line, text)) open.push({ text: text.trim(), line, end: this.source.blockEndAt(line) });
+      if (this.opensANamedPlace(line, text)) open.push({ text: text.trim(), line, end: this.source.blockEndAt(line), around: open[open.length - 1] || null });
     }
     return headByLineMap;
   }
