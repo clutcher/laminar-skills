@@ -7,7 +7,7 @@ import { collectLeadingLines } from "../../../../../inputs/source/declarations/D
 
 export const TEST_KINDS = Object.freeze({ TEST: "TEST", HOOK: "HOOK", HELPER: "HELPER" });
 
-const NO_TEST_HEAD_FACTS = Object.freeze({ testHeads: [], hookHeads: [], testsAreMarked: false });
+const NO_TEST_HEAD_FACTS = Object.freeze({ testHeads: [], hookHeads: [], everyMethodIsATest: false });
 
 const isAMethod = declaration => declaration.scale === Scale.METHOD.name;
 
@@ -32,6 +32,8 @@ function readTestKindOfTheDeclaration(declaration, marked, reading) {
   return TEST_KINDS.HELPER;
 }
 
+const collectSetupConstructorHeadLines = (methods, reading) => methods.filter(reading.isAConstructor).map(declaration => declaration.line);
+
 export function collectTestHeadFacts(declarations, lines, reading) {
   const lineTexts = (lines || []).map(text => String(text ?? ""));
   const testHeadLines = [];
@@ -42,11 +44,12 @@ export function collectTestHeadFacts(declarations, lines, reading) {
     if (testKind === TEST_KINDS.TEST) testHeadLines.push(declaration.line);
     if (testKind === TEST_KINDS.HOOK) hookHeadLines.push(declaration.line);
   }
-  const setupConstructorHeadLines = testHeadLines.length ? methods.filter(reading.isAConstructor).map(declaration => declaration.line) : [];
+  const everyMethodIsATest = testHeadLines.length === 0 && reading.hasATestFileName;
+  const setupConstructorHeadLines = testHeadLines.length || everyMethodIsATest ? collectSetupConstructorHeadLines(methods, reading) : [];
   return {
     testHeads: testHeadLines,
     hookHeads: [...new Set([...hookHeadLines, ...setupConstructorHeadLines])].sort((left, right) => left - right),
-    testsAreMarked: reading.testOpeners.length > 0 || testHeadLines.length > 0,
+    everyMethodIsATest,
   };
 }
 
@@ -54,7 +57,7 @@ export function readTestKindWhere(facts, isTheHead) {
   const testHeadFacts = { ...NO_TEST_HEAD_FACTS, ...(facts || {}) };
   if (testHeadFacts.testHeads.some(isTheHead)) return TEST_KINDS.TEST;
   if (testHeadFacts.hookHeads.some(isTheHead)) return TEST_KINDS.HOOK;
-  return testHeadFacts.testsAreMarked ? TEST_KINDS.HELPER : TEST_KINDS.TEST;
+  return testHeadFacts.everyMethodIsATest ? TEST_KINDS.TEST : TEST_KINDS.HELPER;
 }
 
 export const readTestKindAtTheHead = (facts, headLine) => readTestKindWhere(facts, line => line === headLine);

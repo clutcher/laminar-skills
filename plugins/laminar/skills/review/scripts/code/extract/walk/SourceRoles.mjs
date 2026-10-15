@@ -1,12 +1,13 @@
-import { findInlineTestRegions, isTestPath } from "../../inputs/source/TestCode.mjs";
+import { findInlineTestRegions, hasATestFileName, isTestPath } from "../../inputs/source/TestCode.mjs";
 import { doesSpanHoldLine } from "../../graph/abstractions/Place.mjs";
 import { Evidence, EVIDENCE_KINDS } from "../../graph/Evidence.mjs";
 import { ROLE_KINDS } from "../../graph/abstractions/Role.mjs";
+import { Scale } from "../../graph/abstractions/Scale.mjs";
 import { CLASS_FINDER_REGISTRY } from "../abstractions/class/index.mjs";
 import { METHOD_FINDER_REGISTRY } from "../abstractions/method/index.mjs";
 import { MARK_FORMS } from "../../inputs/source/declarations/MarkedDeclarations.mjs";
 import { readTestFrictionFacts } from "../abstractions/method/generic/testing/TestFrictionFacts.mjs";
-import { collectTestHeadFacts } from "../abstractions/method/generic/testing/TestKinds.mjs";
+import { collectTestHeadFacts, readTestKindAtTheHead } from "../abstractions/method/generic/testing/TestKinds.mjs";
 import { findTypeRouteAbove } from "../abstractions/class/generic/routes/TypeRoutes.mjs";
 
 const TESTS_FOUND_BY = "AbstractionTree";
@@ -61,32 +62,49 @@ function buildEarliestTypeRouteReader(classFinders, lines) {
   };
 }
 
-function buildTheTestKindReading(source, methodFinders) {
+function buildTheTestKindReading(source, context, isNamedAsATest) {
   const driver = source.driver;
+  const languageFinders = METHOD_FINDER_REGISTRY.findRoleFindersOfTheLanguage(context);
   return {
-    testOpeners: methodFinders.flatMap(finder => finder.testCodeMarks.testOpeners),
-    hookMarks: methodFinders.flatMap(finder => finder.testCodeMarks.hookMarks),
+    testOpeners: languageFinders.flatMap(finder => finder.testCodeMarks.testOpeners),
+    hookMarks: languageFinders.flatMap(finder => finder.testCodeMarks.hookMarks),
+    hasATestFileName: isNamedAsATest,
     isATestCall: declaration => Boolean(driver.readDeclaration(declaration.text).isATestCall),
     isAConstructor: declaration => Boolean(declaration.scope) && (declaration.name === declaration.scope || driver.isAConstructor(declaration)),
   };
 }
 
-function readTests(roles, declarations, source, lines, methodFinders, context) {
-  if (isTestPath(source.path)) {
-    roles.giveTo(ofTheFile, ROLE_KINDS.TEST, {
-      evidence: new Evidence({ kind: EVIDENCE_KINDS.CONVENTION, foundBy: TESTS_FOUND_BY, detail: "a test path" }),
-      facts: {
-        frameworks: [...context.frameworks],
-        ...readTestFrictionFacts(lines, methodFinders),
-        ...collectTestHeadFacts(declarations, lines, buildTheTestKindReading(source, methodFinders)),
-      },
-    });
-  }
-  for (const region of findInlineTestRegions(source.path, source.lines)) {
-    for (const declaration of declarations.filter(declaration => doesSpanHoldLine(region, declaration.line))) {
-      roles.giveTo(declaration, ROLE_KINDS.TEST, { evidence: new Evidence({ kind: EVIDENCE_KINDS.DECLARED, foundBy: TESTS_FOUND_BY, detail: `an inline test region at lines ${region.from}-${region.to}` }) });
+function readTestsOfTheFile(roles, declarations, source, lines, methodFinders, context) {
+  roles.giveTo(ofTheFile, ROLE_KINDS.TEST, {
+    evidence: new Evidence({ kind: EVIDENCE_KINDS.CONVENTION, foundBy: TESTS_FOUND_BY, detail: "a test path" }),
+    facts: {
+      frameworks: [...context.frameworks],
+      ...readTestFrictionFacts(lines, methodFinders),
+      ...collectTestHeadFacts(declarations, lines, buildTheTestKindReading(source, context, hasATestFileName(source.path))),
+    },
+  });
+}
+
+const readInlineTestKindFacts = (testHeadFacts, declaration) => (declaration.scale === Scale.METHOD.name ? { testKind: readTestKindAtTheHead(testHeadFacts, declaration.line) } : {});
+
+function readInlineTests(roles, declarations, source, lines, context) {
+  const regions = findInlineTestRegions(source.path, source.lines);
+  const inlineDeclarations = declarations.filter(declaration => regions.some(region => doesSpanHoldLine(region, declaration.line)));
+  if (!inlineDeclarations.length) return;
+  const testHeadFacts = collectTestHeadFacts(inlineDeclarations, lines, buildTheTestKindReading(source, context, false));
+  for (const region of regions) {
+    for (const declaration of inlineDeclarations.filter(declaration => doesSpanHoldLine(region, declaration.line))) {
+      roles.giveTo(declaration, ROLE_KINDS.TEST, {
+        evidence: new Evidence({ kind: EVIDENCE_KINDS.DECLARED, foundBy: TESTS_FOUND_BY, detail: `an inline test region at lines ${region.from}-${region.to}` }),
+        facts: readInlineTestKindFacts(testHeadFacts, declaration),
+      });
     }
   }
+}
+
+function readTests(roles, declarations, source, lines, methodFinders, context) {
+  if (isTestPath(source.path)) readTestsOfTheFile(roles, declarations, source, lines, methodFinders, context);
+  readInlineTests(roles, declarations, source, lines, context);
 }
 
 export function findRolesOfSource(source, declarations, lines, context) {

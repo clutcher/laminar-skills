@@ -10,7 +10,7 @@ const rubyHeredoc = createMatchedOpener(/<<(['"`]?)([A-Z_][A-Z0-9_]*)\1(?![\w$])
 export const RubyLanguage = Object.freeze({
   diffDriver: "ruby",
   extensions: [".rb", ".rake", ".gemspec", ".ru"],
-  testFileNames: [/_test\.rb$/],
+  testFileNames: [/_test\.rb$/, /_spec\.rb$/],
   commentForms: createForms(["#"], [createBlockForm("=begin", "=end")]),
   stringForm: createForm(HASH_COMMENTS, [rubyIndentedHeredoc, rubyHeredoc, createShortQuote("\""), createShortQuote("'")]),
   singleQuotedStrings: true,

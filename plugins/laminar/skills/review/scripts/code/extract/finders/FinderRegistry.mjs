@@ -49,6 +49,10 @@ export class FinderRegistry {
     return this.#remember(`role|${context.key}`, () => Object.freeze(this.roleFinders.filter(finder => finder.appliesTo(context))));
   }
 
+  findRoleFindersOfTheLanguage(context) {
+    return this.#remember(`language roles|${context.language}`, () => Object.freeze(this.roleFinders.filter(finder => context.speaks(finder))));
+  }
+
   #remember(key, find) {
     if (!this.#foundByKeyMap.has(key)) this.#foundByKeyMap.set(key, find());
     return this.#foundByKeyMap.get(key);

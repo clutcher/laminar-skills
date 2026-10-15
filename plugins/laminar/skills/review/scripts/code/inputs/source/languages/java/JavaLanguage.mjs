@@ -17,7 +17,7 @@ const JAVA_FUNCTION_NAME_PATTERN_SOURCE = [
 export const JavaLanguage = Object.freeze({
   diffDriver: "java",
   extensions: [".java"],
-  testFileNames: [/Tests?\.[a-z]+$/],
+  testFileNames: [/Tests?\.[a-z]+$/, /[a-z\d]IT\.[a-z]+$/],
   commentForms: C_FAMILY,
   stringForm: createTripleQuotedJvmForm(MULTI_LINE),
   functionNamePattern: JAVA_FUNCTION_NAME_PATTERN_SOURCE,

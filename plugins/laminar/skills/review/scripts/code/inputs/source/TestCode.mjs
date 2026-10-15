@@ -8,7 +8,9 @@ const TEST_FOLDER_PATTERN = /(^|\/)(test|tests|spec|specs|__tests__)(\/|$)/;
 
 const readTestFileNamePatterns = filePath => findLanguage(DIFF_DRIVER_BY_EXTENSION_MAP[path.posix.extname(filePath).toLowerCase()]).testFileNames || [];
 
-export const isTestPath = filePath => TEST_FOLDER_PATTERN.test(String(filePath)) || readTestFileNamePatterns(String(filePath)).some(name => name.test(String(filePath)));
+export const hasATestFileName = filePath => readTestFileNamePatterns(String(filePath)).some(name => name.test(String(filePath)));
+
+export const isTestPath = filePath => TEST_FOLDER_PATTERN.test(String(filePath)) || hasATestFileName(filePath);
 
 export const findInlineTestRegions = (filePath, lines) => {
   const driver = findDriver(filePath);
