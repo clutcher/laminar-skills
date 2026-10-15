@@ -14,6 +14,8 @@ Use strict type checking, and write the parameter types and the return type of e
 
 Write names in camel case, in whole words, as the main set says (naming). Name a test in the form should, outcome, when, condition (tests, section 9).
 
+- Book (*How to Verify Correctness*, *How to Structure Tests*): "The pattern `should<Outcome>When<Condition>` captures them in a consistent format that becomes predictable across the codebase."
+
 ## 3. Fixed versions of dependencies
 
 Pin each dependency to 1 exact version, with no range such as a caret or a tilde. A range lets 2 installs of the same code differ.

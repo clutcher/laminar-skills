@@ -51,15 +51,16 @@ Let each test check 1 behavior. Use several assertions where 1 behavior gives se
 
 ## 8. Given, when, then
 
-Write each test in 3 blocks, setup, action and check, separated by blank lines and marked as given, when and then. Keep to the shape exactly. Each mark is the bare word in lower case and nothing after it; the names arrange, act and assert, or blank lines alone, do not make this shape. This form is a rule of the skill, narrower than the book, which names Arrange-Act-Assert the same structure. The shape is a schema that nearly every developer knows, so the whole test reads as 1 item. The phase marks are the 1 kind of comment a test keeps. This is the book's pattern *Visual Separation*.
+Write each test in 3 blocks, setup, action and check, separated by blank lines and marked as given, when and then. Keep to the shape exactly. Each mark is a comment with the bare word in lower case and nothing after it, as in the book's listings; the names arrange, act and assert, or blank lines alone, do not make this shape. The shape is a schema that nearly every developer knows, so the whole test reads as 1 item. The phase marks are the 1 kind of comment a test keeps. This is the book's pattern *Visual Separation*.
 
 - Book (*The Common Pitfalls*, *Visual Separation*): "The rule, then, is to match Given-When-Then exactly, because a test that drifts loses the schema and falls back on the principles to stay simple."
+- Book (*How to Verify Correctness*, *How to Structure Tests*): "Comments mark the phases explicitly"
 
 ## 9. A name of outcome and condition
 
-Name each test for the expected outcome and the condition that produces it, in business words, in the form should, outcome, when, condition, in the casing of the language. A name with no should and outcome breaks this rule even where the other tests of the repository use another form; this is a rule of the skill, narrower than the book. The name tells the reader which rule the test protects without reading the body.
+Name each test for the expected outcome and the condition that produces it, in business words, in the form should, outcome, when, condition, in the casing of the language. A name with no should and outcome breaks this rule even where the other tests of the repository use another form; this clause is a rule of the skill, narrower than the book. The name tells the reader which rule the test protects without reading the body.
 
-- Book (*How to Verify Correctness*, *How to Structure Tests*): "A good name states the expected outcome and any conditions that produce it, so reviewers can decide whether this test matches the requirement they are checking."
+- Book (*How to Verify Correctness*, *How to Structure Tests*): "A good name states the expected outcome and any conditions that produce it, so reviewers can decide whether this test matches the requirement they are checking." · "The pattern `should<Outcome>When<Condition>` captures them in a consistent format that becomes predictable across the codebase."
 
 ## 10. Realistic data and named conditions
 
@@ -76,9 +77,9 @@ Read a test that is hard to write as feedback on the design, and fix the product
 
 ## 12. Test files by behavior
 
-Start with 1 test file per production class. Split it into 1 file per behavior, named with the class and then the behavior, when a shared setup no longer fits every test. The wish to divide a test file into sections with comments is the same signal; split the file instead. Do not log in tests: a test shows its result through its assertions. These 2 are rules of the skill, narrower than the book.
+Start with 1 test file per production class. Split it into 1 file per behavior, named with the class and then the behavior, when a shared setup no longer fits every test. The wish to divide a test file into sections with comments is the same signal; split the file instead. Do not log in tests: a test shows its result through its assertions. These 2 last rules are rules of the skill, narrower than the book.
 
-- Book (*How to Verify Correctness*, *How to Structure Tests*): "the signal to split arrives when shared setup no longer applies to every test"
+- Book (*How to Verify Correctness*, *How to Structure Tests*): "one test class per production class remains a reasonable place to start" · "the signal to split arrives when shared setup no longer applies to every test" · "Each name still starts with the class, which keeps its tests together in the directory"
 
 ## 13. Coverage finds gaps
 

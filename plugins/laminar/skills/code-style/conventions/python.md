@@ -11,3 +11,5 @@ Write type hints on every parameter and every return value. Give a record of kno
 ## 2. Names and test names
 
 Write names in snake case, in whole words, as the main set says (naming). Name a test in the form should, outcome, when, condition, such as a name that starts with should or with test and then should (tests, section 9).
+
+- Book (*How to Verify Correctness*, *How to Structure Tests*): "The pattern `should<Outcome>When<Condition>` captures them in a consistent format that becomes predictable across the codebase."

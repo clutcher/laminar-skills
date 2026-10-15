@@ -16,6 +16,8 @@ Where a dependency has an interface, such as an api or spi interface of the appl
 
 A stereotype marker such as Component or Service, and a Value marker on a constructor parameter, may stay on a domain class: they only describe the class and do nothing when the logic runs (classes, section 10). Behavior that the framework runs on its own, such as a transaction around a method or logic on save, stays out of the domain class.
 
+- Book (*The Principles at Every Scale*, *Hexagonal Architecture*): "Some framework presence is only a marker on a field"
+
 ## 4. Configuration classes and properties
 
 A configuration class takes its properties as constructor parameters and has no getters and no fields bound by markers. Split the property files by concern, such as executors, clients and caches, and write keys in the form of the framework, words in lower case joined by hyphens, grouped like the keys of the framework itself. Each key with children holds only keys that belong to what it names, as the fields of a class do (classes, section 5). Never commit a file of local overrides.

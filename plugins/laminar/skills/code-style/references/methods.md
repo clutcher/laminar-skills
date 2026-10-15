@@ -87,6 +87,7 @@ Make the parameters match what the method name describes. Where a method takes p
 - Book (*The Common Pitfalls*, *Scoped Parameters*): "Both directions violate the same principle: parameters should match what the method name describes, not sit above or below it." · "Parameters that are too narrow force callers to assemble primitives that the method immediately groups inside, which pushes structure onto every call site."
 - Book (*The Common Pitfalls*, *Scoped Parameters*): "The signal for narrow parameters is traveling companions: when the same three or four values appear together across multiple signatures, they signal a missing name." · "The signal for broad parameters is unused surface: when a method touches only one field of a large object, the parameter carries too much."
 - Book (*The Common Pitfalls*, *Scoped Parameters*): "Because parameters resist compression, the raw count matters" · "Aim for four parameters or fewer"
+- Book (*What Software Design Means*, *When the Qualities Themselves Conflict*): "Extension points, interfaces, and factories for hypothetical future requirements increase cognitive load"
 - Limits: a long list of unrelated inputs that no grouping can name is essential complexity of the domain; organize it and stop reshaping it (see comments).
 
 ## 13. The structure of other objects stays hidden

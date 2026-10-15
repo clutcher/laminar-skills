@@ -59,7 +59,7 @@ Check data from outside where it enters the application: in the method that the 
 
 - Book (*What Correctness Means*, *Validate at the Boundary*): "That check belongs at the entry boundary, which lets every abstraction inside trust the data that passes." · "Placing the same check inside every method would add complexity without adding safety, so the error handling stays at the edge while the domain logic stays clean." · "check once at the edge, then trust what flows past it" · "Yet even a validated input can drive the abstraction into a bad state while it runs"
 - Book (*What Testing Means*, *What Testing Means*): "Application entry boundaries are where external actors invoke the application"
-- Limits: the business rules of the domain stay in the domain; the entry checks the outside data (see methods, section 6). A check at the entry covers only the rule it states, so check every rule of the outside data there, such as its range as well as its presence; a range check inside, after a presence check at the entry, still checks outside data away from the entry. This is a rule of the skill, narrower than the book.
+- Limits: the business rules of the domain stay in the domain; the entry checks the outside data (see methods, section 6). A check at the entry covers only the rule it states, so check every rule of the outside data there, such as its range as well as its presence; a range check inside, after a presence check at the entry, still checks outside data away from the entry, because "Once the boundary confirms that the inputs meet their rules, the inner methods run without repeating those checks".
 
 ## 9. Outside data is never safe
 
@@ -73,7 +73,7 @@ Treat data from outside as data that can come from an attacker. Meet the expecta
 Where the code meets a truly invalid state, stop and signal the failure. Do not return in silence, and do not try to recover in place. Let 1 global handler turn failures into a response, so methods hold no recovery code. A program that runs on in a broken state gives results that look right but are wrong, and those cost far more to trace. This is the design decision *Fail Fast*.
 
 - Book (*What Correctness Means*, *Fail Fast*): "This means the code stops at the first sign of a bad state, rather than running past it." · "A single global exception handler makes this practical, because it gathers all failures in one place instead of spreading recovery code through every method."
-- Write the message of a failure for the developer who reads it in the log; the global handler decides what the caller sees. This rule of the skill is narrower than the book.
+- Write the message of a failure for the developer who reads it in the log; the global handler decides what the caller sees, as it "logs the context for later review, and returns a clean error response". This rule of the skill is narrower than the book.
 - Limits: an unusual input with a natural answer gets a normal result (section 6), and that is not running past a bad state. "Some inputs are just wrong, and no change to what an operation means can turn them into a normal result, so the code must check them somewhere." The domain decides which inputs are truly invalid.
 
 ## 11. Where prevention stops
@@ -85,3 +85,5 @@ After you shape the types and the boundaries, still test the results. A formula 
 ## 12. Few logs
 
 Log failures and the few events that the people who run the application need, once, where they are handled; do not log the inner steps of an operation, and do not log in tests. Each log line is 1 more item for the reader of the code and of the log. Never log a secret or personal data from outside (section 9). This rule of the skill is narrower than the book.
+
+- Book (*What Correctness Means*, *What Correct Means*): "don't expose passwords in logs"

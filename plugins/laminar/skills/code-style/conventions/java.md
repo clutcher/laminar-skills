@@ -26,6 +26,8 @@ Use a stream only where it is clearly easier to understand than the plain loop; 
 
 Where a value is 1 of a closed set of cases, use a sealed interface with a record per case, or an enum, and a switch with pattern matching that names every case and has no default branch. The compiler then breaks the build where a new case is not handled (correctness, section 2); a default branch turns that check off.
 
+- Book (*What Correctness Means*, *Exclude Illegal States*): "they also let the compiler check that every variant is handled"
+
 ## 5. Failures as unchecked exceptions with an error kind
 
 Signal a failure with an exception that extends RuntimeException, and give it an enum of the kinds of error it can carry where every kind carries the same data. Where a kind carries data of its own, such as the items it rejects, give that kind an exception type of its own, so no caller reads data that its kind never has (correctness, section 2). Do not declare checked exceptions. A checked exception forces recovery code into every caller, while 1 global handler should turn failures into a response (correctness, section 10).
@@ -45,6 +47,8 @@ Write a text of several lines as a text block. Where code runs several tasks at 
 ## 9. A class of static functions
 
 A class that holds only static functions is final and has a private constructor. Name it for the work it does, never with a general word such as utils or helper, and never for a thing it does not hold (naming, section 8).
+
+- Book (*The Encapsulation Principle*, *How Naming Makes Boundaries Work*): "a class named `Helper` that handles validation, formatting, and persistence forces readers to examine every method"
 
 ## 10. Libraries: Lombok, MapStruct, multimaps
 
