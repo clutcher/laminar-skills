@@ -21,7 +21,7 @@ Where you see another problem in code that the change does not touch, leave that
 
 Decide the abstractions and their boundaries first, write all the production code next, and write the tests last: "confirming requires something to confirm, so design precedes code and code precedes tests." While you design and write, do not build or run the code: "During this phase, the developer does not run, build, or validate the code: the work is thinking and writing." Where writing shows a design problem, change the decision and then the code. Build and run once the tests are written, and fix what they show.
 
-Folders are part of the design. Choose the folder of each new file when you decide its abstraction, before you write it, by the placement steps of modules, section 3, so the whole path of every file you add reads as 1 phrase.
+Folders are part of the design. Choose the folder of each new file when you decide its abstraction, before you write it (modules, section 3), because "Every folder, at any depth, stays consistent inside and hides its contents behind its name, which introduces a new abstraction level."
 
 ## 3. The qualities and their order
 
@@ -70,11 +70,12 @@ Where a rule seems to forbid a shape that reads well, ask which of the 6 failure
 
 The everyday fixes of the book's chapter *The Common Pitfalls*, for every change. The reference files give their limits.
 
-- *Self-Documenting Code*: where a block needs a comment that says what it does, extract it into a method named for its intent. Start every method name with a verb that states its work. No comment by default, no TODO.
+- *Self-Documenting Code*: where a block needs a comment that says what it does, extract it into a method named for its intent. No comment by default, no TODO.
+- Verb first: start every method name with a verb that states its work; this rule of the skill is narrower than the book (naming, section 3).
 - *Context-Aware Constants*: name a constant, and every other value, for its business purpose, kind last, such as days or rate; 1 constant per rule, private where used; in a test, give each value that sets up the condition the test name states a name, a constant or a local.
 - *Guard Clauses*: put each precondition at the top and leave early, and move the checks that together say the input is ready behind 1 named check.
 - *Visual Separation*: keep the lines of each group together, with a blank line between groups and after the preconditions; while a detail sits among the parts, extract instead.
-- *Enums Over Boolean Flags*: give a category 1 closed set of named values for each exclusive dimension, not booleans or free text, which allow values the domain forbids.
+- *Enums Over Boolean Flags*: give a category 1 closed set of named values for each exclusive dimension, not booleans, which allow values the domain forbids; the same holds for text compared with fixed values, a rule of the skill, narrower than the book.
 - *Boolean Parameter Splitting*: a flag that chooses 2 operations becomes 2 named methods, and a flag that picks a variant becomes a named value.
 - *Scoped Parameters*: give values that travel together, or that a method groups at once, a named type; pass 1 field, not a large object; keep the count low, because "the raw count matters".
 - *Builder*: where parts of an object depend on each other or on an order, put those rules in 1 place that checks the object before use.

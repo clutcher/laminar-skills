@@ -17,7 +17,8 @@ Add a public method to a class only where it serves what the class name describe
 Where a method combines 2 abstractions, put it in a caller that holds both, not in the class that owns 1 of them. Where a method drops into details, put it inside a lower abstraction. After you split methods across classes, align the signatures inside each class: where 1 method takes whole objects and its neighbours take identifiers, it mixes 2 abstraction levels. This is *Single-Level Methods* too.
 
 - Book (*The Common Pitfalls*, *Single-Level Methods*): "Public methods that fall outside what the class name describes are details that leaked into the wrong abstraction, and they belong elsewhere: above as a coordinator, or below as a detail."
-- A domain operation that takes back pieces of the domain's own output that a caller made, and only unpacks, filters or merges them before it hands them to rules the domain already has, is work of that caller: keep it in the caller. This rule of the skill is narrower than the book. · "This second fix shows that the same principle applies at two scales: first split methods across classes by what each name describes, then align signatures within each class."
+- A domain operation that takes back pieces of the domain's own output that a caller made, and only unpacks, filters or merges them before it hands them to rules the domain already has, is work of that caller: keep it in the caller. This rule of the skill is narrower than the book.
+- Book (*The Common Pitfalls*, *Single-Level Methods*): "This second fix shows that the same principle applies at two scales: first split methods across classes by what each name describes, then align signatures within each class."
 
 ## 3. A private method answers to its own name
 
@@ -28,21 +29,22 @@ Hold every public method to the class name. Hold a private method to its own nam
 
 ## 4. A group of methods that is a class of its own
 
-Look for groups among the private methods and fields of a class: private methods that share a field, a parameter or a collaborator that no public method uses, and methods that use a different set of objects. Such a group is a part of its own. Give it its own class, named after its part, and give the first class a field of that type: the reader then finds the part by its name, and the group's state no longer stands beside every change of the class. Decide this when you extract, not after: a detail that brings its own field or collaborator goes into a new class, not into another private method.
+Decide this when you extract a part. Where the part brings a field, a parameter or a collaborator that no public method of the class uses, or works with a different set of objects than the rest, it is a part of its own: give it its own class, named after the part, and give the first class a field of that type. The reader then finds the part by its name, and its state no longer stands beside every change of the class.
 
 - Book (*The Encapsulation Principle*, *When No Name Works*): "Methods that share parameters the other methods never use operate within an abstraction smaller than the full class." · "Methods that use a completely different set of objects to do their work belong behind different boundaries."
 - Why: "dependencies are working memory items during modification", so the developer who changes the class holds every private group in mind.
 - A private method that serves the whole stays private, however many there are: "Each helper method isolates its own dependencies from the others, which means changing one piece does not require understanding the rest of the method at all."
-- Work that only runs other work of the class, such as storing its results to look them up again, retrying it or cutting it into batches, sits at another abstraction level than that work: put it "above as a coordinator, or below as a detail".
+- Work that only runs other work of the class, such as storing its results to look them up again, retrying it or cutting it into batches, sits at another abstraction level than that work: put it in a class of its own. This is derived from the rule that a method outside the class name belongs "above as a coordinator, or below as a detail".
 - A class that routes each case to its own private methods can stay 1 class while the set of cases is closed: "this minimum fix is enough when the provider list is closed and new providers are rare."
 - Limits: a split adds depth like any extraction, so split only where the group has a name of its own; a count of methods or fields never decides. Methods that change together but apart from the rest are a group too: "Methods that always change together but separately from their neighbors form a group the rest of the class does not join." A test that wants to reach a private method points at the same group: "The urge to test a private method directly signals logic that needs its own class."
 
 ## 5. Fields that belong together
 
-Where some fields of a class always appear together and the business treats them as 1 whole, move them into a type of their own and hold 1 field of that type. Group the fields as the business thinks of them, not as the storage table lays them out. Where a type already groups the same values as a parameter, use that type for the fields too. Name a field inside a type without repeating the name of the type. Let a type named for a role hold only what that role names: a type of search criteria holds the filters, and paging, sorting or the choice of fields go into types of their own. This holds for the types of a schema that an application exposes too. A flat list of fields gives the reader no group, and it holds details of parts that the class never names. This is the book's pattern *Single-Level Fields*.
+Where some fields of a class always appear together and the business treats them as 1 whole, move them into a type of their own and hold 1 field of that type. Group the fields as the business thinks of them, not as the storage table lays them out. Where a type already groups the same values as a parameter, use that type for the fields too. Name a field inside a type without repeating the name of the type. Let a type named for a role hold only what that role names: a type of search criteria holds the filters, and paging, sorting or the choice of fields go into types of their own. This holds for the types of a schema that an application exposes too. The rules on the field name, on a type named for a role and on schema types are rules of the skill, narrower than the book. A flat list of fields gives the reader no group, and it holds details of parts that the class never names. This is the book's pattern *Single-Level Fields*.
 
 - Book (*The Common Pitfalls*, *Single-Level Fields*): "Whenever a set of fields always appears together and the business treats them as one whole, those fields belong inside an abstraction." · "This pattern is SLAP applied to the fields of the class: each field should be a part of what the class name describes, not a detail of a part."
 - Book (*The Common Pitfalls*, *Single-Level Fields*): "Data classes often start flat because databases store data in tables with columns, so the initial structure mirrors the schema rather than the domain." · "the same abstraction the Scoped Parameters fix used at the method signature, reused here to group fields"
+- Book (*The Encapsulation Principle*, *How Naming Makes Boundaries Work*): "The outer name gives context to the inner one, so when the outside already names the purpose, the inside does not need to repeat it."
 - Limits: a caller then reaches a nested value through 1 more step, and that step is the price of a visible relation, not a structure to hide: "takes one more step than a flat field, but keeps the relationship between order and address visible at the call site"
 
 ## 6. A category as a closed set
@@ -51,7 +53,7 @@ Where boolean fields describe what kind of thing an object is, replace them with
 
 - Book (*The Common Pitfalls*, *Enums Over Boolean Flags*): "All three recommendations share one core idea: a boolean field that represents a domain category should become an enum that makes valid states explicit." · "Each new boolean doubles the state space, while each new enum value adds exactly one state to its dimension." · "The variable name carries intent but the value carries none, so renaming fixes nothing."
 - Book (*The Common Pitfalls*, *Enums Over Boolean Flags*): "Yet most flags turn out to be a category, and a category rarely stays at two values." · "Modeling it as an enum early puts the category in one place" · "types that prevent invalid states move the constraint from many separate conditionals into one enforced location"
-- Limits: a boolean that is a real state of the object stays a boolean, because such flags "describe a real state of the object, not a category". A check of the combination in 1 constructor or builder is not enough, because "Only the type carries the decision for the whole codebase at once".
+- Limits: a boolean that is a real state of the object stays a boolean, because such flags "describe a real state of the object, not a category". Let the type carry a combination, beside any check in the constructor or builder, because "Only the type carries the decision for the whole codebase at once".
 
 ## 7. Construction rules in 1 place
 
@@ -94,5 +96,4 @@ Do not split a domain object into a domain copy and a storage copy joined by a c
 Give a class the behavior it needs through fields of other types that it calls, not through a chain of base classes. A reader of a subclass must hold every base class in mind to predict what a method does. The book reports the old warning, "Favor object composition over class inheritance", and this rule of the skill is narrower than the book.
 
 - Book (*What Quality Means*, *What Objects Promised (1980-1995)*): "Reading a single method required understanding its parents, grandparents, and every override along the way."
-
 - Limits: a class that implements a contract, such as an interface of the application, is not inheritance in this sense.

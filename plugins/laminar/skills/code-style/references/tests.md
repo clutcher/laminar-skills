@@ -11,9 +11,10 @@ Write each test to give inputs, run the code, and check the outputs against the 
 
 ## 2. No check of internal calls
 
-Do not assert that a method was called. Where a method returns nothing and only changes something outside, check the effect itself, such as a stored record read back, or cover it with an integration test, or extract the decision so it returns a value. Do not build substitutes that return substitutes, do not assert a value that a substitute was told to return, and do not accept any argument where the test must check a specific one. Each of these passes with wrong behavior and fails with correct behavior.
+Do not assert that a method was called. Where a method returns nothing and only changes something outside, check the effect itself, such as a stored record read back, or cover it with an integration test, or extract the decision so it returns a value. Use only substitutes that return plain values, assert values the code computed, and match the specific argument the test must check. Substitutes that return substitutes, an assertion on a value that a substitute was told to return, and a matcher that accepts any argument each pass with wrong behavior and fails with correct behavior.
 
 - Book (*How to Verify Correctness*, *How Tests Expose Design Problems*): "The test can also check the side effect itself, for example by reading back a stored record or a message the substitute received." · "If neither option fits, leaving that behavior untested is preferable because no test is better than a bad test." · "Each pattern prevents the test from catching bugs, because a test that passes with wrong behavior and fails with correct behavior provides negative value."
+- Book (*How to Verify Correctness*, *How Tests Expose Design Problems*): "mocks return mocks" · "loose matchers masking upstream bugs"
 
 ## 3. Integration tests from entry to exit as the default
 
@@ -27,14 +28,14 @@ For every application, test first the main paths from the entry boundary to the 
 In an integration test, run all the code of the application up to its exit boundary. Substitute only what lies past it, such as the database, a remote service or a queue. Do not substitute a service inside the application, because the test then skips the code it replaces and checks only part of the path.
 
 - Book (*What Testing Means*, *What Testing Means*): "Everything beyond that point can be real or substituted without changing the test type, whether it is the database itself, the network, or the framework that carries the call." · "A substitute placed higher changes the answer: a controller test with its services mocked skips the code those services run, so the path stops above the exit boundary."
-- Limits: a real database gives more confidence than a substitute, at a cost.
+- Limits: a real database gives more confidence than a substitute, at a cost: "using a real database increases confidence by verifying database interaction as part of the path" (*What Testing Means*, *How to Distribute Tests*).
 
 ## 5. Unit tests where combinations demand them
 
-Write unit tests for logic whose branches multiply the outcomes past what the integration tests take. Once a class has unit tests, cover all its branches there. Do not write unit tests for every class by default. For logic that selects values from a table, test the calculation once and the edge cases of the lookup, not 1 test per row.
+Write unit tests for logic whose branches multiply the outcomes past what the integration tests take. When you add unit tests for a class, cover all the branches of the logic you add or change there. Do not write unit tests for every class by default. For logic that selects values from a table, test the calculation once and the edge cases of the lookup, not 1 test per row.
 
 - Book (*What Testing Means*, *How to Distribute Tests*): "Unit tests belong where combinatorial logic demands them, not as a default practice applied to every function or class" · "Once a class gets unit tests, the unit suite covers all its branches, not only the ones integration misses." · "Path count drives unit tests, not data count, so a two-hundred-row table generates one calculation test plus a few lookup edge cases."
-- Limits: a class whose branches the integration tests already take needs no unit tests. Checks that run one after another, each with 1 condition that rejects or passes, add their outcomes and do not multiply them, so the integration tests that reach each rejection cover them; an edge value of 1 check, such as a limit reached exactly, is a case of an integration test, not a reason for a unit test class.
+- Limits: a class whose branches the integration tests already take needs no unit tests. Checks that run one after another, each with 1 condition that rejects or passes, add their outcomes and do not multiply them, so the integration tests that reach each rejection cover them; an edge value of 1 check, such as a limit reached exactly, is a case of an integration test, not a reason for a unit test class. This limit is derived from the rule that unit tests belong "where combinatorial logic demands them".
 
 ## 6. Expected values from the requirement
 
@@ -51,14 +52,14 @@ Let each test check 1 behavior. Use several assertions where 1 behavior gives se
 
 ## 8. Given, when, then
 
-Write each test in 3 blocks, setup, action and check, separated by blank lines and marked as given, when and then. Keep to the shape exactly. Each mark is a comment with the bare word in lower case and nothing after it, as in the book's listings; the names arrange, act and assert, or blank lines alone, do not make this shape. The shape is a schema that nearly every developer knows, so the whole test reads as 1 item. The phase marks are the 1 kind of comment a test keeps. This is the book's pattern *Visual Separation*.
+Write each test in 3 blocks, setup, action and check, separated by blank lines. Keep to the shape exactly. Mark the 3 blocks with the comments given, when and then, each the bare word in lower case with nothing after it, as in the book's listings. Using these words rather than arrange, act and assert is a rule of the skill, narrower than the book, which calls it "the same test structure that unit testing knows as Arrange-Act-Assert". The shape is a schema that nearly every developer knows, so the whole test reads as 1 item. The phase marks are the 1 kind of comment a test keeps. This is the book's pattern *Visual Separation*.
 
 - Book (*The Common Pitfalls*, *Visual Separation*): "The rule, then, is to match Given-When-Then exactly, because a test that drifts loses the schema and falls back on the principles to stay simple."
 - Book (*How to Verify Correctness*, *How to Structure Tests*): "Comments mark the phases explicitly"
 
 ## 9. A name of outcome and condition
 
-Name each test for the expected outcome and the condition that produces it, in business words, in the form should, outcome, when, condition, in the casing of the language. A name with no should and outcome breaks this rule even where the other tests of the repository use another form; this clause is a rule of the skill, narrower than the book. The name tells the reader which rule the test protects without reading the body.
+Name each test for the expected outcome and the condition that produces it, in business words, in the form should, outcome, when, condition, in the casing of the language. Use this form also where the other tests of the repository use another form; this clause is a rule of the skill, narrower than the book. The name tells the reader which rule the test protects without reading the body.
 
 - Book (*How to Verify Correctness*, *How to Structure Tests*): "A good name states the expected outcome and any conditions that produce it, so reviewers can decide whether this test matches the requirement they are checking." · "The pattern `should<Outcome>When<Condition>` captures them in a consistent format that becomes predictable across the codebase."
 
@@ -77,7 +78,7 @@ Read a test that is hard to write as feedback on the design, and fix the product
 
 ## 12. Test files by behavior
 
-Start with 1 test file per production class. Split it into 1 file per behavior, named with the class and then the behavior, when a shared setup no longer fits every test. The wish to divide a test file into sections with comments is the same signal; split the file instead. Do not log in tests: a test shows its result through its assertions. These 2 last rules are rules of the skill, narrower than the book.
+Start with 1 test file per production class. Split it into 1 file per behavior, named with the class and then the behavior, when a shared setup no longer fits every test. The wish to divide a test file into sections with comments is the same signal; split the file instead. Do not log in tests: a test shows its result through its assertions. The signal from comment sections and the rule against logs in tests are rules of the skill, narrower than the book.
 
 - Book (*How to Verify Correctness*, *How to Structure Tests*): "one test class per production class remains a reasonable place to start" · "the signal to split arrives when shared setup no longer applies to every test" · "Each name still starts with the class, which keeps its tests together in the directory"
 

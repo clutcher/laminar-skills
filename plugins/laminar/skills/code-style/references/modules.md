@@ -1,42 +1,35 @@
 # Modules and applications
 
-Contents: 1. Modules named after the parts of the application · 2. What a module exposes, declared and enforced · 3. Every folder consistent inside, and where a new file goes · 4. The application, what uses it, and what it needs · 5. A domain free of infrastructure · 6. Classes that coordinate and classes that compute · 7. Another module through its exposed types · 8. Known layouts and few new folders · 9. The same names in every module · 10. The same questions for applications · 11. The entry and exit boundaries of an application · 12. Imports at the top of the file
+Contents: 1. Modules named after the parts of the application · 2. What a module exposes, declared and enforced · 3. Every folder consistent inside · 4. The application, what uses it, and what it needs · 5. A domain free of infrastructure · 6. Classes that coordinate and classes that compute · 7. Another module through its exposed types · 8. Known layouts and few new folders · 9. The same names in every module · 10. The same questions for applications · 11. The entry and exit boundaries of an application · 12. Imports at the top of the file
 
 A module here is a folder or a package of files with 1 name. A folder is an abstraction like a method: its name predicts what it holds.
 
 ## 1. Modules named after the parts of the application
 
-Do not keep many files as peers in 1 folder. Find the parts the application has, and give each part a module named after it. At the outermost folder, prefer names that say what the system does over names of frameworks. Peers with no shared shape or purpose do not group into 1 item, and nothing names the part each file belongs to. This is the book's pattern *Modular Monolith*.
+Do not add a file as 1 more peer of many in a folder: put it into the module named after its part, and create that module where the part has none. Leave existing files where they are. At the outermost folder, prefer names that say what the system does over names of frameworks. Peers with no shared shape or purpose do not group into 1 item, and nothing names the part each file belongs to. This is the book's pattern *Modular Monolith*.
 
 - Book (*The Principles at Every Scale*, *Modular Monolith*): "Each file at the root is a detail of one of these parts, so every class belongs inside the module named after its part." · "the outermost folder should communicate what the system does rather than which frameworks it uses"
 
 ## 2. What a module exposes, declared and enforced
 
-Split each module into what it offers and what it hides. Let the language visibility or an automated test fail the build on a reference past the boundary. Without this, every file stays reachable from every other module, and the boundary exists in name only.
+In a module you create, split what it offers from what it hides, and let visibility or a test fail the build on a reference past the boundary. In an existing module, keep each reference you add to what it exposes. Without this, every file stays reachable from every other module, and the boundary exists in name only.
 
 - Book (*The Principles at Every Scale*, *Modular Monolith*): "To finish encapsulation, each module must declare which classes belong to its public contract and which stay hidden inside." · "Enforcement closes this gap by turning the convention into a rule that language tools or automated tests verify on every change." · "Even one forgotten import breaks a boundary and brings back the problem the modules solved."
 
-## 3. Every folder consistent inside, and where a new file goes
+## 3. Every folder consistent inside
 
-At every depth, make every file and subfolder a part of what the folder path names. Business naming or technical naming can change from 1 folder to the next, but 1 folder does not mix parts and details. A detail among the parts of a folder is the unnamed part failure, as in a method.
+Treat a folder like a method: its whole path, read from the source root down, names 1 thing, and everything directly inside it is a part of that thing. Put each file you add into the folder whose path names what the file is a part of. A file that serves only 1 other file goes with that file, inside it or in a subfolder named for it, so the folder stays at 1 abstraction level, unless the folder holds no other part beside that file. Where no folder names the thing, create one, and name it so that the path still reads as 1 phrase. Business naming and technical naming may change from one folder to the next, but never inside 1 folder. A detail among the parts of a folder is the unnamed part failure, as in a method. The reading of the whole path as 1 name is derived from the rule that every folder "hides its contents behind its name, which introduces a new abstraction level".
 
-Place each file you add, and each folder you create, by these steps. They apply to what the change adds, never to existing files.
-
-1. Read the whole path of the target folder, from the source root down, as 1 phrase: it names 1 thing or 1 capability, and each folder narrows the one above it.
-2. Put the file there only where it is a direct part of what that path names, read by its own name: the path never adds a verb or a missing word to make a name fit.
-3. Where the file serves 1 other entry of the folder, such as a type that holds a piece of that entry's data, put it inside that entry or into a subfolder named for it. Where its name describes something beside or above the path, put it where that is named.
-4. 3 or more files of 1 repeating shape, such as 1 for each provider, belong together where the path names what they are; a file that chooses, builds or lists them is not 1 of them.
-5. In a module, put each file into 1 of the 3 parts of section 4. The application imports no code of its ways in or out, and an implementation of what the application needs sits in a way out, never inside the application.
-6. Name a new folder so that its path still reads as 1 phrase, and put into it only parts of what that path names.
-
+- Limits: files of 1 repeating shape, such as 1 for each provider, sit together as parts where the folder names what they are, and a file that chooses or builds them is not 1 of them. This rule of the skill is narrower than the book.
 - In a folder of 1 way in or 1 way out, keep at its root the class the folder exists for, and put its helpers, such as wire types, clients and mappers, into subfolders named for them. A count of files never sets where a folder splits; belonging does. This rule of the skill is narrower than the book.
 - Book (*The Principles at Every Scale*, *Modular Monolith*): "Each folder must follow SLAP, not the order of business and technical naming across folders." · "Every folder, at any depth, stays consistent inside and hides its contents behind its name, which introduces a new abstraction level."
+- Book (*The Single Level of Abstraction Principle*, *What Single Level of Abstraction Means*): "To apply the question, read what the name describes, hold it as the reference, and ask each operation inside whether it belongs."
 
 ## 4. The application, what uses it, and what it needs
 
-Inside a module, put the application logic in 1 folder, everything that calls the module in a second, and everything the module calls in a third. Inside the application, declare what it offers and what it needs as contracts it owns. Give each way in and each way out its own folder. 1 flat folder mixes transport, business and storage code. This is the book's pattern *Hexagonal Architecture*.
+Inside a module, put the application logic in 1 folder, everything that calls the module in a second, and everything the module calls in a third. Inside the application, declare what it offers and what it needs as contracts it owns. Give each way in and each way out its own folder. Put an implementation of what the application needs into a way out, never inside the application. Let the application import no code of its ways in or out; this rule of the skill is narrower than the book. 1 flat folder mixes transport, business and storage code. This is the book's pattern *Hexagonal Architecture*.
 
-- Book (*The Principles at Every Scale*, *Hexagonal Architecture*): "Within that boundary, applying SLAP separates the module into the three parts every application has: the application itself, everything that uses it, and everything it needs to work." · "The `api/` folder declares what callers can ask for, and the `spi/` folder declares what the application needs."
+- Book (*The Principles at Every Scale*, *Hexagonal Architecture*): "Within that boundary, applying SLAP separates the module into the three parts every application has: the application itself, everything that uses it, and everything it needs to work." · "The `api/` folder declares what callers can ask for, and the `spi/` folder declares what the application needs." · "What it needs becomes an interface in `spi/` and an implementation at the edge in `out/`" · "the code that fulfills them lives outside the app in `out/`"
 - Limits: the api and spi interfaces stay even where each has 1 implementation and nothing varies, because they are the boundary of the application, which is an abstraction itself; the rule against an interface for 1 operation that does not vary is not about them: "These interfaces exist because `app` is itself an abstraction: `api/` and `spi/` are its visible boundary, while everything in `domain/` stays hidden behind them." The book sets no layout inside the domain: "No fixed layout applies here, because domain logic takes many forms across different business problems."
 
 ## 5. A domain free of infrastructure

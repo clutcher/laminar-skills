@@ -59,7 +59,7 @@ Check data from outside where it enters the application: in the method that the 
 
 - Book (*What Correctness Means*, *Validate at the Boundary*): "That check belongs at the entry boundary, which lets every abstraction inside trust the data that passes." · "Placing the same check inside every method would add complexity without adding safety, so the error handling stays at the edge while the domain logic stays clean." · "check once at the edge, then trust what flows past it" · "Yet even a validated input can drive the abstraction into a bad state while it runs"
 - Book (*What Testing Means*, *What Testing Means*): "Application entry boundaries are where external actors invoke the application"
-- Limits: the business rules of the domain stay in the domain; the entry checks the outside data (see methods, section 6). A check at the entry covers only the rule it states, so check every rule of the outside data there, such as its range as well as its presence; a range check inside, after a presence check at the entry, still checks outside data away from the entry, because "Once the boundary confirms that the inputs meet their rules, the inner methods run without repeating those checks".
+- Limits: the business rules of the domain stay in the domain; the entry checks the outside data (see methods, section 6). A check at the entry covers only the rule it states, so check every rule of the outside data there, such as its range as well as its presence; check the range at the entry too, not inside after a presence check at the entry, because "Once the boundary confirms that the inputs meet their rules, the inner methods run without repeating those checks".
 
 ## 9. Outside data is never safe
 
