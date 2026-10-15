@@ -63,6 +63,6 @@ Before you tune for speed, know the threshold that fast enough means for this co
 
 ## 9. When the fix of waste costs simplicity
 
-Most fixes of waste cost nothing. Where the fix must build what the codebase does not have, such as a batch interface, build it: the waste stands until the batch operation exists, even though it adds infrastructure. This rule of the skill is narrower than the book, which names the cost of that work. A cache is a different case: it adds state to keep consistent, and how long its data stays correct is a business decision, so keep a new cache inside 1 operation unless that decision is made on purpose.
+Most fixes of waste cost nothing. Where you need a batch operation and the codebase does not have one, add it, then replace the call in the loop with 1 call of it, or load all data before the loop. Do not keep a call in a loop because the batch operation is missing. This rule of the skill is narrower than the book, which names the cost of the new operation. A cache is a different case: it adds state to keep consistent, and how long its data stays correct is a business decision, so keep a new cache inside 1 operation unless that decision is made on purpose.
 
 - Book (*What Software Design Means*, *When the Qualities Themselves Conflict*): "Even waste removal can cost clarity when the fix must build what the codebase lacks: caching adds state to keep consistent, and batching adds infrastructure where no batch interface exists."
