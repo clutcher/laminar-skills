@@ -1,0 +1,106 @@
+diff --git a/library/src/fines/out/modules/overdue-loans-using-loans-module.ts b/library/src/fines/out/modules/overdue-loans-using-loans-module.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/fines/out/modules/overdue-loans-using-loans-module.ts
+@@ -0,0 +1,15 @@
++import { LoanLookup, PublicLoan } from "../../../loans";
++import { OverdueLoan } from "../../app/domain/model/overdue-loan";
++import { OverdueLoans } from "../../app/spi/overdue-loans";
++
++export class OverdueLoansUsingLoansModule implements OverdueLoans {
++  constructor(private readonly loanLookup: LoanLookup) {}
++
++  async loansOfMember(memberId: string): Promise<OverdueLoan[]> {
++    return (await this.loanLookup.loansOfMember(memberId)).map(toOverdueLoan);
++  }
++}
++
++function toOverdueLoan(loan: PublicLoan): OverdueLoan {
++  return new OverdueLoan(loan.memberId, loan.dueOn);
++}
+diff --git a/library/src/loans/app/domain/model/loan.ts b/library/src/loans/app/domain/model/loan.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/loans/app/domain/model/loan.ts
+@@ -0,0 +1,17 @@
++export class Loan {
++  readonly loanId: string;
++  readonly memberId: string;
++  readonly bookTitle: string;
++  readonly dueOn: Date;
++
++  constructor(loanId: string, memberId: string, bookTitle: string, dueOn: Date) {
++    this.loanId = loanId;
++    this.memberId = memberId;
++    this.bookTitle = bookTitle;
++    this.dueOn = dueOn;
++  }
++
++  renewedFor(days: number): Loan {
++    return new Loan(this.loanId, this.memberId, this.bookTitle, new Date(this.dueOn.getTime() + days * 86400000));
++  }
++}
+diff --git a/library/src/loans/app/spi/loan-store.ts b/library/src/loans/app/spi/loan-store.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/loans/app/spi/loan-store.ts
+@@ -0,0 +1,6 @@
++import { Loan } from "../domain/model/loan";
++
++export interface LoanStore {
++  saveLoan(loan: Loan): Promise<void>;
++  loansOfMember(memberId: string): Promise<Loan[]>;
++}
+diff --git a/library/src/loans/in/modules/loan-lookup.ts b/library/src/loans/in/modules/loan-lookup.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/loans/in/modules/loan-lookup.ts
+@@ -0,0 +1,23 @@
++import { Loan } from "../../app/domain/model/loan";
++import { LoanStore } from "../../app/spi/loan-store";
++import { PublicLoan } from "./public-loan";
++
++export class LoanLookup {
++  constructor(private readonly loanStore: LoanStore) {}
++
++  async loansOfMember(memberId: string): Promise<PublicLoan[]> {
++    return (await this.loanStore.loansOfMember(memberId)).map(toPublicLoan);
++  }
++
++  async recordLoan(loan: PublicLoan): Promise<void> {
++    await this.loanStore.saveLoan(toLoan(loan));
++  }
++}
++
++function toPublicLoan(loan: Loan): PublicLoan {
++  return new PublicLoan(loan.loanId, loan.memberId, loan.bookTitle, loan.dueOn);
++}
++
++function toLoan(loan: PublicLoan): Loan {
++  return new Loan(loan.loanId, loan.memberId, loan.bookTitle, loan.dueOn);
++}
+diff --git a/library/src/loans/in/modules/public-loan.ts b/library/src/loans/in/modules/public-loan.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/loans/in/modules/public-loan.ts
+@@ -0,0 +1,13 @@
++export class PublicLoan {
++  readonly loanId: string;
++  readonly memberId: string;
++  readonly bookTitle: string;
++  readonly dueOn: Date;
++
++  constructor(loanId: string, memberId: string, bookTitle: string, dueOn: Date) {
++    this.loanId = loanId;
++    this.memberId = memberId;
++    this.bookTitle = bookTitle;
++    this.dueOn = dueOn;
++  }
++}
+diff --git a/library/src/loans/index.ts b/library/src/loans/index.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/loans/index.ts
+@@ -0,0 +1,2 @@
++export { LoanLookup } from "./in/modules/loan-lookup";
++export { PublicLoan } from "./in/modules/public-loan";

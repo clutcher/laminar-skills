@@ -1,0 +1,93 @@
+diff --git a/apiary/src/main/java/com/example/apiary/hives/app/api/HarvestRecording.java b/apiary/src/main/java/com/example/apiary/hives/app/api/HarvestRecording.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/hives/app/api/HarvestRecording.java
+@@ -0,0 +1,10 @@
++package com.example.apiary.hives.app.api;
++
++import java.time.LocalDate;
++
++public interface HarvestRecording {
++
++    void recordHarvest(String hiveCode, LocalDate harvestedOn, int jarCount, String flowerSource);
++
++    int jarsOfSeason(int year);
++}
+diff --git a/apiary/src/main/java/com/example/apiary/hives/app/domain/HarvestService.java b/apiary/src/main/java/com/example/apiary/hives/app/domain/HarvestService.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/hives/app/domain/HarvestService.java
+@@ -0,0 +1,29 @@
++package com.example.apiary.hives.app.domain;
++
++import com.example.apiary.hives.app.api.HarvestRecording;
++import com.example.apiary.hives.app.domain.model.HarvestEntry;
++import com.example.apiary.hives.app.domain.model.HoneyHarvest;
++import com.example.apiary.hives.app.spi.HarvestStore;
++
++import java.time.LocalDate;
++
++public class HarvestService implements HarvestRecording {
++
++    private final HarvestStore harvestStore;
++
++    public HarvestService(HarvestStore harvestStore) {
++        this.harvestStore = harvestStore;
++    }
++
++    @Override
++    public void recordHarvest(String hiveCode, LocalDate harvestedOn, int jarCount, String flowerSource) {
++        harvestStore.save(new HoneyHarvest(hiveCode, harvestedOn, jarCount, flowerSource));
++    }
++
++    @Override
++    public int jarsOfSeason(int year) {
++        return harvestStore.entriesOfSeason(year).stream()
++                .mapToInt(HarvestEntry::jarCount)
++                .sum();
++    }
++}
+diff --git a/apiary/src/main/java/com/example/apiary/hives/app/domain/model/HarvestEntry.java b/apiary/src/main/java/com/example/apiary/hives/app/domain/model/HarvestEntry.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/hives/app/domain/model/HarvestEntry.java
+@@ -0,0 +1,6 @@
++package com.example.apiary.hives.app.domain.model;
++
++import java.time.LocalDate;
++
++public record HarvestEntry(String hiveCode, LocalDate harvestedOn, int jarCount, String flowerSource) {
++}
+diff --git a/apiary/src/main/java/com/example/apiary/hives/app/domain/model/HoneyHarvest.java b/apiary/src/main/java/com/example/apiary/hives/app/domain/model/HoneyHarvest.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/hives/app/domain/model/HoneyHarvest.java
+@@ -0,0 +1,10 @@
++package com.example.apiary.hives.app.domain.model;
++
++import java.time.LocalDate;
++
++public record HoneyHarvest(String hiveCode, LocalDate harvestedOn, int jarCount, String flowerSource) {
++
++    public boolean isSingleFlower() {
++        return !flowerSource.contains(",");
++    }
++}
+diff --git a/apiary/src/main/java/com/example/apiary/hives/app/spi/HarvestStore.java b/apiary/src/main/java/com/example/apiary/hives/app/spi/HarvestStore.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/hives/app/spi/HarvestStore.java
+@@ -0,0 +1,13 @@
++package com.example.apiary.hives.app.spi;
++
++import com.example.apiary.hives.app.domain.model.HarvestEntry;
++import com.example.apiary.hives.app.domain.model.HoneyHarvest;
++
++import java.util.List;
++
++public interface HarvestStore {
++
++    void save(HoneyHarvest harvest);
++
++    List<HarvestEntry> entriesOfSeason(int year);
++}

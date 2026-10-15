@@ -1,0 +1,114 @@
+diff --git a/apiary/src/main/java/com/example/apiary/hives/app/domain/model/HoneyHarvest.java b/apiary/src/main/java/com/example/apiary/hives/app/domain/model/HoneyHarvest.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/hives/app/domain/model/HoneyHarvest.java
+@@ -0,0 +1,10 @@
++package com.example.apiary.hives.app.domain.model;
++
++import java.time.LocalDate;
++
++public record HoneyHarvest(String hiveCode, LocalDate harvestedOn, int jarCount, String flowerSource) {
++
++    public boolean isSingleFlower() {
++        return !flowerSource.contains(",");
++    }
++}
+diff --git a/apiary/src/main/java/com/example/apiary/hives/app/spi/HarvestStore.java b/apiary/src/main/java/com/example/apiary/hives/app/spi/HarvestStore.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/hives/app/spi/HarvestStore.java
+@@ -0,0 +1,12 @@
++package com.example.apiary.hives.app.spi;
++
++import com.example.apiary.hives.app.domain.model.HoneyHarvest;
++
++import java.util.List;
++
++public interface HarvestStore {
++
++    void save(HoneyHarvest harvest);
++
++    List<HoneyHarvest> harvestsOfHive(String hiveCode);
++}
+diff --git a/apiary/src/main/java/com/example/apiary/hives/in/modules/HarvestLookup.java b/apiary/src/main/java/com/example/apiary/hives/in/modules/HarvestLookup.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/hives/in/modules/HarvestLookup.java
+@@ -0,0 +1,33 @@
++package com.example.apiary.hives.in.modules;
++
++import com.example.apiary.hives.app.domain.model.HoneyHarvest;
++import com.example.apiary.hives.app.spi.HarvestStore;
++
++import java.util.List;
++
++public class HarvestLookup {
++
++    private final HarvestStore harvestStore;
++
++    public HarvestLookup(HarvestStore harvestStore) {
++        this.harvestStore = harvestStore;
++    }
++
++    public List<PublicHoneyHarvest> harvestsOfHive(String hiveCode) {
++        return harvestStore.harvestsOfHive(hiveCode).stream()
++                .map(this::toPublicHarvest)
++                .toList();
++    }
++
++    public void recordHarvest(PublicHoneyHarvest harvest) {
++        harvestStore.save(toHoneyHarvest(harvest));
++    }
++
++    private PublicHoneyHarvest toPublicHarvest(HoneyHarvest harvest) {
++        return new PublicHoneyHarvest(harvest.hiveCode(), harvest.harvestedOn(), harvest.jarCount(), harvest.flowerSource());
++    }
++
++    private HoneyHarvest toHoneyHarvest(PublicHoneyHarvest harvest) {
++        return new HoneyHarvest(harvest.hiveCode(), harvest.harvestedOn(), harvest.jarCount(), harvest.flowerSource());
++    }
++}
+diff --git a/apiary/src/main/java/com/example/apiary/hives/in/modules/PublicHoneyHarvest.java b/apiary/src/main/java/com/example/apiary/hives/in/modules/PublicHoneyHarvest.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/hives/in/modules/PublicHoneyHarvest.java
+@@ -0,0 +1,6 @@
++package com.example.apiary.hives.in.modules;
++
++import java.time.LocalDate;
++
++public record PublicHoneyHarvest(String hiveCode, LocalDate harvestedOn, int jarCount, String flowerSource) {
++}
+diff --git a/apiary/src/main/java/com/example/apiary/shop/out/modules/HarvestsForSaleUsingHivesModule.java b/apiary/src/main/java/com/example/apiary/shop/out/modules/HarvestsForSaleUsingHivesModule.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/shop/out/modules/HarvestsForSaleUsingHivesModule.java
+@@ -0,0 +1,28 @@
++package com.example.apiary.shop.out.modules;
++
++import com.example.apiary.hives.in.modules.HarvestLookup;
++import com.example.apiary.hives.in.modules.PublicHoneyHarvest;
++import com.example.apiary.shop.app.domain.model.JarBatch;
++import com.example.apiary.shop.app.spi.HarvestsForSale;
++
++import java.util.List;
++
++public class HarvestsForSaleUsingHivesModule implements HarvestsForSale {
++
++    private final HarvestLookup harvestLookup;
++
++    public HarvestsForSaleUsingHivesModule(HarvestLookup harvestLookup) {
++        this.harvestLookup = harvestLookup;
++    }
++
++    @Override
++    public List<JarBatch> batchesOfHive(String hiveCode) {
++        return harvestLookup.harvestsOfHive(hiveCode).stream()
++                .map(this::toJarBatch)
++                .toList();
++    }
++
++    private JarBatch toJarBatch(PublicHoneyHarvest harvest) {
++        return new JarBatch(harvest.hiveCode(), harvest.jarCount());
++    }
++}

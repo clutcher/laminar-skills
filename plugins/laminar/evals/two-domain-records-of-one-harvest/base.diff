@@ -1,0 +1,45 @@
+diff --git a/apiary/pom.xml b/apiary/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/apiary/pom.xml
+@@ -0,0 +1,16 @@
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example</groupId>
++    <artifactId>apiary</artifactId>
++    <version>1.0.0</version>
++    <dependencies>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-web</artifactId>
++        </dependency>
++        <dependency>
++            <groupId>org.springframework.modulith</groupId>
++            <artifactId>spring-modulith-starter-core</artifactId>
++        </dependency>
++    </dependencies>
++</project>
+diff --git a/apiary/src/main/java/com/example/apiary/ApiaryApplication.java b/apiary/src/main/java/com/example/apiary/ApiaryApplication.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/ApiaryApplication.java
+@@ -0,0 +1,12 @@
++package com.example.apiary;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class ApiaryApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(ApiaryApplication.class, args);
++    }
++}
+diff --git a/apiary/src/main/java/com/example/apiary/hives/package-info.java b/apiary/src/main/java/com/example/apiary/hives/package-info.java
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/java/com/example/apiary/hives/package-info.java
+@@ -0,0 +1,2 @@
++@org.springframework.modulith.ApplicationModule
++package com.example.apiary.hives;

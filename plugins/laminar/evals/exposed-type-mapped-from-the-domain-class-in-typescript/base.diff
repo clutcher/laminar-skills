@@ -1,0 +1,83 @@
+diff --git a/library/package.json b/library/package.json
+new file mode 100644
+--- /dev/null
++++ b/library/package.json
+@@ -0,0 +1,10 @@
++{
++  "name": "library",
++  "version": "1.0.0",
++  "dependencies": {
++    "express": "4.19.2"
++  },
++  "devDependencies": {
++    "typescript": "5.4.5"
++  }
++}
+diff --git a/library/src/fines/app/api/fine-member.ts b/library/src/fines/app/api/fine-member.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/fines/app/api/fine-member.ts
+@@ -0,0 +1,3 @@
++export interface FineMember {
++  fineOf(memberId: string, today: Date): Promise<number>;
++}
+diff --git a/library/src/fines/app/domain/fine-service.ts b/library/src/fines/app/domain/fine-service.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/fines/app/domain/fine-service.ts
+@@ -0,0 +1,14 @@
++import { FineMember } from "../api/fine-member";
++import { OverdueLoans } from "../spi/overdue-loans";
++
++export class FineService implements FineMember {
++  constructor(private readonly overdueLoans: OverdueLoans) {}
++
++  async fineOf(memberId: string, today: Date): Promise<number> {
++    const loans = await this.overdueLoans.loansOfMember(memberId);
++    return loans
++      .map(loan => Math.floor((today.getTime() - loan.dueOn.getTime()) / 86400000))
++      .filter(daysOverdue => daysOverdue > 0)
++      .reduce((fine, daysOverdue) => fine + daysOverdue * 20, 0);
++  }
++}
+diff --git a/library/src/fines/app/domain/model/overdue-loan.ts b/library/src/fines/app/domain/model/overdue-loan.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/fines/app/domain/model/overdue-loan.ts
+@@ -0,0 +1,6 @@
++export class OverdueLoan {
++  constructor(
++    readonly memberId: string,
++    readonly dueOn: Date,
++  ) {}
++}
+diff --git a/library/src/fines/app/spi/overdue-loans.ts b/library/src/fines/app/spi/overdue-loans.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/fines/app/spi/overdue-loans.ts
+@@ -0,0 +1,5 @@
++import { OverdueLoan } from "../domain/model/overdue-loan";
++
++export interface OverdueLoans {
++  loansOfMember(memberId: string): Promise<OverdueLoan[]>;
++}
+diff --git a/library/src/fines/index.ts b/library/src/fines/index.ts
+new file mode 100644
+--- /dev/null
++++ b/library/src/fines/index.ts
+@@ -0,0 +1,1 @@
++export type { FineMember } from "./app/api/fine-member";
+diff --git a/library/tsconfig.json b/library/tsconfig.json
+new file mode 100644
+--- /dev/null
++++ b/library/tsconfig.json
+@@ -0,0 +1,9 @@
++{
++  "compilerOptions": {
++    "target": "ES2022",
++    "module": "commonjs",
++    "strict": true,
++    "outDir": "dist"
++  },
++  "include": ["src"]
++}
