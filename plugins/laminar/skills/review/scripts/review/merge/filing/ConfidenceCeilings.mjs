@@ -2,7 +2,8 @@ import { IN_OUT_SIDES, liesInAnotherApplication } from "../../../code/index.mjs"
 import { CHECKS_BY_ID_MAP, TRACKS } from "../../../checks/CheckCatalog.mjs";
 import { isAnInOutOperation } from "../../prepare/relations/DesignRelationCodeUnderReview.mjs";
 import { MAX_ENTRY_METHODS } from "../../prepare/abstractions/walks/BoundaryPathsWalk.mjs";
-import { stripLeadingDotSlash } from "../abstractions/AbstractionsAtPlaces.mjs";
+import { buildFileAndLineKey, stripLeadingDotSlash } from "../abstractions/AbstractionsAtPlaces.mjs";
+import { OCCURRENCE_KINDS } from "../../prepare/abstractions/walks/decisions/SameDecisionWalk.mjs";
 
 const CONFIDENCE_ORDER = Object.freeze(["high", "moderate", "low"]);
 
@@ -46,10 +47,27 @@ const findTheOtherModuleRoots = (codeUnderReview, places) => {
 
 const askWhetherTheModulesAgree = (homeRoot, otherRoots) => `Must module \`${homeRoot}\` and module ${otherRoots.map(root => `\`${root}\``).join(", ")} give the same answer for the system to stay correct?`;
 
+const ASK_WHETHER_THE_INPUT_CAN_BE_THE_KEY = "Can the input itself serve as the key, so no made-up key is needed?";
+
+const collectMatchingKeyPlaceKeys = codeUnderReview => new Set((codeUnderReview.sameDecisionAt || [])
+  .filter(occurrence => occurrence.kind === OCCURRENCE_KINDS.MATCHING_KEY)
+  .flatMap(occurrence => occurrence.places || [])
+  .map(place => buildFileAndLineKey(place.path, place.line)));
+
+const restsOnAMatchingKey = (codeUnderReview, places) => {
+  const matchingKeyPlaceKeys = collectMatchingKeyPlaceKeys(codeUnderReview);
+  const isAMatchingKeyPlace = place => listLinesOf(place).some(line => matchingKeyPlaceKeys.has(buildFileAndLineKey(place.file, line)));
+  return matchingKeyPlaceKeys.size > 0 && places.length > 0 && places.every(isAMatchingKeyPlace);
+};
+
 const findTheModuleCeiling = (codeUnderReview, places, run) => {
   const inAnotherApplication = place => liesInAnotherApplication(codeUnderReview.path, stripLeadingDotSlash(place.file), run.applicationRoots);
-  const otherRoots = findTheOtherModuleRoots(codeUnderReview, places.filter(place => !inAnotherApplication(place)));
-  return otherRoots.length ? { ceiling: "moderate", confirm: askWhetherTheModulesAgree(codeUnderReview.homeModule.root, otherRoots) } : NO_LIMIT;
+  const placesInThisApplication = places.filter(place => !inAnotherApplication(place));
+  const otherRoots = findTheOtherModuleRoots(codeUnderReview, placesInThisApplication);
+  if (!otherRoots.length) return NO_LIMIT;
+  const placesInOtherModules = placesInThisApplication.filter(place => otherRoots.includes(findModuleRootOfThePlace(codeUnderReview, place.file)));
+  const confirm = restsOnAMatchingKey(codeUnderReview, placesInOtherModules) ? ASK_WHETHER_THE_INPUT_CAN_BE_THE_KEY : askWhetherTheModulesAgree(codeUnderReview.homeModule.root, otherRoots);
+  return { ceiling: "moderate", confirm };
 };
 
 const PLACES_FROM_THE_PATCH_ALONE = "The places come from the patch alone, so the whole tree may hold more of them.";
