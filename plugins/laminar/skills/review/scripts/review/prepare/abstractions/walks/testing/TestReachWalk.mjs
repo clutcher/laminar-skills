@@ -1,6 +1,7 @@
 import { CHANGE_MODES, changesTheBoundary, changesTheCode, findDriver, isOwnCodeAt, isTestPath, readLanguageFamily, readOwnSpans, Scale, findSharedStems, collectStems, TEST_KINDS, readTestKindAtTheHead, readTestHeadFactsOfTheFile, buildWholeWordPattern } from "../../../../../code/index.mjs";
 import { readFileStem } from "../../../../../files/paths.mjs";
 import { RepositoryAbstractions } from "../../RepositoryAbstractions.mjs";
+import { TopClassWiring, formatWiredTypeNames } from "./TopClassWiring.mjs";
 
 const NAMES_PER_ROUND = 40;
 export const DEFAULT_REACH_BUDGET_MS = 30000;
@@ -132,6 +133,7 @@ export class TestReachWalk {
     this.mode = mode;
     this.budget = new ReachBudget(budgetMs);
     this.repositoryAbstractions = new RepositoryAbstractions(references.graph, repositoryText, filePath => this.readFileLines(filePath));
+    this.topClassWiring = new TopClassWiring(graph, this.repositoryAbstractions, filePath => this.readFileLines(filePath));
     this.linesByPathMap = new Map();
     this.testMethodsByPathMap = new Map();
     this.longestClassKeyByTestKeyMap = new Map();
@@ -304,8 +306,9 @@ class ReachWalk {
         }
         this.offerTestsByFileName(round[at]);
         const places = this.findPlacesNamingOutsideTheOwnCode(round[at]);
-        this.recordTheTopAndTheReachingTests(round[at], places);
-        const above = this.findClassesAbove(round[at], places);
+        const wired = this.findEntryBoundaryClassesWiredTo(round[at], places);
+        this.recordTheTopAndTheReachingTests(round[at], places, wired);
+        const above = [...this.findClassesAbove(round[at], places), ...wired];
         this.markAsWalked(above);
         pending.push(...above);
       }
@@ -392,8 +395,8 @@ class ReachWalk {
     return this.findPlacesNaming(reachingClass).filter(place => !isOwnCodeAt(place, this.abstraction.path, this.ownLines));
   }
 
-  recordTheTopAndTheReachingTests(reachingClass, places) {
-    if (this.isATop(reachingClass, places)) this.tops.push(this.buildTopClass(reachingClass));
+  recordTheTopAndTheReachingTests(reachingClass, places, wired) {
+    if (this.isATop(reachingClass, places) && !wired.length) this.tops.push(this.buildTopClass(reachingClass));
     for (const place of places) {
       if (isTestPath(place.path)) this.offer(this.buildReachingTest(place.path, reachingClass, reachingClass.kind));
       else if (this.reach.isInlineTestPlace(place) && reachingClass.depth === 0 && namesInCode(place.text, reachingClass.name)) this.offer(this.buildReachingTest(place.path, reachingClass, reachingClass.kind));
@@ -426,12 +429,38 @@ class ReachWalk {
     return above;
   }
 
+  findEntryBoundaryClassesWiredTo(reachingClass, places) {
+    if (!reachingClass.pathsBelow || !this.isATop(reachingClass, places) || this.reach.topClassWiring.hasAnEntryBoundaryRole(reachingClass.path)) return [];
+    const wiredByClassNameMap = new Map();
+    for (const { method, typeNames } of this.reach.topClassWiring.findEntryMethodsWiredTo(reachingClass.path, reachingClass.names[1], this.languageFamily)) {
+      const name = this.reach.repositoryAbstractions.findTypeNameOfTheFile(method.place.file);
+      if (!name || this.walked.has(name)) continue;
+      const wiredClass = wiredByClassNameMap.get(name) || this.buildWiredClass(name, method.place.file, reachingClass, typeNames);
+      wiredClass.wiredMethods.push({ name: method.name, line: method.place.startLine });
+      wiredByClassNameMap.set(name, wiredClass);
+    }
+    return [...wiredByClassNameMap.values()];
+  }
+
+  buildWiredClass(name, filePath, reachingClass, typeNames) {
+    return {
+      name,
+      path: filePath,
+      pathsBelow: [reachingClass.path, ...reachingClass.pathsBelow],
+      chain: [`${name} (wired to ${reachingClass.name} by ${formatWiredTypeNames(typeNames)})`, ...reachingClass.chain],
+      names: [name, ...reachingClass.names],
+      depth: reachingClass.depth + 1,
+      kind: reachingClass.kind,
+      wiredMethods: [],
+    };
+  }
+
   isATop(reachingClass, places) {
     return !places.some(place => place.path !== reachingClass.path && !this.reach.isTestPlace(place));
   }
 
   buildTopClass(reachingClass) {
-    const methods = reachingClass.pathsBelow ? this.reach.repositoryAbstractions.findTheMethodsCallingInto(reachingClass.path, reachingClass.pathsBelow) : [];
+    const methods = reachingClass.wiredMethods || (reachingClass.pathsBelow ? this.reach.repositoryAbstractions.findTheMethodsCallingInto(reachingClass.path, reachingClass.pathsBelow) : []);
     return {
       name: reachingClass.name,
       path: reachingClass.path,
