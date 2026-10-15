@@ -11,8 +11,10 @@ export const holdsABoundaryFact = abstraction => {
     || (module.crossings || []).some(line => HIDDEN_CROSSING_PATTERN.test(line));
 };
 
+const KINDS_JUDGED_BELOW_THEIR_OWN_SCALE = new Set([CHANGE_KINDS.INTERNALS_CHANGED, CHANGE_KINDS.MOVED]);
+
 const schedulesItsOwnScale = abstraction => {
-  if (abstraction.changeKind !== CHANGE_KINDS.INTERNALS_CHANGED) return true;
+  if (!KINDS_JUDGED_BELOW_THEIR_OWN_SCALE.has(abstraction.changeKind)) return true;
   return abstraction.scale === Scale.METHOD.name || (abstraction.scale === Scale.MODULE.name && holdsABoundaryFact(abstraction));
 };
 

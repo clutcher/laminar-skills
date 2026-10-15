@@ -1,4 +1,5 @@
 import { FILE_STATUS } from "./Hunk.mjs";
+import { readFileStem } from "../../../files/paths.mjs";
 
 export const CHANGE_KINDS = Object.freeze({
   CREATED: "CREATED",
@@ -40,18 +41,17 @@ const KIND_BY_FILE_STATUS_MAP = Object.freeze({
   [FILE_STATUS.REMOVED]: CHANGE_KINDS.REMOVED,
 });
 
-const BOUNDARY_MOVING_KINDS = new Set([
-  CHANGE_KINDS.CREATED,
-  CHANGE_KINDS.BOUNDARY_CHANGED,
-  CHANGE_KINDS.MOVED,
-  CHANGE_KINDS.RENAMED,
-]);
+export const renamesTheFile = changedFile => changedFile.status === FILE_STATUS.RENAMED
+  && Boolean(changedFile.oldPath) && readFileStem(changedFile.oldPath) !== readFileStem(changedFile.path);
 
-export const movesTheBoundary = changeKind => BOUNDARY_MOVING_KINDS.has(changeKind);
+const readMovedFileChangeKind = (changedFile, events) => {
+  if (readChangeKindFromEvents(events) === CHANGE_KINDS.BOUNDARY_CHANGED) return CHANGE_KINDS.BOUNDARY_CHANGED;
+  return renamesTheFile(changedFile) ? CHANGE_KINDS.RENAMED : CHANGE_KINDS.MOVED;
+};
 
-export function readFileChangeKind(changedFile) {
-  if (changedFile.status === FILE_STATUS.RENAMED) return changedFile.folderChanged ? CHANGE_KINDS.MOVED : CHANGE_KINDS.RENAMED;
-  return KIND_BY_FILE_STATUS_MAP[changedFile.status] || null;
+export function readFileChangeKind(changedFile, events) {
+  if (changedFile.status === FILE_STATUS.RENAMED) return readMovedFileChangeKind(changedFile, events);
+  return KIND_BY_FILE_STATUS_MAP[changedFile.status] || readChangeKindFromEvents(events);
 }
 
 export function readDeclaredMemberChangeKind(alsoStoodOnTheRemovedSide) {
@@ -85,8 +85,6 @@ const ABSTRACTION_CHANGE_BY_CHANGE_KIND_MAP = Object.freeze({
   [CHANGE_KINDS.INTERNALS_CHANGED]: { kind: ABSTRACTION_CHANGE_KINDS.BODY_CHANGED, detail: "" },
 });
 
-const BOUNDARY_MOVING_CHANGES = new Set([ABSTRACTION_CHANGE_KINDS.ADDED, ABSTRACTION_CHANGE_KINDS.REMOVED, ABSTRACTION_CHANGE_KINDS.MOVED, ABSTRACTION_CHANGE_KINDS.BOUNDARY_MOVED]);
-
 export class AbstractionChange {
   constructor({ kind, before = null, after = null, changedLines = null, detail = "" }) {
     this.kind = kind;
@@ -95,10 +93,6 @@ export class AbstractionChange {
     this.changedLines = changedLines;
     this.detail = detail;
     Object.freeze(this);
-  }
-
-  movesTheBoundary() {
-    return BOUNDARY_MOVING_CHANGES.has(this.kind);
   }
 
   static createBetween(before, after, changedLines = null) {

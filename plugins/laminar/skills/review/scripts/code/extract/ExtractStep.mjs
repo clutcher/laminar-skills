@@ -6,7 +6,7 @@ import { findRepositoryToRead } from "../inputs/change/ChangeReader.mjs";
 import { FILE_STATUS } from "../inputs/change/Hunk.mjs";
 import { RepositoryText } from "../inputs/repository/RepositoryText.mjs";
 import { CachedSourceIndex } from "../inputs/repository/index/CachedSourceIndex.mjs";
-import { CHANGE_KINDS, readChangeKindFromEvents, readDeclaredMemberChangeKind, readFileChangeKind } from "../inputs/change/AbstractionChange.mjs";
+import { CHANGE_KINDS, readDeclaredMemberChangeKind, readFileChangeKind } from "../inputs/change/AbstractionChange.mjs";
 import { readBoundaryRank } from "./tree/BoundaryRank.mjs";
 import { BOUNDARY_RANKS } from "../graph/abstractions/Role.mjs";
 import { ChangeMarker } from "../inputs/change/ChangeMarker.mjs";
@@ -46,7 +46,7 @@ const BOUNDARY_MOVING_FILE_STATUS = new Set([FILE_STATUS.CREATED, FILE_STATUS.RE
 
 const NO_FILES_OF_ITS_OWN = Object.freeze({ statuses: new Set(), readings: [] });
 
-const NOTHING_OF_ITS_OWN_CHANGED = new Set([CHANGE_KINDS.INTERNALS_CHANGED, CHANGE_KINDS.REFERENCE]);
+const NOTHING_OF_ITS_OWN_CHANGED = new Set([CHANGE_KINDS.INTERNALS_CHANGED, CHANGE_KINDS.REFERENCE, CHANGE_KINDS.MOVED, CHANGE_KINDS.RENAMED]);
 
 const searchesItsOwnDecisions = abstraction =>
   abstraction.scale === Scale.METHOD.name
@@ -384,7 +384,7 @@ export class ExtractStep {
     const { file, driver, reading } = changedFileReading;
     if (driver.holdsKeyTrees) { this.addKeysOfFile(changedFileReading, parents); return; }
     if (driver.fileHoldsTypesOnly && file.existsAfterTheChange) { this.addTypesOfFile({ file, driver, reading }, parents); return; }
-    const kind = readFileChangeKind(file) || readChangeKindFromEvents(reading.events);
+    const kind = readFileChangeKind(file, reading.events);
     if (!kind) { this.dropAsTrivial(file); return; }
     const parent = parents.get(readFolderPath(file.path));
     const { tag: typeTag, span, bodyLines } = reading.readTheFilesOwnTypeAndSpan();

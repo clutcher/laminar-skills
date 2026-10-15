@@ -42,15 +42,13 @@ export const MAX_CALLED_BODY_LINES = 12;
 
 const listPathsShownAfterTheChange = change => change.files.filter(file => file.existsAfterTheChange).map(file => file.path);
 
-const GONE_KINDS = new Set([CHANGE_KINDS.REMOVED, CHANGE_KINDS.MOVED, CHANGE_KINDS.RENAMED]);
-
 const holdsAModuleRoot = abstraction => Boolean(abstraction.module && abstraction.module.root);
 
 export function needFor(abstraction) {
   if (abstraction.scale === Scale.MODULE.name && holdsAModuleRoot(abstraction)) return SLICE_NEEDS.THE_MODULE_TREE;
   if (abstraction.scale === Scale.MODULE.name || abstraction.scale === Scale.APPLICATION.name) return SLICE_NEEDS.THE_FILE_LISTS;
   if (abstraction.changeKind === CHANGE_KINDS.REFERENCE) return SLICE_NEEDS.THE_IMPORT_AND_ITS_BARE_USES;
-  if (GONE_KINDS.has(abstraction.changeKind)) return SLICE_NEEDS.THE_REFERENCES_AND_TYPE_HEADS;
+  if (abstraction.changeKind === CHANGE_KINDS.REMOVED) return SLICE_NEEDS.THE_REFERENCES_AND_TYPE_HEADS;
   if (abstraction.scale === Scale.VARIABLE.name) return abstraction.occurrences.length ? SLICE_NEEDS.THE_DECLARING_LINES_THEIR_TYPES_AND_USES : SLICE_NEEDS.THE_DECLARING_LINES_AND_THEIR_TYPES;
   if (abstraction.scale === Scale.CLASS.name) {
     return abstraction.changeKind === CHANGE_KINDS.CREATED ? SLICE_NEEDS.THE_FILE_WHOLE : SLICE_NEEDS.THE_MEMBER_AND_ITS_TYPE_HEADS;
@@ -373,11 +371,21 @@ export class SliceBuilder {
 
   listDeclaredLines(abstraction, lines) {
     if (abstraction.fields) return abstraction.fields.flatMap(field => this.readLinesWithin(abstraction.path, lines, field.lines, field.changedLines));
+    if (abstraction.changeKind === CHANGE_KINDS.RENAMED) return this.readKnownLinesWithin(abstraction.path, lines, abstraction.lines);
     return this.readLinesWithin(abstraction.path, lines, abstraction.lines || { from: 1, to: 1 }, abstraction.changedLines || abstraction.lines);
   }
 
   readLinesWithin(filePath, lines, span, changedSpan) {
     return lines ? numberLines(lines.slice(span.from - 1, span.to), span.from) : this.listHunkLines(filePath, changedSpan);
+  }
+
+  readKnownLinesWithin(filePath, lines, span) {
+    if (lines) return numberLines(lines.slice(span.from - 1, span.to), span.from);
+    const file = this.change.files.find(changed => changed.path === filePath);
+    if (!file) return [];
+    return file.readNumberedNewLines()
+      .filter(({ line }) => doesSpanHoldLine(span, line))
+      .map(({ line, text }) => `${line}: ${text}`);
   }
 
   listHunkLines(filePath, span) {

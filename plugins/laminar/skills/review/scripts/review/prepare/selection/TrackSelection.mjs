@@ -44,9 +44,11 @@ const passesItsMeasureGate = (check, abstraction) => check.gate.kind !== GATE_KI
 
 const isTheClassOfAFileNamedByTheLanguage = abstraction => abstraction.kind === ABSTRACTION_KINDS.FILE && isAFileNamedByTheLanguage(abstraction.path);
 
+const NAME_ONLY_KINDS = new Set([CHANGE_KINDS.REFERENCE, CHANGE_KINDS.RENAMED]);
+
 const listSimplicityChecks = abstraction => {
   if (isTheClassOfAFileNamedByTheLanguage(abstraction)) return [];
-  if (abstraction.changeKind === CHANGE_KINDS.REFERENCE) return [CHECKS_BY_ID_MAP.S2];
+  if (NAME_ONLY_KINDS.has(abstraction.changeKind)) return [CHECKS_BY_ID_MAP.S2];
   if (abstraction.isTest && !isATestHelper(abstraction)) return [...TEST_CLASS_CHECKS];
   if (onlyStoresItsParameters(abstraction)) return [];
   const selected = findTheSingleLetterName(abstraction) ? [] : [CHECKS_BY_ID_MAP.S2];
@@ -83,7 +85,7 @@ const holdsOnlyAnOpening = abstraction => abstraction.scale === Scale.MODULE.nam
 
 const isAModuleWithOnlyItsInternalsChanged = abstraction => abstraction.scale === Scale.MODULE.name && abstraction.changeKind === CHANGE_KINDS.INTERNALS_CHANGED;
 
-const isReadOnly = abstraction => abstraction.changeKind === CHANGE_KINDS.REFERENCE
+const isReadOnly = abstraction => NAME_ONLY_KINDS.has(abstraction.changeKind)
   || holdsOnlyCreatedSubfolders(abstraction)
   || holdsOnlyAnOpening(abstraction)
   || isAModuleWithOnlyItsInternalsChanged(abstraction);

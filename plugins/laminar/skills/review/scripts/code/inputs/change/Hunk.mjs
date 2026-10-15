@@ -1,4 +1,3 @@
-import path from "node:path";
 import { numberFileLines } from "../source/SourceText.mjs";
 
 export const holdsANonBlankLine = lines => lines.some(line => line.trim());
@@ -93,10 +92,6 @@ export class Hunk {
 export class ChangedFile {
   constructor(filePath, oldPath, status) {
     Object.assign(this, { path: filePath, oldPath, status, hunks: [], lines: null });
-  }
-
-  get folderChanged() {
-    return this.oldPath !== null && path.posix.dirname(this.oldPath) !== path.posix.dirname(this.path);
   }
 
   get holdsTheWholeText() {
