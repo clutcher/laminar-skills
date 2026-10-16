@@ -2,6 +2,7 @@
 # Under /plugins/ the tree is re-included whole, so a new file there is tracked at once.
 /*
 
+!/.gitattributes
 !/.gitignore
 !/LICENSE
 !/LICENSE-CC-BY-4.0
