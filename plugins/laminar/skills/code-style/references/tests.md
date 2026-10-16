@@ -1,6 +1,6 @@
 # Tests
 
-Contents: 1. Behavior through inputs and outputs · 2. No check of internal calls · 3. Integration tests from entry to exit as the default · 4. Substitutes only past the exit boundary · 5. Unit tests where combinations demand them · 6. Expected values from the requirement · 7. 1 behavior per test · 8. Given, when, then · 9. A name of outcome and condition · 10. Realistic data and named conditions · 11. A hard test points at the production code · 12. Test files by behavior · 13. Coverage finds gaps
+Contents: 1. Behavior through inputs and outputs · 2. No check of internal calls · 3. Integration tests from entry to exit as the default · 4. Substitutes only past the exit boundary · 5. Unit tests where combinations demand them · 6. Expected values from the requirement · 7. 1 behavior per test · 8. Given, when, then · 9. A name of outcome and condition · 10. Realistic data and named conditions · 11. A hard test points at the production code · 12. Test files by behavior · 13. Coverage finds gaps · 14. Tests that call a real outside system
 
 ## 1. Behavior through inputs and outputs
 
@@ -87,3 +87,10 @@ Start with 1 test file per production class. Split it into 1 file per behavior, 
 Read low coverage as a sign of missing tests. Do not write tests to raise a coverage number, because such tests touch code without checking outcomes.
 
 - Book (*What Testing Means*, *How to Distribute Tests*): "Coverage serves as a hygiene metric rather than a quality metric, because it can reveal where tests are absent but cannot reveal whether existing tests verify anything meaningful."
+
+## 14. Tests that call a real outside system
+
+Keep a test that calls a real outside system, such as a remote service of another team or the sandbox of a payment provider, out of the regular build: mark it with a tag or a condition that the regular build leaves out. End the name of its test class or test file with 1 fixed suffix that the project chooses once, such as Live. Such a test fails when the outside system is slow or down, with no change in the code, so in the regular build it would make a failure mean something other than a change of behavior. The suffix tells the reader, before the body, that the test needs the outside system. These are rules of the skill, narrower than the book.
+
+- Book (*What Testing Means*, *How to Distribute Tests*): "When the test exercises the full path as the real caller would, substituting a third-party API at the boundary does not reduce correctness confidence."
+- Limits: a database or a queue that the build starts on its own is not an outside system, and a test that uses it stays in the regular build (section 4).

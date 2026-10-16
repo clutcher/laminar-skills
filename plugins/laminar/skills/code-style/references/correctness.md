@@ -84,6 +84,7 @@ After you shape the types and the boundaries, still test the results. A formula 
 
 ## 12. Few logs
 
-Log failures and the few events that the people who run the application need, once, where they are handled; do not log the inner steps of an operation, and do not log in tests. Each log line is 1 more item for the reader of the code and of the log. Never log a secret or personal data from outside (section 9). This rule of the skill is narrower than the book.
+Log failures and the few events that the people who run the application need, once, where they are handled; do not log the inner steps of an operation, and do not log in tests. Each log line is 1 more item for the reader of the code and of the log. Never log a secret or personal data from outside (section 9). Write no log line of debug severity, or of a lower severity, in production code: such a line logs an inner step, and it is off where the application runs, so it serves no one there and stays 1 more item for every reader of the code. These rules of the skill are narrower than the book.
 
 - Book (*What Correctness Means*, *What Correct Means*): "don't expose passwords in logs"
+- Limits: a debug line you add to find a defect leaves the code before the change is finished.

@@ -1,8 +1,8 @@
 # Spring
 
-Contents: 1. Constructor injection · 2. Inject by the interface · 3. Markers in the domain · 4. Configuration classes and properties · 5. Names of classes by role · 6. Strategies collected into a map · 7. Validation markers at the entry · 8. Executors and caches · 9. Tests with the framework
+Contents: 1. Constructor injection · 2. Inject by the interface · 3. Markers in the domain · 4. Configuration classes and properties · 5. Names of classes by role · 6. Strategies collected into a map · 7. Validation markers at the entry · 8. Executors and caches · 9. Tests with the framework · 10. Storage verbs and business verbs
 
-These are rules of this skill for Spring, narrower than the book. Read this file only where the code already uses Spring, together with java.md. Where the project's own CLAUDE.md or its documented conventions say otherwise on a Spring matter, follow the project: that override holds for the rules of this file only, never for the directions of the main set. Each rule keeps to the directions of the main set; where they seem to pull apart, the main set wins.
+These are rules of this skill for Spring, narrower than the book. Read this file only where the code already uses Spring, together with java.md. Where a project convention under `.claude/rules/conventions/` says otherwise on a Spring matter, follow the project: that override holds for the rules of the skill only, never for the directions of the main set. Each rule keeps to the directions of the main set; where they seem to pull apart, the main set wins.
 
 ## 1. Constructor injection
 
@@ -14,13 +14,15 @@ Where a dependency has an interface, such as an api or spi interface of the appl
 
 ## 3. Markers in the domain
 
-A stereotype marker such as Component or Service, and a Value marker on a constructor parameter, may stay on a domain class: they only describe the class and do nothing when the logic runs (classes, section 10). Behavior that the framework runs on its own, such as a transaction around a method or logic on save, stays out of the domain class.
+A stereotype marker such as Component or Service, and a Value marker on a constructor parameter, may stay on a domain class: they only describe the class and do nothing when the logic runs (classes, section 10). Behavior that the framework runs on its own, such as a transaction around a method or logic on save, stays out of the domain class. A qualifier marker, which chooses 1 bean among several of 1 type, is wiring and stays out of the domain class too (section 4).
 
 - Book (*The Principles at Every Scale*, *Hexagonal Architecture*): "Some framework presence is only a marker on a field"
 
 ## 4. Configuration classes and properties
 
 Put the bean wiring of a module into a config folder beside app, in and out, in 1 class named for the module and ending in ModuleConfiguration. Put setup that the whole application shares, such as executors, clients, security and a clock, into classes at the root of the application beside its start class, each named with the application and its concern and ending in Configuration (modules, section 4). A method that declares a bean starts with a verb like every method, such as createCarrierClient, and gives the bean its name in the bean marker, such as carrierClient, so the method names its work and the bean keeps a noun name (naming, section 3). A configuration class takes its properties as constructor parameters and has no getters and no fields bound by markers. Split the property files by concern, such as executors, clients and caches, and write keys in the form of the framework, words in lower case joined by hyphens, grouped like the keys of the framework itself. Each key with children holds only keys that belong to what it names, as the fields of a class do (classes, section 5). Never commit a file of local overrides.
+
+- Where a class needs 1 of 2 or more beans of 1 type, choose the bean in the bean method of the module configuration: that method takes the chosen bean as a parameter, chosen there by its bean name, and passes it to the constructor of the class (section 1). Which bean a class gets is a decision of the wiring. A qualifier on the domain class splits that decision between the configuration and the domain, so a reader of the configuration no longer sees the wiring whole. This rule of the skill is narrower than the book, which lets a marker that does nothing when the logic runs stay in the domain (section 3).
 
 ## 5. Names of classes by role
 
@@ -51,3 +53,11 @@ Build an executor from the factory the framework gives, and set only the values 
 - Assert on the content of the response with concrete values; capture an argument sent to a substitute only for an effect that leaves no trace in the response (tests, section 3).
 - Test pure logic without the framework context (java.md, section 11).
 - Give a test a property through the property support of the test framework or through the constructor, never by setting a field by reflection.
+- Mark a test that calls a real outside system with the tag marker of the test framework, or with a condition on a property, so the regular build leaves it out, and give its class the suffix the project chose (tests, section 14).
+
+## 10. Storage verbs and business verbs
+
+Name the methods of a storage interface in the spi with the verbs of the framework, such as find, save and delete, so a reader who knows the framework reads each one as a known operation. Name the operations that callers call, in the api and in the services behind it, with the verb of the business action, such as search, create or remove. Each verb keeps 1 meaning: find reads stored items by a key or a filter, search answers a question of a caller, save stores an item, create makes a new item under its business rules, delete removes a stored item, and remove ends an item in the business sense. So the 2 sets of verbs name 2 different kinds of work, and they are not 2 words for 1 thing (naming, sections 3 and 11). These are rules of the skill, narrower than the book.
+
+- Book (*What Simple Means*, *Long-Term Memory and Schemas*): "The repository lookup schema captures another pattern: take an identifier, query a data source, return an entity or indicate absence."
+- Limits: a storage method whose work the framework verbs do not name, such as a count or a lock, takes the verb of its work. An operation that only hands the call on to storage, with no rule of its own, still takes the business verb, because its callers read it on the business side.
