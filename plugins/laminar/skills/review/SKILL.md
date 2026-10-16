@@ -7,7 +7,7 @@ description: Reviews code for design quality against the 3 qualities of high-qua
 
 **You run 5 fixed steps in order, with 1 cost check between step 1 and step 2, and decide nothing else.** At the cost check the user decides and you pass the answer on. You pick the target and the 3 placeholders below, and every id, every file of the code under review and every agent belongs to the scripts and the 2 workflows.
 
-**Say what you are reviewing in 1 short line before you start.** One line such as `Reviewing origin/main...HEAD in the orders service.` is the whole of it.
+**Say what you are reviewing in 1 short line before you start.** One line such as `Reviewing <remote>/<default>...HEAD in the orders service.` is the whole of it.
 
 To answer a question about how the review works, what a track or a check judges, or what a section of a report means, read `<skill>/reference.md`. A running review never needs it.
 
@@ -21,15 +21,19 @@ To answer a question about how the review works, what a track or a check judges,
 
 Keep the double quotes the commands below put around each placeholder, so a path with a space in it still works.
 
-The first command takes 1 of `--range`, for a pull request, a branch, a commit, a tag or "my changes", with `origin/main...HEAD` or the base you were given where the user names none; `--files`, for named files, a folder, a module or a package; and `--diff`, for a patch text, and only where no tree is available. `--exclude` takes path prefixes the review leaves out entirely, which the banner then names as reviewed by nobody.
+Choose the remote `<remote>` with git alone. Where `git remote` lists 1 remote, use it. Where it lists `upstream`, use `upstream`. Else use the remote of the upstream of the current branch, which is the part before the first `/` of what `git rev-parse --abbrev-ref --symbolic-full-name "@{upstream}"` prints. Else use `origin` where it is listed. Else ask the user.
 
-A range with 2 ends, such as `origin/main...HEAD`, reads only commits, so changes the user has not committed are not reviewed. Where the user asks for those changes too, pass 1 end only, such as `--range origin/main`: the script then compares that base with the user's checkout, which holds the changes not committed, and a new file that git does not track yet is still left out.
+Find the default branch `<default>` in this order, and never run `git remote set-head`: the name that `git symbolic-ref --short refs/remotes/<remote>/HEAD` prints, without its `<remote>/` start; else the name after `ref: refs/heads/` in what `git ls-remote --symref <remote> HEAD` prints; else `main` and then `master`, the first that `git rev-parse --verify --quiet <remote>/<name>` or `git rev-parse --verify --quiet <name>` finds; else ask the user.
 
-For a pull request or a branch, fetch its head first and pass the head as a ref where one exists, such as `--range origin/main...origin/<branch>`, and not as a bare commit id, because a later review of the same branch then uses the same worktree again. The script reads a range with 2 ends in a worktree of its own, never in the user's checkout.
+The base is the default branch as the remote holds it. Run `git fetch <remote> <default>` before step 1, which moves no local branch and not the checkout, and use `<remote>/<default>` as the base, because a local default branch can be weeks old and then brings changes that are already merged into the review. Where the repository has no remote or the fetch fails, use the local default branch, and say in your first line that the base is local and can be old.
 
-Where the user names a pull request by its number, read it with git alone. Fetch its merge ref with `git fetch origin refs/pull/<number>/merge`, which hosts such as GitHub and Azure DevOps publish, read its 2 parents at once with `git rev-parse FETCH_HEAD^1 FETCH_HEAD^2`, and pass `--range <first>...<second>`: the first parent is the target branch of the pull request and the second its head. Where the host publishes no merge ref, as for a pull request with conflicts, fetch `refs/pull/<number>/head`, pass `--range origin/<default>...<its commit>`, and say in your first line that the base is the default branch. Where neither ref exists, ask the user for the name of the branch.
+The first command takes 1 of `--range`, for a pull request, a branch, a commit, a tag or "my changes", with `<remote>/<default>...HEAD` or the base you were given where the user names none; `--files`, for named files, a folder, a module or a package; and `--diff`, for a patch text, and only where no tree is available. `--exclude` takes path prefixes the review leaves out entirely, which the banner then names as reviewed by nobody.
 
-The base is the default branch as the remote holds it, `main` or the branch that `git symbolic-ref --short refs/remotes/origin/HEAD` names. Run `git fetch origin <default>` before step 1, which moves no local branch and not the checkout, and use `origin/<default>` as the base, because a local default branch can be weeks old and then brings changes that are already merged into the review. Where the repository has no `origin` or the fetch fails, use the local default branch, and say in your first line that the base is local and can be old.
+A range with 2 ends, such as `<remote>/<default>...HEAD`, reads only commits, so changes the user has not committed are not reviewed. Where the user asks for those changes too, pass 1 end only, such as `--range <remote>/<default>`: the script then compares that base with the user's checkout, which holds the changes not committed, and a new file that git does not track yet is still left out.
+
+For a pull request or a branch, fetch its head first and pass the head as a ref where one exists, such as `--range <remote>/<default>...<remote>/<branch>`, and not as a bare commit id, because a later review of the same branch then uses the same worktree again. The script reads a range with 2 ends in a worktree of its own, never in the user's checkout.
+
+Where the user names a pull request by its number, read it with git alone. List its refs with 1 call, `git ls-remote <remote> refs/pull/<number>/merge refs/pull/<number>/head refs/merge-requests/<number>/merge refs/merge-requests/<number>/head refs/pull-requests/<number>/merge refs/pull-requests/<number>/from`, because each host names them in its own way. Where a merge ref is listed, fetch it with `git fetch <remote> <that ref>`, read its 2 parents at once with `git rev-parse "FETCH_HEAD^1" "FETCH_HEAD^2"`, and pass `--range <first>...<second>`: the first parent is the target branch of the pull request and the second its head. Where only a head ref or a from ref is listed, as for a pull request with conflicts, fetch it, pass `--range <remote>/<default>...<the commit ls-remote listed for it>`, and say in your first line that the base is the default branch. Where no ref is listed, as on a host that publishes no pull request refs, ask the user for the name of the branch.
 
 ## Step 1, Prepare
 
@@ -39,6 +43,8 @@ Run both commands in 1 Bash call.
 node "<skill>/scripts/runReview.mjs" extract --run "<run>" --repo "<target>" --range "<range>"
 node "<skill>/scripts/runReview.mjs" prepare --run "<run>"
 ```
+
+The extract command prints `run folder:` with the absolute path of the run folder. Use that path for `<run>` in every later step.
 
 The prepare command prints a `RESULT` line and writes the same object to `<run>/prepare-return.json`. That object is the map the next step needs.
 
@@ -75,22 +81,13 @@ Workflow({ name: "laminar:laminar-review-judge", args: {
 } })
 ```
 
-As soon as a wave's call returns, write its `.result` to its own file, `<run>/returns/possible-findings-<N>.json`, where `<N>` is the number of the wave, and then start the next wave.
-
-```bash
-cat > "<run>/returns/possible-findings-<N>.json" <<'JSON'
-<the .result object of the judge workflow's task output for wave N>
-JSON
-```
+As soon as a wave's call returns, write its `.result` with the Write tool to its own file, `<run>/returns/possible-findings-<N>.json`, where `<N>` is the number of the wave, and then start the next wave.
 
 ## Step 3, Merge
 
-Write the `.result` of the judge workflow's task output, then run the merge, both in 1 Bash call.
+Write the `.result` of the judge workflow's task output with the Write tool to `<run>/returns/possible-findings.json`, then run the merge alone in 1 Bash call.
 
 ```bash
-cat > "<run>/returns/possible-findings.json" <<'JSON'
-<the .result object of the judge workflow's task output>
-JSON
 node "<skill>/scripts/runReview.mjs" merge --run "<run>" --findings "<run>/returns/possible-findings.json"
 ```
 
@@ -106,7 +103,7 @@ Where the merge stops with an error, show its error line to the user and stop. N
 
 ## Step 4, Verify
 
-**Read `refuterCalls` under `counts` in the `RESULT` object the merge printed.** Where it is 0, no possible finding goes to a second read, so do not call the verify workflow: write `{"verdicts":[],"refutations":[],"notVerified":[]}` to `<run>/returns/verdicts.json` and go to step 5, where that file takes the place of the object the verify workflow returns. Else call it.
+**Read `refuterCalls` under `counts` in the `RESULT` object the merge printed.** Where it is 0, no possible finding goes to a second read, so do not call the verify workflow: write `{"verdicts":[],"refutations":[],"notVerified":[]}` to `<run>/returns/verdicts.json` with the Write tool and go to step 5, where that file takes the place of the object the verify workflow returns. Else call it.
 
 ```
 Workflow({ name: "laminar:laminar-review-verify", args: {
@@ -129,22 +126,13 @@ Workflow({ name: "laminar:laminar-review-verify", args: {
 } })
 ```
 
-As soon as a wave's call returns, write its `.result` to its own file, `<run>/returns/verdicts-<N>.json`, where `<N>` is the number of the wave, and then start the next wave.
-
-```bash
-cat > "<run>/returns/verdicts-<N>.json" <<'JSON'
-<the .result object of the verify workflow's task output for wave N>
-JSON
-```
+As soon as a wave's call returns, write its `.result` with the Write tool to its own file, `<run>/returns/verdicts-<N>.json`, where `<N>` is the number of the wave, and then start the next wave.
 
 ## Step 5, Report
 
-Write the `.result` of the verify workflow's task output, then run the render, both in 1 Bash call.
+Write the `.result` of the verify workflow's task output with the Write tool to `<run>/returns/verdicts.json`, then run the render alone in 1 Bash call.
 
 ```bash
-cat > "<run>/returns/verdicts.json" <<'JSON'
-<the .result object of the verify workflow's task output>
-JSON
 node "<skill>/scripts/runReview.mjs" render --run "<run>" --verdicts "<run>/returns/verdicts.json"
 ```
 
