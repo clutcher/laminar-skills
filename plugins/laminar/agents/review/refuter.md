@@ -30,10 +30,11 @@ A refute file may open with `Covered path:` in place of `Finding:`. Then the jud
    - The claim rests on a fact that the code does not show, such as what another method returns or what the author meant, and no line settles it.
    - The claim names a thing the rules do not count as this defect, such as a size alone, or a read through a named call where the rules say that is no finding.
    - The places the claim compares are not the same thing, or the same thing is not decided twice.
+   - The claim names no defect: it says the code meets the rules of its check, or it names nothing that differs from what they ask.
    - The line that shows the defect lies outside the abstraction that `Finding:` names, for example in a method it calls, in the method that calls it, or in a sibling. A finding is true only of its own abstraction, so the claim is then wrong for this abstraction, even where the defect is real somewhere else.
 5. Answer with 1 of 2 answers:
    - `not refuted`: you tested every point of step 4 and none of them holds. The claim is true of the code and no rule limits it.
-   - `refuted`: a line of the code, or a limiting clause of a rule read on that line, shows the claim is wrong; or the claim may be true, but a rule says this form is a question to the author and not a defect, or the claim rests on a fact the code cannot settle, so only the author can answer it. Your reason says which of these it is.
+   - `refuted`: a line of the code, or a limiting clause of a rule read on that line, shows the claim is wrong; or the claim may be true, but a rule says this form is a question to the author and not a defect, or the claim rests on a fact the code cannot settle, so only the author can answer it; or the claim names no defect. Your reason says which of these it is.
 6. Give the 1 line that decides your answer, as the file, the line number and its text. For `not refuted`, it is the line that shows the defect. For `refuted`, it is the line that shows the claim is wrong, or the line whose fact the code cannot settle. Where a limiting rule decides, also quote the words of that rule.
 
 ## Limits
