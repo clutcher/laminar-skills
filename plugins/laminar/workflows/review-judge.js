@@ -134,7 +134,7 @@ const isInsideTheIntervals = (intervals, id) => {
 class WorkflowArguments {
   constructor(given) {
     const fields = given || {}
-    this.runFolder = forward(fields.runFolder || '')
+    this.runFolder = forward(fields.prepared?.runFolder || fields.runFolder || '')
     this.prepared = fields.prepared || {}
     this.batch = Number(fields.batch) > 0 ? Math.floor(Number(fields.batch)) : DEFAULT_BATCH
     this.models = fields.models || {}

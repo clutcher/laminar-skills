@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { resolveAbsolutePath, joinFilesystemPath, convertToRepositoryPath } from "../../../files/paths.mjs";
+import { resolveAbsolutePath, joinFilesystemPath, convertToRepositoryPath, convertToPathPrefix } from "../../../files/paths.mjs";
 import { ChangedFile, FILE_STATUS, Hunk } from "./Hunk.mjs";
 import { runNoIndexDiff, runWithDiffDrivers } from "./DiffDrivers.mjs";
-import { readGitOutputOrFail } from "../repository/GitCommands.mjs";
+import { PLAIN_PATCH_OPTIONS, readGitOutputOrFail, readTopFolderOf } from "../repository/GitCommands.mjs";
 import { movesAmong } from "./MovedFiles.mjs";
 import { joinLinesAsFileText } from "../source/SourceText.mjs";
 
@@ -13,7 +13,68 @@ export const chooseRepositoryToRead = (mode, repository) => (mode === CHANGE_MOD
 
 export const findRepositoryToRead = change => chooseRepositoryToRead(change.mode, change.repository);
 
-const DIFF_HEADER_PATTERN = /^diff --git a\/(.*?) b\/(.*)$/;
+const DIFF_HEADER_START = "diff --git ";
+const OLD_PATH_PREFIX = "a/";
+const NEW_PATH_PREFIX = "b/";
+const QUOTED_PATH_PIECE_PATTERN = /\\([0-7]{3}|[\s\S])|([^\\"]+)/y;
+const BYTE_BY_ESCAPE_LETTER_MAP = Object.freeze({ a: 7, b: 8, t: 9, n: 10, v: 11, f: 12, r: 13 });
+
+const readEscapedBytes = escaped => /^[0-7]{3}$/.test(escaped)
+  ? [parseInt(escaped, 8)]
+  : [BYTE_BY_ESCAPE_LETTER_MAP[escaped] ?? escaped.charCodeAt(0)];
+
+function readQuotedText(text) {
+  const bytes = [];
+  let end = 1;
+  QUOTED_PATH_PIECE_PATTERN.lastIndex = end;
+  for (let piece = QUOTED_PATH_PIECE_PATTERN.exec(text); piece; piece = QUOTED_PATH_PIECE_PATTERN.exec(text)) {
+    bytes.push(...(piece[1] === undefined ? Buffer.from(piece[2], "utf8") : readEscapedBytes(piece[1])));
+    end = QUOTED_PATH_PIECE_PATTERN.lastIndex;
+  }
+  return text[end] === '"' ? { value: Buffer.from(bytes).toString("utf8"), rest: text.slice(end + 1) } : null;
+}
+
+const readPathField = text => (text.startsWith('"') ? readQuotedText(text)?.value ?? null : text.trim());
+
+function splitUnquotedHalves(rest) {
+  const middle = (rest.length - 1) / 2;
+  const isSplitInTwoSamePaths = Number.isInteger(middle) && rest.startsWith(OLD_PATH_PREFIX) && rest.startsWith(` ${NEW_PATH_PREFIX}`, middle)
+    && rest.slice(OLD_PATH_PREFIX.length, middle) === rest.slice(middle + 1 + NEW_PATH_PREFIX.length);
+  return isSplitInTwoSamePaths ? [rest.slice(0, middle), rest.slice(middle + 1)] : null;
+}
+
+function splitQuotedPaths(rest) {
+  if (rest.startsWith('"')) {
+    const oldPath = readQuotedText(rest);
+    return oldPath && oldPath.rest.startsWith(" ") ? [oldPath.value, readPathField(oldPath.rest.slice(1))] : null;
+  }
+  const quotedNewPathAt = rest.indexOf(' "');
+  return quotedNewPathAt >= 0 ? [rest.slice(0, quotedNewPathAt), readPathField(rest.slice(quotedNewPathAt + 1))] : null;
+}
+
+function splitAtTheFirstNewPrefix(rest) {
+  const split = /^(a\/.*?) (b\/.*)$/.exec(rest);
+  return split ? [split[1], split[2]] : null;
+}
+
+const removePrefix = (given, prefix) => (given && given.startsWith(prefix) ? given.slice(prefix.length) : null);
+
+function readHeaderPaths(line) {
+  const rest = line.slice(DIFF_HEADER_START.length);
+  const [oldPath, newPath] = splitUnquotedHalves(rest) || splitQuotedPaths(rest) || splitAtTheFirstNewPrefix(rest) || [];
+  const paths = { oldPath: removePrefix(oldPath, OLD_PATH_PREFIX), newPath: removePrefix(newPath, NEW_PATH_PREFIX) };
+  return paths.oldPath && paths.newPath ? paths : null;
+}
+
+function startChangedFile(line) {
+  const paths = readHeaderPaths(line);
+  if (!paths) {
+    console.error(`extract: the paths of the diff header ${JSON.stringify(line)} could not be read, so that file is left out`);
+    return null;
+  }
+  return new ChangedFile(paths.newPath, paths.oldPath === paths.newPath ? null : paths.oldPath, FILE_STATUS.CHANGED);
+}
+
 const HUNK_HEADER_PATTERN = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@ ?(.*)$/;
 
 function parseDiff(text) {
@@ -21,18 +82,17 @@ function parseDiff(text) {
   let current = null;
   let hunk = null;
   for (const line of text.split(/\r?\n/)) {
-    const header = DIFF_HEADER_PATTERN.exec(line);
-    if (header) {
-      current = new ChangedFile(header[2], header[1] === header[2] ? null : header[1], FILE_STATUS.CHANGED);
-      files.push(current);
+    if (line.startsWith(DIFF_HEADER_START)) {
+      current = startChangedFile(line);
+      if (current) files.push(current);
       hunk = null;
       continue;
     }
     if (!current) continue;
     if (line.startsWith("new file mode")) { current.status = FILE_STATUS.CREATED; current.oldPath = null; }
     else if (line.startsWith("deleted file mode")) { current.status = FILE_STATUS.REMOVED; current.oldPath = null; }
-    else if (line.startsWith("rename from")) { current.status = FILE_STATUS.RENAMED; current.oldPath = line.slice("rename from ".length).trim(); }
-    else if (line.startsWith("rename to")) current.path = line.slice("rename to ".length).trim();
+    else if (line.startsWith("rename from")) { current.status = FILE_STATUS.RENAMED; current.oldPath = readPathField(line.slice("rename from ".length)) ?? current.oldPath; }
+    else if (line.startsWith("rename to")) current.path = readPathField(line.slice("rename to ".length)) ?? current.path;
     else if (!hunk && line === "--- /dev/null" && current.status === FILE_STATUS.CHANGED) { current.status = FILE_STATUS.CREATED; current.oldPath = null; }
     const hunkHeader = HUNK_HEADER_PATTERN.exec(line);
     if (hunkHeader) {
@@ -114,12 +174,22 @@ function formatNamedFilesAsDiff(repository, given) {
   return fileDiffs.join("\n");
 }
 
-const isExcluded = (filePath, excluded) =>
-  excluded.some(prefix => filePath === prefix || filePath.startsWith(prefix.replace(/\/+$/, "") + "/"));
+const isUnderPrefix = (filePath, prefix) => Boolean(prefix) && (filePath === prefix || filePath.startsWith(`${prefix}/`));
+
+const isExcluded = (filePath, excluded) => excluded.some(given => isUnderPrefix(filePath, convertToPathPrefix(given)));
+
+function isTheSameFolder(left, right) {
+  try { return fs.realpathSync(left) === fs.realpathSync(right); } catch { return false; }
+}
+
+function findTheFolderOfDiffPaths(repository) {
+  const top = readTopFolderOf(repository);
+  return top && !isTheSameFolder(top, repository) ? top : repository;
+}
 
 function chooseTheModeFor(repository, files, treeReason) {
   if (!repository) return { mode: CHANGE_MODES.PATCH, reason: "no tree was given" };
-  if (!fs.existsSync(path.join(repository, ".git"))) return { mode: CHANGE_MODES.PATCH, reason: "the target is not a git working tree" };
+  if (!readTopFolderOf(repository)) return { mode: CHANGE_MODES.PATCH, reason: "the target is not a git working tree" };
   const missing = files.filter(file => file.existsAfterTheChange && !fs.existsSync(joinFilesystemPath(repository, file.path)));
   if (missing.length) return { mode: CHANGE_MODES.PATCH, reason: `${missing.length} path(s) of the change are not in the tree` };
   return { mode: CHANGE_MODES.REPOSITORY, reason: treeReason || "the tree holds every path of the change" };
@@ -140,12 +210,12 @@ export class ChangeReader {
 
   static createFromRevisions(repository, revisions, namedFiles, excluded, headTree = null) {
     const text = runWithDiffDrivers(driverArgs => {
-      const args = [...driverArgs, "diff", "-U0", "--no-color", "--find-renames"];
+      const args = [...driverArgs, "diff", ...PLAIN_PATCH_OPTIONS, "--no-relative", "-U0", "--no-color", "--find-renames"];
       if (revisions) args.push(revisions);
       if (namedFiles.length) args.push("--", ...namedFiles);
       return readGitOutputOrFail(args, repository);
     });
-    return headTree ? new ChangeReader(headTree.folder, text, excluded, headTree.reason) : new ChangeReader(repository, text, excluded);
+    return headTree ? new ChangeReader(headTree.folder, text, excluded, headTree.reason) : new ChangeReader(findTheFolderOfDiffPaths(repository), text, excluded);
   }
 
   static createFromNamedFiles(repository, namedFiles, excluded) {

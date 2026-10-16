@@ -92,7 +92,7 @@ const toItem = ([itemNumber, possibleFindings]) => ({
 class WorkflowArguments {
   constructor(given) {
     const fields = given || {}
-    this.runFolder = forward(fields.runFolder || '')
+    this.runFolder = forward(fields.merged?.runFolder || fields.runFolder || '')
     this.merged = fields.merged || null
     this.models = withTheAliasesResolved(fields.models)
     this.effort = withTheAliasesResolved(fields.effort)

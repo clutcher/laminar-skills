@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { CUSTOM_PATTERN_BY_DIFF_DRIVER_MAP, DIFF_DRIVER_BY_EXTENSION_MAP } from "../source/Languages.mjs";
-import { runGitProcess } from "../repository/GitCommands.mjs";
+import { PLAIN_PATCH_OPTIONS, runGitProcess } from "../repository/GitCommands.mjs";
 
 export const formatDiffAttributeLines = () =>
   Object.entries(DIFF_DRIVER_BY_EXTENSION_MAP).map(([extension, diffDriver]) => `*${extension} diff=${diffDriver}\n`).join("");
@@ -40,7 +40,7 @@ export function runNoIndexDiff(prefix, writeBeforeAndAfter, diffArgs) {
     fs.mkdirSync(path.join(directory, "before"));
     fs.mkdirSync(path.join(directory, "after"));
     writeBeforeAndAfter(path.join(directory, "before"), path.join(directory, "after"));
-    const finished = runWithDiffDrivers(driverArgs => runGitProcess([...driverArgs, "diff", "--no-index", ...diffArgs, "--no-color", "--no-renames", "before", "after"], directory));
+    const finished = runWithDiffDrivers(driverArgs => runGitProcess([...driverArgs, "diff", "--no-index", ...PLAIN_PATCH_OPTIONS, ...diffArgs, "--no-color", "--no-renames", "before", "after"], directory));
     return isADiffRun(finished) ? finished.stdout : NO_DIFF;
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });

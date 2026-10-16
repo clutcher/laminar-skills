@@ -4,6 +4,8 @@ export const resolveAbsolutePath = given => path.resolve(given).split(path.sep).
 
 export const convertToRepositoryPath = given => String(given).split(path.sep).join("/");
 
+export const convertToPathPrefix = given => String(given).replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
+
 export const joinFilesystemPath = (repository, relative) => path.join(repository, ...String(relative).split("/"));
 
 export const readFolderPath = given => {

@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { listRegisteredWorktrees } from "./WorktreeRegistry.mjs";
-import { readCommonGitFolderOf, runGitIn, readGitOutputIn } from "../repository/GitCommands.mjs";
+import { readCommonGitFolderOf, readTopFolderOf, runGitIn, readGitOutputIn } from "../repository/GitCommands.mjs";
 import { markLastUsed } from "./LastUsedMarker.mjs";
 import { WORKTREE_PREFIX } from "./ReviewWorktreeSweep.mjs";
 import { resolveAbsolutePath, isSamePath, convertToRepositoryPath } from "../../../files/paths.mjs";
@@ -35,11 +36,26 @@ export function buildWorktreeKey(head, sha) {
   return slug ? `${slug}-${computeShortHash(head)}` : computeShortHash(head);
 }
 
-const runGitOrStopIn = (folder, args) => {
-  const finished = runGitIn(folder, args);
+const runGitOrStopIn = (folder, args, environment = {}) => {
+  const finished = runGitIn(folder, args, environment);
   if (finished.error || finished.status !== 0) throw new WorktreeStop(`git ${args.join(" ")} failed: ${String(finished.stderr || (finished.error && finished.error.message) || "").trim()}`);
   return finished.stdout.trim();
 };
+
+const CHECKOUT_ENVIRONMENT = Object.freeze({ GIT_LFS_SKIP_SMUDGE: "1" });
+
+const LONG_PATHS_CONFIG = Object.freeze(process.platform === "win32" ? ["-c", "core.longpaths=true"] : []);
+
+const buildCheckoutConfig = noHooksFolder => ["-c", `core.hooksPath=${noHooksFolder}`, ...LONG_PATHS_CONFIG];
+
+function runCheckoutOrStopIn(folder, args) {
+  const noHooksFolder = fs.mkdtempSync(path.join(os.tmpdir(), "laminar-no-hooks-"));
+  try {
+    return runGitOrStopIn(folder, [...buildCheckoutConfig(noHooksFolder), ...args], CHECKOUT_ENVIRONMENT);
+  } finally {
+    fs.rmSync(noHooksFolder, { recursive: true, force: true });
+  }
+}
 
 function addALineToTheExcludeFile(top, line) {
   const commonFolder = readCommonGitFolderOf(top);
@@ -60,7 +76,7 @@ function ensureIgnored(top, folder) {
 
 export class ReviewWorktree {
   constructor(repository, head, now = Date.now()) {
-    this.top = readGitOutputIn(repository, ["rev-parse", "--show-toplevel"]);
+    this.top = readTopFolderOf(repository);
     if (!this.top) throw new WorktreeStop(`${repository} is not a git working tree`);
     this.sha = readGitOutputIn(repository, ["rev-parse", "--verify", "--quiet", `${head}^{commit}`]);
     if (!this.sha) throw new WorktreeStop(`the head commit ${head} is not in the repository at ${this.top}; fetch it first, then run again`);
@@ -84,13 +100,13 @@ export class ReviewWorktree {
   moveToHead() {
     const registered = listRegisteredWorktrees(this.top).find(registeredWorktree => isSamePath(registeredWorktree.folder, this.folder));
     if (!registered) throw new WorktreeStop(`the folder ${this.folder} exists but is not a worktree of this repository; move it away, then run again`);
-    if (registered.head !== this.sha) runGitOrStopIn(this.folder, ["checkout", "--detach", "--force", this.sha]);
+    if (registered.head !== this.sha) runCheckoutOrStopIn(this.folder, ["checkout", "--detach", "--force", this.sha]);
   }
 
   create() {
     runGitIn(this.top, ["worktree", "prune"]);
     fs.mkdirSync(this.worktreesFolder, { recursive: true });
-    runGitOrStopIn(this.top, ["worktree", "add", "--detach", this.folder, this.sha]);
+    runCheckoutOrStopIn(this.top, ["worktree", "add", "--detach", this.folder, this.sha]);
   }
 
   markUsed() {

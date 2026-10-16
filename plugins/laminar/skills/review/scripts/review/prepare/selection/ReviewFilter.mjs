@@ -1,9 +1,8 @@
 import { Scale } from "../../../code/index.mjs";
+import { convertToPathPrefix } from "../../../files/paths.mjs";
 import { DESIGN_JUDGE_TYPES, JUDGE_TYPE_BY_SCALE_MAP, JUDGE_TYPE_BY_TRACK_MAP } from "../../../checks/JudgeType.mjs";
 
 export const JUDGE_TYPES = Object.freeze([...new Set([...Object.values(JUDGE_TYPE_BY_SCALE_MAP), ...DESIGN_JUDGE_TYPES, ...Object.values(JUDGE_TYPE_BY_TRACK_MAP)])]);
-
-const removeEndSlash = prefix => prefix.replace(/^\.\//, "").replace(/\/+$/, "");
 
 const isUnder = (given, prefix) => given === prefix || given.startsWith(`${prefix}/`);
 
@@ -35,7 +34,7 @@ const resolveScaleNamed = name => {
 export class ReviewFilter {
   constructor({ judges = [], paths = [], scales = [] } = {}) {
     this.judges = [...new Set(judges.flatMap(resolveJudgeTypesNamed))];
-    this.paths = paths.map(removeEndSlash).filter(Boolean);
+    this.paths = paths.map(convertToPathPrefix).filter(Boolean);
     this.scales = [...new Set(scales.map(resolveScaleNamed))];
   }
 

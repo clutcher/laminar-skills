@@ -2,7 +2,12 @@ import { spawnSync } from "node:child_process";
 
 export const MAX_BUFFER = 1 << 28;
 
-export const runGitProcess = (args, cwd) => spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: MAX_BUFFER });
+const UNQUOTED_PATHS_CONFIG = Object.freeze(["-c", "core.quotePath=false"]);
+
+export const PLAIN_PATCH_OPTIONS = Object.freeze(["--no-ext-diff", "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/", "--inter-hunk-context=0"]);
+
+export const runGitProcess = (args, cwd, environment = {}) =>
+  spawnSync("git", [...UNQUOTED_PATHS_CONFIG, ...args], { cwd, encoding: "utf8", maxBuffer: MAX_BUFFER, env: { ...process.env, ...environment } });
 
 export const hasSucceeded = finished => !finished.error && finished.status === 0;
 
@@ -16,9 +21,11 @@ export const readTrimmedGitOutput = (args, cwd) => {
   return output === null ? null : output.trim();
 };
 
-export const runGitIn = (folder, args) => runGitProcess(["-C", folder, ...args]);
+export const runGitIn = (folder, args, environment = {}) => runGitProcess(["-C", folder, ...args], undefined, environment);
 
 export const readGitOutputIn = (folder, args) => readTrimmedGitOutput(["-C", folder, ...args]);
+
+export const readTopFolderOf = folder => readGitOutputIn(folder, ["rev-parse", "--show-toplevel"]);
 
 export const readCommonGitFolderOf = folder => readTrimmedGitOutput(["rev-parse", "--path-format=absolute", "--git-common-dir"], folder);
 
