@@ -2,7 +2,7 @@
 
 Contents: 1. Type hints everywhere · 2. Names and test names · 3. Wiring of a module
 
-These are rules of this skill for Python, narrower than the book. Read this file whenever you write Python. Where the project's own CLAUDE.md or its documented conventions say otherwise on a Python matter, follow the project: that override holds for the rules of this file only, never for the directions of the main set.
+These are rules of this skill for Python, narrower than the book. Read this file whenever you write Python. Where a project convention under `.claude/rules/conventions/` says otherwise on a Python matter, follow the project: that override holds for the rules of the skill only, never for the directions of the main set.
 
 ## 1. Type hints everywhere
 

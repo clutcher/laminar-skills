@@ -116,9 +116,15 @@ Against a repository the review reads callers, folders, tests and the build conf
 
 The plugin also holds `laminar:code-style`, the same book's design directions for code that is written or changed: a new feature, a bug fix, a pull request comment or the fix of a review finding. Each direction gives its reason, the cognitive failure it prevents or its correctness or performance reason, so the code an agent writes is code the review accepts. It loads when Claude Code writes code, and you can ask for it by name. It keeps a change to what was asked: it moves an existing abstraction only where the new code needs it, as its own step with no change of behavior, asks before a move that other modules or tests depend on, and fixes a small problem only inside a method the change already edits.
 
-Its core is short and holds the order of work, the qualities, the cognitive failures, the 2 principles, the rules for when 2 directions pull against each other and the common pitfalls. Reference files per area, such as names, methods, classes, modules, tests and performance, hold the full directions with the book's sentences. A few rules of the author are narrower than the book, such as a verb at the start of every method name, and the skill marks each of them. Files under `conventions/` hold the rules of 1 language or framework; they apply to code in that language, and a project's own conventions win on those matters.
+Its core is short and holds the order of work, the qualities, the cognitive failures, the 2 principles, the rules for when 2 directions pull against each other and the common pitfalls. Reference files per area, such as names, methods, classes, modules, tests and performance, hold the full directions with the book's sentences. A few rules of the author are narrower than the book, such as a verb at the start of every method name, and the skill marks each of them. Files under `conventions/` hold the rules of 1 language or framework, or of documentation and instruction files, and a project's own conventions win on those matters.
 
 It is not a review: it reports nothing, and the review stays the check of the result.
+
+## Convention check
+
+`laminar:check-conventions` checks a change, a pull request, a branch or your working tree, against the rules a writer can miss: the common pitfalls and the rules of `laminar:code-style` that are narrower than the book, its conventions files for the languages of the change, and your project's own conventions. Ask for a convention check, or a check against your team's conventions before a merge. Every finding names the rule it rests on and is input to a discussion, not a gate on the merge; the book's design directions stay with the review.
+
+A project writes its conventions as `.md` files under `.claude/rules/conventions/`, each with its `paths:` and numbered rules, and Claude Code loads a file when it reads or writes a file that matches. A project convention wins over the skill's conventions files, its common pitfalls and its rules narrower than the book, and never over a direction of the book: the check reports such a contradiction on the convention file. A hook of the plugin adds the conventions file of a language when Claude Code first writes a file in it; set `LAMINAR_CONVENTION_HINTS=off` in the `env` of your settings.json to turn it off.
 
 ## What this review is not
 
@@ -157,9 +163,9 @@ The evaluation cases are published under [`plugins/laminar/evals/`](plugins/lami
 
 Copyright (c) 2026 Igor Zarvanskyi.
 
-The code is licensed under the MIT License, in [`LICENSE`](LICENSE). The code is the scripts under `plugins/laminar/skills/review/scripts/`, the workflows under `plugins/laminar/workflows/`, the eval harness `plugins/laminar/evals/grade.mjs`, and the code in the diffs of the eval cases.
+The code is licensed under the MIT License, in [`LICENSE`](LICENSE). The code is the scripts under `plugins/laminar/skills/review/scripts/`, the workflows under `plugins/laminar/workflows/`, the hook under `plugins/laminar/hooks/`, the eval harness `plugins/laminar/evals/grade.mjs`, and the code in the diffs of the eval cases.
 
-The text is licensed under the Creative Commons Attribution 4.0 International License, in [`LICENSE-CC-BY-4.0`](LICENSE-CC-BY-4.0), with the summary at <https://creativecommons.org/licenses/by/4.0/>. The text is the agent bodies under `plugins/laminar/agents/`, the skill text under `plugins/laminar/skills/review/` other than its scripts, the README files, and the `expected.md` files of the eval cases. You may share and adapt it, including commercially, if you give appropriate credit, link to the licence, and say whether you changed anything.
+The text is licensed under the Creative Commons Attribution 4.0 International License, in [`LICENSE-CC-BY-4.0`](LICENSE-CC-BY-4.0), with the summary at <https://creativecommons.org/licenses/by/4.0/>. The text is the agent bodies under `plugins/laminar/agents/`, the skill text under `plugins/laminar/skills/` other than the review's scripts, the README files, and the `expected.md` files of the eval cases. You may share and adapt it, including commercially, if you give appropriate credit, link to the licence, and say whether you changed anything.
 
 **Attribution.** Please credit the text as:
 

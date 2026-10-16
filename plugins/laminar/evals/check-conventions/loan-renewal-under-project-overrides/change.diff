@@ -1,0 +1,152 @@
+diff --git a/.claude/rules/conventions/java.md b/.claude/rules/conventions/java.md
+index 10e3952..d553272 100644
+--- a/.claude/rules/conventions/java.md
++++ b/.claude/rules/conventions/java.md
+@@ -4,10 +4,14 @@ paths:
+ ---
+ # Java
+ 
+-Contents: 1. Optional for a missing item
++Contents: 1. Optional for a missing item · 2. Methods of at most 15 lines
+ 
+ ## 1. Optional for a missing item
+ 
+ Return an Optional from a method that finds 1 item that can be missing, and never null. The caller then sees the missing case in the type and must handle it before it reads the item.
+ 
+ - Limits: a field, a parameter and a collection are never an Optional.
++
++## 2. Methods of at most 15 lines
++
++Split a method into private methods as soon as its body passes 15 lines. A short method fits on 1 screen, so a reader sees all of it without scrolling.
+diff --git a/lending-app/README.md b/lending-app/README.md
+new file mode 100644
+index 0000000..bcfb878
+--- /dev/null
++++ b/lending-app/README.md
+@@ -0,0 +1,5 @@
++# Lending application
++
++Lends copies of books to members and renews their loans. Start it with `mvn spring-boot:run` from this folder.
++
++A member renews a loan at most 2 times, by 14 days each time, for a fee of 0.50 euros.
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/Loan.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/Loan.java
+index de5c9a6..3005d02 100644
+--- a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/Loan.java
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/Loan.java
+@@ -2,5 +2,5 @@ package org.citylibrary.lending.loan.app.domain.model;
+ 
+ import java.time.LocalDate;
+ 
+-public record Loan(String loanId, String copyId, String memberId, LocalDate dueDate) {
++public record Loan(String loanId, String copyId, String memberId, LocalDate dueDate, int renewalCount) {
+ }
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/RenewalReceipt.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/RenewalReceipt.java
+new file mode 100644
+index 0000000..5cc8e57
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/RenewalReceipt.java
+@@ -0,0 +1,7 @@
++package org.citylibrary.lending.loan.app.domain.model;
++
++import java.math.BigDecimal;
++import java.time.LocalDate;
++
++public record RenewalReceipt(String loanId, LocalDate newDueDate, BigDecimal renewalFee) {
++}
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/services/LoanRenewalService.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/services/LoanRenewalService.java
+new file mode 100644
+index 0000000..097a203
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/services/LoanRenewalService.java
+@@ -0,0 +1,49 @@
++package org.citylibrary.lending.loan.app.domain.services;
++
++import org.citylibrary.lending.loan.app.domain.model.Loan;
++import org.citylibrary.lending.loan.app.domain.model.LoanRefusalKind;
++import org.citylibrary.lending.loan.app.domain.model.LoanRefusedException;
++import org.citylibrary.lending.loan.app.domain.model.RenewalReceipt;
++import org.citylibrary.lending.loan.app.spi.LoanRepository;
++import org.citylibrary.lending.loan.app.spi.MemberNotifier;
++import org.springframework.beans.factory.annotation.Qualifier;
++import org.springframework.stereotype.Service;
++
++import java.math.BigDecimal;
++import java.time.Duration;
++import java.time.LocalDate;
++
++@Service
++public class LoanRenewalService {
++
++    private static final Duration RENEWAL_PERIOD = Duration.ofDays(14);
++    private static final BigDecimal RENEWAL_FEE_EUROS = new BigDecimal("0.50");
++
++    private final LoanRepository loanRepository;
++    private final MemberNotifier memberNotifier;
++
++    public LoanRenewalService(LoanRepository loanRepository, @Qualifier("emailMemberNotifier") MemberNotifier memberNotifier) {
++        this.loanRepository = loanRepository;
++        this.memberNotifier = memberNotifier;
++    }
++
++    public RenewalReceipt renewLoan(String copyId) {
++        Loan loan = loanRepository.findActiveByCopyId(copyId)
++                .orElseThrow(() -> new LoanRefusedException(LoanRefusalKind.NO_ACTIVE_LOAN, copyId));
++        if (loan.renewalCount() >= 2) {
++            throw new LoanRefusedException(LoanRefusalKind.RENEWAL_LIMIT_REACHED, copyId);
++        }
++
++        LocalDate newDueDate = loan.dueDate().plusDays(RENEWAL_PERIOD.toDays());
++        Loan renewedLoan = new Loan(
++                loan.loanId(),
++                loan.copyId(),
++                loan.memberId(),
++                newDueDate,
++                loan.renewalCount() + 1);
++        loanRepository.save(renewedLoan);
++
++        memberNotifier.notifyDueDateMoved(loan.memberId(), newDueDate);
++        return new RenewalReceipt(loan.loanId(), newDueDate, RENEWAL_FEE_EUROS);
++    }
++}
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/services/LoanService.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/services/LoanService.java
+index 8563d94..7890367 100644
+--- a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/services/LoanService.java
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/services/LoanService.java
+@@ -12,6 +12,7 @@ import java.util.*;
+ public class LoanService {
+ 
+     private static final Duration STANDARD_LOAN_PERIOD = Duration.ofDays(21);
++    private static final int INITIAL_RENEWAL_COUNT = 0;
+ 
+     private final LoanRepository loanRepository;
+ 
+@@ -21,7 +22,7 @@ public class LoanService {
+ 
+     public Loan lendCopy(String copyId, String memberId, LocalDate lendingDate) {
+         LocalDate dueDate = lendingDate.plusDays(STANDARD_LOAN_PERIOD.toDays());
+-        Loan loan = new Loan(UUID.randomUUID().toString(), copyId, memberId, dueDate);
++        Loan loan = new Loan(UUID.randomUUID().toString(), copyId, memberId, dueDate, INITIAL_RENEWAL_COUNT);
+         loanRepository.save(loan);
+         return loan;
+     }
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/spi/LoanRepository.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/spi/LoanRepository.java
+index a1fe7e5..328136c 100644
+--- a/lending-app/src/main/java/org/citylibrary/lending/loan/app/spi/LoanRepository.java
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/spi/LoanRepository.java
+@@ -2,11 +2,16 @@ package org.citylibrary.lending.loan.app.spi;
+ 
+ import org.citylibrary.lending.loan.app.domain.model.Loan;
+ 
++import java.util.List;
+ import java.util.Optional;
+ 
+ public interface LoanRepository {
+ 
+     Optional<Loan> findById(String loanId);
+ 
++    Optional<Loan> findActiveByCopyId(String copyId);
++
++    List<Loan> searchByMember(String memberId);
++
+     void save(Loan loan);
+ }

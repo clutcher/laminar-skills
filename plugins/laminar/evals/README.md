@@ -1,6 +1,6 @@
 # Evaluation cases
 
-The cases of the review skill stand under `review/`, 1 folder each. A case is a diff to review and the reader's file the review is expected to produce. The cases of the coding style skill stand under `code-style/`, where its own README says how they run. `grade.mjs` builds and grades the cases of both, because both end in a review's reader file.
+The cases of the review skill stand under `review/`, 1 folder each. A case is a diff to review and the reader's file the review is expected to produce. The cases of the coding style skill stand under `code-style/`, where its own README says how they run. `grade.mjs` builds and grades the cases of both, because both end in a review's reader file. The cases of the convention check stand under `check-conventions/`, where its own README says how they run: `grade.mjs` builds them, and they are graded by hand.
 
 The `claude plugin eval` runner cannot run this skill, because a review is 5 session steps, 2 of them Workflow calls, and the Workflow tool is not one the runner can grant.
 So a case is built, reviewed and graded from a session instead, and a case holds none of the runner's own files, a `prompt.md`, a `case.yaml`, a `fixture.sh` or a `graders/` folder, because they grade nothing.

@@ -2,7 +2,7 @@
 
 Contents: 1. Types on every function · 2. Names and test names · 3. Fixed versions of dependencies
 
-These are rules of this skill for TypeScript and JavaScript, narrower than the book. Read this file whenever you write TypeScript or JavaScript. Where the project's own CLAUDE.md or its documented conventions say otherwise on a TypeScript matter, follow the project: that override holds for the rules of this file only, never for the directions of the main set.
+These are rules of this skill for TypeScript and JavaScript, narrower than the book. Read this file whenever you write TypeScript or JavaScript. Where a project convention under `.claude/rules/conventions/` says otherwise on a TypeScript matter, follow the project: that override holds for the rules of the skill only, never for the directions of the main set.
 
 ## 1. Types on every function
 

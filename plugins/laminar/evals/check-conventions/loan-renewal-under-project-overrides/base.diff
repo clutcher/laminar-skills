@@ -1,0 +1,252 @@
+diff --git a/.claude/rules/conventions/java.md b/.claude/rules/conventions/java.md
+new file mode 100644
+index 0000000..10e3952
+--- /dev/null
++++ b/.claude/rules/conventions/java.md
+@@ -0,0 +1,13 @@
++---
++paths:
++  - "**/*.java"
++---
++# Java
++
++Contents: 1. Optional for a missing item
++
++## 1. Optional for a missing item
++
++Return an Optional from a method that finds 1 item that can be missing, and never null. The caller then sees the missing case in the type and must handle it before it reads the item.
++
++- Limits: a field, a parameter and a collection are never an Optional.
+diff --git a/.claude/rules/conventions/loans.md b/.claude/rules/conventions/loans.md
+new file mode 100644
+index 0000000..1dc745a
+--- /dev/null
++++ b/.claude/rules/conventions/loans.md
+@@ -0,0 +1,15 @@
++---
++paths:
++  - "lending-app/src/main/java/**/loan/**/*.java"
++---
++# Loans
++
++Contents: 1. A loan period as a duration · 2. Fees and fines as Money
++
++## 1. A loan period as a duration
++
++Hold every loan period as a Duration, and name it for the loan it limits, such as STANDARD_LOAN_PERIOD. A bare number of days leaves the unit to the reader, and a period in hours for e-books would then read as days.
++
++## 2. Fees and fines as Money
++
++Hold every fee and every fine as a Money value with its currency, never as a bare decimal. The library charges in 2 currencies at its 2 border branches, and a bare decimal loses the currency between them.
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..01590fe
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# City library lending
++
++Java 21, Spring Boot. The lending application lends copies of books to members and renews their loans. Every document of the repository is under `docs/`, starting with `docs/lending.md`.
+diff --git a/docs/lending.md b/docs/lending.md
+new file mode 100644
+index 0000000..0a6a254
+--- /dev/null
++++ b/docs/lending.md
+@@ -0,0 +1,3 @@
++# Lending
++
++A member borrows a copy of a book for the standard loan period of 21 days. The loan module lives under `lending-app/src/main/java/org/citylibrary/lending/loan`, laid out as `app` with its `api`, `spi` and `domain`, and `out` for the code at its exit boundary.
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/Loan.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/Loan.java
+new file mode 100644
+index 0000000..de5c9a6
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/Loan.java
+@@ -0,0 +1,6 @@
++package org.citylibrary.lending.loan.app.domain.model;
++
++import java.time.LocalDate;
++
++public record Loan(String loanId, String copyId, String memberId, LocalDate dueDate) {
++}
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/LoanRefusalKind.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/LoanRefusalKind.java
+new file mode 100644
+index 0000000..b0fb8ad
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/LoanRefusalKind.java
+@@ -0,0 +1,7 @@
++package org.citylibrary.lending.loan.app.domain.model;
++
++public enum LoanRefusalKind {
++    COPY_ALREADY_LENT,
++    NO_ACTIVE_LOAN,
++    RENEWAL_LIMIT_REACHED
++}
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/LoanRefusedException.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/LoanRefusedException.java
+new file mode 100644
+index 0000000..cb6f55e
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/LoanRefusedException.java
+@@ -0,0 +1,15 @@
++package org.citylibrary.lending.loan.app.domain.model;
++
++public class LoanRefusedException extends RuntimeException {
++
++    private final LoanRefusalKind kind;
++
++    public LoanRefusedException(LoanRefusalKind kind, String copyId) {
++        super(kind + " for copy " + copyId);
++        this.kind = kind;
++    }
++
++    public LoanRefusalKind kind() {
++        return kind;
++    }
++}
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/Money.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/Money.java
+new file mode 100644
+index 0000000..7f9b455
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/model/Money.java
+@@ -0,0 +1,7 @@
++package org.citylibrary.lending.loan.app.domain.model;
++
++import java.math.BigDecimal;
++import java.util.Currency;
++
++public record Money(BigDecimal amount, Currency currency) {
++}
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/services/LoanService.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/services/LoanService.java
+new file mode 100644
+index 0000000..8563d94
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/domain/services/LoanService.java
+@@ -0,0 +1,28 @@
++package org.citylibrary.lending.loan.app.domain.services;
++
++import org.citylibrary.lending.loan.app.domain.model.Loan;
++import org.citylibrary.lending.loan.app.spi.LoanRepository;
++import org.springframework.stereotype.Service;
++
++import java.time.Duration;
++import java.time.LocalDate;
++import java.util.*;
++
++@Service
++public class LoanService {
++
++    private static final Duration STANDARD_LOAN_PERIOD = Duration.ofDays(21);
++
++    private final LoanRepository loanRepository;
++
++    public LoanService(LoanRepository loanRepository) {
++        this.loanRepository = loanRepository;
++    }
++
++    public Loan lendCopy(String copyId, String memberId, LocalDate lendingDate) {
++        LocalDate dueDate = lendingDate.plusDays(STANDARD_LOAN_PERIOD.toDays());
++        Loan loan = new Loan(UUID.randomUUID().toString(), copyId, memberId, dueDate);
++        loanRepository.save(loan);
++        return loan;
++    }
++}
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/spi/LoanRepository.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/spi/LoanRepository.java
+new file mode 100644
+index 0000000..a1fe7e5
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/spi/LoanRepository.java
+@@ -0,0 +1,12 @@
++package org.citylibrary.lending.loan.app.spi;
++
++import org.citylibrary.lending.loan.app.domain.model.Loan;
++
++import java.util.Optional;
++
++public interface LoanRepository {
++
++    Optional<Loan> findById(String loanId);
++
++    void save(Loan loan);
++}
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/app/spi/MemberNotifier.java b/lending-app/src/main/java/org/citylibrary/lending/loan/app/spi/MemberNotifier.java
+new file mode 100644
+index 0000000..8ad000a
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/app/spi/MemberNotifier.java
+@@ -0,0 +1,8 @@
++package org.citylibrary.lending.loan.app.spi;
++
++import java.time.LocalDate;
++
++public interface MemberNotifier {
++
++    void notifyDueDateMoved(String memberId, LocalDate newDueDate);
++}
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/out/notification/EmailMemberNotifier.java b/lending-app/src/main/java/org/citylibrary/lending/loan/out/notification/EmailMemberNotifier.java
+new file mode 100644
+index 0000000..038d5d4
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/out/notification/EmailMemberNotifier.java
+@@ -0,0 +1,15 @@
++package org.citylibrary.lending.loan.out.notification;
++
++import org.citylibrary.lending.loan.app.spi.MemberNotifier;
++import org.springframework.stereotype.Component;
++
++import java.time.LocalDate;
++
++@Component("emailMemberNotifier")
++public class EmailMemberNotifier implements MemberNotifier {
++
++    @Override
++    public void notifyDueDateMoved(String memberId, LocalDate newDueDate) {
++        System.out.println("Email to member " + memberId + ": your loan is now due on " + newDueDate);
++    }
++}
+diff --git a/lending-app/src/main/java/org/citylibrary/lending/loan/out/notification/SmsMemberNotifier.java b/lending-app/src/main/java/org/citylibrary/lending/loan/out/notification/SmsMemberNotifier.java
+new file mode 100644
+index 0000000..5286181
+--- /dev/null
++++ b/lending-app/src/main/java/org/citylibrary/lending/loan/out/notification/SmsMemberNotifier.java
+@@ -0,0 +1,15 @@
++package org.citylibrary.lending.loan.out.notification;
++
++import org.citylibrary.lending.loan.app.spi.MemberNotifier;
++import org.springframework.stereotype.Component;
++
++import java.time.LocalDate;
++
++@Component("smsMemberNotifier")
++public class SmsMemberNotifier implements MemberNotifier {
++
++    @Override
++    public void notifyDueDateMoved(String memberId, LocalDate newDueDate) {
++        System.out.println("SMS to member " + memberId + ": your loan is now due on " + newDueDate);
++    }
++}
+diff --git a/pom.xml b/pom.xml
+new file mode 100644
+index 0000000..0d334ea
+--- /dev/null
++++ b/pom.xml
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <parent>
++        <groupId>org.springframework.boot</groupId>
++        <artifactId>spring-boot-starter-parent</artifactId>
++        <version>3.3.4</version>
++    </parent>
++    <groupId>org.citylibrary</groupId>
++    <artifactId>lending-app</artifactId>
++    <version>1.0.0</version>
++    <properties>
++        <java.version>21</java.version>
++    </properties>
++    <dependencies>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-web</artifactId>
++        </dependency>
++    </dependencies>
++</project>
