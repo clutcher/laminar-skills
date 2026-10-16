@@ -75,12 +75,13 @@ The everyday fixes of the book's chapter *The Common Pitfalls*, for every change
 - *Context-Aware Constants*: name a constant, and every other value, for its business purpose, kind last, such as days or rate; 1 constant per rule, private where used; in a test, give each value that sets up the condition the test name states a name, a constant or a local.
 - *Guard Clauses*: put each precondition at the top and leave early, and move the checks that together say the input is ready behind 1 named check.
 - *Visual Separation*: keep the lines of each group together, with a blank line between groups and after the preconditions; while a detail sits among the parts, extract instead.
-- *Enums Over Boolean Flags*: give a category 1 closed set of named values for each exclusive dimension, not booleans, which allow values the domain forbids; the same holds for text compared with fixed values, a rule of the skill, narrower than the book.
-- *Boolean Parameter Splitting*: a flag that chooses 2 operations becomes 2 named methods, and a flag that picks a variant becomes a named value.
-- *Scoped Parameters*: give values that travel together, or that a method groups at once, a named type; pass 1 field, not a large object; keep the count low, because "the raw count matters".
+- *Enums Over Boolean Flags*: give a category 1 closed set of named values for each exclusive dimension, not booleans, which allow values the domain forbids; the same holds for text compared with fixed values, a rule of the skill, narrower than the book. *Boolean Parameter Splitting*: a flag that chooses 2 operations becomes 2 named methods, and a flag that picks a variant becomes a named value.
 - *Builder*: where parts of an object depend on each other or on an order, put those rules in 1 place that checks the object before use.
 - *Single-Level Fields*: move fields that always appear together and that the business treats as 1 whole into their own type, not a copy of the storage table.
 - *Single-Level Methods*: add a public method only where it serves the class name and shares the types of its neighbours; a method that combines 2 abstractions goes to a caller above.
+- A collection held by a key: name the entries, then the key, and end with the kind of collection, such as map or index; the entries and the key alone, without the kind, predict a single value (naming, section 10).
+- A type that holds a piece of the data of 1 other type, such as the reason or the code of 1 exception or 1 response, goes inside that type or in a subfolder named for it, never loose beside it in a folder of its kind (modules, section 3).
+- Test files: split a test file into 1 file per behavior as soon as a piece of its shared setup serves only some of its tests, such as data that only 1 operation of the class reads (tests, section 12).
 
 ## 8. The reference files
 
