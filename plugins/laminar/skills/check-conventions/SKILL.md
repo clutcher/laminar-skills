@@ -14,12 +14,12 @@ Contents: 1. The target · 2. The rules · 3. Which rule wins · 4. How to check
 
 ## 1. The target
 
-The argument is `$ARGUMENTS`. Find the default branch: `main`, or the branch that `git symbolic-ref --short refs/remotes/origin/HEAD` names where there is no `main`. Do not change the checkout.
+The argument is `$ARGUMENTS`. Find the default branch: `main`, or the branch that `git symbolic-ref --short refs/remotes/origin/HEAD` names where there is no `main`. Do not change the checkout. The base is the default branch as the remote holds it: run `git fetch origin <default>`, which moves no local branch and not the checkout, and use `origin/<default>` as `<base>`, because a local default branch can be weeks old and then brings changes that are already merged into the diff. Where the repository has no `origin` or the fetch fails, use the local `<default>` as `<base>`, and say in your first line that the base is local and can be old.
 
 - A number is a pull request. Read its base branch with `gh pr view <number> --json baseRefName`, fetch its head with `git fetch origin pull/<number>/head`, and compare `origin/<base>...FETCH_HEAD`. Read each changed file with `git show FETCH_HEAD:<path>`.
-- A branch name compares `<default>...<branch>`. Read each changed file with `git show <branch>:<path>`.
-- No argument, or `current`, compares `<default>...HEAD`, which holds only commits. Read each changed file with `git show HEAD:<path>`.
-- `working-tree` compares the merge base of `<default>` and `HEAD` with the working tree, so it holds committed and uncommitted changes. Add the new files that `git ls-files --others --exclude-standard` lists. Read each changed file from the disk.
+- A branch name compares `<base>...<branch>`. Read each changed file with `git show <branch>:<path>`.
+- No argument, or `current`, compares `<base>...HEAD`, which holds only commits. Read each changed file with `git show HEAD:<path>`.
+- `working-tree` compares the merge base of `<base>` and `HEAD` with the working tree, so it holds committed and uncommitted changes. Add the new files that `git ls-files --others --exclude-standard` lists. Read each changed file from the disk.
 
 Read the diff with `git diff --find-renames <range>`, and read every changed file in full at the head of the change. A deleted file has no finding.
 

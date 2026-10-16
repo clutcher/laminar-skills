@@ -62,7 +62,7 @@ Each finding names the abstraction, the check, what the review found, a short di
 
 Ask Claude Code for a review of a pull request, a branch, a commit, files, a folder or a module, for example `Review my branch against main` or `Run a Laminar Code Review of src/orders`. You can also ask whether code is simple, well named, well structured, well bounded or well tested.
 
-When you name no range, the review reads `main...HEAD`. That range holds only commits, so changes you have not committed are not reviewed. To review them too, ask for the changes in your working tree: the review then compares `main` with your checkout. A new file that git does not track yet is still left out, so add it with `git add` first.
+When you name no range, the review fetches the default branch from `origin` and reads `origin/main...HEAD`, so a local `main` that is weeks old does not bring changes that are already merged; without `origin`, or offline, it uses the local `main` and says so. That range holds only commits, so changes you have not committed are not reviewed. To review them too, ask for the changes in your working tree: the review then compares `origin/main` with your checkout. The convention check uses the same base. A new file that git does not track yet is still left out, so add it with `git add` first.
 
 ## What a review costs and how long it takes
 

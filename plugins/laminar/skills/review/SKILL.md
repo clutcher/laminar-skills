@@ -7,7 +7,7 @@ description: Reviews code for design quality against the 3 qualities of high-qua
 
 **You run 5 fixed steps in order, with 1 cost check between step 1 and step 2, and decide nothing else.** At the cost check the user decides and you pass the answer on. You pick the target and the 3 placeholders below, and every id, every file of the code under review and every agent belongs to the scripts and the 2 workflows.
 
-**Say what you are reviewing in 1 short line before you start.** One line such as `Reviewing main...HEAD in the orders service.` is the whole of it.
+**Say what you are reviewing in 1 short line before you start.** One line such as `Reviewing origin/main...HEAD in the orders service.` is the whole of it.
 
 To answer a question about how the review works, what a track or a check judges, or what a section of a report means, read `<skill>/reference.md`. A running review never needs it.
 
@@ -21,11 +21,13 @@ To answer a question about how the review works, what a track or a check judges,
 
 Keep the double quotes the commands below put around each placeholder, so a path with a space in it still works.
 
-The first command takes 1 of `--range`, for a pull request, a branch, a commit, a tag or "my changes", with `main...HEAD` or the base you were given where the user names none; `--files`, for named files, a folder, a module or a package; and `--diff`, for a patch text, and only where no tree is available. `--exclude` takes path prefixes the review leaves out entirely, which the banner then names as reviewed by nobody.
+The first command takes 1 of `--range`, for a pull request, a branch, a commit, a tag or "my changes", with `origin/main...HEAD` or the base you were given where the user names none; `--files`, for named files, a folder, a module or a package; and `--diff`, for a patch text, and only where no tree is available. `--exclude` takes path prefixes the review leaves out entirely, which the banner then names as reviewed by nobody.
 
-A range with 2 ends, such as `main...HEAD`, reads only commits, so changes the user has not committed are not reviewed. Where the user asks for those changes too, pass 1 end only, such as `--range main`: the script then compares that base with the user's checkout, which holds the changes not committed, and a new file that git does not track yet is still left out.
+A range with 2 ends, such as `origin/main...HEAD`, reads only commits, so changes the user has not committed are not reviewed. Where the user asks for those changes too, pass 1 end only, such as `--range origin/main`: the script then compares that base with the user's checkout, which holds the changes not committed, and a new file that git does not track yet is still left out.
 
-For a pull request or a branch, fetch its head first and pass the head as a ref where one exists, such as `--range main...origin/<branch>`, and not as a bare commit id, because a later review of the same branch then uses the same worktree again. The script reads a range with 2 ends in a worktree of its own, never in the user's checkout.
+For a pull request or a branch, fetch its head first and pass the head as a ref where one exists, such as `--range origin/main...origin/<branch>`, and not as a bare commit id, because a later review of the same branch then uses the same worktree again. The script reads a range with 2 ends in a worktree of its own, never in the user's checkout.
+
+The base is the default branch as the remote holds it, `main` or the branch that `git symbolic-ref --short refs/remotes/origin/HEAD` names. Run `git fetch origin <default>` before step 1, which moves no local branch and not the checkout, and use `origin/<default>` as the base, because a local default branch can be weeks old and then brings changes that are already merged into the review. Where the repository has no `origin` or the fetch fails, use the local default branch, and say in your first line that the base is local and can be old.
 
 ## Step 1, Prepare
 
