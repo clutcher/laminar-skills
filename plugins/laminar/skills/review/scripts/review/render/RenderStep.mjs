@@ -57,7 +57,7 @@ export class RenderStep {
 
   run() {
     this.covered = new TestCoveredPaths(this.merged.coveredPaths, this.returns, { mode: this.prepared.mode });
-    this.settled = new SettledFindings([...numberThePossibleFindings(this.merged.groups), ...this.covered.pathsToTest], this.returns, this.covered.listNumbers());
+    this.settled = new SettledFindings([...numberThePossibleFindings(this.merged.groups), ...this.covered.pathsToTest], this.returns, this.covered.listNumbers(), this.prepared.codeUnderReview || []);
     this.sweep = addTheFindingsToTheSweep(this.merged.sweep, this.covered.pathsToTest.flatMap(group => group.possibleFindings));
     this.changeSummary = formatChangeSummary(this.reviewed);
     this.banner = this.formatBanner();

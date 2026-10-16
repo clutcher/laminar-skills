@@ -3,7 +3,8 @@ import { TRACKS } from "../../../checks/CheckCatalog.mjs";
 import { JUDGE_TYPE_BY_TRACK_MAP } from "../../../checks/JudgeType.mjs";
 import { isInTheChange } from "../../merge/returns/PossibleFindings.mjs";
 import { isAConsideration } from "../../merge/filing/Considerations.mjs";
-import { buildPlaceKey } from "../../merge/abstractions/AbstractionsAtPlaces.mjs";
+import { buildPlaceKey, stripLeadingDotSlash } from "../../merge/abstractions/AbstractionsAtPlaces.mjs";
+import { listMatchingKeyPlaces } from "../../merge/filing/ConfidenceCeilings.mjs";
 import { isRefuted, VerifyReturns } from "./VerifyReturns.mjs";
 
 const CONFIDENCE_LEVELS = Object.freeze(["high", "moderate", "low"]);
@@ -213,20 +214,35 @@ const findTheRejectedLeadOfItsCheck = (ruledFinding, ruled) => {
   return isRejected(leadOfTheCheck) && firstSurvivorOfTheCheck === ruledFinding ? leadOfTheCheck.finding : null;
 };
 
-const listPlacesOfSurvivors = (ruledFinding, ruled, placeKeysOfTheRejected) => {
+const readSpanOfTheRejected = (rejected, place) => rejected.ownLines || { from: place.line, to: place.line };
+
+const holdsAMatchingKeyPlace = (matchingKeyPlaces, place, rejected) => {
+  const span = readSpanOfTheRejected(rejected, place);
+  return matchingKeyPlaces.some(keyPlace => stripLeadingDotSlash(keyPlace.path) === stripLeadingDotSlash(place.file)
+    && Number(keyPlace.line) >= Number(span.from) && Number(keyPlace.line) <= Number(span.to));
+};
+
+const isDroppedAsRejected = (place, rejectedByPlaceKeyMap, matchingKeyPlaces) => {
+  const rejected = rejectedByPlaceKeyMap.get(buildPlaceKey(place));
+  return Boolean(rejected) && !holdsAMatchingKeyPlace(matchingKeyPlaces, place, rejected);
+};
+
+const listPlacesOfSurvivors = (ruledFinding, ruled, rejectedByPlaceKeyMap, matchingKeyPlaces) => {
   const rejectedLead = findTheRejectedLeadOfItsCheck(ruledFinding, ruled);
   const shown = new Set([buildPlaceKey(ruledFinding.finding)]);
   return [...(rejectedLead ? rejectedLead.alsoAt || [] : []), ...(ruledFinding.finding.alsoAt || [])]
-    .filter(place => !placeKeysOfTheRejected.has(buildPlaceKey(place)) && !shown.has(buildPlaceKey(place)) && shown.add(buildPlaceKey(place)));
+    .filter(place => !isDroppedAsRejected(place, rejectedByPlaceKeyMap, matchingKeyPlaces) && !shown.has(buildPlaceKey(place)) && shown.add(buildPlaceKey(place)));
 };
 
-const keepThePlacesOfSurvivors = ruled => {
+const keepThePlacesOfSurvivors = (ruled, matchingKeyPlacesOf) => {
   if (!ruled.some(isRejected)) return ruled;
   const placeKeysOfSurvivors = new Set(ruled.filter(ruledFinding => !isRejected(ruledFinding)).map(ruledFinding => buildPlaceKey(ruledFinding.finding)));
-  const placeKeysOfTheRejected = new Set(ruled.filter(isRejected).map(ruledFinding => buildPlaceKey(ruledFinding.finding)).filter(key => !placeKeysOfSurvivors.has(key)));
+  const rejectedByPlaceKeyMap = new Map(ruled.filter(isRejected)
+    .map(ruledFinding => [buildPlaceKey(ruledFinding.finding), ruledFinding.finding])
+    .filter(([key]) => !placeKeysOfSurvivors.has(key)));
   return ruled.map(ruledFinding => isRejected(ruledFinding)
     ? ruledFinding
-    : { ...ruledFinding, finding: { ...ruledFinding.finding, alsoAt: listPlacesOfSurvivors(ruledFinding, ruled, placeKeysOfTheRejected) } });
+    : { ...ruledFinding, finding: { ...ruledFinding.finding, alsoAt: listPlacesOfSurvivors(ruledFinding, ruled, rejectedByPlaceKeyMap, matchingKeyPlacesOf(ruledFinding.finding.codeUnderReviewId)) } });
 };
 
 export const UNMATCHED_REASONS = Object.freeze({
@@ -268,7 +284,9 @@ const listVerdictsOfTheGroup = (group, returns) => [
 ];
 
 export class SettledFindings {
-  constructor(groups, givenReturns, numbersSettledElsewhere = []) {
+  constructor(groups, givenReturns, numbersSettledElsewhere = [], everyCodeUnderReview = []) {
+    const matchingKeyPlacesByIdMap = new Map(everyCodeUnderReview.map(codeUnderReview => [codeUnderReview.id, listMatchingKeyPlaces(codeUnderReview)]));
+    this.matchingKeyPlacesOf = codeUnderReviewId => matchingKeyPlacesByIdMap.get(codeUnderReviewId) || [];
     const returns = givenReturns instanceof Map ? VerifyReturns.fromVerdictsByItem(givenReturns) : givenReturns;
     this.kept = [];
     this.considered = [];
@@ -287,7 +305,7 @@ export class SettledFindings {
 
   settle(group, returns) {
     const combines = group.verdict ? [] : combinesOf(group, listVerdictsOfTheGroup(group, returns));
-    const ruled = keepThePlacesOfSurvivors(group.possibleFindings.map(finding => ruleFinding(finding, group, returns, combines)));
+    const ruled = keepThePlacesOfSurvivors(group.possibleFindings.map(finding => ruleFinding(finding, group, returns, combines)), this.matchingKeyPlacesOf);
     const standing = foldTheCombines(ruled.filter(ruledFinding => !isRejected(ruledFinding)));
     this.rejected.push(...ruled.filter(isRejected).map(ruledFinding => ruledFinding.finding));
     if (!standing.length) return;

@@ -49,9 +49,11 @@ const askWhetherTheModulesAgree = (homeRoot, otherRoots) => `Must module \`${hom
 
 const ASK_WHETHER_THE_INPUT_CAN_BE_THE_KEY = "Can the input itself serve as the key, so no made-up key is needed?";
 
-const collectMatchingKeyPlaceKeys = codeUnderReview => new Set((codeUnderReview.sameDecisionAt || [])
+export const listMatchingKeyPlaces = codeUnderReview => (codeUnderReview.sameDecisionAt || [])
   .filter(occurrence => occurrence.kind === OCCURRENCE_KINDS.MATCHING_KEY)
-  .flatMap(occurrence => occurrence.places || [])
+  .flatMap(occurrence => occurrence.places || []);
+
+const collectMatchingKeyPlaceKeys = codeUnderReview => new Set(listMatchingKeyPlaces(codeUnderReview)
   .map(place => buildFileAndLineKey(place.path, place.line)));
 
 const restsOnAMatchingKey = (codeUnderReview, places) => {
