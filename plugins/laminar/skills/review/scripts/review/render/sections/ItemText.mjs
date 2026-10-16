@@ -114,6 +114,7 @@ const LABELS = Object.freeze({
   INPUT: "Input",
   TAKEN_BY: "Taken by",
   UNVERIFIED: "Unverified",
+  DECLARED_BY_THE_SCHEMA: "Declared by the schema",
   DIRECTION: DIRECTION_LABELS.ONE,
   ALSO_IN: "Also in",
   ACROSS_APPLICATIONS: "Across applications",
@@ -124,7 +125,7 @@ const LABELS = Object.freeze({
 
 const POINT_ORDER = Object.freeze([
   LABELS.FOUND, LABELS.PATH, LABELS.BRANCHES, LABELS.INPUT, LABELS.TAKEN_BY, LABELS.UNVERIFIED,
-  LABELS.DIRECTION, LABELS.ALSO_IN, LABELS.ACROSS_APPLICATIONS, LABELS.PLACES_LEFT_UNOPENED, LABELS.CONFIDENCE, LABELS.NOT_VERIFIED,
+  LABELS.DECLARED_BY_THE_SCHEMA, LABELS.DIRECTION, LABELS.ALSO_IN, LABELS.ACROSS_APPLICATIONS, LABELS.PLACES_LEFT_UNOPENED, LABELS.CONFIDENCE, LABELS.NOT_VERIFIED,
 ]);
 
 const BLOCK_LINES = Object.freeze({
@@ -237,6 +238,13 @@ const createFixPoint = finding => {
   return { label: LABELS.DIRECTION, text: formatDirectionOfTheFinding(finding), lines: formatDirectionLines(directions, isConditional ? IF_A_DEFECT : ""), isConditional };
 };
 
+export const formatDeclaredBySchema = finding => {
+  const schemaType = finding.declaredBySchema;
+  return schemaType && schemaType.displayName ? `\`${schemaType.displayName}\` · ${stripLeadingDotSlash(schemaType.file)}:${schemaType.line}` : "";
+};
+
+const createDeclaredBySchemaPoint = finding => createLabeledPoint(LABELS.DECLARED_BY_THE_SCHEMA, formatDeclaredBySchema(finding));
+
 const createAlsoInPoint = finding => {
   const alsoIn = formatAlsoIn(finding);
   return alsoIn ? createNamedPoint(LABELS.ALSO_IN, `${alsoIn}.`) : null;
@@ -261,6 +269,7 @@ const createNotVerifiedPoint = finding => finding.notVerified ? createLabeledPoi
 const pointsOf = finding => [
   createFoundPoint(finding),
   ...createTestPlanPoints(finding),
+  createDeclaredBySchemaPoint(finding),
   createFixPoint(finding),
   createAlsoInPoint(finding),
   createAcrossApplicationsPoint(finding),
@@ -299,8 +308,11 @@ const formatFixBlock = findings => {
   return findingPoints.length ? [formatBlockLine(LABELS.DIRECTION), ...findingPoints.map(({ finding, point }) => formatNestedLine(finding, point))] : [];
 };
 
+const formatItemLevelBlock = (findings, label) => keepTheFirstPointOfEachText(pointsUnder(findings, label)).map(({ point }) => point.line);
+
 const formatBlock = (findings, label) => {
   if (label === LABELS.DIRECTION) return formatFixBlock(findings);
+  if (label === LABELS.DECLARED_BY_THE_SCHEMA) return formatItemLevelBlock(findings, label);
   const findingPoints = pointsUnder(findings, label);
   return isAShownBlock(label, findingPoints) ? [formatBlockLine(label), ...findingPoints.map(({ finding, point }) => formatNestedLine(finding, point))] : [];
 };

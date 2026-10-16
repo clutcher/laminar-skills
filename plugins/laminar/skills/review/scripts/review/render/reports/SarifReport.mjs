@@ -52,6 +52,7 @@ const buildProperties = finding => {
   const second = (finding.alsoAt || [])[0];
   if (second && second.displayName) properties.also_abstraction = second.displayName;
   if ((finding.callerApplications || []).length) Object.assign(properties, { entry_boundary_of: finding.application, called_by: [...finding.callerApplications] });
+  if (isPlace(finding.declaredBySchema)) properties.declared_by_schema = finding.declaredBySchema.displayName;
   return properties;
 };
 
@@ -80,8 +81,13 @@ const buildAcrossApplicationsPlaces = finding => (finding.callerApplications || 
 
 const isTheFirstOfItsKind = (location, order, locations) => locations.findIndex(other => JSON.stringify(other) === JSON.stringify(location)) === order;
 
+const DECLARED_BY_THE_SCHEMA_ROLE = "declared by the schema";
+
+const buildDeclaredBySchemaPlaces = finding => (isPlace(finding.declaredBySchema) ? [buildDescribedPlace(finding.declaredBySchema, DECLARED_BY_THE_SCHEMA_ROLE)] : []);
+
 const buildRelatedLocations = finding => [
   ...(finding.alsoAt || []).map(place => buildLocation(place.file, place.line)),
+  ...buildDeclaredBySchemaPlaces(finding),
   ...buildTestPlanPlaces(finding),
   ...buildAcrossApplicationsPlaces(finding),
 ].filter(isTheFirstOfItsKind);

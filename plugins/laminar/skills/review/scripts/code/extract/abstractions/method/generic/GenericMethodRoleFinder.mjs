@@ -10,10 +10,25 @@ import { MARK_FORMS } from "../../../../inputs/source/declarations/MarkedDeclara
 import { findTypeHolding } from "../../../../inputs/source/declarations/TypeHolding.mjs";
 import { NO_OUTBOUND_IO } from "./outside/OutboundIo.mjs";
 import { NO_TEST_CODE_MARKS } from "./testing/TestCodeMarks.mjs";
+import { findClosingParenthesis, ONLY_PARENTHESES } from "../../../../inputs/source/text/Brackets.mjs";
+import { escapeForAPattern } from "../../../../inputs/source/text/PatternText.mjs";
+import { splitIntoTopLevelPieces } from "../../../../inputs/source/text/TopLevelText.mjs";
 
 const citeMarkedLine = (lines, at) => `${String(lines[at - 1]).trim()} at line ${at}`;
 
 const isAMethod = declaration => declaration.scale === Scale.METHOD.name;
+
+const MAX_HEAD_LINES = 12;
+
+const NO_PARAMETERS = Object.freeze([]);
+
+const readParameterPieces = (lines, method) => {
+  const headText = lines.slice(method.line - 1, method.line - 1 + MAX_HEAD_LINES).map(line => String(line ?? "")).join(" ");
+  const nameAt = headText.search(new RegExp(`(?<![\\w$])${escapeForAPattern(method.name)}\\s*\\(`));
+  const opening = nameAt < 0 ? -1 : headText.indexOf("(", nameAt);
+  const closing = opening < 0 ? -1 : findClosingParenthesis(headText, opening, ONLY_PARENTHESES);
+  return closing < 0 ? NO_PARAMETERS : splitIntoTopLevelPieces(headText.slice(opening + 1, closing));
+};
 
 export class GenericMethodRoleFinder extends RoleFinder {
   constructor() {
@@ -21,6 +36,7 @@ export class GenericMethodRoleFinder extends RoleFinder {
     this.methodMapping = null;
     this.bareVerb = null;
     this.schemaMapping = null;
+    this.schemaArgument = null;
     this.outboundIo = NO_OUTBOUND_IO;
     this.testCodeMarks = NO_TEST_CODE_MARKS;
   }
@@ -37,7 +53,7 @@ export class GenericMethodRoleFinder extends RoleFinder {
   }
 
   findSchemaMappingRoles(method, file) {
-    const schemaMapping = this.findSchemaMapping(file.lines, method.line);
+    const schemaMapping = this.findSchemaMapping(file.lines, method);
     if (!schemaMapping) return [];
     const evidence = new Evidence({ kind: EVIDENCE_KINDS.DECLARED, foundBy: GenericMethodRoleFinder.name, detail: citeMarkedLine(file.lines, schemaMapping.line) });
     return [{ kind: ROLE_KINDS.ENTRY_BOUNDARY, form: MARK_FORMS.SCHEMA_MAPPING, of: method, line: schemaMapping.line, evidence, facts: { schemaMapping } }];
@@ -61,9 +77,17 @@ export class GenericMethodRoleFinder extends RoleFinder {
     return "";
   }
 
-  findSchemaMapping(lines, headLine) {
+  findSchemaMapping(lines, method) {
     if (!this.schemaMapping) return null;
-    const mapping = findAnnotationLinesAbove(lines, headLine).find(annotationLine => this.schemaMapping.test(annotationLine.text));
-    return mapping ? { line: mapping.line, names: findTextLiterals(mapping.text).map(literal => literal.text) } : null;
+    const mapping = findAnnotationLinesAbove(lines, method.line).find(annotationLine => this.schemaMapping.test(annotationLine.text));
+    return mapping ? { line: mapping.line, names: findTextLiterals(mapping.text).map(literal => literal.text), arguments: this.findSchemaArguments(lines, method) } : null;
+  }
+
+  findSchemaArguments(lines, method) {
+    if (!this.schemaArgument) return NO_PARAMETERS;
+    return readParameterPieces(lines, method)
+      .map(parameterText => ({ parameterText, mark: this.schemaArgument.exec(parameterText) }))
+      .filter(({ mark }) => mark)
+      .map(({ parameterText, mark }) => ({ name: mark[1] || "", parameterText }));
   }
 }

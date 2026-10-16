@@ -18,6 +18,7 @@ import { CoreOperationsWalk } from "./walks/core/CoreOperationsWalk.mjs";
 import { RebuiltValuesWalk } from "./walks/RebuiltValuesWalk.mjs";
 import { MemberGroupsWalk } from "./walks/memberGroups/MemberGroupsWalk.mjs";
 import { EntryBoundariesWalk } from "./walks/entryBoundaries/EntryBoundariesWalk.mjs";
+import { CodeForms } from "./walks/entryBoundaries/CodeForms.mjs";
 import { BoundaryPathsWalk } from "./walks/BoundaryPathsWalk.mjs";
 import { FieldReadings } from "./walks/entryBoundaries/FieldReadings.mjs";
 import { selectMethodFriction, TestFrictionWalk } from "./walks/testing/TestFrictionWalk.mjs";
@@ -79,6 +80,7 @@ export class CodeGraphWalks {
     this.reviewedTestCode = new TestCode(filePath => this.reviewedFiles.readFileLines(filePath));
     this.relations = NO_RELATIONS;
     this.boundaryPaths = [];
+    this.codeForms = [];
   }
 
   markTheFileKindClasses() {
@@ -115,6 +117,7 @@ export class CodeGraphWalks {
     this.runBoundaryPaths();
     this.runRelations();
     this.runFieldReadings();
+    this.runCodeForms();
     this.runTestFriction();
     this.runChangedBranches();
     this.runNamedDeclarations();
@@ -147,6 +150,7 @@ export class CodeGraphWalks {
       ...createPropertyWhenNotEmpty("memberGroups", this.relations.memberGroups),
       entryBoundaries: this.relations.entryBoundaries,
       boundaryPaths: this.boundaryPaths,
+      ...createPropertyWhenNotEmpty("codeForms", this.codeForms),
     };
   }
 
@@ -244,6 +248,10 @@ export class CodeGraphWalks {
     this.relations.memberGroups = new MemberGroupsWalk(this.repositoryText, this.change, findCallGraph, this.codeGraph).findRelations(abstractions);
     this.entryBoundaryReading = new EntryBoundariesWalk(this.repositoryText, this.testCode, this.change, this.roots, findCallGraph, this.references, this.codeGraph);
     if (new Set(this.roots.map(readFolderPath)).size >= MIN_APPLICATIONS_FOR_AN_ENTRY_BOUNDARY) this.relations.entryBoundaries = this.entryBoundaryReading.walkAbstractions(abstractions);
+  }
+
+  runCodeForms() {
+    this.codeForms = new CodeForms(this.repositoryText, this.roots, this.codeGraph).findCodeForms();
   }
 
   runFieldReadings() {

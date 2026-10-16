@@ -4,8 +4,9 @@
 
 ### Production code
 
-1. Class `storefront-api:AvailabilityInput`
+1. Class `AvailabilityInput`
    - Scoped Parameters
+   - Declared by the schema: `storefront-api:AvailabilityInput`
 
 ## Must not appear
 

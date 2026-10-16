@@ -1,5 +1,5 @@
 import { convertToText } from "../sections/ReturnedValueText.mjs";
-import { formatAcrossApplications, formatDirectionOfTheFinding, COMBINED_LEADS_SEPARATOR, EXISTING_CODE, formatHead, IN_THE_CHANGE, formatQuotedDisplayName, PLACES_LEFT_UNOPENED, formatSentence, SUB_POINT_INDENT } from "../sections/ItemText.mjs";
+import { formatAcrossApplications, formatDeclaredBySchema, formatDirectionOfTheFinding, COMBINED_LEADS_SEPARATOR, EXISTING_CODE, formatHead, IN_THE_CHANGE, formatQuotedDisplayName, PLACES_LEFT_UNOPENED, formatSentence, SUB_POINT_INDENT } from "../sections/ItemText.mjs";
 import { readCheckName, readLead, TRACK_WORDS } from "../../../checks/CheckWords.mjs";
 import { formatSweepWords } from "../../merge/draft/Sweep.mjs";
 import { buildIoEndsSection } from "../sections/IoEndsSection.mjs";
@@ -118,6 +118,7 @@ const formatSingleFinding = finding => {
   if (finding.evidence) lines.push(quoteText(finding.evidence));
   if (finding.failureScenario) lines.push(`Cost: ${convertToText(finding.failureScenario)}`);
   for (const place of finding.alsoAt || []) lines.push(`Also at: \`${place.file}:${place.line}\`, \`${place.displayName}\`${place.quote ? `\n${quoteText(place.quote)}` : ""}`);
+  if (formatDeclaredBySchema(finding)) lines.push(`Declared by the schema: ${formatDeclaredBySchema(finding)}`);
   if ((finding.places || []).length) lines.push(["Places:", ...finding.places.map(formatPlaceAnswer)].join("\n"));
   lines.push(...formatAcrossApplicationsLines(finding));
   if (finding.placesLeftUnopened === true) lines.push(PLACES_LEFT_UNOPENED);

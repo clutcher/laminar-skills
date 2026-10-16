@@ -55,9 +55,9 @@ const FIELD_ARGUMENTS_PATTERN = /\([^)]*\)/g;
 
 const FIELD_TYPE_PATTERN = /:\s*([^@#=]+)/;
 
-const readFieldTypeText = fieldText => ((FIELD_TYPE_PATTERN.exec(String(fieldText).replace(FIELD_ARGUMENTS_PATTERN, "")) || [])[1] || "").trim();
+export const readFieldTypeText = fieldText => ((FIELD_TYPE_PATTERN.exec(String(fieldText).replace(FIELD_ARGUMENTS_PATTERN, "")) || [])[1] || "").trim();
 
-const readNamedTypeOf = typeText => typeText.replace(/[[\]!\s]/g, "");
+export const readNamedTypeOf = typeText => typeText.replace(/[[\]!\s]/g, "");
 
 export class EntryBoundariesWalk {
   constructor(repositoryText, testCode, change, roots, callGraphOf, references, codeGraph) {

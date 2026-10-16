@@ -28,6 +28,7 @@ const A_SECTION_HEAD = /^##\s+(.+?)\s*$/;
 const A_LEAD_WORD_SEPARATOR = /,\s*|\s+and\s+/;
 const A_LEVEL_POINT = /^(?:Confidence:\s*(High|Moderate|Low)\b|(High|Moderate|Low) confidence)/i;
 const AN_ALSO_POINT = /^Also in\s+(.+)$/;
+const A_DECLARED_BY_THE_SCHEMA_POINT = /^Declared by the schema:\s+(.+)$/;
 const A_CONFIDENCE_BLOCK = "Confidence:";
 const AN_ALSO_BLOCK = "Also in:";
 const A_LEVEL_WORD = /^(High|Moderate|Low)\b/i;
@@ -127,6 +128,11 @@ const alsoOf = item => [
   ...item.points.filter(point => AN_ALSO_POINT.test(point)).flatMap(point => backtickedNamesIn(AN_ALSO_POINT.exec(point)[1])),
   ...(item.nested[AN_ALSO_BLOCK] || []).flatMap(backtickedNamesIn),
 ];
+
+const declaredByTheSchemaOf = item => item.points.filter(point => A_DECLARED_BY_THE_SCHEMA_POINT.test(point))
+  .flatMap(point => backtickedNamesIn(A_DECLARED_BY_THE_SCHEMA_POINT.exec(point)[1]));
+
+const findMissingSchemaTypes = (expected, raised) => declaredByTheSchemaOf(expected).filter(name => !declaredByTheSchemaOf(raised).includes(name));
 
 const addPoint = (held, indent, text) => {
   if (held.pointIndent < 0) held.pointIndent = indent;
@@ -321,8 +327,14 @@ function gradeExpected(expected, raisedItems) {
     console.log(`FAIL  ${head} — raised, but it names no second place ${missingPlaces.join(", ")}`);
     return 1;
   }
+  const missingSchemaTypes = findMissingSchemaTypes(expected, raised);
+  if (missingSchemaTypes.length) {
+    console.log(`FAIL  ${head} — raised, but it names no schema type ${missingSchemaTypes.join(", ")} as the one that declares it`);
+    return 1;
+  }
   const places = alsoOf(expected).length ? `, also in ${alsoOf(expected).join(", ")}` : "";
-  console.log(`PASS  ${head} — raised at confidence ${levelOf(raised, lead)}${places}`);
+  const schemaTypes = declaredByTheSchemaOf(expected).length ? `, declared by the schema ${declaredByTheSchemaOf(expected).join(", ")}` : "";
+  console.log(`PASS  ${head} — raised at confidence ${levelOf(raised, lead)}${places}${schemaTypes}`);
   return 0;
 }
 
@@ -330,6 +342,11 @@ function gradeExpectedConsideration(expected, raised, head) {
   const missingPlaces = alsoOf(expected).filter(reference => !alsoOf(raised).includes(reference));
   if (missingPlaces.length) {
     console.log(`FAIL  ${head} — raised under ${TO_CONSIDER}, but it names no second place ${missingPlaces.join(", ")}`);
+    return 1;
+  }
+  const missingSchemaTypes = findMissingSchemaTypes(expected, raised);
+  if (missingSchemaTypes.length) {
+    console.log(`FAIL  ${head} — raised under ${TO_CONSIDER}, but it names no schema type ${missingSchemaTypes.join(", ")} as the one that declares it`);
     return 1;
   }
   console.log(`PASS  ${head} — raised under ${TO_CONSIDER}`);

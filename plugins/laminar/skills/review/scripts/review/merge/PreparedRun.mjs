@@ -23,6 +23,7 @@ export class PreparedRun {
     const reviewed = readJsonFile(path.join(runFolder, REVIEW_ABSTRACTIONS_FILE));
     this.changedLines = new ChangedLinesText(reviewed.changedLines);
     this.entryBoundaries = reviewed.entryBoundaries || [];
+    this.codeForms = reviewed.codeForms || [];
     this.abstractionsOfTheChange = reviewed.abstractionsOfTheChange || [];
   }
 

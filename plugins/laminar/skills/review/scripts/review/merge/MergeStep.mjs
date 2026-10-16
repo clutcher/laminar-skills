@@ -8,6 +8,7 @@ import { splitFindingsByFiledCheck } from "./filing/FiledCheck.mjs";
 import { CodeUnderReviewPlaces } from "./abstractions/CodeUnderReviewPlaces.mjs";
 import { buildFixGroups } from "./draft/FixGroup.mjs";
 import { EntryBoundaryMarker } from "./draft/EntryBoundaryMarker.mjs";
+import { CodeFormMarker } from "./draft/CodeFormMarker.mjs";
 import { buildDraftItems } from "./draft/DraftItem.mjs";
 import { readCheckRules } from "../../checks/CheckText.mjs";
 import { buildSweep } from "./draft/Sweep.mjs";
@@ -95,7 +96,8 @@ export class MergeStep {
     this.dropped = [...checked.dropped, ...covered.dropped];
     this.repaired = [...checked.repaired, ...covered.repaired];
     const grouped = buildFixGroups(this.possibleFindings, { applicationOf: this.createApplicationLookup() });
-    this.groups = numberThePossibleFindingsOfTheDraft(applyTheScriptVerdict(new EntryBoundaryMarker(this.preparedRun.entryBoundaries).markGroups(addTheApplicationsOfTheirPlaces(grouped, this.listApplicationRoots()))));
+    const marked = new CodeFormMarker(this.preparedRun.codeForms).markGroups(new EntryBoundaryMarker(this.preparedRun.entryBoundaries).markGroups(addTheApplicationsOfTheirPlaces(grouped, this.listApplicationRoots())));
+    this.groups = numberThePossibleFindingsOfTheDraft(applyTheScriptVerdict(marked));
     this.coveredPaths = numberCoveredPathsAfter(findTheLastPossibleFindingNumber(this.groups), covered.kept.map(possibleFinding => this.repairTheAbstractionPlace(possibleFinding)));
     this.items = buildDraftItems(this.findGroupsToVerify(), this.sliceLines, this.preparedRun.changedLines);
     this.verifyHandOff = new VerifyHandOff(this.runFolder, { groups: this.groups, items: this.items, coveredPaths: this.coveredPaths, everyCodeUnderReview: codeUnderReview });

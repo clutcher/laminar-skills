@@ -14,6 +14,7 @@ export class JvmSpringMethodRoleFinder extends GenericMethodRoleFinder {
   outboundIo = new OutboundIo({ exitModules: ["org.springframework.data", "org.springframework.jdbc", "org.springframework.orm", "org.springframework.transaction", "org.springframework.web.client", "org.springframework.web.reactive.function.client", "org.springframework.kafka", "org.springframework.amqp", "org.springframework.jms", "org.springframework.cloud.openfeign"] });
   testCodeMarks = new TestCodeMarks({ privateMethodsReached: [/\bReflectionTestUtils\.invokeMethod\b/] });
   schemaMapping = /^\s*@\w*Mapping\b/;
+  schemaArgument = /@Argument\b(?:\s*\(\s*(?:(?:name|value)\s*=\s*)?"([^"]*)")?/;
 
   readVerb(text) {
     const word = (SPRING_MAPPING_PATTERN.exec(text) || [])[1] || "";
