@@ -27,6 +27,8 @@ A range with 2 ends, such as `origin/main...HEAD`, reads only commits, so change
 
 For a pull request or a branch, fetch its head first and pass the head as a ref where one exists, such as `--range origin/main...origin/<branch>`, and not as a bare commit id, because a later review of the same branch then uses the same worktree again. The script reads a range with 2 ends in a worktree of its own, never in the user's checkout.
 
+Where the user names a pull request by its number, read it with git alone. Fetch its merge ref with `git fetch origin refs/pull/<number>/merge`, which hosts such as GitHub and Azure DevOps publish, read its 2 parents at once with `git rev-parse FETCH_HEAD^1 FETCH_HEAD^2`, and pass `--range <first>...<second>`: the first parent is the target branch of the pull request and the second its head. Where the host publishes no merge ref, as for a pull request with conflicts, fetch `refs/pull/<number>/head`, pass `--range origin/<default>...<its commit>`, and say in your first line that the base is the default branch. Where neither ref exists, ask the user for the name of the branch.
+
 The base is the default branch as the remote holds it, `main` or the branch that `git symbolic-ref --short refs/remotes/origin/HEAD` names. Run `git fetch origin <default>` before step 1, which moves no local branch and not the checkout, and use `origin/<default>` as the base, because a local default branch can be weeks old and then brings changes that are already merged into the review. Where the repository has no `origin` or the fetch fails, use the local default branch, and say in your first line that the base is local and can be old.
 
 ## Step 1, Prepare
