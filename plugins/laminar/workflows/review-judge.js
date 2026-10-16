@@ -341,7 +341,6 @@ const THE_FIELDS_EVERY_JUDGE_WRITES = {
   summary: A_TEXT,
   confidence: { type: 'string', enum: ['high', 'moderate', 'low'] },
   whatWouldConfirm: A_TEXT,
-  consider: A_TEXT,
   inChange: { type: 'boolean' },
 }
 
@@ -354,6 +353,8 @@ const findingOf = (own, mustFill) => ({
 })
 
 const THE_PREDICTION = { prediction: A_TEXT, found: A_TEXT }
+
+const THE_QUESTION_TO_THE_AUTHOR = { consider: A_TEXT }
 
 const THE_BELONGING_ANSWERS = { belongingAnswers: STRINGS }
 
@@ -391,7 +392,7 @@ const TEST_PLAN_SCHEMA = {
 
 const SCHEMA_OF_ANY_CHECK_BY_JUDGE_TYPE = {
   'judge-simplicity-variable': judgeSchemaOf(findingOf({ ...THE_PREDICTION, established: A_TEXT, field: A_TEXT }, ['prediction', 'found'])),
-  'judge-simplicity-method': judgeSchemaOf(findingOf({ ...THE_PREDICTION, ...THE_BELONGING_ANSWERS, established: A_TEXT })),
+  'judge-simplicity-method': judgeSchemaOf(findingOf({ ...THE_PREDICTION, ...THE_BELONGING_ANSWERS, ...THE_QUESTION_TO_THE_AUTHOR, established: A_TEXT })),
   'judge-simplicity-class': judgeSchemaOf(findingOf({ ...THE_PREDICTION, ...THE_BELONGING_ANSWERS, established: A_TEXT })),
   'judge-simplicity-module': judgeSchemaOf({
     type: 'object',
@@ -409,7 +410,7 @@ const SCHEMA_OF_ANY_CHECK_BY_JUDGE_TYPE = {
   'judge-design-over-extraction': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE } })),
   'judge-design-scoped-parameters': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE } })),
   'judge-design-leaked-details': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE } })),
-  'judge-design-entry-boundary': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE } })),
+  'judge-design-entry-boundary': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE }, ...THE_QUESTION_TO_THE_AUTHOR })),
   'judge-design-missing-boundary': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE }, ...THE_BELONGING_ANSWERS })),
   'judge-correctness-prevention': judgeSchemaOf(findingOf({ decision: A_TEXT, established: A_TEXT, alsoAt: { type: 'array', items: A_SECOND_PLACE } }, ['decision'])),
   'judge-correctness-validate-at-the-boundary': judgeSchemaOf(findingOf({ alsoAt: { type: 'array', items: A_SECOND_PLACE } }, ['alsoAt'])),
@@ -422,6 +423,7 @@ const SCHEMA_OF_ANY_CHECK_BY_JUDGE_TYPE = {
     placesLeftUnopened: { type: 'boolean' },
     fact: A_TEXT,
     mechanism: A_TEXT,
+    ...THE_QUESTION_TO_THE_AUTHOR,
   }, ['places', 'fact'])),
   'judge-simplicity-comment': judgeSchemaOf(findingOf({ ...THE_PREDICTION })),
 }
