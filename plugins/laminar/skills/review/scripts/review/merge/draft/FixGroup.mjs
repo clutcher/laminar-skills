@@ -5,6 +5,7 @@ import { opensAnAnnotation } from "../../../code/index.mjs";
 import { collectQuotedPlaceKeys, stripLeadingDotSlash } from "../abstractions/AbstractionsAtPlaces.mjs";
 import { holdsAnEnclosingMark, findIndexOfTheEnclosingMark } from "../../render/sections/ItemText.mjs";
 import { holdsCopiesOfOnePattern, repeatTheSamePattern } from "./SamePattern.mjs";
+import { KEY_ROLES } from "../../prepare/abstractions/walks/decisions/MatchingKeyWalk.mjs";
 
 const TRACKS_JUDGED_ON_LINES = new Set(["PREVENTION", "BOUNDARY", "PERFORMANCE"]);
 
@@ -19,6 +20,10 @@ const VALIDATE_AT_THE_BOUNDARY = CHECKS_BY_ID_MAP.CP6.id;
 const THE_COMMENT_JUDGE = "judge-simplicity-comment";
 
 const NO_APPLICATION = () => "";
+
+const NO_MATCHING_KEY_PLACES = () => [];
+
+const KEY_ROLES_OF_THE_CALLER = new Set([KEY_ROLES.MADE, KEY_ROLES.MATCHED]);
 
 const ENCLOSING_MARK = " in ";
 
@@ -177,7 +182,22 @@ const areTheSameResult = (one, other, applicationOf) => one !== other && one[0].
   && (holdsTheSameFinding(one, other) || holdsTheSameFinding(other, one) || holdTheSameDefect(one, other)
     || quoteTheSameCommentOfOneAbstraction(one, other) || areCopiesOfOneFinding(one, other, applicationOf));
 
-const compareKeepingOrder = (one, other, applicationOf) => Number(isOneCommentResult(one)) - Number(isOneCommentResult(other))
+const readOwnSpan = finding => finding.ownLines || { from: finding.line, to: finding.line };
+
+const liesInTheOwnLinesOf = (keyPlace, finding) => stripLeadingDotSlash(keyPlace.path || "") === stripLeadingDotSlash(finding.file || "")
+  && Number(keyPlace.line) >= Number(readOwnSpan(finding).from) && Number(keyPlace.line) <= Number(readOwnSpan(finding).to);
+
+const makesOrMatchesTheKeyIn = (keyPlaces, callers) => keyPlaces.some(keyPlace => KEY_ROLES_OF_THE_CALLER.has(keyPlace.role)
+  && callers.some(caller => liesInTheOwnLinesOf(keyPlace, caller)));
+
+const takesTheRequestOfACallerIn = (result, other, matchingKeyPlacesOf) => result.some(possibleFinding => possibleFinding.check === THE_REPEATED_DECISION
+  && makesOrMatchesTheKeyIn(matchingKeyPlacesOf(possibleFinding.codeUnderReviewId), other.filter(caller => caller.codeUnderReviewId !== possibleFinding.codeUnderReviewId)));
+
+const compareByTheOperationThatTakesTheRequest = (one, other, matchingKeyPlacesOf) => Number(takesTheRequestOfACallerIn(other, one, matchingKeyPlacesOf))
+  - Number(takesTheRequestOfACallerIn(one, other, matchingKeyPlacesOf));
+
+const compareKeepingOrder = (one, other, applicationOf, matchingKeyPlacesOf) => Number(isOneCommentResult(one)) - Number(isOneCommentResult(other))
+  || compareByTheOperationThatTakesTheRequest(one, other, matchingKeyPlacesOf)
   || compareByWhereTheDefectSits(one[0], other[0])
   || (areCopiesOfOneFinding(one, other, applicationOf) ? compareByPlace(one[0], other[0]) : 0);
 
@@ -207,12 +227,12 @@ const findCalleeFold = items => {
   return null;
 };
 
-const findJoinablePair = (items, applicationOf) => {
+const findJoinablePair = (items, applicationOf, matchingKeyPlacesOf) => {
   for (const item of items) {
     for (const result of item.results) {
       for (const otherItem of items.filter(other => other !== item)) {
         const other = otherItem.results.find(otherResult => areTheSameResult(result, otherResult, applicationOf));
-        if (other) return compareKeepingOrder(result, other, applicationOf) <= 0
+        if (other) return compareKeepingOrder(result, other, applicationOf, matchingKeyPlacesOf) <= 0
           ? { kept: { item, result }, named: { item: otherItem, result: other } }
           : { kept: { item: otherItem, result: other }, named: { item, result } };
       }
@@ -267,11 +287,11 @@ const applyTheLowestConfidenceAcrossApplications = (result, applicationOf) => {
   return settled === lead ? result : [settled, ...others];
 };
 
-const findPairToJoin = (items, applicationOf) => findCalleeFold(items) || findJoinablePair(items, applicationOf);
+const findPairToJoin = (items, applicationOf, matchingKeyPlacesOf) => findCalleeFold(items) || findJoinablePair(items, applicationOf, matchingKeyPlacesOf);
 
-const joinResults = (items, applicationOf, foldedCallees) => {
+const joinResults = (items, applicationOf, matchingKeyPlacesOf, foldedCallees) => {
   const joined = items.map(item => ({ results: [...item.results] }));
-  for (let pair = findPairToJoin(joined, applicationOf); pair; pair = findPairToJoin(joined, applicationOf)) {
+  for (let pair = findPairToJoin(joined, applicationOf, matchingKeyPlacesOf); pair; pair = findPairToJoin(joined, applicationOf, matchingKeyPlacesOf)) {
     const { kept, named } = pair;
     if (pair.foldedAsACallee) named.result.forEach(possibleFinding => foldedCallees.add(possibleFinding));
     named.item.results.splice(named.item.results.indexOf(named.result), 1);
@@ -287,11 +307,11 @@ const collectPossibleFindingsOfTheItem = (item, applicationOf, foldedCallees) =>
   .sort((left, right) => compareByCheck(left[0], right[0]))
   .flat();
 
-export function buildFixGroups(possibleFindings, { applicationOf = NO_APPLICATION } = {}) {
+export function buildFixGroups(possibleFindings, { applicationOf = NO_APPLICATION, matchingKeyPlacesOf = NO_MATCHING_KEY_PLACES } = {}) {
   const groups = [];
   const foldedCallees = new Set();
   const items = groupPossibleFindingsByAbstraction(possibleFindings).map(possibleFindingsOfTheItem => ({ results: groupIntoResults(possibleFindingsOfTheItem) }));
-  for (const item of joinResults(items, applicationOf, foldedCallees)) {
+  for (const item of joinResults(items, applicationOf, matchingKeyPlacesOf, foldedCallees)) {
     const possibleFindingsOfTheItem = collectPossibleFindingsOfTheItem(item, applicationOf, foldedCallees);
     const lead = possibleFindingsOfTheItem[0];
     groups.push({

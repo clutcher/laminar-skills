@@ -18,7 +18,7 @@ import { resolveAbsolutePath } from "../../files/paths.mjs";
 import { readApplicationName, findDeployableFolder, findDeployableRoots } from "../../code/index.mjs";
 import { writeJsonFile } from "../../files/jsonFile.mjs";
 import { buildDraftLinesText } from "./draft/DraftLinesText.mjs";
-import { applyTheConfidenceCeilings } from "./filing/ConfidenceCeilings.mjs";
+import { applyTheConfidenceCeilings, listMatchingKeyPlaces } from "./filing/ConfidenceCeilings.mjs";
 import { markTheConsiderations } from "./filing/Considerations.mjs";
 import { placeTheFindingsByTheirCodeUnderReview } from "./abstractions/AbstractionOfTheCodeUnderReview.mjs";
 import { isSettledByTheScript, splitJudgeFindingsTheScriptSettled, applyTheScriptVerdict } from "./filing/ScriptSettled.mjs";
@@ -95,7 +95,7 @@ export class MergeStep {
     this.possibleFindings = checked.kept.map(possibleFinding => this.repairTheAbstractionPlace(possibleFinding));
     this.dropped = [...checked.dropped, ...covered.dropped];
     this.repaired = [...checked.repaired, ...covered.repaired];
-    const grouped = buildFixGroups(this.possibleFindings, { applicationOf: this.createApplicationLookup() });
+    const grouped = buildFixGroups(this.possibleFindings, { applicationOf: this.createApplicationLookup(), matchingKeyPlacesOf: this.createMatchingKeyPlacesLookup(codeUnderReview) });
     const marked = new CodeFormMarker(this.preparedRun.codeForms).markGroups(new EntryBoundaryMarker(this.preparedRun.entryBoundaries).markGroups(addTheApplicationsOfTheirPlaces(grouped, this.listApplicationRoots())));
     this.groups = numberThePossibleFindingsOfTheDraft(applyTheScriptVerdict(marked));
     this.coveredPaths = numberCoveredPathsAfter(findTheLastPossibleFindingNumber(this.groups), covered.kept.map(possibleFinding => this.repairTheAbstractionPlace(possibleFinding)));
@@ -109,6 +109,11 @@ export class MergeStep {
 
   findGroupsToVerify() {
     return this.groups.filter(group => !isSettledByTheScript(group));
+  }
+
+  createMatchingKeyPlacesLookup(codeUnderReview) {
+    const matchingKeyPlacesByIdMap = new Map(codeUnderReview.map(each => [each.id, listMatchingKeyPlaces(each)]));
+    return codeUnderReviewId => matchingKeyPlacesByIdMap.get(codeUnderReviewId) || [];
   }
 
   listApplicationRoots() {
