@@ -33,10 +33,14 @@ const listSameDecisionPlacesOutsideItsOwnSpan = (finding, codeUnderReview) => li
 const collectSameDecisionPlaceKeysOutsideItsOwnSpan = (finding, codeUnderReview) => listSameDecisionPlacesOutsideItsOwnSpan(finding, codeUnderReview)
   .flatMap(place => listLinesOf(place).map(line => buildFileAndLineKey(place.file, line)));
 
+const listMappingPlaces = occurrence => ((occurrence.mapped || {}).mappings || []).flatMap(mapping => [mapping.head, mapping.built].filter(Boolean));
+
+const listTwinPlaces = occurrence => [...occurrence.places, ...listMappingPlaces(occurrence)];
+
 const restsOnNearTwinsAlone = (finding, codeUnderReview) => {
   const twinOccurrences = listTwinOccurrences(codeUnderReview);
   if (!twinOccurrences.length) return false;
-  const twinKeys = new Set(twinOccurrences.flatMap(occurrence => occurrence.places.map(place => buildFileAndLineKey(place.path, place.line))));
+  const twinKeys = new Set(twinOccurrences.flatMap(occurrence => listTwinPlaces(occurrence).map(place => buildFileAndLineKey(place.path, place.line))));
   const namedSameDecisionKeys = collectSameDecisionPlaceKeysOutsideItsOwnSpan(finding, codeUnderReview);
   return namedSameDecisionKeys.length ? namedSameDecisionKeys.every(key => twinKeys.has(key)) : (codeUnderReview.sameDecisionAt || []).every(occurrence => occurrence.kind === NEAR_TWIN);
 };
