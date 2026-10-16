@@ -243,7 +243,12 @@ export const formatDeclaredBySchema = finding => {
   return schemaType && schemaType.displayName ? `\`${schemaType.displayName}\` · ${stripLeadingDotSlash(schemaType.file)}:${schemaType.line}` : "";
 };
 
-const createDeclaredBySchemaPoint = finding => createLabeledPoint(LABELS.DECLARED_BY_THE_SCHEMA, formatDeclaredBySchema(finding));
+const formatTheSchemaTypeName = finding => {
+  const schemaType = finding.declaredBySchema;
+  return schemaType && schemaType.displayName ? `\`${schemaType.displayName}\`` : "";
+};
+
+const createDeclaredBySchemaPoint = finding => createLabeledPoint(LABELS.DECLARED_BY_THE_SCHEMA, formatTheSchemaTypeName(finding));
 
 const createAlsoInPoint = finding => {
   const alsoIn = formatAlsoIn(finding);
