@@ -37,9 +37,11 @@ const collapsed = given => String(given || "").replace(/\s+/g, " ").trim();
 
 const THE_EXISTING_CODE_MARK = /\s+·\s+existing code$/;
 
+const THE_SHARED_HEAD_LINE = /\s+·\s+line\s+\d+$/;
+
 const headOf = found => ({
   kind: found[2],
-  ...namesOf(collapsed(found[3]).replace(THE_EXISTING_CODE_MARK, "")),
+  ...namesOf(collapsed(found[3]).replace(THE_EXISTING_CODE_MARK, "").replace(THE_SHARED_HEAD_LINE, "")),
 });
 
 function namesOf(rest) {
