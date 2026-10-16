@@ -29,7 +29,7 @@ Load the rules in this order, and keep the file and the number of each rule, bec
 
 1. The project conventions: every `.md` file under `.claude/rules/conventions/` of the checked repository, also in subfolders, whose `paths:` match a changed file, and every file there with no `paths:`. `${CLAUDE_SKILL_DIR}/references/project-conventions.md` gives the form of these files. Where the folder does not exist, check only the rules of the skill, and say so in the report.
 2. The common pitfalls: section 7 of `${CLAUDE_SKILL_DIR}/../code-style/SKILL.md`, every bullet.
-3. Every rule marked narrower than the book in the files under `${CLAUDE_SKILL_DIR}/../code-style/references/`. Find them with `grep -n "narrower than the book"`, and read the whole section around each match, because the mark can close a paragraph that holds several rules.
+3. Every rule marked narrower than the book in the files under `${CLAUDE_SKILL_DIR}/../code-style/references/`. Find them with `grep -n "narrower than the book"`. The mark covers only the paragraph or the bullet it stands in, which can hold several rules; every other rule of the same section is a direction of the book.
 4. The conventions files under `${CLAUDE_SKILL_DIR}/../code-style/conventions/` for the change: `java.md`, `typescript.md` or `python.md` for each language of a changed file, `spring.md` only where the changed code or the build file already uses Spring, and `docs.md` where the change holds documentation or an instruction file for agents. Every rule of a conventions file counts, also a rule that stands in a `Limits` bullet of a section.
 
 ## 3. Which rule wins
@@ -42,6 +42,7 @@ Load the rules in this order, and keep the file and the number of each rule, bec
 
 - Check only the lines the change adds or changes, and what they create: a new name, a new file, a new folder, a new test or a new configuration key. A line the change does not touch has no finding, also where it breaks a rule.
 - Report a line only where you can name the rule it breaks. No rule named, no finding.
+- A section of a reference file under `code-style/references/` with no mark narrower than the book is a direction of the book. Never cite it for a finding, also where the change breaks it, because `laminar:review` judges it. Cite it only beside a project rule in a contradiction. A pointer to it inside a conventions file, such as `(methods, section 1)`, does not make it a rule to check.
 - Where the rule clearly applies, state the fix. Where the answer depends on an intent the code does not show, such as whether a value is a business rule, ask the author a question and state no fix.
 - Do not build, run or change the code.
 
