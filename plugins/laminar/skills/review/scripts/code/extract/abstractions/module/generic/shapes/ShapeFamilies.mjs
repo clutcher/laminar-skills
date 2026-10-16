@@ -1,12 +1,12 @@
 export const SHAPE_FAMILIES = Object.freeze([
   Object.freeze({
-    name: "ports api and spi, adapters in and out",
+    name: "api and spi, in and out",
     apiSpi: { api: ["api"], spi: ["spi"] },
     apiSpiBesideTheApp: true,
     inOut: { in: ["in"], out: ["out"] },
   }),
   Object.freeze({
-    name: "ports and adapters in and out",
+    name: "in and out as api and spi",
     apiSpi: { api: ["in", "inbound", "incoming"], spi: ["out", "outbound", "outgoing"] },
     inOut: { in: ["in", "inbound"], out: ["out", "outbound"] },
   }),
@@ -17,7 +17,7 @@ export const SHAPE_FAMILIES = Object.freeze([
     inOutWordsUnderTheParent: { in: ["primary"], out: ["secondary"] },
   }),
   Object.freeze({
-    name: "provided and required ports",
+    name: "provided and required",
     apiSpi: { api: ["provided"], spi: ["required"] },
     inOut: { in: [], out: [] },
   }),
