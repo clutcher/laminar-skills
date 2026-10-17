@@ -2,6 +2,7 @@ import { AbstractionTree, formatDisplayName, VISIBILITIES, readVisibilityOfDecla
 import { holdsMembersOfItsOwn } from "../inputs/source/declarations/SourceHeads.mjs";
 import { doesSpanHoldLine } from "../graph/abstractions/Place.mjs";
 import { Scale } from "../graph/abstractions/Scale.mjs";
+import { isADeclaredType } from "../graph/abstractions/Abstraction.mjs";
 import { findRepositoryToRead } from "../inputs/change/ChangeReader.mjs";
 import { FILE_STATUS } from "../inputs/change/Hunk.mjs";
 import { RepositoryText } from "../inputs/repository/RepositoryText.mjs";
@@ -43,6 +44,8 @@ import { TestRecognition } from "./tree/TestRecognition.mjs";
 import { TestLayout } from "./tree/TestLayout.mjs";
 import { TestPlacements } from "../inputs/source/TestPlacement.mjs";
 import { AbstractionFacts, INTERACTION_LINES } from "./tree/AbstractionFacts.mjs";
+
+const isATopLevelType = type => isADeclaredType(type) && Boolean(type.place) && !(type.parent && isADeclaredType(type.parent));
 
 const BOUNDARY_MOVING_FILE_STATUS = new Set([FILE_STATUS.CREATED, FILE_STATUS.REMOVED, FILE_STATUS.RENAMED]);
 
@@ -233,10 +236,20 @@ export class ExtractStep {
     }, this.shapes);
   }
 
+  readTheTypeNamesByPath() {
+    const typeNamesByPathMap = new Map();
+    for (const type of this.walker.graph.listAbstractionsAt(Scale.CLASS).filter(isATopLevelType)) {
+      if (!typeNamesByPathMap.has(type.place.file)) typeNamesByPathMap.set(type.place.file, []);
+      typeNamesByPathMap.get(type.place.file).push(type.name);
+    }
+    return typeNamesByPathMap;
+  }
+
   readTheTestLayout() {
     return new TestLayout({
-      testPlacements: new TestPlacements(this.listWalkedPaths()),
+      testPlacements: new TestPlacements(this.listWalkedPaths(), this.readTheTypeNamesByPath()),
       listFilePathsIn: folder => this.moduleReading.folderFiles.listFiles(folder).map(file => file.path),
+      readFileLines: filePath => this.repositoryText.readFileLines(filePath),
     });
   }
 
@@ -366,7 +379,7 @@ export class ExtractStep {
     const onlyCreatedSubfoldersFact = holdsOnlyCreatedSubfolders(module, createdSubfolders) ? { holdsOnlyCreatedSubfolders: true } : {};
     const onlyAnOpeningFact = holdsOnlyAnOpening(module, createdSubfolders, this.openedByTheChange) ? { holdsOnlyAnOpening: true } : {};
     const moduleShapeFacts = this.shapeFacts.readTheFactsOfTheFolder(module.folder, folder => this.moduleFolders.has(folder));
-    const testLayoutFacts = this.testLayout.readTheFacts(module.folder, module.readings.map(changedFileReading => changedFileReading.file.path));
+    const testLayoutFacts = this.testLayout.readTheFacts(module.folder, module.readings.map(changedFileReading => changedFileReading.file));
     return { ...read, references, joinsAFolder: this.createdFolders.joinsAFolder(module.folder), createdSubfolders, ...onlyCreatedSubfoldersFact, ...onlyAnOpeningFact, ...moduleShapeFacts, ...testLayoutFacts };
   }
 

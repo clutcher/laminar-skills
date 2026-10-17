@@ -34,6 +34,7 @@ export { ABSTRACTION_KINDS, isADeclaredType, isAFileNamedByTheLanguage, isPlaced
 export { CHANGE_KINDS, changesTheBoundary, changesTheCode, readDeclaredMemberChangeKind } from "./inputs/change/AbstractionChange.mjs";
 export { readDescribedFields, readFoundFields, isOwnCodeAt, readOwnSpans, readVisibilityOfDeclaration, VISIBILITIES } from "./extract/tree/AbstractionTree.mjs";
 export { isTestPath, countPhaseMarks, TestCode } from "./inputs/source/TestCode.mjs";
+export { TEST_PLACEMENTS } from "./inputs/source/TestPlacement.mjs";
 export { TEST_KINDS, readTestKindAtTheHead, readTestHeadFactsOfTheFile, readTestKindWhere } from "./extract/abstractions/method/generic/testing/TestKinds.mjs";
 export { findClosingParenthesisAcrossLines, findParameterListAfterTheName } from "./extract/calls/scope/ParameterListText.mjs";
 export { findTheTypeDeclarationsInScope } from "./extract/calls/resolution/DeclarationLookups.mjs";

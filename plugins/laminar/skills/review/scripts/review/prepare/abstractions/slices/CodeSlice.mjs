@@ -1,4 +1,4 @@
-import { CHANGE_KINDS, liesInAnotherApplication, findDriver, FILE_STATUS, holdsANonBlankLine, holdsKeyTreesAt, findInnermostHolding, isATypesOnlyFile, liesInTheTypeOutsideItsMethods, Scale, doesSpanHoldLine, VISIBILITIES } from "../../../../code/index.mjs";
+import { CHANGE_KINDS, liesInAnotherApplication, findDriver, FILE_STATUS, holdsANonBlankLine, holdsKeyTreesAt, findInnermostHolding, isATypesOnlyFile, liesInTheTypeOutsideItsMethods, Scale, doesSpanHoldLine, TEST_PLACEMENTS, VISIBILITIES } from "../../../../code/index.mjs";
 import { isAReadIdentifierOccurrence } from "../walks/decisions/SameDecisionWalk.mjs";
 import { MAX_CONTEXT_LINES, ReferenceContext } from "../references/ReferenceContext.mjs";
 import { ReferenceOrder } from "../references/ReferenceOrder.mjs";
@@ -6,7 +6,7 @@ import { SourceRoots } from "./SourceRoots.mjs";
 import { FolderChildren } from "./FolderChildren.mjs";
 import { FieldTypeHeads } from "./FieldTypeHeads.mjs";
 import { readKeyTreeSections } from "./KeyTreeSlice.mjs";
-import { FIELD_READING_SECTIONS, FILE_LIST_SECTIONS, formatStoppedLine, isAStoppedLine, findLineNumber, numberLines, formatPlacedSliceLine, findPlaceOfSliceLine } from "../../formats/SliceFormat.mjs";
+import { FIELD_READING_SECTIONS, FILE_LIST_SECTIONS, formatStoppedLine, isAStoppedLine, findLineNumber, numberLines, formatPlacedSliceLine, findPlaceOfSliceLine, readListedPath } from "../../formats/SliceFormat.mjs";
 
 
 const buildCallerWindowLines = (abstraction, caller, lines) => [
@@ -176,7 +176,13 @@ const listCreatedSubfolderLines = abstraction => ((abstraction.module || {}).cre
 
 const listTreeLines = module => [...(module.tree || []), ...(module.treeStopped ? [formatStoppedLine((module.tree || []).length)] : [])];
 
-const formatChildCountLine = ({ children: childCount, files }) => `children: ${childCount} · files: ${files} · folders: ${childCount - files}`;
+const listTheTestsBesideTheirFiles = abstraction => new Set(((abstraction.module || {}).testPlacements || [])
+  .filter(testPlacement => testPlacement.placement === TEST_PLACEMENTS.BESIDE)
+  .map(testPlacement => testPlacement.path));
+
+const leaveOutTheListedPaths = (lines, leftOutPaths) => lines.filter(line => !leftOutPaths.has(readListedPath(line)));
+
+const formatChildCountLine =({ children: childCount, files }) => `children: ${childCount} · files: ${files} · folders: ${childCount - files}`;
 
 const removeOwnLines = (heads, ownLines) => {
   const own = new Set(ownLines.map(findLineNumber).filter(Boolean));
@@ -315,8 +321,8 @@ export class SliceBuilder {
         moduleRoot: buildModuleRootLines(abstraction),
         createdSubfolders: listCreatedSubfolderLines(abstraction),
         ...buildModuleBoundaryFactSections(abstraction.module || {}),
-        [CHILD_COUNT]: this.listChildCount(abstraction),
-        fileList: this.folderChildren.readFileListOneLevelDeeper(abstraction.path),
+        [CHILD_COUNT]: this.listChildCountWithoutTheTestsBeside(abstraction),
+        fileList: leaveOutTheListedPaths(this.folderChildren.readFileListOneLevelDeeper(abstraction.path), listTheTestsBesideTheirFiles(abstraction)),
         siblings: this.folderChildren.listSiblingsShown(abstraction),
       });
     }
@@ -624,5 +630,12 @@ export class SliceBuilder {
 
   listChildCount(abstraction) {
     return this.folderChildren.isReadForItsParts(abstraction) ? [formatChildCountLine(this.folderChildren.countDirectChildren(abstraction.path))] : [];
+  }
+
+  listChildCountWithoutTheTestsBeside(abstraction) {
+    if (!this.folderChildren.isReadForItsParts(abstraction)) return [];
+    const testsBeside = listTheTestsBesideTheirFiles(abstraction).size;
+    const { children, files } = this.folderChildren.countDirectChildren(abstraction.path);
+    return [formatChildCountLine({ children: children - testsBeside, files: files - testsBeside })];
   }
 }

@@ -2,6 +2,7 @@ import { Scale } from "../../../code/index.mjs";
 import { SCRIPT_JUDGE_TYPE } from "../../prepare/settled/ScriptFindings.mjs";
 import { listPlacesShownInSections, readSliceSections } from "../../prepare/formats/SliceFormat.mjs";
 import { stripLeadingDotSlash } from "../abstractions/AbstractionsAtPlaces.mjs";
+import { JUDGE_TYPE_BY_SCALE_MAP } from "../../../checks/JudgeType.mjs";
 
 const THE_SCRIPT_VERDICT = Object.freeze({ decision: "keep", confidence: "high", settledBy: "script" });
 
@@ -22,7 +23,9 @@ const buildPlaceKey = (abstractionId, judgeType, check, file, line) => `${abstra
 const listPlaceKeysTheScriptSettled = codeUnderReview => listPlacesShownInSections(codeUnderReview.path, readSliceSections(codeUnderReview))
   .flatMap(place => codeUnderReview.checks.map(check => buildPlaceKey(codeUnderReview.abstractionId, codeUnderReview.standsInFor, check.id, place.file, place.line)));
 
-const listEvidencePlaces = finding => (finding.evidence || []).flatMap(named => (named.lines || []).map(line => ({ file: named.file, line })));
+const settlesFilesOfAModule = codeUnderReview => codeUnderReview.scale === Scale.MODULE.name || codeUnderReview.standsInFor === JUDGE_TYPE_BY_SCALE_MAP[Scale.MODULE.name];
+
+const listEvidencePlaces =finding => (finding.evidence || []).flatMap(named => (named.lines || []).map(line => ({ file: named.file, line })));
 
 const isOnAModuleTheScriptSettled = (finding, judged, settledFiles) => {
   if (judged.scale !== Scale.MODULE.name) return false;
@@ -35,8 +38,8 @@ const namesAPlaceTheScriptSettled = (finding, judged, settledPlaceKeys) => listE
 
 export function splitJudgeFindingsTheScriptSettled(findings, everyCodeUnderReview = []) {
   const settledByTheScript = everyCodeUnderReview.filter(codeUnderReview => codeUnderReview.judgeType === SCRIPT_JUDGE_TYPE);
-  const settledFiles = new Set(settledByTheScript.filter(codeUnderReview => codeUnderReview.scale === Scale.MODULE.name).flatMap(listFilesShownInTheSlice));
-  const settledPlaceKeys = new Set(settledByTheScript.filter(codeUnderReview => codeUnderReview.scale !== Scale.MODULE.name).flatMap(listPlaceKeysTheScriptSettled));
+  const settledFiles = new Set(settledByTheScript.filter(settlesFilesOfAModule).flatMap(listFilesShownInTheSlice));
+  const settledPlaceKeys = new Set(settledByTheScript.filter(codeUnderReview => !settlesFilesOfAModule(codeUnderReview)).flatMap(listPlaceKeysTheScriptSettled));
   const codeUnderReviewByIdMap = new Map(everyCodeUnderReview.map(codeUnderReview => [codeUnderReview.id, codeUnderReview]));
   const isSettled = finding => {
     const judged = codeUnderReviewByIdMap.get(finding.codeUnderReviewId);

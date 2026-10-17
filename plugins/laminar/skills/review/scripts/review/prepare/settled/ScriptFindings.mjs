@@ -1,4 +1,4 @@
-import { Scale } from "../../../code/index.mjs";
+import { ABSTRACTION_KINDS as KINDS_OF_AN_ABSTRACTION, Scale } from "../../../code/index.mjs";
 import { CHECKS_BY_ID_MAP, TRACKS } from "../../../checks/CheckCatalog.mjs";
 import { readFileName } from "../../../files/paths.mjs";
 import { formatPlacedSliceLine } from "../formats/SliceFormat.mjs";
@@ -47,6 +47,33 @@ const buildSpiInsideTheAppFindingTexts = ({ apiSpiTypeName: spiName, implementat
   };
 };
 
+const THE_PREDICTION_OF_A_TEST_FILE_NAME = "A test file name starts with the name of the file it tests, and the behavior it verifies follows that name.";
+
+const buildTestFileNamingAFileFindingTexts = ({ test, named }) => {
+  const testName = formatInlineCode(readFileName(test.path));
+  const nameInTheTest = formatInlineCode(named.name);
+  return {
+    summary: `${testName} names ${nameInTheTest} after its start: put ${nameInTheTest} first and the behavior after it, so its tests stand together with the other tests of ${formatInlineCode(readFileName(named.path))}`,
+    prediction: THE_PREDICTION_OF_A_TEST_FILE_NAME,
+    found: `The name of ${testName} opens with other words, and ${nameInTheTest} follows them.`,
+  };
+};
+
+const buildTestFileNamingNoFileFindingTexts = ({ test }) => {
+  const testName = formatInlineCode(readFileName(test.path));
+  return {
+    summary: `${testName} names no file of its folder or of the folder it mirrors: start the test name with the name of the file it tests, so the reader can tell which file its tests verify`,
+    prediction: THE_PREDICTION_OF_A_TEST_FILE_NAME,
+    found: `The name of ${testName} opens with the name of no file of its folder or of the folder it mirrors, and holds none after its start.`,
+  };
+};
+
+const buildTestFileNameFindingTexts = settledTestFileName => (settledTestFileName.named
+  ? buildTestFileNamingAFileFindingTexts(settledTestFileName)
+  : buildTestFileNamingNoFileFindingTexts(settledTestFileName));
+
+const TEST_FILE_NAME_SECTION = "testFileName";
+
 const readPlacedSliceLineOfAPlace = place => formatPlacedSliceLine(place.path, place.line, place.text);
 
 const buildEvidenceOfPlaces = places => places.map(place => ({ file: place.path, lines: [place.line] }));
@@ -72,6 +99,15 @@ const SETTLED_KINDS = Object.freeze([
     listPlaces: settledSpi => [settledSpi.apiSpiType, ...settledSpi.implementations],
     listFiles: settledSpi => [settledSpi.apiSpiType.path, ...settledSpi.implementations.map(implementation => implementation.path)],
     buildFindingTexts: settledSpi => buildSpiInsideTheAppFindingTexts(settledSpi),
+  },
+  {
+    field: "settledTestFileNames",
+    section: TEST_FILE_NAME_SECTION,
+    standsInFor: JUDGE_TYPE_BY_SCALE_MAP[Scale.MODULE.name],
+    listPlaces: settledTestFileName => [settledTestFileName.test],
+    listFiles: settledTestFileName => [settledTestFileName.test.path],
+    buildFindingTexts: settledTestFileName => buildTestFileNameFindingTexts(settledTestFileName),
+    createCodeUnderReview: (abstraction, kind, settledTestFileName, id) => createCodeUnderReviewOfATestFile(abstraction, kind, settledTestFileName, id),
   },
 ]);
 
@@ -183,7 +219,18 @@ const createCodeUnderReviewOfTheScript = (abstraction, kind, settled, id) => ({
   slice: { sections: [{ section: kind.section, lines: kind.listPlaces(settled).map(readPlacedSliceLineOfAPlace) }] },
 });
 
-const createCodeUnderReviewOfAnAbstractionTheScriptSettled = (abstraction, kind, settled, id) => ({
+const createCodeUnderReviewOfATestFile = (abstraction, kind, settledTestFileName, id) => ({
+  ...createCodeUnderReviewOfTheScript(abstraction, kind, settledTestFileName, id),
+  displayName: readFileName(settledTestFileName.test.path),
+  name: readFileName(settledTestFileName.test.path),
+  scale: Scale.CLASS.name,
+  kind: KINDS_OF_AN_ABSTRACTION.FILE,
+  path: settledTestFileName.test.path,
+  isTest: true,
+  standsInFor: kind.standsInFor,
+});
+
+const createCodeUnderReviewOfAnAbstractionTheScriptSettled =(abstraction, kind, settled, id) => ({
   id,
   abstractionId: abstraction.id,
   displayName: abstraction.displayName,
@@ -218,6 +265,8 @@ const isAModule = abstraction => abstraction.scale === Scale.MODULE.name;
 
 const listSettledFacts = abstraction => SETTLED_KINDS.flatMap(kind => ((abstraction.module || {})[kind.field] || []).map(settledFact => ({ abstraction, kind, settledFact })));
 
+const chooseHowToCreateTheCodeUnderReview = kind => kind.createCodeUnderReview || createCodeUnderReviewOfTheScript;
+
 const KEEPS_EVERY_JUDGE_TYPE = () => true;
 
 const KEEPS_EVERY_SCALE = () => true;
@@ -229,7 +278,8 @@ const listAbstractionFactsTheScriptSettles = (selectedAbstractions, keepsJudgeTy
 export function buildScriptFindings(abstractions, changedLines = {}, { selectedAbstractions = [], keepsJudgeType = KEEPS_EVERY_JUDGE_TYPE, keepsScale = KEEPS_EVERY_SCALE } = {}) {
   const modulesKept = keepsScale(Scale.MODULE.name) ? abstractions.filter(isAModule) : [];
   const settledFactsOfModules = modulesKept.flatMap(listSettledFacts)
-    .map(settled => ({ ...settled, createCodeUnderReview: createCodeUnderReviewOfTheScript }));
+    .filter(settled => !settled.kind.standsInFor || keepsJudgeType(settled.kind.standsInFor))
+    .map(settled => ({ ...settled, createCodeUnderReview: chooseHowToCreateTheCodeUnderReview(settled.kind) }));
   const settledFactsOfAbstractions = listAbstractionFactsTheScriptSettles(selectedAbstractions.filter(abstraction => keepsScale(abstraction.scale)), keepsJudgeType)
     .map(settled => ({ ...settled, createCodeUnderReview: createCodeUnderReviewOfAnAbstractionTheScriptSettled }));
   return [...settledFactsOfModules, ...settledFactsOfAbstractions].map(({ abstraction, kind, settledFact, createCodeUnderReview }, at) => {
