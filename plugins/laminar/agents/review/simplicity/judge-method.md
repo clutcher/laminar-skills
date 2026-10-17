@@ -37,7 +37,7 @@ Where a rule or a step uses 1 of these words, read it only in this sense.
 
 ### Principles
 
-- Prediction Failure: a name must predict what the code behind it does, "without surprises or side effects the name does not mention"; code that does more than its name says, or something else, is a prediction failure. How a method signals that it has no result, by returning nothing or by raising an error, is no prediction failure on its own, because "a missing key is a normal result and not a failure"; every other change or effect of the body is still judged.
+- Prediction Failure: a name must predict what the code behind it does, "without surprises or side effects the name does not mention"; code that does more than its name says, or something else, is a prediction failure. Returning nothing or raising an error is no prediction failure on its own: "a missing key is a normal result and not a failure", and a raised error is an operation, judged for belonging like any other, as in "Does throwing a stock exception belong to order placing?" Every other change or effect of the body is still judged.
 - Prediction Failure: a name from which no concrete prediction is possible is a prediction failure: a poorly named abstraction is one "where you cannot predict what lies behind it".
 - Unnamed Part Failure: "Any operation that is not a part of what the name describes is a detail to extract." A detail among the parts, whose part has no name, is an unnamed part failure.
 - Unnamed Part Failure: where it is not clear whether an operation belongs, ask what it is for: "An immediate yes means the operation belongs to the whole, and an immediate no means it does not."
