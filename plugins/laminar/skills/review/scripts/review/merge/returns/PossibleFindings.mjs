@@ -2,6 +2,7 @@ import { isOwnCodeAt, isTestPath, readOwnSpans, doesSpanHoldLine, CHANGE_KINDS, 
 import { METHOD_MARK, buildPlaceKey, AbstractionsAtPlaces, stripLeadingDotSlash } from "../abstractions/AbstractionsAtPlaces.mjs";
 import { PreparedRun } from "../PreparedRun.mjs";
 import { JudgeReturn } from "./JudgeReturn.mjs";
+import { JudgeCacheUse } from "../../cache/JudgeReturnCache.mjs";
 
 export const buildPossibleFindingId = (codeUnderReviewId, check) => `${codeUnderReviewId}|${check}`;
 
@@ -185,7 +186,8 @@ export class PossibleFindings {
   constructor(runFolder, files) {
     const given = files || {};
     this.preparedRun = new PreparedRun(runFolder);
-    this.judgeReturn = JudgeReturn.readFrom(given.findings);
+    this.judgeCacheUse = new JudgeCacheUse(runFolder, given.judgeCache ? { cache: given.judgeCache } : {});
+    this.judgeReturn = new JudgeReturn(this.judgeCacheUse.addTheSavedReturns(JudgeReturn.readFrom(given.findings).returned));
     this.places = new AbstractionsAtPlaces(runFolder, this.preparedRun.repository, this.preparedRun.abstractionsOfTheChange);
   }
 
