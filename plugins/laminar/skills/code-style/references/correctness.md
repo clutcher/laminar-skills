@@ -2,7 +2,7 @@
 
 Contents: 1. A boundary that exposes only valid uses · 2. A type for each valid case · 3. A single owner for each decision · 4. State changed only through the abstraction · 5. Immutable where nothing must change · 6. An edge case as a normal result · 7. No hidden dependencies · 8. Outside data checked once, at the entry · 9. Outside data is never safe · 10. Fail fast, and handle failures in 1 place · 11. Where prevention stops · 12. Few logs
 
-The book names 6 design decisions that prevent errors before the code runs. Each entry names its decision in italics.
+The book names 6 design decisions that prevent errors before the code runs. Each section names its decision in italics.
 
 ## 1. A boundary that exposes only valid uses
 
@@ -20,14 +20,14 @@ Where a value is in 1 of several states and each state has its own data, give ea
 
 ## 3. A single owner for each decision
 
-Put each business decision in 1 abstraction, and let every caller reach it through that boundary, so a change of the rule has 1 place to change. Copies of a decision drift apart, and the system then gives different answers on different paths. This is the design decision *Have a Single Owner*.
+Put each business decision in 1 abstraction, and let every caller reach it through that boundary, so a change of the decision has 1 place to change. Copies of a decision drift apart, and the system then gives different answers on different paths. This is the design decision *Have a Single Owner*.
 
 - Book (*What Correctness Means*, *Have a Single Owner*): "A decision repeated in many places will drift over time, so giving it a single owner is the next design decision that prevents errors." · "The fix is encapsulation: one abstraction owns the decision, and every caller reaches it through that boundary."
 - Limits: code that looks the same is not always the same decision (see classes). A copy in 2 applications that deploy apart can be a deliberate choice (see modules).
 
 ## 4. State changed only through the abstraction
 
-Where a rule limits the values or the steps of a state, do not let callers set the state directly. Put each change behind a method of the abstraction that refuses a change the rule forbids. Where the allowed step depends on the current state, keep the state inside and refuse a wrong step. Reject an invalid combination at creation too, in the constructor or in the last step of a builder. Do not hand out a changeable field that the rules limit, such as a collection: give the caller a copy, a view that cannot change, or an operation instead of the data. This is the design decision *Protect the State*.
+Where a business rule limits the values or the steps of a state, do not let callers set the state directly. Put each change behind a method of the abstraction that refuses a change the business rule forbids. Where the allowed step depends on the current state, keep the state inside and refuse a wrong step. Reject an invalid combination at creation too, in the constructor or in the last step of a builder. Do not hand out a changeable field that the business rules limit, such as a collection: give the caller a copy, a view that cannot change, or an operation instead of the data. This is the design decision *Protect the State*.
 
 - Book (*What Correctness Means*, *Protect the State*): "Prevention comes from an abstraction that protects its state and controls every transition into it." · "In cases when the decision depends only on the new value, a simpler enforcement is enough: the method that applies the change refuses the value before the object stores it." · "A constructor does this by rejecting any input that would build an invalid combination, so that combination never reaches the object at all." · "When an object exposes setters or mutable fields, every holder of a reference becomes a possible source of change no one expected."
 
@@ -55,11 +55,11 @@ Write a calculation so it reads only its inputs and changes nothing outside itse
 
 ## 8. Outside data checked once, at the entry
 
-Check data from outside where it enters the application: in the method that the outside actor calls, such as the method that receives a request or a message, or the method that a scheduled job runs. Inside, do not check the same rule again, also not in the first lines of the operation that the entry calls; trust what passed the entry. A precondition inside an operation guards the rules of that operation, such as a state that the work itself can reach, and not the request data again. The entry boundary is the 1 place where the data has met no rule yet. This is the design decision *Validate at the Boundary*.
+Check data from outside where it enters the application: in the method that the outside actor calls, such as the method that receives a request or a message, or the method that a scheduled job runs. Inside, do not check the same input rule again, also not in the first lines of the operation that the entry calls; trust what passed the entry. A precondition inside an operation guards the business rules of that operation, such as a state that the work itself can reach, and not the request data again. The entry boundary is the 1 place where the data has met no input rule yet. This is the design decision *Validate at the Boundary*.
 
 - Book (*What Correctness Means*, *Validate at the Boundary*): "That check belongs at the entry boundary, which lets every abstraction inside trust the data that passes." · "Placing the same check inside every method would add complexity without adding safety, so the error handling stays at the edge while the domain logic stays clean." · "check once at the edge, then trust what flows past it" · "Yet even a validated input can drive the abstraction into a bad state while it runs"
 - Book (*What Testing Means*, *What Testing Means*): "Application entry boundaries are where external actors invoke the application"
-- Limits: the business rules of the domain stay in the domain; the entry checks the outside data (see methods, section 6). A check at the entry covers only the rule it states, so check every rule of the outside data there, such as its range as well as its presence; check the range at the entry too, not inside after a presence check at the entry, because "Once the boundary confirms that the inputs meet their rules, the inner methods run without repeating those checks".
+- Limits: the business rules of the domain stay in the domain; the entry checks the outside data (see methods, section 6). A check at the entry covers only the input rule it states, so check every input rule of the outside data there, such as its range as well as its presence; check the range at the entry too, not inside after a presence check at the entry, because "Once the boundary confirms that the inputs meet their rules, the inner methods run without repeating those checks".
 
 ## 9. Outside data is never safe
 

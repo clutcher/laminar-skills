@@ -13,7 +13,7 @@ Contents: 1. The scope of the change · 2. The order of work · 3. The qualities
 
 Deliver the change that was asked, at the scope that was asked. A new feature adds what the feature needs. A bug fix changes the behavior that the bug report names. The fix of 1 review finding or 1 pull request comment changes what that finding or comment names, and nothing around it. Before you write, read the code around the change. The book: "When a developer receives a requirement, the first step is understanding the surrounding code: its structure, its boundaries, and the decisions that shaped them." Where an abstraction already owns the decision you need, call it, and do not write a second copy of the decision.
 
-1 case widens the scope: the decision you change also lives in other places. Then the change covers every place, because "a failure in one place can be fixed there, while a decision in many places needs a single home." Move the decision into 1 abstraction and let every place call it. A change to 1 copy leaves the other copies with the old rule, and nothing tells the next reader.
+1 case widens the scope: the decision you change also lives in other places. Then the change covers every place, because "a failure in one place can be fixed there, while a decision in many places needs a single home." Move the decision into 1 abstraction and let every place call it. A change to 1 copy leaves the other copies with the old decision, and nothing tells the next reader.
 
 Where the new code needs an existing abstraction that sits in the wrong place, so that using it there would copy a decision, call in the wrong direction or join a folder the new code is not part of, move it first, as its own step that changes no behavior, and name the move when you report the change. Before a move of code that another module calls, or one after which tests change more than their imports, ask the user; where nobody can answer, leave the code in place and name the move you would make. Fix a small problem, such as a name or an unnamed step, only inside a method the change already edits. Where you see another problem in code that the change does not touch, leave that code as it is, and name the problem when you report the change. The directions hold for every language. Where a language or a framework has a direct form of a direction, such as a closed set of values, an immutable type or module visibility, use that form. A form that these directions reject is wrong even where the code around it uses it: do not copy local style that breaks them.
 
@@ -64,7 +64,7 @@ When new behavior is not a part of what an existing method, class or module name
 - A copy inside 1 application or across applications. 1 decision in 2 modules of 1 application is a copy: it is "one design decision that shows up in several modules and must stay the same in each for the system to stay correct", so give it 1 owner. In 2 applications that deploy apart, a copy can be a deliberate choice, to save a remote call or to check on both sides. Make that choice on purpose, and name it when you report the change.
 - Flexibility or readability. Add an interface, a factory or an extension point only where variation is seen in the code or on the roadmap: "Even where change is expected, check whether the minimum fix already solves the cognitive failure."
 
-Where a rule seems to forbid a shape that reads well, ask which of the 6 failures the shape causes. Where it causes none, the shape is fine, because "the detection questions, not the wording of any rule, decide each case".
+Where a direction seems to forbid a shape that reads well, ask which of the 6 failures the shape causes. Where it causes none, the shape is fine, because "the detection questions, not the wording of any rule, decide each case".
 
 ## 7. The common pitfalls
 
@@ -72,14 +72,14 @@ The everyday fixes of the book's chapter *The Common Pitfalls*, for every change
 
 - *Self-Documenting Code*: where a block needs a comment that says what it does, extract it into a method named for its intent. No comment by default, no TODO.
 - Verb first: start every method name with a verb that states its work; this rule of the skill is narrower than the book (naming, section 3).
-- *Context-Aware Constants*: name a constant, and every other value, for its business purpose, kind last, such as days or rate; 1 constant per rule, private where used; in a test, give each value that sets up the condition the test name states a name, a constant or a local.
+- *Context-Aware Constants*: name a constant, and every other value, for its business purpose, kind last, such as days or rate; 1 constant per business rule, private where used; in a test, give each value that sets up the condition the test name states a name, a constant or a local.
 - *Guard Clauses*: put each precondition at the top and leave early, and move the checks that together say the input is ready behind 1 named check.
 - *Visual Separation*: keep the lines of each group together, with a blank line between groups and after the preconditions; while a detail sits among the parts, extract instead.
 - *Enums Over Boolean Flags*: give a category 1 closed set of named values for each exclusive dimension, not booleans, which allow values the domain forbids; the same holds for text compared with fixed values, a rule of the skill, narrower than the book. *Boolean Parameter Splitting*: a flag that chooses 2 operations becomes 2 named methods, and a flag that picks a variant becomes a named value.
 - *Builder*: where parts of an object depend on each other or on an order, put those rules in 1 place that checks the object before use.
 - *Single-Level Fields*: move fields that always appear together and that the business treats as 1 whole into their own type, not a copy of the storage table.
 - *Single-Level Methods*: add a public method only where it serves the class name and shares the types of its neighbours; a method that combines 2 abstractions goes to a caller above.
-- A collection held by a key: name the entries, then the key, and end with the kind of collection, such as map or index; the entries and the key alone, without the kind, predict a single value (naming, section 10).
+- A collection held by a key: name the values, then the key, and end with the kind of collection, such as map or index; the values and the key alone, without the kind, predict a single value (naming, section 10).
 - A type that holds a piece of the data of 1 other type, such as the reason or the code of 1 exception or 1 response, goes inside that type or in a subfolder named for it, never loose beside it in a folder of its kind (modules, section 3).
 - Test files: split a test file into 1 file per behavior as soon as a piece of its shared setup serves only some of its tests, such as data that only 1 operation of the class reads (tests, section 12).
 

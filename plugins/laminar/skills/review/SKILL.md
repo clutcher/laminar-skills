@@ -146,7 +146,7 @@ node "<skill>/scripts/runReview.mjs" render --run "<run>" --verdicts "<run>/retu
 
 Where the render stops with an error, show its error line to the user and stop.
 
-**Then read `<run>/review.md` and show it in the conversation.** Name `review-evidence.md` beside it as the evidence, and do not repeat it. The items under `## To consider` are questions to the author and not findings, so pass them on as questions. `review.sarif` sits beside both for a tool that wants it. Where you pass the report on, into a pull request comment or anywhere else, carry the check name, the name of the abstraction and the fix word for word, because a paraphrase drops what the finding names.
+**Then read `<run>/review.md` and show it in the conversation.** Name `review-evidence.md` beside it as the evidence, and do not repeat it. The considerations under `## To consider` are questions to the author and not findings, so pass them on as questions. `review.sarif` sits beside both for a tool that wants it. Where you pass the report on, into a pull request comment or anywhere else, carry the check name, the name of the abstraction and the direction word for word, because a paraphrase drops what the finding names.
 
 **Never spawn an agent of your own and never write a file the steps above do not name.** A finding loses its quoted evidence at every hop.
 

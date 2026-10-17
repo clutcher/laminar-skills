@@ -6,7 +6,7 @@ A project writes its own conventions in files of 1 form, so a writer reads them 
 
 ## 1. Where the files live
 
-Put the files into `.claude/rules/conventions/` of the repository, as `.md` files, in subfolders where that helps, such as 1 subfolder for each application. Give each file 1 area, such as 1 language, 1 framework or 1 part of the domain, and name the file for that area, such as `kotlin.md` or `loans.md`.
+Put the files into `.claude/rules/conventions/` of the repository, as `.md` files, in subfolders where that helps, such as 1 subfolder for each application. Give each file 1 subject, such as 1 language, 1 framework or 1 area of the domain, and name the file for that subject, such as `kotlin.md` or `loans.md`.
 
 ## 2. When Claude Code loads them
 
