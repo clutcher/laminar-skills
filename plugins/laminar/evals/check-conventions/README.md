@@ -16,7 +16,7 @@ From a session, with `<case>` the case folder and `<dir>` a new folder outside e
 node evals/grade.mjs --build <dir> <case>
 ```
 
-It commits the base on `main`, commits the change on a branch named `change` and prints `main...change`. Run `laminar:check-conventions` in `<dir>` with the argument `change`. Grade the report by hand against `expected.md`: each item under `## Must appear` is a hit where a finding names its place and 1 of its ids, and each line under `## Must not appear` is clean where no finding matches it. `grade.mjs` does not grade it, because it grades only the reader file of a review.
+It commits the base on `main`, commits the change on a branch named `change` and prints `main...change`. Run `laminar:check-conventions` in `<dir>` with the argument `change`, and once more with `change scales: module,class` to test the scale filter. Grade the report by hand against `expected.md`: each item under `## Must appear` is a hit where a finding names its place, 1 of its ids and its scale, and each line under `## Must not appear` is clean where no finding matches it. `grade.mjs` does not grade it, because it grades only the reader file of a review.
 
 ## The cases
 
