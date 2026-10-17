@@ -50,6 +50,8 @@ The extract command prints `run folder:` with the absolute path of the run folde
 
 The prepare command prints a `RESULT` line and writes the same object to `<run>/prepare-return.json`. That object is the map the next step needs.
 
+The prepare command reads the judge returns saved by an earlier review of the same code, so a call whose input has not changed runs no agent. Where the user asks to judge everything again, add `--no-judge-cache` to the prepare command.
+
 Where a command stops with an error, show its error line to the user and stop: run no later step and write no file in its place.
 
 ## The cost check, between step 1 and step 2

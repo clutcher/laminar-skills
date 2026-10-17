@@ -126,6 +126,19 @@ const toIoPath = ([number, endNumber, endCallCount]) => {
   }
 }
 
+const hashTheMessageTail = text => {
+  let first = 0xdeadbeef
+  let second = 0x41c6ce57
+  for (let at = 0; at < text.length; at++) {
+    const code = text.charCodeAt(at)
+    first = Math.imul(first ^ code, 2654435761)
+    second = Math.imul(second ^ code, 1597334677)
+  }
+  first = Math.imul(first ^ (first >>> 16), 2246822507) ^ Math.imul(second ^ (second >>> 13), 3266489909)
+  second = Math.imul(second ^ (second >>> 16), 2246822507) ^ Math.imul(first ^ (first >>> 13), 3266489909)
+  return (4294967296 * (2097151 & second) + (first >>> 0)).toString(36)
+}
+
 const isInsideTheIntervals = (intervals, id) => {
   const number = Number(String(id).slice(ID_MARKS.CODE_UNDER_REVIEW.length))
   return intervals.some(([from, to]) => number >= from && number <= to)
@@ -188,6 +201,10 @@ class WorkflowArguments {
 
   get ioGroups() {
     return this.prepared.ioGroups || []
+  }
+
+  savedTailsOf(codeUnderReviewId) {
+    return (this.prepared.judgeCache || {})[codeUnderReviewId] || []
   }
 
   fileAt(relative) { return `${this.runFolder}/${relative}` }
@@ -445,7 +462,9 @@ const sized = (prompt, label) => {
 
 const NO_IO_SCREEN = { rules: [], unknown: [] }
 
-const NOTHING_JUDGED = { findings: [], covered: [], notRun: [], counts: { judgeCalls: 0, emptied: 0, findings: 0, notRun: 0 }, ioScreen: NO_IO_SCREEN }
+const NO_JUDGE_CACHE_USE = { hits: [], fresh: [] }
+
+const NOTHING_JUDGED = { findings: [], covered: [], notRun: [], counts: { judgeCalls: 0, cachedJudgeCalls: 0, emptied: 0, findings: 0, notRun: 0 }, ioScreen: NO_IO_SCREEN, judgeCache: NO_JUDGE_CACHE_USE }
 
 const stoppedWith = words => ({ ...NOTHING_JUDGED, stopped: words })
 
@@ -488,13 +507,19 @@ const answered = [...ungatedJudged, ...gatedRun.judged, ...ioPathsRun.judged].fi
 const findings = answered.flatMap(returned => returned.findings)
 const covered = answered.flatMap(returned => returned.covered)
 const notRun = [...gatedRun.narrowed.notRun, ...ioPathsRun.notRun, ...answered.flatMap(returned => returned.notRun)]
+const judgeCache = {
+  hits: answered.flatMap(returned => returned.cacheHit ? [returned.cacheHit] : []),
+  fresh: answered.flatMap(returned => returned.cacheFresh ? [returned.cacheFresh] : []),
+}
+if (judgeCache.hits.length) log(`${judgeCache.hits.length} judge call(s) answered from the saved judge returns, so no agent ran for them`)
 return {
   ...(theArguments.wave ? { wave: theArguments.wave.number } : {}),
   findings,
   covered,
   notRun,
-  counts: { judgeCalls: everyJudgeCall.length, emptied: gatedRun.narrowed.emptied, findings: findings.length, notRun: notRun.length },
+  counts: { judgeCalls: everyJudgeCall.length, cachedJudgeCalls: judgeCache.hits.length, emptied: gatedRun.narrowed.emptied, findings: findings.length, notRun: notRun.length },
   ioScreen: ioPathsRun.ioScreen,
+  judgeCache,
 }
 
 function gateFieldsOf(code, check) {
@@ -719,6 +744,8 @@ async function judgeOf(judgeCall) {
   const label = `judge ${judgeCall.judgeType.replace('judge-', '')} ${batch[0].id}${batch.length > 1 ? ` and ${batch.length - 1} more` : ''}`
   const message = sized(batch.map(messageOf).join('\n\n'), label)
   const options = theAgents.optionsFor(judgeCall.judgeType, { phase: STEPS.judge.phase, label, schema: SCHEMA_BY_JUDGE_TYPE[judgeCall.judgeType], stallMs: JUDGE_STALL_MS })
+  const tail = batch.length === 1 ? tailOf(message, options) : ''
+  if (tail && theArguments.savedTailsOf(batch[0].id).includes(tail)) return { findings: [], covered: [], notRun: [], cacheHit: [batch[0].id, tail] }
   for (let attempt = 1; attempt <= JUDGE_ATTEMPTS; attempt++) {
     const returned = await agent(message, options).catch(() => null)
     if (STEPS.judge.missingFrom(returned).length) continue
@@ -727,10 +754,15 @@ async function judgeOf(judgeCall) {
       findings: stampedWithTheCodeUnderReviewId(returned.findings, batch[0].id),
       covered: stampedWithTheCodeUnderReviewId(returned.covered || [], batch[0].id),
       notRun: [],
+      ...(tail ? { cacheFresh: [batch[0].id, tail] } : {}),
     }
   }
   log(`the ${label} call returned nothing usable in ${JUDGE_ATTEMPTS} attempt(s), so its checks are reported as failed`)
   return { findings: [], covered: [], notRun: checksNoJudgeReached(batch) }
+}
+
+function tailOf(message, options) {
+  return hashTheMessageTail([options.model, options.effort, ...message.split('\n').slice(1)].join('\n'))
 }
 
 function checksNoJudgeReached(batch) {
