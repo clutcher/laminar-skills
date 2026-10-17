@@ -1,0 +1,17 @@
+diff --git a/cloakroom/src/main/java/com/example/cloakroom/CloakroomApplication.java b/cloakroom/src/main/java/com/example/cloakroom/CloakroomApplication.java
+new file mode 100644
+--- /dev/null
++++ b/cloakroom/src/main/java/com/example/cloakroom/CloakroomApplication.java
+@@ -0,0 +1,12 @@
++package com.example.cloakroom;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class CloakroomApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(CloakroomApplication.class, args);
++    }
++}

@@ -1,0 +1,17 @@
+diff --git a/bistro-tables/src/main/java/com/example/bistro/BistroTablesApplication.java b/bistro-tables/src/main/java/com/example/bistro/BistroTablesApplication.java
+new file mode 100644
+--- /dev/null
++++ b/bistro-tables/src/main/java/com/example/bistro/BistroTablesApplication.java
+@@ -0,0 +1,12 @@
++package com.example.bistro;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class BistroTablesApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(BistroTablesApplication.class, args);
++    }
++}

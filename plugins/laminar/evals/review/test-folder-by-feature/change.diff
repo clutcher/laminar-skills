@@ -1,0 +1,158 @@
+diff --git a/ski-lifts/src/main/java/com/example/skilift/daypass/DayPass.java b/ski-lifts/src/main/java/com/example/skilift/daypass/DayPass.java
+new file mode 100644
+--- /dev/null
++++ b/ski-lifts/src/main/java/com/example/skilift/daypass/DayPass.java
+@@ -0,0 +1,10 @@
++package com.example.skilift.daypass;
++
++import java.time.LocalDate;
++
++public record DayPass(String passNumber, LocalDate validOn, boolean refunded) {
++
++    public DayPass refund() {
++        return new DayPass(passNumber, validOn, true);
++    }
++}
+diff --git a/ski-lifts/src/main/java/com/example/skilift/daypass/DayPassDesk.java b/ski-lifts/src/main/java/com/example/skilift/daypass/DayPassDesk.java
+new file mode 100644
+--- /dev/null
++++ b/ski-lifts/src/main/java/com/example/skilift/daypass/DayPassDesk.java
+@@ -0,0 +1,28 @@
++package com.example.skilift.daypass;
++
++import java.time.LocalDate;
++import java.util.HashMap;
++import java.util.Map;
++import java.util.Optional;
++import java.util.UUID;
++
++public class DayPassDesk {
++
++    private final Map<String, DayPass> dayPassesByNumber = new HashMap<>();
++
++    public DayPass sellDayPass(LocalDate validOn) {
++        DayPass dayPass = new DayPass(UUID.randomUUID().toString(), validOn, false);
++        dayPassesByNumber.put(dayPass.passNumber(), dayPass);
++        return dayPass;
++    }
++
++    public DayPass refundUnusedDayPass(String passNumber) {
++        DayPass refundedDayPass = dayPassesByNumber.get(passNumber).refund();
++        dayPassesByNumber.put(passNumber, refundedDayPass);
++        return refundedDayPass;
++    }
++
++    public Optional<DayPass> findDayPass(String passNumber) {
++        return Optional.ofNullable(dayPassesByNumber.get(passNumber));
++    }
++}
+diff --git a/ski-lifts/src/main/java/com/example/skilift/gate/LiftGate.java b/ski-lifts/src/main/java/com/example/skilift/gate/LiftGate.java
+new file mode 100644
+--- /dev/null
++++ b/ski-lifts/src/main/java/com/example/skilift/gate/LiftGate.java
+@@ -0,0 +1,24 @@
++package com.example.skilift.gate;
++
++import com.example.skilift.daypass.DayPass;
++import com.example.skilift.daypass.DayPassDesk;
++import java.time.LocalDate;
++
++public class LiftGate {
++
++    private final DayPassDesk dayPassDesk;
++
++    public LiftGate(DayPassDesk dayPassDesk) {
++        this.dayPassDesk = dayPassDesk;
++    }
++
++    public boolean opensFor(String passNumber, LocalDate today) {
++        return dayPassDesk.findDayPass(passNumber)
++                .filter(dayPass -> isValidToday(dayPass, today))
++                .isPresent();
++    }
++
++    private boolean isValidToday(DayPass dayPass, LocalDate today) {
++        return !dayPass.refunded() && dayPass.validOn().equals(today);
++    }
++}
+diff --git a/ski-lifts/src/test/java/com/example/skilift/features/daypass/BuyDayPassAndRideTheLiftTest.java b/ski-lifts/src/test/java/com/example/skilift/features/daypass/BuyDayPassAndRideTheLiftTest.java
+new file mode 100644
+--- /dev/null
++++ b/ski-lifts/src/test/java/com/example/skilift/features/daypass/BuyDayPassAndRideTheLiftTest.java
+@@ -0,0 +1,42 @@
++package com.example.skilift.features.daypass;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import com.example.skilift.daypass.DayPass;
++import com.example.skilift.daypass.DayPassDesk;
++import com.example.skilift.gate.LiftGate;
++import java.time.LocalDate;
++import org.junit.jupiter.api.Test;
++
++class BuyDayPassAndRideTheLiftTest {
++
++    private static final LocalDate FEBRUARY_TENTH = LocalDate.of(2027, 2, 10);
++
++    @Test
++    void shouldOpenTheLiftGateWhenTheSkierShowsADayPassBoughtForToday() {
++        // given
++        DayPassDesk dayPassDesk = new DayPassDesk();
++        LiftGate liftGate = new LiftGate(dayPassDesk);
++        DayPass dayPass = dayPassDesk.sellDayPass(FEBRUARY_TENTH);
++
++        // when
++        boolean opened = liftGate.opensFor(dayPass.passNumber(), FEBRUARY_TENTH);
++
++        // then
++        assertThat(opened).isTrue();
++    }
++
++    @Test
++    void shouldKeepTheLiftGateClosedWhenTheDayPassWasBoughtForAnotherDay() {
++        // given
++        DayPassDesk dayPassDesk = new DayPassDesk();
++        LiftGate liftGate = new LiftGate(dayPassDesk);
++        DayPass dayPass = dayPassDesk.sellDayPass(FEBRUARY_TENTH.plusDays(1));
++
++        // when
++        boolean opened = liftGate.opensFor(dayPass.passNumber(), FEBRUARY_TENTH);
++
++        // then
++        assertThat(opened).isFalse();
++    }
++}
+diff --git a/ski-lifts/src/test/java/com/example/skilift/features/daypass/RefundUnusedDayPassTest.java b/ski-lifts/src/test/java/com/example/skilift/features/daypass/RefundUnusedDayPassTest.java
+new file mode 100644
+--- /dev/null
++++ b/ski-lifts/src/test/java/com/example/skilift/features/daypass/RefundUnusedDayPassTest.java
+@@ -0,0 +1,29 @@
++package com.example.skilift.features.daypass;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import com.example.skilift.daypass.DayPass;
++import com.example.skilift.daypass.DayPassDesk;
++import com.example.skilift.gate.LiftGate;
++import java.time.LocalDate;
++import org.junit.jupiter.api.Test;
++
++class RefundUnusedDayPassTest {
++
++    private static final LocalDate FEBRUARY_TENTH = LocalDate.of(2027, 2, 10);
++
++    @Test
++    void shouldKeepTheLiftGateClosedWhenTheSkierRefundedTheDayPass() {
++        // given
++        DayPassDesk dayPassDesk = new DayPassDesk();
++        LiftGate liftGate = new LiftGate(dayPassDesk);
++        DayPass dayPass = dayPassDesk.sellDayPass(FEBRUARY_TENTH);
++        dayPassDesk.refundUnusedDayPass(dayPass.passNumber());
++
++        // when
++        boolean opened = liftGate.opensFor(dayPass.passNumber(), FEBRUARY_TENTH);
++
++        // then
++        assertThat(opened).isFalse();
++    }
++}

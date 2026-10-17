@@ -1,0 +1,17 @@
+diff --git a/greenhouse-control/src/main/java/com/example/greenhouse/GreenhouseControlApplication.java b/greenhouse-control/src/main/java/com/example/greenhouse/GreenhouseControlApplication.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-control/src/main/java/com/example/greenhouse/GreenhouseControlApplication.java
+@@ -0,0 +1,12 @@
++package com.example.greenhouse;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class GreenhouseControlApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(GreenhouseControlApplication.class, args);
++    }
++}

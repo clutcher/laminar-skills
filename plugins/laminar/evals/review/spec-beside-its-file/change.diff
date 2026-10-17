@@ -1,0 +1,71 @@
+diff --git a/tram-fares/src/fares/fareCalculator.spec.ts b/tram-fares/src/fares/fareCalculator.spec.ts
+new file mode 100644
+--- /dev/null
++++ b/tram-fares/src/fares/fareCalculator.spec.ts
+@@ -0,0 +1,28 @@
++import { describe, expect, it } from "vitest";
++import { calculateSingleFareInCents } from "./fareCalculator";
++
++describe("calculateSingleFareInCents", () => {
++  it("should charge one zone when the ride stays inside zone A", () => {
++    // given
++    const fromStopName = "Central Station";
++    const toStopName = "Market Square";
++
++    // when
++    const fareInCents = calculateSingleFareInCents(fromStopName, toStopName);
++
++    // then
++    expect(fareInCents).toBe(120);
++  });
++
++  it("should charge three zones when the ride goes from zone A to zone C", () => {
++    // given
++    const fromStopName = "Central Station";
++    const toStopName = "Harbour Gate";
++
++    // when
++    const fareInCents = calculateSingleFareInCents(fromStopName, toStopName);
++
++    // then
++    expect(fareInCents).toBe(360);
++  });
++});
+diff --git a/tram-fares/src/fares/fareCalculator.ts b/tram-fares/src/fares/fareCalculator.ts
+new file mode 100644
+--- /dev/null
++++ b/tram-fares/src/fares/fareCalculator.ts
+@@ -0,0 +1,8 @@
++import { countZonesCrossed, findZoneOfStop } from "./zoneMap";
++
++const FARE_PER_ZONE_IN_CENTS = 120;
++
++export const calculateSingleFareInCents = (fromStopName: string, toStopName: string): number => {
++  const zonesCrossed = countZonesCrossed(findZoneOfStop(fromStopName), findZoneOfStop(toStopName));
++  return zonesCrossed * FARE_PER_ZONE_IN_CENTS;
++};
+diff --git a/tram-fares/src/fares/zoneMap.ts b/tram-fares/src/fares/zoneMap.ts
+new file mode 100644
+--- /dev/null
++++ b/tram-fares/src/fares/zoneMap.ts
+@@ -0,0 +1,20 @@
++export type Zone = "A" | "B" | "C";
++
++const ZONE_BY_STOP_NAME: Record<string, Zone> = {
++  "Central Station": "A",
++  "Market Square": "A",
++  "Riverside": "B",
++  "University": "B",
++  "Harbour Gate": "C",
++};
++
++export const findZoneOfStop = (stopName: string): Zone => {
++  const zone = ZONE_BY_STOP_NAME[stopName];
++  if (zone === undefined) {
++    throw new Error(`No zone is known for the stop ${stopName}`);
++  }
++  return zone;
++};
++
++export const countZonesCrossed = (fromZone: Zone, toZone: Zone): number =>
++  Math.abs(fromZone.charCodeAt(0) - toZone.charCodeAt(0)) + 1;

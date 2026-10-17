@@ -1,0 +1,118 @@
+diff --git a/cloakroom/src/main/java/com/example/cloakroom/coats/CoatTicket.java b/cloakroom/src/main/java/com/example/cloakroom/coats/CoatTicket.java
+new file mode 100644
+--- /dev/null
++++ b/cloakroom/src/main/java/com/example/cloakroom/coats/CoatTicket.java
+@@ -0,0 +1,4 @@
++package com.example.cloakroom.coats;
++
++public record CoatTicket(int ticketNumber, int hookNumber) {
++}
+diff --git a/cloakroom/src/main/java/com/example/cloakroom/coats/CoatTicketDesk.java b/cloakroom/src/main/java/com/example/cloakroom/coats/CoatTicketDesk.java
+new file mode 100644
+--- /dev/null
++++ b/cloakroom/src/main/java/com/example/cloakroom/coats/CoatTicketDesk.java
+@@ -0,0 +1,36 @@
++package com.example.cloakroom.coats;
++
++import java.util.ArrayDeque;
++import java.util.Deque;
++import java.util.HashMap;
++import java.util.Map;
++import java.util.Optional;
++
++public class CoatTicketDesk {
++
++    private final Deque<Integer> freeHookNumbers = new ArrayDeque<>();
++    private final Map<Integer, CoatTicket> ticketsByNumber = new HashMap<>();
++    private int lastTicketNumber;
++
++    public CoatTicketDesk(int hookCount) {
++        for (int hookNumber = 1; hookNumber <= hookCount; hookNumber++) {
++            freeHookNumbers.add(hookNumber);
++        }
++    }
++
++    public CoatTicket hangUpCoat() {
++        lastTicketNumber++;
++        CoatTicket coatTicket = new CoatTicket(lastTicketNumber, freeHookNumbers.removeFirst());
++        ticketsByNumber.put(coatTicket.ticketNumber(), coatTicket);
++        return coatTicket;
++    }
++
++    public Optional<Integer> findHookOfTicket(int ticketNumber) {
++        return Optional.ofNullable(ticketsByNumber.get(ticketNumber)).map(CoatTicket::hookNumber);
++    }
++
++    public void handBackCoat(int ticketNumber) {
++        CoatTicket coatTicket = ticketsByNumber.remove(ticketNumber);
++        freeHookNumbers.addFirst(coatTicket.hookNumber());
++    }
++}
+diff --git a/cloakroom/src/test/java/com/example/cloakroom/coats/CoatTicketDeskTest.java b/cloakroom/src/test/java/com/example/cloakroom/coats/CoatTicketDeskTest.java
+new file mode 100644
+--- /dev/null
++++ b/cloakroom/src/test/java/com/example/cloakroom/coats/CoatTicketDeskTest.java
+@@ -0,0 +1,23 @@
++package com.example.cloakroom.coats;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import org.junit.jupiter.api.Test;
++
++class CoatTicketDeskTest {
++
++    @Test
++    void shouldHangTheNextCoatOnTheHookTheLastCoatFreedWhenACoatWasHandedBack() {
++        // given
++        CoatTicketDesk coatTicketDesk = new CoatTicketDesk(20);
++        coatTicketDesk.hangUpCoat();
++        CoatTicket secondTicket = coatTicketDesk.hangUpCoat();
++        coatTicketDesk.handBackCoat(secondTicket.ticketNumber());
++
++        // when
++        CoatTicket thirdTicket = coatTicketDesk.hangUpCoat();
++
++        // then
++        assertThat(thirdTicket.hookNumber()).isEqualTo(2);
++    }
++}
+diff --git a/cloakroom/src/test/java/com/example/cloakroom/coats/LostTicketCoatTicketDeskTest.java b/cloakroom/src/test/java/com/example/cloakroom/coats/LostTicketCoatTicketDeskTest.java
+new file mode 100644
+--- /dev/null
++++ b/cloakroom/src/test/java/com/example/cloakroom/coats/LostTicketCoatTicketDeskTest.java
+@@ -0,0 +1,35 @@
++package com.example.cloakroom.coats;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import org.junit.jupiter.api.Test;
++
++class LostTicketCoatTicketDeskTest {
++
++    @Test
++    void shouldFindNoHookWhenTheVisitorShowsATicketTheDeskNeverGaveOut() {
++        // given
++        CoatTicketDesk coatTicketDesk = new CoatTicketDesk(20);
++        coatTicketDesk.hangUpCoat();
++
++        // when
++        var hookNumber = coatTicketDesk.findHookOfTicket(57);
++
++        // then
++        assertThat(hookNumber).isEmpty();
++    }
++
++    @Test
++    void shouldFindNoHookWhenTheCoatOfTheTicketWasAlreadyHandedBack() {
++        // given
++        CoatTicketDesk coatTicketDesk = new CoatTicketDesk(20);
++        CoatTicket coatTicket = coatTicketDesk.hangUpCoat();
++        coatTicketDesk.handBackCoat(coatTicket.ticketNumber());
++
++        // when
++        var hookNumber = coatTicketDesk.findHookOfTicket(coatTicket.ticketNumber());
++
++        // then
++        assertThat(hookNumber).isEmpty();
++    }
++}

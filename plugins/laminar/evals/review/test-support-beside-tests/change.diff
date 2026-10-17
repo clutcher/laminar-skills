@@ -1,0 +1,194 @@
+diff --git a/greenhouse-control/src/main/java/com/example/greenhouse/watering/GreenhouseBed.java b/greenhouse-control/src/main/java/com/example/greenhouse/watering/GreenhouseBed.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-control/src/main/java/com/example/greenhouse/watering/GreenhouseBed.java
+@@ -0,0 +1,4 @@
++package com.example.greenhouse.watering;
++
++public record GreenhouseBed(String bedId, String plantKind, int targetMoisturePercent) {
++}
+diff --git a/greenhouse-control/src/main/java/com/example/greenhouse/watering/MoistureSensor.java b/greenhouse-control/src/main/java/com/example/greenhouse/watering/MoistureSensor.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-control/src/main/java/com/example/greenhouse/watering/MoistureSensor.java
+@@ -0,0 +1,6 @@
++package com.example.greenhouse.watering;
++
++public interface MoistureSensor {
++
++    int readMoisturePercent(String bedId);
++}
+diff --git a/greenhouse-control/src/main/java/com/example/greenhouse/watering/WateringOrder.java b/greenhouse-control/src/main/java/com/example/greenhouse/watering/WateringOrder.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-control/src/main/java/com/example/greenhouse/watering/WateringOrder.java
+@@ -0,0 +1,4 @@
++package com.example.greenhouse.watering;
++
++public record WateringOrder(String bedId, int litres) {
++}
+diff --git a/greenhouse-control/src/main/java/com/example/greenhouse/watering/WateringScheduler.java b/greenhouse-control/src/main/java/com/example/greenhouse/watering/WateringScheduler.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-control/src/main/java/com/example/greenhouse/watering/WateringScheduler.java
+@@ -0,0 +1,30 @@
++package com.example.greenhouse.watering;
++
++import java.util.List;
++
++public class WateringScheduler {
++
++    private static final int LITRES_PER_MISSING_MOISTURE_PERCENT = 2;
++
++    private final MoistureSensor moistureSensor;
++
++    public WateringScheduler(MoistureSensor moistureSensor) {
++        this.moistureSensor = moistureSensor;
++    }
++
++    public List<WateringOrder> planWatering(List<GreenhouseBed> beds) {
++        return beds.stream()
++                .filter(this::isDrierThanItsTarget)
++                .map(this::orderWaterForTheMissingMoisture)
++                .toList();
++    }
++
++    private boolean isDrierThanItsTarget(GreenhouseBed bed) {
++        return moistureSensor.readMoisturePercent(bed.bedId()) < bed.targetMoisturePercent();
++    }
++
++    private WateringOrder orderWaterForTheMissingMoisture(GreenhouseBed bed) {
++        int missingMoisturePercent = bed.targetMoisturePercent() - moistureSensor.readMoisturePercent(bed.bedId());
++        return new WateringOrder(bed.bedId(), missingMoisturePercent * LITRES_PER_MISSING_MOISTURE_PERCENT);
++    }
++}
+diff --git a/greenhouse-control/src/test/java/com/example/greenhouse/watering/FakeMoistureSensor.java b/greenhouse-control/src/test/java/com/example/greenhouse/watering/FakeMoistureSensor.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-control/src/test/java/com/example/greenhouse/watering/FakeMoistureSensor.java
+@@ -0,0 +1,19 @@
++package com.example.greenhouse.watering;
++
++import java.util.HashMap;
++import java.util.Map;
++
++public class FakeMoistureSensor implements MoistureSensor {
++
++    private final Map<String, Integer> moisturePercentByBedId = new HashMap<>();
++
++    public FakeMoistureSensor withMoisture(String bedId, int moisturePercent) {
++        moisturePercentByBedId.put(bedId, moisturePercent);
++        return this;
++    }
++
++    @Override
++    public int readMoisturePercent(String bedId) {
++        return moisturePercentByBedId.get(bedId);
++    }
++}
+diff --git a/greenhouse-control/src/test/java/com/example/greenhouse/watering/GreenhouseBedBuilder.java b/greenhouse-control/src/test/java/com/example/greenhouse/watering/GreenhouseBedBuilder.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-control/src/test/java/com/example/greenhouse/watering/GreenhouseBedBuilder.java
+@@ -0,0 +1,26 @@
++package com.example.greenhouse.watering;
++
++public class GreenhouseBedBuilder {
++
++    private String bedId = "bed-tomatoes-1";
++    private String plantKind = "tomato";
++    private int targetMoisturePercent = 60;
++
++    public static GreenhouseBedBuilder aTomatoBed() {
++        return new GreenhouseBedBuilder();
++    }
++
++    public GreenhouseBedBuilder withBedId(String bedId) {
++        this.bedId = bedId;
++        return this;
++    }
++
++    public GreenhouseBedBuilder withTargetMoisturePercent(int targetMoisturePercent) {
++        this.targetMoisturePercent = targetMoisturePercent;
++        return this;
++    }
++
++    public GreenhouseBed build() {
++        return new GreenhouseBed(bedId, plantKind, targetMoisturePercent);
++    }
++}
+diff --git a/greenhouse-control/src/test/java/com/example/greenhouse/watering/WateringSchedulerMixedBedsTest.java b/greenhouse-control/src/test/java/com/example/greenhouse/watering/WateringSchedulerMixedBedsTest.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-control/src/test/java/com/example/greenhouse/watering/WateringSchedulerMixedBedsTest.java
+@@ -0,0 +1,27 @@
++package com.example.greenhouse.watering;
++
++import static com.example.greenhouse.watering.GreenhouseBedBuilder.aTomatoBed;
++import static org.assertj.core.api.Assertions.assertThat;
++
++import java.util.List;
++import org.junit.jupiter.api.Test;
++
++class WateringSchedulerMixedBedsTest {
++
++    @Test
++    void shouldOrderWaterOnlyForTheDryBedWhenOneOfTwoBedsIsDry() {
++        // given
++        GreenhouseBed dryBed = aTomatoBed().withBedId("bed-tomatoes-1").withTargetMoisturePercent(60).build();
++        GreenhouseBed wetBed = aTomatoBed().withBedId("bed-tomatoes-2").withTargetMoisturePercent(60).build();
++        FakeMoistureSensor moistureSensor = new FakeMoistureSensor()
++                .withMoisture("bed-tomatoes-1", 50)
++                .withMoisture("bed-tomatoes-2", 70);
++        WateringScheduler wateringScheduler = new WateringScheduler(moistureSensor);
++
++        // when
++        List<WateringOrder> wateringOrders = wateringScheduler.planWatering(List.of(dryBed, wetBed));
++
++        // then
++        assertThat(wateringOrders).containsExactly(new WateringOrder("bed-tomatoes-1", 20));
++    }
++}
+diff --git a/greenhouse-control/src/test/java/com/example/greenhouse/watering/WateringSchedulerTest.java b/greenhouse-control/src/test/java/com/example/greenhouse/watering/WateringSchedulerTest.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-control/src/test/java/com/example/greenhouse/watering/WateringSchedulerTest.java
+@@ -0,0 +1,38 @@
++package com.example.greenhouse.watering;
++
++import static com.example.greenhouse.watering.GreenhouseBedBuilder.aTomatoBed;
++import static org.assertj.core.api.Assertions.assertThat;
++
++import java.util.List;
++import org.junit.jupiter.api.Test;
++
++class WateringSchedulerTest {
++
++    @Test
++    void shouldOrderTwoLitresPerMissingPercentWhenTheBedIsDrierThanItsTarget() {
++        // given
++        GreenhouseBed tomatoBed = aTomatoBed().withBedId("bed-tomatoes-1").withTargetMoisturePercent(60).build();
++        FakeMoistureSensor moistureSensor = new FakeMoistureSensor().withMoisture("bed-tomatoes-1", 45);
++        WateringScheduler wateringScheduler = new WateringScheduler(moistureSensor);
++
++        // when
++        List<WateringOrder> wateringOrders = wateringScheduler.planWatering(List.of(tomatoBed));
++
++        // then
++        assertThat(wateringOrders).containsExactly(new WateringOrder("bed-tomatoes-1", 30));
++    }
++
++    @Test
++    void shouldOrderNoWaterWhenTheBedHoldsItsTargetMoisture() {
++        // given
++        GreenhouseBed tomatoBed = aTomatoBed().withBedId("bed-tomatoes-2").withTargetMoisturePercent(60).build();
++        FakeMoistureSensor moistureSensor = new FakeMoistureSensor().withMoisture("bed-tomatoes-2", 60);
++        WateringScheduler wateringScheduler = new WateringScheduler(moistureSensor);
++
++        // when
++        List<WateringOrder> wateringOrders = wateringScheduler.planWatering(List.of(tomatoBed));
++
++        // then
++        assertThat(wateringOrders).isEmpty();
++    }
++}

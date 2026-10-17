@@ -1,0 +1,17 @@
+diff --git a/ski-lifts/src/main/java/com/example/skilift/SkiLiftsApplication.java b/ski-lifts/src/main/java/com/example/skilift/SkiLiftsApplication.java
+new file mode 100644
+--- /dev/null
++++ b/ski-lifts/src/main/java/com/example/skilift/SkiLiftsApplication.java
+@@ -0,0 +1,12 @@
++package com.example.skilift;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class SkiLiftsApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(SkiLiftsApplication.class, args);
++    }
++}

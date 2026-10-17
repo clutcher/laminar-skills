@@ -1,0 +1,132 @@
+diff --git a/bistro-tables/src/main/java/com/example/bistro/booking/TableBooking.java b/bistro-tables/src/main/java/com/example/bistro/booking/TableBooking.java
+new file mode 100644
+--- /dev/null
++++ b/bistro-tables/src/main/java/com/example/bistro/booking/TableBooking.java
+@@ -0,0 +1,10 @@
++package com.example.bistro.booking;
++
++import java.time.LocalDateTime;
++
++public record TableBooking(String bookingCode, String guestName, int guestCount, LocalDateTime arrivesAt, boolean cancelled) {
++
++    public TableBooking cancel() {
++        return new TableBooking(bookingCode, guestName, guestCount, arrivesAt, true);
++    }
++}
+diff --git a/bistro-tables/src/main/java/com/example/bistro/booking/TableBookingController.java b/bistro-tables/src/main/java/com/example/bistro/booking/TableBookingController.java
+new file mode 100644
+--- /dev/null
++++ b/bistro-tables/src/main/java/com/example/bistro/booking/TableBookingController.java
+@@ -0,0 +1,28 @@
++package com.example.bistro.booking;
++
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++@RequestMapping("/table-bookings")
++public class TableBookingController {
++
++    private final TableBookingService tableBookingService;
++
++    public TableBookingController(TableBookingService tableBookingService) {
++        this.tableBookingService = tableBookingService;
++    }
++
++    @PostMapping
++    public TableBooking bookTable(@RequestBody TableBookingRequest tableBookingRequest) {
++        return tableBookingService.bookTable(tableBookingRequest.guestName(), tableBookingRequest.guestCount(), tableBookingRequest.arrivesAt());
++    }
++
++    @PostMapping("/{bookingCode}/cancellation")
++    public TableBooking cancelBooking(@PathVariable String bookingCode) {
++        return tableBookingService.cancelBooking(bookingCode);
++    }
++}
+diff --git a/bistro-tables/src/main/java/com/example/bistro/booking/TableBookingRequest.java b/bistro-tables/src/main/java/com/example/bistro/booking/TableBookingRequest.java
+new file mode 100644
+--- /dev/null
++++ b/bistro-tables/src/main/java/com/example/bistro/booking/TableBookingRequest.java
+@@ -0,0 +1,6 @@
++package com.example.bistro.booking;
++
++import java.time.LocalDateTime;
++
++public record TableBookingRequest(String guestName, int guestCount, LocalDateTime arrivesAt) {
++}
+diff --git a/bistro-tables/src/main/java/com/example/bistro/booking/TableBookingService.java b/bistro-tables/src/main/java/com/example/bistro/booking/TableBookingService.java
+new file mode 100644
+--- /dev/null
++++ b/bistro-tables/src/main/java/com/example/bistro/booking/TableBookingService.java
+@@ -0,0 +1,25 @@
++package com.example.bistro.booking;
++
++import java.time.LocalDateTime;
++import java.util.HashMap;
++import java.util.Map;
++import java.util.UUID;
++import org.springframework.stereotype.Service;
++
++@Service
++public class TableBookingService {
++
++    private final Map<String, TableBooking> bookingsByCode = new HashMap<>();
++
++    public TableBooking bookTable(String guestName, int guestCount, LocalDateTime arrivesAt) {
++        TableBooking tableBooking = new TableBooking(UUID.randomUUID().toString(), guestName, guestCount, arrivesAt, false);
++        bookingsByCode.put(tableBooking.bookingCode(), tableBooking);
++        return tableBooking;
++    }
++
++    public TableBooking cancelBooking(String bookingCode) {
++        TableBooking cancelledBooking = bookingsByCode.get(bookingCode).cancel();
++        bookingsByCode.put(bookingCode, cancelledBooking);
++        return cancelledBooking;
++    }
++}
+diff --git a/bistro-tables/src/test/java/com/example/bistro/booking/CancelledBookingControllerTest.java b/bistro-tables/src/test/java/com/example/bistro/booking/CancelledBookingControllerTest.java
+new file mode 100644
+--- /dev/null
++++ b/bistro-tables/src/test/java/com/example/bistro/booking/CancelledBookingControllerTest.java
+@@ -0,0 +1,38 @@
++package com.example.bistro.booking;
++
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++
++import java.time.LocalDateTime;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.http.MediaType;
++import org.springframework.test.web.servlet.MockMvc;
++
++@SpringBootTest
++@AutoConfigureMockMvc
++class CancelledBookingControllerTest {
++
++    @Autowired
++    private MockMvc mockMvc;
++
++    @Autowired
++    private TableBookingService tableBookingService;
++
++    @Test
++    void shouldMarkTheBookingCancelledWhenTheGuestCancelsIt() throws Exception {
++        // given
++        TableBooking tableBooking = tableBookingService.bookTable("Ada Moreno", 4, LocalDateTime.of(2027, 3, 12, 19, 30));
++
++        // when
++        var cancellation = mockMvc.perform(post("/table-bookings/{bookingCode}/cancellation", tableBooking.bookingCode())
++                .contentType(MediaType.APPLICATION_JSON));
++
++        // then
++        cancellation.andExpect(status().isOk())
++                .andExpect(jsonPath("$.cancelled").value(true));
++    }
++}
