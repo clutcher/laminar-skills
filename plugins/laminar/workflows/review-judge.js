@@ -451,6 +451,8 @@ const stoppedWith = words => ({ ...NOTHING_JUDGED, stopped: words })
 
 const PREPARE_RETURN_WORKFLOW_FILE = 'prepare-return.workflow.js'
 
+let unloadedReturn = null
+
 async function loadPreparedOf(given) {
   const fields = given || {}
   if (fields.prepared || !fields.runFolder) return fields.prepared
@@ -459,12 +461,15 @@ async function loadPreparedOf(given) {
     return await workflow({ scriptPath })
   } catch (error) {
     log(`the run folder gave no prepare return: ${error.message}`)
+    unloadedReturn = error.message
     return null
   }
 }
 
 const theArguments = new WorkflowArguments({ ...(args || {}), prepared: await loadPreparedOf(args) })
 const theAgents = new Agents(theArguments)
+
+if (unloadedReturn) return stoppedWith(`the call did not run: ${PREPARE_RETURN_WORKFLOW_FILE} could not be loaded (${unloadedReturn}): where the file is missing, run the prepare command again; where another workflow calls this one, call it at the top level instead, because a workflow that another workflow calls cannot load the file, or pass prepared`)
 
 if (!theArguments.runFolder) return stoppedWith('the call did not run: it needs the run folder the prepare command wrote')
 

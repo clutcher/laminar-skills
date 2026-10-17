@@ -157,6 +157,8 @@ const stoppedWith = words => ({ ...NOTHING_VERIFIED, stopped: words })
 
 const MERGE_RETURN_WORKFLOW_FILE = 'merge-return.workflow.js'
 
+let unloadedReturn = null
+
 async function loadMergedOf(given) {
   const fields = given || {}
   if (fields.merged || !fields.runFolder) return fields.merged
@@ -165,12 +167,15 @@ async function loadMergedOf(given) {
     return await workflow({ scriptPath })
   } catch (error) {
     log(`the run folder gave no merge return: ${error.message}`)
+    unloadedReturn = error.message
     return null
   }
 }
 
 const theArguments = new WorkflowArguments({ ...(args || {}), merged: await loadMergedOf(args) })
 const theAgents = new Agents(theArguments)
+
+if (unloadedReturn) return stoppedWith(`the call did not run: ${MERGE_RETURN_WORKFLOW_FILE} could not be loaded (${unloadedReturn}): where the file is missing, run the merge command again; where another workflow calls this one, call it at the top level instead, because a workflow that another workflow calls cannot load the file, or pass merged`)
 
 if (!theArguments.runFolder) return stoppedWith('the call did not run: it needs the run folder the merge wrote')
 
