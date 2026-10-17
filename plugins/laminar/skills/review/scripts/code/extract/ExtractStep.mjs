@@ -40,6 +40,8 @@ import { CodeGraph } from "../graph/CodeGraph.mjs";
 import { ModuleOpenings } from "./abstractions/module/generic/published/ModuleOpenings.mjs";
 import { CommentPlacement } from "./tree/CommentPlacement.mjs";
 import { TestRecognition } from "./tree/TestRecognition.mjs";
+import { TestLayout } from "./tree/TestLayout.mjs";
+import { TestPlacements } from "../inputs/source/TestPlacement.mjs";
 import { AbstractionFacts, INTERACTION_LINES } from "./tree/AbstractionFacts.mjs";
 
 const BOUNDARY_MOVING_FILE_STATUS = new Set([FILE_STATUS.CREATED, FILE_STATUS.REMOVED, FILE_STATUS.RENAMED]);
@@ -197,6 +199,7 @@ export class ExtractStep {
     this.shapes = this.readTheModuleShapes();
     this.walker = new AbstractionWalker(new CodeGraph(), { roots: this.roots, applications: this.applications, shapes: this.shapes }).walk(this.walk.listEveryFile());
     this.moduleReading = this.readTheModules();
+    this.testLayout = this.readTheTestLayout();
     this.moduleOpenings = new ModuleOpenings({ change: this.change, walkedPaths: this.listWalkedPaths(), walker: this.walker, shapes: this.shapes, moduleReading: this.moduleReading, repositoryText: this.repositoryText, applications: this.applications });
     this.publishedSets = this.moduleOpenings.readThePublishedSets();
     this.moduleOpenings.giveTheOpeningRoles(this.publishedSets);
@@ -228,6 +231,13 @@ export class ExtractStep {
       findApplicationStarts: language => this.walk.findApplicationStarts(language),
       findFrameworksAt: folder => this.applications.listFrameworkNamesAt(folder),
     }, this.shapes);
+  }
+
+  readTheTestLayout() {
+    return new TestLayout({
+      testPlacements: new TestPlacements(this.listWalkedPaths()),
+      listFilePathsIn: folder => this.moduleReading.folderFiles.listFiles(folder).map(file => file.path),
+    });
   }
 
   readTheShapeFacts() {
@@ -356,7 +366,8 @@ export class ExtractStep {
     const onlyCreatedSubfoldersFact = holdsOnlyCreatedSubfolders(module, createdSubfolders) ? { holdsOnlyCreatedSubfolders: true } : {};
     const onlyAnOpeningFact = holdsOnlyAnOpening(module, createdSubfolders, this.openedByTheChange) ? { holdsOnlyAnOpening: true } : {};
     const moduleShapeFacts = this.shapeFacts.readTheFactsOfTheFolder(module.folder, folder => this.moduleFolders.has(folder));
-    return { ...read, references, joinsAFolder: this.createdFolders.joinsAFolder(module.folder), createdSubfolders, ...onlyCreatedSubfoldersFact, ...onlyAnOpeningFact, ...moduleShapeFacts };
+    const testLayoutFacts = this.testLayout.readTheFacts(module.folder, module.readings.map(changedFileReading => changedFileReading.file.path));
+    return { ...read, references, joinsAFolder: this.createdFolders.joinsAFolder(module.folder), createdSubfolders, ...onlyCreatedSubfoldersFact, ...onlyAnOpeningFact, ...moduleShapeFacts, ...testLayoutFacts };
   }
 
   dropAsTrivial(file, reason = LEFT_OUT_REASONS.TRIVIAL) {

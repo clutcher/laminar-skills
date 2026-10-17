@@ -12,6 +12,7 @@ export const CppLanguage = Object.freeze({
   diffDriver: "cpp",
   extensions: [".c", ".h", ".cc", ".cpp", ".cxx", ".c++", ".hpp", ".hh", ".hxx", ".h++", ".inl", ".ipp", ".tpp"],
   testFileNames: [/Tests?\.[a-z]+$/, /_test\.[a-z]+$/],
+  testNameAffixes: { openings: [], endings: ["Tests", "Test", "_test"] },
   commentForms: C_FAMILY,
   functionNamePattern: CPP_FUNCTION_NAME_PATTERN_SOURCE,
   trailingDotContinues: true,

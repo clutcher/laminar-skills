@@ -13,6 +13,7 @@ export const ScalaLanguage = Object.freeze({
   diffDriver: "scala",
   extensions: [".scala", ".sc"],
   testFileNames: [/Tests?\.[a-z]+$/, /[a-z\d]IT\.[a-z]+$/, /Spec\.[a-z]+$/],
+  testNameAffixes: { openings: [], endings: ["Tests", "Test", "IT", "Spec"] },
   commentForms: C_FAMILY,
   stringForm: createTripleQuotedJvmForm(RAW_MULTI_LINE),
   functionNamePattern: SCALA_FUNCTION_NAME_PATTERN_SOURCE,

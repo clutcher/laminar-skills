@@ -4,9 +4,19 @@ import { findDriver } from "./drivers/LanguageRegistry.mjs";
 import { doRegionsHoldLine } from "../../graph/abstractions/Place.mjs";
 import { findGivenWhenThenComments } from "./lines/CommentLines.mjs";
 
-const TEST_FOLDER_PATTERN = /(^|\/)(test|tests|spec|specs|__tests__)(\/|$)/;
+const TEST_FOLDER_NAMES = Object.freeze(["test", "tests", "spec", "specs", "__tests__"]);
 
-const readTestFileNamePatterns = filePath => findLanguage(DIFF_DRIVER_BY_EXTENSION_MAP[path.posix.extname(filePath).toLowerCase()]).testFileNames || [];
+const TEST_FOLDER_PATTERN = new RegExp(`(^|/)(${TEST_FOLDER_NAMES.join("|")})(/|$)`);
+
+const NO_TEST_NAME_AFFIXES = Object.freeze({ openings: [], endings: [] });
+
+const findLanguageOfTheFile = filePath => findLanguage(DIFF_DRIVER_BY_EXTENSION_MAP[path.posix.extname(filePath).toLowerCase()]);
+
+const readTestFileNamePatterns = filePath => findLanguageOfTheFile(filePath).testFileNames || [];
+
+export const isATestFolderName = name => TEST_FOLDER_NAMES.includes(name);
+
+export const readTestNameAffixes = filePath => findLanguageOfTheFile(String(filePath)).testNameAffixes || NO_TEST_NAME_AFFIXES;
 
 export const hasATestFileName = filePath => readTestFileNamePatterns(String(filePath)).some(name => name.test(String(filePath)));
 

@@ -76,6 +76,7 @@ const listTracksOfATestCodeMethod = abstraction => {
 const listTestTracks = abstraction => {
   if (abstraction.scale === Scale.METHOD.name && changesTheCode(abstraction.changeKind)) return listTracksOfATestCodeMethod(abstraction);
   if (abstraction.scale === Scale.CLASS.name && changesTheBoundary(abstraction.changeKind)) return [TRACKS.SIMPLICITY];
+  if (abstraction.scale === Scale.MODULE.name) return [TRACKS.SIMPLICITY];
   return [];
 };
 
@@ -85,6 +86,8 @@ const holdsOnlyAnOpening = abstraction => abstraction.scale === Scale.MODULE.nam
 
 const isAModuleWithOnlyItsInternalsChanged = abstraction => abstraction.scale === Scale.MODULE.name && abstraction.changeKind === CHANGE_KINDS.INTERNALS_CHANGED;
 
+const followsAKnownTestLayout = abstraction => abstraction.scale === Scale.MODULE.name && Boolean((abstraction.module || {}).followsAKnownTestLayout);
+
 const isReadOnly = abstraction => NAME_ONLY_KINDS.has(abstraction.changeKind)
   || holdsOnlyCreatedSubfolders(abstraction)
   || holdsOnlyAnOpening(abstraction)
@@ -92,6 +95,7 @@ const isReadOnly = abstraction => NAME_ONLY_KINDS.has(abstraction.changeKind)
 
 export function listTracks(abstraction) {
   if (abstraction.commentsOnly) return holdsAJudgedComment(abstraction) ? [TRACKS.COMMENT] : [];
+  if (followsAKnownTestLayout(abstraction)) return [];
   if (abstraction.isTest) return listTestTracks(abstraction);
   if (isReadOnly(abstraction) || holdsKeyTreesAt(abstraction.path)) return [TRACKS.SIMPLICITY];
   const tracks = [TRACKS.SIMPLICITY];

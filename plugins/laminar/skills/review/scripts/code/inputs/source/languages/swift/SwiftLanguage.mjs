@@ -13,6 +13,7 @@ export const SwiftLanguage = Object.freeze({
   diffDriver: "swift",
   extensions: [".swift"],
   testFileNames: [/Tests?\.[a-z]+$/, /Spec\.[a-z]+$/],
+  testNameAffixes: { openings: [], endings: ["Tests", "Test", "Spec"] },
   commentForms: C_FAMILY,
   stringForm: createForm(C_COMMENTS, [createTripleQuote("\"", MULTI_LINE), createShortQuote("\"")]),
   functionNamePattern: SWIFT_FUNCTION_NAME_PATTERN_SOURCE,

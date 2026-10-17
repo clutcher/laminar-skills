@@ -9,6 +9,7 @@ export const CSharpLanguage = Object.freeze({
   diffDriver: "csharp",
   extensions: [".cs", ".csx"],
   testFileNames: [/Tests?\.[a-z]+$/],
+  testNameAffixes: { openings: [], endings: ["Tests", "Test"] },
   commentForms: C_FAMILY,
   stringForm: createForm(C_COMMENTS, [rawCSharpString, verbatimCSharpString, createShortQuote("\""), createShortQuote("'")]),
   trailingDotContinues: true,

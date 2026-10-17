@@ -9,6 +9,7 @@ export const PhpLanguage = Object.freeze({
   diffDriver: "php",
   extensions: [".php", ".phtml"],
   testFileNames: [/Tests?\.[a-z]+$/],
+  testNameAffixes: { openings: [], endings: ["Tests", "Test"] },
   commentForms: createForms(["//", "#"], [SLASH_STAR]),
   stringForm: createForm({ lineComments: ["//", "#"], blockComment: C_COMMENTS.blockComment }, [phpHeredoc, createShortQuote("\""), createShortQuote("'")]),
   singleQuotedStrings: true,

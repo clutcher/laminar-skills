@@ -5,6 +5,7 @@ export const ElixirLanguage = Object.freeze({
   diffDriver: "elixir",
   extensions: [".ex", ".exs"],
   testFileNames: [/_test\.exs?$/],
+  testNameAffixes: { openings: [], endings: ["_test"] },
   commentForms: HASH_ONLY,
   singleQuotedStrings: true,
   tripleQuotes: ['"""'],

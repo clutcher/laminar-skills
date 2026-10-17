@@ -18,6 +18,7 @@ export const JavaLanguage = Object.freeze({
   diffDriver: "java",
   extensions: [".java"],
   testFileNames: [/Tests?\.[a-z]+$/, /[a-z\d]IT\.[a-z]+$/],
+  testNameAffixes: { openings: [], endings: ["Tests", "Test", "IT"] },
   commentForms: C_FAMILY,
   stringForm: createTripleQuotedJvmForm(MULTI_LINE),
   functionNamePattern: JAVA_FUNCTION_NAME_PATTERN_SOURCE,

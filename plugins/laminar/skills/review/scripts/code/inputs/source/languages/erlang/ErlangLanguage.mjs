@@ -8,6 +8,7 @@ export const ErlangLanguage = Object.freeze({
   diffDriver: "erlang",
   extensions: [".erl", ".hrl"],
   testFileNames: [/_test\.erl$/],
+  testNameAffixes: { openings: [], endings: ["_test"] },
   commentForms: createForms(["%"]),
   functionNamePattern: ERLANG_FUNCTION_NAME_PATTERN_SOURCE,
   singleQuotedStrings: true,

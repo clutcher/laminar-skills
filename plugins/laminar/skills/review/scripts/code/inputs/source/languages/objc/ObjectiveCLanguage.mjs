@@ -12,6 +12,7 @@ export const ObjectiveCLanguage = Object.freeze({
   diffDriver: "objc",
   extensions: [".m", ".mm"],
   testFileNames: [/Tests?\.[a-z]+$/],
+  testNameAffixes: { openings: [], endings: ["Tests", "Test"] },
   commentForms: C_FAMILY,
   readDeclaration: findObjectiveCMethod,
 });

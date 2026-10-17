@@ -14,6 +14,7 @@ export const DartLanguage = Object.freeze({
   diffDriver: "dart",
   extensions: [".dart"],
   testFileNames: [/_test\.dart$/],
+  testNameAffixes: { openings: [], endings: ["_test"] },
   commentForms: C_FAMILY,
   stringForm: createForm(C_COMMENTS, [createTripleQuote("\"", MULTI_LINE), createTripleQuote("'", MULTI_LINE), createShortQuote("\""), createShortQuote("'")]),
   functionNamePattern: DART_FUNCTION_NAME_PATTERN_SOURCE,

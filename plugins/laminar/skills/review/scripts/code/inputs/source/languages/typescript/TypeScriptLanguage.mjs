@@ -56,6 +56,7 @@ export const TypeScriptLanguage = Object.freeze({
   diffDriver: "javascript",
   extensions: [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"],
   testFileNames: [/\.(?:test|spec)\.[a-z]+$/],
+  testNameAffixes: { openings: [], endings: [".test", ".spec"] },
   commentForms: C_FAMILY,
   stringForm: createForm(C_COMMENTS, [templateLiteral, createShortQuote("'"), createShortQuote("\"")]),
   functionNamePattern: JAVASCRIPT_FUNCTION_NAME_PATTERN_SOURCE,

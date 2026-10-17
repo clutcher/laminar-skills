@@ -11,6 +11,7 @@ export const RubyLanguage = Object.freeze({
   diffDriver: "ruby",
   extensions: [".rb", ".rake", ".gemspec", ".ru"],
   testFileNames: [/_test\.rb$/, /_spec\.rb$/],
+  testNameAffixes: { openings: [], endings: ["_test", "_spec"] },
   commentForms: createForms(["#"], [createBlockForm("=begin", "=end")]),
   stringForm: createForm(HASH_COMMENTS, [rubyIndentedHeredoc, rubyHeredoc, createShortQuote("\""), createShortQuote("'")]),
   singleQuotedStrings: true,

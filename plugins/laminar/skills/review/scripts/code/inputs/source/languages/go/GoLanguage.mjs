@@ -20,6 +20,7 @@ export const GoLanguage = Object.freeze({
   diffDriver: "golang",
   extensions: [".go"],
   testFileNames: [/_test\.go$/],
+  testNameAffixes: { openings: [], endings: ["_test"] },
   commentForms: C_FAMILY,
   stringForm: createForm(C_COMMENTS, [createDelimitedOpener("`", "`", RAW_MULTI_LINE), createShortQuote("\""), createShortQuote("'")]),
   functionNamePattern: GOLANG_FUNCTION_NAME_PATTERN_SOURCE,
