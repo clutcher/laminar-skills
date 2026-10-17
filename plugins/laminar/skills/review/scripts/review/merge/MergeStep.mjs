@@ -68,10 +68,10 @@ const findTheLastPossibleFindingNumber = groups => groups
   .reduce((last, possibleFinding) => Math.max(last, Number.isInteger(possibleFinding.number) ? possibleFinding.number : 0), 0);
 
 export class MergeStep {
-  constructor(runFolder, findingsFile, { ruleCache = new IoRuleCache(), judgeCache } = {}) {
+  constructor(runFolder, findingsFile, { ruleCache = new IoRuleCache() } = {}) {
     this.runFolder = runFolder;
     this.ruleCache = ruleCache;
-    this.possibleFindingSource = new PossibleFindings(runFolder, { findings: findingsFile, judgeCache });
+    this.possibleFindingSource = new PossibleFindings(runFolder, { findings: findingsFile });
     this.preparedRun = this.possibleFindingSource.preparedRun;
     this.sliceLines = new SliceLines(runFolder, this.preparedRun.prepared);
     this.codeUnderReviewPlaces = new CodeUnderReviewPlaces(runFolder, this.preparedRun.prepared.codeUnderReview);
@@ -133,7 +133,8 @@ export class MergeStep {
   buildCounts() {
     return {
       possibleFindings: this.possibleFindings.length,
-      cachedJudgeCalls: (this.possibleFindingSource.judgeReturn.returned.judgeCache || {}).hits?.length || 0,
+      judgeCalls: Number((this.possibleFindingSource.judgeReturn.returned.counts || {}).judgeCalls) || 0,
+      cachedJudgeCalls: this.possibleFindingSource.judgeCacheUse.reusedCount,
       dropped: this.dropped.length,
       refiled: this.refiled.length,
       filedUnderAnotherCheck: this.filedUnderAnotherCheck.length,

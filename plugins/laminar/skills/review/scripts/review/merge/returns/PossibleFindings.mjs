@@ -186,7 +186,7 @@ export class PossibleFindings {
   constructor(runFolder, files) {
     const given = files || {};
     this.preparedRun = new PreparedRun(runFolder);
-    this.judgeCacheUse = new JudgeCacheUse(runFolder, given.judgeCache ? { cache: given.judgeCache } : {});
+    this.judgeCacheUse = new JudgeCacheUse(runFolder);
     this.judgeReturn = new JudgeReturn(this.judgeCacheUse.addTheSavedReturns(JudgeReturn.readFrom(given.findings).returned));
     this.places = new AbstractionsAtPlaces(runFolder, this.preparedRun.repository, this.preparedRun.abstractionsOfTheChange);
   }
