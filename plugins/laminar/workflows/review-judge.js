@@ -449,7 +449,21 @@ const NOTHING_JUDGED = { findings: [], covered: [], notRun: [], counts: { judgeC
 
 const stoppedWith = words => ({ ...NOTHING_JUDGED, stopped: words })
 
-const theArguments = new WorkflowArguments(args)
+const PREPARE_RETURN_WORKFLOW_FILE = 'prepare-return.workflow.js'
+
+async function loadPreparedOf(given) {
+  const fields = given || {}
+  if (fields.prepared || !fields.runFolder) return fields.prepared
+  const scriptPath = `${forward(fields.runFolder)}/${PREPARE_RETURN_WORKFLOW_FILE}`
+  try {
+    return await workflow({ scriptPath })
+  } catch (error) {
+    log(`the run folder gave no prepare return: ${error.message}`)
+    return null
+  }
+}
+
+const theArguments = new WorkflowArguments({ ...(args || {}), prepared: await loadPreparedOf(args) })
 const theAgents = new Agents(theArguments)
 
 if (!theArguments.runFolder) return stoppedWith('the call did not run: it needs the run folder the prepare command wrote')
@@ -464,7 +478,7 @@ if (!theArguments.codeUnderReview.length && (theArguments.prepared.counts || {})
 }
 
 if (!theArguments.codeUnderReview.length) {
-  log('the call carries no code under review, so no judge ran; pass the prepare command\'s RESULT object as prepared')
+  log(`the call carries no code under review, so no judge ran; run the prepare command again, which writes ${PREPARE_RETURN_WORKFLOW_FILE}`)
   return stoppedWith('the call did not run: prepared names no code under review')
 }
 

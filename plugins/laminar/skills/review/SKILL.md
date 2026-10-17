@@ -48,7 +48,7 @@ node "<skill>/scripts/runReview.mjs" prepare --run "<run>"
 
 The extract command prints `run folder:` with the absolute path of the run folder. Use that path for `<run>` in every later step.
 
-The prepare command prints a `RESULT` line and writes the same object to `<run>/prepare-return.json`. That object is the map the next step needs.
+The prepare command prints a `RESULT` line and writes the same object to `<run>/prepare-return.json` and to `<run>/prepare-return.workflow.js`. The judge workflow reads that object from `<run>/prepare-return.workflow.js` itself, so never pass it as an argument.
 
 Where a command stops with an error, show its error line to the user and stop: run no later step and write no file in its place.
 
@@ -64,8 +64,7 @@ The task output of every Workflow call below holds the object the workflow retur
 
 ```
 Workflow({ name: "laminar:laminar-review-judge", args: {
-  runFolder: "<run>",
-  prepared: <the RESULT object the prepare command printed>
+  runFolder: "<run>"
 } })
 ```
 
@@ -73,12 +72,11 @@ It returns the possible findings, the covered paths, the checks no judge ran, th
 
 Where a Workflow call fails or its task output holds no `.result`, call it again once with the same arguments. Where it fails again, show the error to the user and stop. Never write a return file of your own.
 
-**Where `waves` in the `RESULT` object holds more than 1 entry, call the judge workflow once per wave, one after the other, and never 2 at once.** Each call carries the same 2 arguments and `wave`, the number of the wave, 1 for the first call, then 2, and so on up to the number of entries in `waves`. Start a call only after the call before it has returned.
+**Where `waves` in the `RESULT` object holds more than 1 entry, call the judge workflow once per wave, one after the other, and never 2 at once.** Each call carries `runFolder` and `wave`, the number of the wave, 1 for the first call, then 2, and so on up to the number of entries in `waves`. Start a call only after the call before it has returned.
 
 ```
 Workflow({ name: "laminar:laminar-review-judge", args: {
   runFolder: "<run>",
-  prepared: <the RESULT object the prepare command printed>,
   wave: <N>
 } })
 ```
@@ -99,7 +97,7 @@ Where step 2 ran in more than 1 wave, every possible findings file is already wr
 node "<skill>/scripts/runReview.mjs" merge --run "<run>" --findings "<run>/returns/possible-findings-1.json,<run>/returns/possible-findings-2.json"
 ```
 
-The merge command prints a `RESULT` line and writes the same object to `<run>/merge-return.json`. That object is the map step 4 needs.
+The merge command prints a `RESULT` line and writes the same object to `<run>/merge-return.json` and to `<run>/merge-return.workflow.js`. The verify workflow reads that object from `<run>/merge-return.workflow.js` itself, so never pass it as an argument.
 
 Where the merge stops with an error, show its error line to the user and stop. Never change a possible findings file by hand to make the merge pass.
 
@@ -109,8 +107,7 @@ Where the merge stops with an error, show its error line to the user and stop. N
 
 ```
 Workflow({ name: "laminar:laminar-review-verify", args: {
-  runFolder: "<run>",
-  merged: <the RESULT object the merge command printed>
+  runFolder: "<run>"
 } })
 ```
 
@@ -118,12 +115,11 @@ It returns `verdicts`, `refutations` and `notVerified`.
 
 Where a Workflow call fails or its task output holds no `.result`, call it again once with the same arguments. Where it fails again, show the error to the user and stop. Never write a return file of your own.
 
-**Where `verify` in the merge `RESULT` object holds `waves` with more than 1 entry, call the verify workflow once per wave, one after the other, and never 2 at once.** Each call carries the same 2 arguments and `wave`, the number of the wave, 1 for the first call, then 2, and so on up to the number of entries in `waves`. Start a call only after the call before it has returned.
+**Where `verify` in the merge `RESULT` object holds `waves` with more than 1 entry, call the verify workflow once per wave, one after the other, and never 2 at once.** Each call carries `runFolder` and `wave`, the number of the wave, 1 for the first call, then 2, and so on up to the number of entries in `waves`. Start a call only after the call before it has returned.
 
 ```
 Workflow({ name: "laminar:laminar-review-verify", args: {
   runFolder: "<run>",
-  merged: <the RESULT object the merge command printed>,
   wave: <N>
 } })
 ```

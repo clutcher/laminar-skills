@@ -10,6 +10,7 @@ import { formatSweepWords } from "./review/merge/draft/Sweep.mjs";
 import { RenderStep } from "./review/render/RenderStep.mjs";
 import { resolveAbsolutePath } from "./files/paths.mjs";
 import { readJsonFile, writeJsonFile } from "./files/jsonFile.mjs";
+import { writeWorkflowReturnFile } from "./files/workflowReturnFile.mjs";
 import { RunFileStop } from "./files/runFile.mjs";
 
 const SUBCOMMANDS = ["extract", "prepare", "merge", "render"];
@@ -19,6 +20,14 @@ const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder
 const PREPARE_RETURN_FILE = "prepare-return.json";
 
 const MERGE_RETURN_FILE = "merge-return.json";
+
+const PREPARE_RETURN_WORKFLOW_FILE = "prepare-return.workflow.js";
+
+const MERGE_RETURN_WORKFLOW_FILE = "merge-return.workflow.js";
+
+const PREPARE_RETURN_META = { name: "prepare-return", description: "The prepare return of 1 run" };
+
+const MERGE_RETURN_META = { name: "merge-return", description: "The merge return of 1 run" };
 
 const splitList = given => String(given || "").split(",").map(piece => piece.trim()).filter(Boolean);
 
@@ -104,7 +113,7 @@ function filterOrStop(parsed) {
 function printThePrepareSummary(runFolder, written) {
   console.log(`run folder: ${resolveAbsolutePath(runFolder)}`);
   const byTrack = Object.entries(written.counts.byTrack).map(([track, count]) => `${track} ${count}`).join(", ");
-  console.log(`prepare: ${written.counts.codeUnderReview} abstraction(s) under review (${byTrack}), ${written.counts.checks} check(s), ${written.counts.screenBatches} screen batch(es), ${written.counts.endCalls} end call(s), ${written.counts.ioRuleScreenCalls} I/O rule screen call(s), ${written.counts.ioEndMethods} I/O end method(s), ${written.counts.codeUnderReview} file(s) written to code-under-review/, written to ${REVIEW_ABSTRACTIONS_FILE}, prepare.json and ${PREPARE_RETURN_FILE}`);
+  console.log(`prepare: ${written.counts.codeUnderReview} abstraction(s) under review (${byTrack}), ${written.counts.checks} check(s), ${written.counts.screenBatches} screen batch(es), ${written.counts.endCalls} end call(s), ${written.counts.ioRuleScreenCalls} I/O rule screen call(s), ${written.counts.ioEndMethods} I/O end method(s), ${written.counts.codeUnderReview} file(s) written to code-under-review/, written to ${REVIEW_ABSTRACTIONS_FILE}, prepare.json, ${PREPARE_RETURN_FILE} and ${PREPARE_RETURN_WORKFLOW_FILE}`);
   console.log(`prepare: ${written.costPlan}, written to cost-plan.json`);
   for (const note of written.notAnswered) {
     console.log(`prepare: ${note.reason}`);
@@ -142,6 +151,7 @@ function prepare(parsed) {
   printThePrepareSummary(parsed.run, written);
   const returned = prepareReturnOf(parsed.run, written);
   writeJsonFile(path.join(parsed.run, PREPARE_RETURN_FILE), returned);
+  writeWorkflowReturnFile(path.join(parsed.run, PREPARE_RETURN_WORKFLOW_FILE), PREPARE_RETURN_META, returned);
   printResult(returned);
 }
 
@@ -149,9 +159,10 @@ function merge(parsed) {
   if (!parsed.findings.length) { console.error(USAGE); process.exit(2); }
   const written = new MergeStep(parsed.run, parsed.findings).run().writeTo();
   console.log(`merge: ${written.counts.possibleFindings} possible finding(s), ${written.counts.dropped} dropped by the line check, ${written.counts.refiled} re-filed under the check their decision names, ${written.counts.filedUnderAnotherCheck} dropped as filed under a check their call did not answer, ${written.counts.linesNotInTheCode} named line(s) not in the code, ${written.counts.items} item(s) in the draft, ${formatSweepWords(written.sweep)}, written to merge.json and draft.md`);
-  console.log(`merge: ${written.counts.refuterCalls} refuter call(s), ${written.counts.excludedFromRefutation} possible finding(s) left out of the refuter, ${written.counts.verifyWaves} verify wave(s), written to refute/, verify/ and ${MERGE_RETURN_FILE}`);
+  console.log(`merge: ${written.counts.refuterCalls} refuter call(s), ${written.counts.excludedFromRefutation} possible finding(s) left out of the refuter, ${written.counts.verifyWaves} verify wave(s), written to refute/, verify/, ${MERGE_RETURN_FILE} and ${MERGE_RETURN_WORKFLOW_FILE}`);
   const returned = { step: "merge", runFolder: resolveAbsolutePath(parsed.run), counts: written.counts, draft: written.draft, draftLines: written.draftLines, verify: written.verify };
   writeJsonFile(path.join(parsed.run, MERGE_RETURN_FILE), returned);
+  writeWorkflowReturnFile(path.join(parsed.run, MERGE_RETURN_WORKFLOW_FILE), MERGE_RETURN_META, returned);
   printResult(returned);
 }
 

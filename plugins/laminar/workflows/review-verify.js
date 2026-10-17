@@ -155,12 +155,26 @@ const NOTHING_VERIFIED = { verdicts: [], refutations: [], notVerified: [] }
 
 const stoppedWith = words => ({ ...NOTHING_VERIFIED, stopped: words })
 
-const theArguments = new WorkflowArguments(args)
+const MERGE_RETURN_WORKFLOW_FILE = 'merge-return.workflow.js'
+
+async function loadMergedOf(given) {
+  const fields = given || {}
+  if (fields.merged || !fields.runFolder) return fields.merged
+  const scriptPath = `${forward(fields.runFolder)}/${MERGE_RETURN_WORKFLOW_FILE}`
+  try {
+    return await workflow({ scriptPath })
+  } catch (error) {
+    log(`the run folder gave no merge return: ${error.message}`)
+    return null
+  }
+}
+
+const theArguments = new WorkflowArguments({ ...(args || {}), merged: await loadMergedOf(args) })
 const theAgents = new Agents(theArguments)
 
 if (!theArguments.runFolder) return stoppedWith('the call did not run: it needs the run folder the merge wrote')
 
-if (!theArguments.verify) return stoppedWith('the call did not run: pass the merge command\'s RESULT object as merged')
+if (!theArguments.verify) return stoppedWith(`the call did not run: the run folder holds no ${MERGE_RETURN_WORKFLOW_FILE} with a verify plan, so run the merge command again`)
 
 if (theArguments.waveNumber === null && theArguments.waves.length > 1) return stoppedWith(`the call did not run: merged plans ${theArguments.waves.length} verify waves, so make 1 call per wave with wave 1 to ${theArguments.waves.length}`)
 
