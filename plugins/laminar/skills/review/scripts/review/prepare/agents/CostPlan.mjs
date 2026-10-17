@@ -9,9 +9,9 @@ export const COST_PLAN_FILE = "cost-plan.json";
 
 export const FULL_COST_PLAN_FILE = "cost-plan-full.json";
 
-export const THRESHOLD = Object.freeze({ judgeCalls: 500, newTokens: 2_000_000 });
+export const THRESHOLD = Object.freeze({ judgeCalls: 750, newTokens: 2_000_000 });
 
-export const AVERAGES_MEASURED = "new tokens, output tokens and cache reads per agent call from the review runs of 2026-10-12 to 2026-10-17, the mean of the runs on fictional code and the runs on a real repository; wall seconds per judge call from earlier measured runs; possible findings per judge call from a run of the eval suite, whose every case holds a defect, so the refuter and verifier calls are an upper estimate";
+export const AVERAGES_MEASURED = "new tokens, output tokens and cache reads per agent call from the review runs of 2026-10-12 to 2026-10-17, the mean of the runs on fictional code and the runs on a real repository; wall seconds per judge call from earlier measured runs; possible findings per judge call before refutation, pooled over the first full review of each of 15 changes of a real repository from 2026-09-22 to 2026-10-17, for the judge types with at least 30 judge calls over at least 2 of those reviews, and 0.35 for every other judge type";
 
 export const DOLLARS_LEAVE_OUT = "the session that runs the review, the calls started again, a model or effort given to the workflow call, and the uncached input, which is counted at the cache write price";
 
@@ -59,18 +59,17 @@ export const EXCLUDED_FROM_REFUTATION = Object.freeze(["judge-correctness-test-p
 
 export const COVERED_PATHS_PER_TEST_PLAN_CALL = 2.2;
 
-export const POSSIBLE_FINDINGS_PER_JUDGE_CALL_OF_ALL_TYPES = 0.354;
+export const POSSIBLE_FINDINGS_PER_JUDGE_CALL_OF_ALL_TYPES = 0.35;
 
 export const POSSIBLE_FINDINGS_PER_JUDGE_CALL_BY_JUDGE_TYPE = Object.freeze({
-  "judge-simplicity-variable": 0.652,
-  "judge-simplicity-method": 0.452,
-  "judge-simplicity-class": 0.426,
-  "judge-simplicity-module": 0.191,
-  "judge-simplicity-decision": 0.194,
-  "judge-correctness-prevention": 0.22,
-  "judge-correctness-simplicity-test-method": 0.542,
-  "judge-performance-abstraction": 0.111,
-  "judge-design-leaked-details": 0.6,
+  "judge-simplicity-variable": 0.34,
+  "judge-simplicity-method": 0.23,
+  "judge-simplicity-class": 0.17,
+  "judge-simplicity-module": 0.06,
+  "judge-simplicity-decision": 0.16,
+  "judge-correctness-prevention": 0.23,
+  "judge-correctness-simplicity-test-method": 0.32,
+  "judge-performance-abstraction": 0.01,
 });
 
 export const SCREEN_EMPTIED_SHARE_BY_JUDGE_TYPE_MAP = Object.freeze({
