@@ -1,6 +1,18 @@
 {
-  "description": "Adds the Laminar conventions of a language to the context the first time an agent writes a file of that language in a session.",
+  "description": "Reminds an agent to load the laminar:code-style skill before its first write of a session, and adds the Laminar conventions of a language the first time an agent writes a file of that language in a session.",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/conventionHints.mjs\" remind",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit",
@@ -13,6 +25,27 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/conventionHints.mjs\" framework",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/conventionHints.mjs\" loaded",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/conventionHints.mjs\" loaded",
             "timeout": 10
           }
         ]
