@@ -1,7 +1,7 @@
 ---
 name: check-conventions
 description: Checks a change, such as a pull request, a branch or the working tree, against the conventions a writer can miss. These are the project's own conventions under .claude/rules/conventions/, the common pitfalls and every rule marked narrower than the book in the laminar code-style skill, and its conventions files for the languages of the change. Use when the user asks for a convention check, asks to check a change against the team or project conventions, or asks for a convention check before a merge. Every finding names the rule it rests on, and a finding is input to a discussion, not a gate on the merge. It does not judge the design directions of the book Laminar Software Design, because laminar:review judges those.
-argument-hint: "[pull request number | branch | range | current | working-tree]"
+argument-hint: "[pull request number | branch | range | current | working-tree] [scales: <list>]"
 ---
 
 # Laminar convention check
@@ -14,7 +14,7 @@ Contents: 1. The target · 2. The rules · 3. Which rule wins · 4. How to check
 
 ## 1. The target
 
-The argument is `$ARGUMENTS`. Do not change the checkout.
+The argument is `$ARGUMENTS`. Do not change the checkout. Where it ends in `scales: <list>`, such as `current scales: application,module,class`, that part is the scale filter of section 5, and the rest is the target. The list takes the words of `laminar:review`, lowercase and joined by commas with no space; an unknown word stops the check, with its name and the known words.
 
 Choose the remote `<remote>` with git alone. Where `git remote` lists 1 remote, use it. Where it lists `upstream`, use `upstream`. Else use the remote of the upstream of the current branch, which is the part before the first `/` of what `git rev-parse --abbrev-ref --symbolic-full-name "@{upstream}"` prints. Else use `origin` where it is listed. Else ask the user.
 
@@ -49,6 +49,7 @@ Load the rules in this order, and keep the file and the number of each rule, bec
 
 - Check only the lines the change adds or changes, and what they create: a new name, a new file, a new folder, a new test or a new configuration key. A line the change does not touch has no finding, also where it breaks a rule.
 - Report a line only where you can name the rule it breaks. No rule named, no finding.
+- Give every finding 1 scale, as `${CLAUDE_SKILL_DIR}/references/scales.md` says.
 - A section of a reference file under `code-style/references/` with no mark narrower than the book is a direction of the book. Never cite it for a finding, also where the change breaks it, because `laminar:review` judges it. Cite it only beside a project rule in a contradiction. A pointer to it inside a conventions file, such as `(methods, section 1)`, does not make it a rule to check.
 - Where the rule clearly applies, state the fix. Where the answer depends on an intent the code does not show, such as whether a value is a business rule, ask the author a question and state no fix.
 - Do not build, run or change the code.
@@ -62,25 +63,27 @@ A finding names its rule with 1 of these ids:
 
 ## 5. The report
 
-Write 3 sections in this order: `## Production code`, `## Tests` and `## Docs and configuration`. A finding on a convention file goes under Docs and configuration. Number the findings from 1 across all 3 sections, so each finding has 1 number in the discussion. Order them by file, in the order of the diff, and then by line. Write `No issues found.` in a section with no finding.
+Open the report with 1 line that names the scales covered, as `Scales: application,module,class,method,variable`. With a scale filter, check every changed line against every rule as before, and leave out only the findings of the scales not asked for; the first line then names each scale left out with the number of findings it left out, as `Scales: module,class · left out: application 0, method 2, variable 1`.
+
+Then write 3 sections in this order: `## Production code`, `## Tests` and `## Docs and configuration`. A finding on a convention file goes under Docs and configuration. Number the findings from 1 across all 3 sections, so each finding has 1 number in the discussion. Order them by file, in the order of the diff, and then by line. Write `No issues found.` in a section with no finding.
 
 Each finding takes this form:
 
 ```markdown
-1. **LoanRenewal#renew:42** — Name the extension for its business purpose (code-style pitfalls: Context-Aware Constants)
+1. **LoanRenewal#renew:42** — Name the extension for its business purpose (code-style pitfalls: Context-Aware Constants) · variable
    - The line compares the days of a renewal with the bare value 14.
    - The rule names every value for its business purpose, with its kind last.
    - **Fix:**
      - Add a private constant `RENEWAL_PERIOD_DAYS` and compare with it.
 ```
 
-The first line names the place, as `Type#method:line`, `Type:line` or `path:line` where no type holds the line, then an action in the imperative, then the id of the rule. Each bullet under it is 1 sentence. Where you ask a question, write `- **Question:**` with the question, in place of the fix.
+The first line names the place, as `Type#method:line`, `Type:line` or `path:line` where no type holds the line, then an action in the imperative, then the id of the rule in brackets, then ` · ` and the scale as 1 bare lowercase word, last on the line. A tool reads this line, so keep its form exact. Each bullet under it is 1 sentence. Where you ask a question, write `- **Question:**` with the question, in place of the fix.
 
-End with a table of the findings per source, 1 row for each project file and each `code-style` file that has a finding, and 1 row for the pitfalls. A contradiction counts in the row of its project file:
+End with a table of the findings per source and scale, 1 row for each project file, each `code-style` file and the pitfalls, for each scale it has a reported finding in. A contradiction counts in the row of its project file:
 
 ```markdown
-| Source | Findings |
-|---|---|
-| project loans.md | 2 |
-| code-style naming.md | 1 |
+| Source | Scale | Findings |
+|---|---|---|
+| project loans.md | class | 2 |
+| code-style pitfalls | variable | 1 |
 ```
