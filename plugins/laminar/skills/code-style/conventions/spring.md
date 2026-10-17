@@ -6,7 +6,7 @@ These are rules of this skill for Spring, narrower than the book. Read this file
 
 ## 1. Constructor injection
 
-Inject every dependency through the constructor, into a private final field. Write no field injection, no setter injection, and no Autowired marker on a class with 1 constructor. Never ask the application context for a bean in code: that is a hidden dependency the signature does not show (correctness, section 7). A configuration value comes in as a constructor parameter with its Value marker.
+Inject every dependency through the constructor, into a private final field. Write no field injection, no setter injection, and no Autowired marker on a class with 1 constructor. Never ask the application context for a bean in code: that is a hidden dependency the signature does not show (correctness, section 7). A configuration value comes in as a constructor parameter with its Value marker. Name the field of a dependency for the type it holds, such as carrierClient for a CarrierClient, so the name keeps the kind word of the type (naming, section 5).
 
 ## 2. Inject by the interface
 
@@ -26,7 +26,7 @@ Put the bean wiring of a module into a config folder beside app, in and out, in 
 
 ## 5. Names of classes by role
 
-End a class name with the word for its role where it has one, such as Service, Facade, Repository, Controller, Converter, Mapper, Validator, Factory, Builder, Processor or Exception, after a business word that says which, such as OrderFacade (naming, section 2). A role word never stands alone, because a general word alone, such as Helper or Mapper, gives the reader little to predict. Use each role word in 1 sense only, as the list below says; these are rules of the skill, narrower than the book. Name the types of a web interface for the call with Request and Response, and an entry of a list in them with RequestItem or ResponseItem; these words stay out of the domain (modules, section 5).
+End a class name with the word for its role where it has one, such as Service, Facade, Repository, Controller, Converter, Mapper, Validator, Factory, Builder, Processor or Exception, after a business word that says which, such as OrderFacade (naming, section 2). A role word never stands alone, because a general word alone, such as Helper or Mapper, gives the reader little to predict. Use each role word in 1 sense only, as the list below says; these are rules of the skill, narrower than the book. Name the types of a web interface for the call with Request and Response, and an element of a list in them with RequestItem or ResponseItem; these words stay out of the domain (modules, section 5).
 
 - Mapper names only a MapStruct mapper; a conversion class written by hand is a Converter (java.md, section 10).
 - A Facade is the entry point that 1 kind of caller uses: it calls services and holds no business rule of its own. A controller calls facades, and facades call services.
@@ -45,19 +45,20 @@ Put validation markers, such as NotNull and Valid, on the types of an entry boun
 
 ## 8. Executors and caches
 
-Build an executor from the factory the framework gives, and set only the values you change, so the framework keeps handling virtual threads. Let a cache drop its entries under memory pressure, read its time to live from a property, and never store a missing value.
+Build an executor from the factory the framework gives, and set only the values you change, so the framework keeps handling virtual threads. Let a cache drop what it holds under memory pressure, read its time to live from a property, and never store a missing value.
 
 ## 9. Tests with the framework
 
 - An integration test starts the application and calls its entry boundary as a real caller does, such as through a web test client, and replaces only what lies past the exit boundary with a substitute bean of the framework, never a plain substitute that the context does not know (tests, sections 3 and 4).
 - Assert on the content of the response with concrete values; capture an argument sent to a substitute only for an effect that leaves no trace in the response (tests, section 3).
 - Test pure logic without the framework context (java.md, section 11).
+- A test class takes the beans it uses through its constructor, into private final fields, and never by field injection (section 1). Where the project has not set the constructor injection mode of the test framework to all, set it once in the test properties, such as spring.test.constructor.autowire.mode=all, and write no Autowired marker on the constructor.
 - Give a test a property through the property support of the test framework or through the constructor, never by setting a field by reflection.
 - Mark a test that calls a real outside system with the tag marker of the test framework, or with a condition on a property, so the regular build leaves it out, and give its class the suffix the project chose (tests, section 14).
 
 ## 10. Storage verbs and business verbs
 
-Name the methods of a storage interface in the spi with the verbs of the framework, such as find, save and delete, so a reader who knows the framework reads each one as a known operation. Name the operations that callers call, in the api and in the services behind it, with the verb of the business action, such as search, create or remove. Each verb keeps 1 meaning: find reads stored items by a key or a filter, search answers a question of a caller, save stores an item, create makes a new item under its business rules, delete removes a stored item, and remove ends an item in the business sense. So the 2 sets of verbs name 2 different kinds of work, and they are not 2 words for 1 thing (naming, sections 3 and 11). These are rules of the skill, narrower than the book.
+Name the methods of a storage interface in the spi with the verbs of the framework, such as find, save and delete, so a reader who knows the framework reads each one as a known operation. Name the operations that callers call, in the api and in the services behind it, with the verb of the business action, such as search, create or remove. Each verb keeps 1 meaning: find looks up items by a key or a filter, in storage or among values already in memory, and returns none or fails where they are missing (naming, section 3), search answers a question of a caller, save stores an item, create makes a new item under its business rules, delete removes a stored item, and remove ends an item in the business sense. So the 2 sets of verbs name 2 different kinds of work, and they are not 2 words for 1 thing (naming, sections 3 and 11). These are rules of the skill, narrower than the book.
 
 - Book (*What Simple Means*, *Long-Term Memory and Schemas*): "The repository lookup schema captures another pattern: take an identifier, query a data source, return an entity or indicate absence."
 - Limits: a storage method whose work the framework verbs do not name, such as a count or a lock, takes the verb of its work. An operation that only hands the call on to storage, with no rule of its own, still takes the business verb, because its callers read it on the business side.

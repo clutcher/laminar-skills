@@ -19,9 +19,7 @@ Where the new code needs an existing abstraction that sits in the wrong place, s
 
 ## 2. The order of work
 
-Decide the abstractions and their boundaries first, write all the production code next, and write the tests last: "confirming requires something to confirm, so design precedes code and code precedes tests." While you design and write, do not build or run the code: "During this phase, the developer does not run, build, or validate the code: the work is thinking and writing." Where writing shows a design problem, change the decision and then the code. Build and run once the tests are written, and fix what they show.
-
-Folders are part of the design. Choose the folder of each new file when you decide its abstraction, before you write it (modules, section 3), because "Every folder, at any depth, stays consistent inside and hides its contents behind its name, which introduces a new abstraction level."
+Decide the abstractions and their boundaries first, write all the production code next, and write the tests last: "confirming requires something to confirm, so design precedes code and code precedes tests." Folders are part of the design: choose the folder of each new file when you decide its abstraction, before you write it (modules, section 3), because "Every folder, at any depth, stays consistent inside and hides its contents behind its name, which introduces a new abstraction level." While you design and write, do not build or run the code: "During this phase, the developer does not run, build, or validate the code: the work is thinking and writing." Where writing shows a design problem, change the decision and then the code. Build and run once the tests are written, and fix what they show.
 
 ## 3. The qualities and their order
 
@@ -70,17 +68,19 @@ Where a direction seems to forbid a shape that reads well, ask which of the 6 fa
 
 The everyday fixes of the book's chapter *The Common Pitfalls*, for every change. The reference files give their limits.
 
-- *Self-Documenting Code*: where a block needs a comment that says what it does, extract it into a method named for its intent. No comment by default, no TODO.
+- *Self-Documenting Code*: where a block needs a comment that says what it does, extract it into a method named for its intent. No comment by default; a note of work left undone stays only where it names its ticket (comments, section 2).
 - Verb first: start every method name with a verb that states its work; this rule of the skill is narrower than the book (naming, section 3).
-- *Context-Aware Constants*: name a constant, and every other value, for its business purpose, kind last, such as days or rate; 1 constant per business rule, private where used; in a test, give each value that sets up the condition the test name states a name, a constant or a local.
+- *Context-Aware Constants*: a literal used in 1 place stays on its line, and a text used in 1 place is never a constant; make a constant only for a value 2 or more places depend on; the 1 exception is a number whose line does not say what it controls, which you name by the value it is compared with, by a local or by a constant; name a constant, and every other value, for its business purpose, kind last, such as days or rate; 1 constant per business rule, private where used, also for a value 2 or more places depend on; in a test, give each value that sets up the condition the test name states a name, a constant or a local (naming, sections 5 to 7).
 - *Guard Clauses*: put each precondition at the top and leave early, and move the checks that together say the input is ready behind 1 named check.
-- *Visual Separation*: keep the lines of each group together, with a blank line between groups and after the preconditions; while a detail sits among the parts, extract instead.
+- 1 question per condition: never join a check that a value is present with the rule that uses the value, in a condition or in a returned expression; handle the missing value first. The returned expression is a rule of the skill, narrower than the book (methods, section 7).
+- *Visual Separation*: keep the lines of each group together, with a blank line between groups and after the block of preconditions, also where only 1 line, such as the return, follows a guard; while a detail sits among the parts, extract instead.
 - *Enums Over Boolean Flags*: give a category 1 closed set of named values for each exclusive dimension, not booleans, which allow values the domain forbids; the same holds for text compared with fixed values, a rule of the skill, narrower than the book. *Boolean Parameter Splitting*: a flag that chooses 2 operations becomes 2 named methods, and a flag that picks a variant becomes a named value.
+- An empty case: where a type has an unknown, empty or missing case, give it a named value or a factory on the type, and let the type answer whether a value is in that case, so no caller builds or compares a raw missing value, also a test that builds or checks the value; a rule of the skill, narrower than the book (classes, section 6).
 - *Builder*: where parts of an object depend on each other or on an order, put those rules in 1 place that checks the object before use.
 - *Single-Level Fields*: move fields that always appear together and that the business treats as 1 whole into their own type, not a copy of the storage table.
 - *Single-Level Methods*: add a public method only where it serves the class name and shares the types of its neighbours; a method that combines 2 abstractions goes to a caller above.
-- A collection held by a key: name the values, then the key, and end with the kind of collection, such as map or index; the values and the key alone, without the kind, predict a single value (naming, section 10).
-- A type that holds a piece of the data of 1 other type, such as the reason or the code of 1 exception or 1 response, goes inside that type or in a subfolder named for it, never loose beside it in a folder of its kind (modules, section 3).
+- A collection held by a key: name the values, then the key, and end with the word map, also the name of a method that returns one, such as a count per key read from storage; the values and the key alone, without map, predict a single value. A text joined or formatted from a collection is named for the text, never the plural of its elements (naming, section 10).
+- A type that holds a piece of the data of 1 other type, such as the reason or the code of 1 exception or 1 response, goes inside that type, or into a subfolder named for that type that holds the type too, never loose beside it in a folder of its kind; in api and spi, once a second interface sits beside an interface, each interface moves with its own request, result and failure types into its own subfolder named for that interface (modules, section 3).
 - Test files: split a test file into 1 file per behavior as soon as a piece of its shared setup serves only some of its tests, such as data that only 1 operation of the class reads (tests, section 12).
 
 ## 8. The reference files

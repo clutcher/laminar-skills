@@ -12,13 +12,13 @@ Write a domain value as a record, and a part of it as a nested record. A record 
 
 ## 2. Null for a missing item, and no Optional
 
-Do not use Optional. A method that finds 1 item that can be missing returns null and carries a nullable marker on its return type, and its name says it finds. A method that returns a collection returns an empty collection, never null (correctness, section 6). The marker tells the reader where a missing value can appear, with no wrapper type to unpack.
+Do not use Optional. A method that finds 1 item that can be missing returns null and carries a nullable marker on its return type, in the interface and in every implementation, a substitute in a test too, and its name says it finds. A method that returns a collection returns an empty collection, never null (correctness, section 6). The marker tells the reader where a missing value can appear, with no wrapper type to unpack.
 
-- Limits: a field that is null only in some states of its type is the shape that *Exclude Illegal States* removes; give each state its own type (correctness, section 2).
+- Limits: null is for the result of a find, not for a state. When you declare a field that is null in some states of its object, such as a value that a later step of its life sets, give each state its own type (correctness, section 2). Where the field stays in 1 type, a factory on the type builds the state in which it is missing, and a method of the type answers whether it is missing, so no caller passes or compares null for it (classes, section 6).
 
 ## 3. Streams only where they read better than a loop
 
-Use a stream only where it is clearly easier to understand than the plain loop; otherwise write the loop. Work on the entries of a map, or a collection into a map, usually reads better as a stream, though not always. Where a stream fits, let it stand as the only statement of a method of its own, whose name states the work that gives its result, and rarely inline among other steps. A stream holds its steps as functions passed to calls, so each function must be 1 part that reads as prose: a method reference, 1 call of a named method, 1 read of a value or 1 plain construction from values as they are (methods, section 1). Prefer a method reference to a lambda that only calls 1 method, and chain a filter and a map rather than a condition inside 1 lambda. Code generators write too many streams and too large ones, and a long or nested stream, or a lambda of several lines inside it, hides parts with no name and holds open constructs. End a stream with toList where the language version has it.
+Use a stream only where it is clearly easier to understand than the plain loop; otherwise write the loop. Work on the keys and values of a map, or a collection into a map, usually reads better as a stream, though not always. Where a stream fits, it may stand as 1 statement among others in a method, such as a value assigned from a stream. A stream holds its steps as functions passed to calls, so each function must be 1 part that reads as prose: a method reference, 1 call of a named method, 1 read of a value or 1 construction of the result that the method name describes, from values as they are, where that construction is the whole lambda (methods, section 1). Prefer a method reference to a lambda that only calls 1 method, and chain a filter and a map rather than a condition inside 1 lambda. Code generators write too many streams and too large ones, and a long or nested stream, or a lambda of several lines inside it, hides parts with no name and holds open constructs. End a stream with toList where the language version has it.
 
 - Limits: a loop body is judged like any method body: each operation in it is a part, or it moves into a named method.
 
@@ -30,7 +30,7 @@ Where a value is 1 of a closed set of cases, use a sealed interface with a recor
 
 ## 5. Failures as unchecked exceptions with an error kind
 
-Signal a failure with an exception that extends RuntimeException, and give it an enum of the kinds of error it can carry where every kind carries the same data. Where a kind carries data of its own, such as the items it rejects, give that kind an exception type of its own, so no caller reads data that its kind never has (correctness, section 2). Do not declare checked exceptions. A checked exception forces recovery code into every caller, while 1 global place should turn every failure into a response (correctness, section 10).
+Signal a failure with an exception that extends RuntimeException. Before you write a second exception type, compare its data with the exceptions the code already has: where the failures carry the same data, such as the id of a missing item, write 1 exception with an enum of the kinds of error, nested in the exception (modules, section 3), and let the place that turns it into a response read the kind (methods, section 12). Where a kind carries data of its own, such as the items it rejects, give that kind an exception type of its own, so no caller reads data that its kind never has (correctness, section 2). Do not declare checked exceptions. A checked exception forces recovery code into every caller, while 1 global place should turn every failure into a response (correctness, section 10).
 
 ## 6. Fields, constructor, methods in a fixed order
 
@@ -38,7 +38,7 @@ Order a class as constants, then fields, then constructors, then public methods,
 
 ## 7. Explicit imports
 
-Name each imported class; write no wildcard import and no static import. Order the imports as the classes of the application, then other libraries, then the standard library. The reader then sees in 1 place every class the file depends on (modules, section 12).
+Name each imported class; write no wildcard import and no static import, also in a test, where a test library shows its assertions and its request builders as static imports: call them through their class. Import the outer type of a nested type, never the nested type alone, and write the outer name at each use, such as the outer exception and then its kind, because a nested name used alone loses what the outer name says (naming, section 2). Order the imports as the classes of the application, then other libraries, then the standard library. The reader then sees in 1 place every class the file depends on (modules, section 12).
 
 ## 8. Small forms of the language
 
@@ -54,7 +54,7 @@ A class that holds only static functions is final and has a private constructor.
 
 Read this section only where the code already uses the library.
 
-- Lombok: on a record, use the builder and the with methods of Lombok, and the builder of an existing value to change 1 field in a copy. Declare a logger by hand as a private static final field, not through a Lombok annotation.
+- Lombok: on a record, use the builder of Lombok with the step prefix with, so each step reads with and the field it sets (naming, section 3), and the with methods of Lombok, and the builder of an existing value to change 1 field in a copy. Declare a logger by hand as a private static final field, not through a Lombok annotation.
 - MapStruct: Mapper is the role word only for a MapStruct mapper, after its subject, such as OrderMapper; a conversion class written by hand ends in Converter, such as OrderConverter. Map between the types of 2 boundaries in a MapStruct mapper, not field by field in a controller or a service, and use its built-in support for maps and collections. Name each mapper method with a verb, such as map or convert, and never starting with to or from (naming, section 3). Map only at a boundary between modules or at an entry boundary, never into a second storage copy of a domain object (classes, section 11).
 - Multimaps: where code keeps several values for 1 key, use the multimap of the library the project has, not a map of lists or parallel lists that it fills by hand.
 

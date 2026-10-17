@@ -13,7 +13,7 @@ Design each boundary so that everything it exposes is valid. Make it easy to use
 
 ## 2. A type for each valid case
 
-Where a value is in 1 of several states and each state has its own data, give each state its own type that holds only its data. Let the compiler check that every case is handled, so a new case breaks the build where it is forgotten. 1 type with fields that are valid only in some states lets a caller read a field that the state does not have. This is the design decision *Exclude Illegal States*.
+Where a value is in 1 of several states and each state has its own data, give each state its own type that holds only its data. Let the compiler check that every case is handled, so a new case breaks the build where it is forgotten; where the language checks this, write no default branch over the cases, because a default turns that check off. 1 type with fields that are valid only in some states lets a caller read a field that the state does not have. This is the design decision *Exclude Illegal States*.
 
 - Book (*What Correctness Means*, *Exclude Illegal States*): "You define the types so the compiler rejects the invalid mix before the code runs." · "Adding a new variant then breaks the build everywhere the set is used but not fully covered, so no state gets forgotten when the set grows."
 - Limits: "Yet a type reaches only as far as the language can encode the rule, so many decisions still live outside the type system."
@@ -49,7 +49,7 @@ Where an input is unusual but not wrong, such as a missing value or an empty lis
 
 ## 7. No hidden dependencies
 
-Write a calculation so it reads only its inputs and changes nothing outside itself. Most languages do not check this, so you keep it by hand. A function that reads state that another part can change depends on that part, and its signature does not show it; the order of calls or of threads can then change its result. A value the code draws from the world outside its inputs, such as the current time or a new random identifier, is such a dependency: take it from a parameter or from a source the class receives, as you take a clock. This is the design decision *Remove Hidden Dependencies*.
+Write a calculation so it reads only its inputs and changes nothing outside itself. Most languages do not check this, so you keep it by hand. A function that reads state that another part can change depends on that part, and its signature does not show it; the order of calls or of threads can then change its result. This is the design decision *Remove Hidden Dependencies*.
 
 - Book (*What Correctness Means*, *Remove Hidden Dependencies*): "When a function reads state that another part of the system can change, it depends on that part, but its signature cannot show that link." · "A pure function reads only its inputs and changes nothing outside itself, so it never touches state that other code shares."
 

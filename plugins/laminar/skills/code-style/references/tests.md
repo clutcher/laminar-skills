@@ -1,6 +1,6 @@
 # Tests
 
-Contents: 1. Behavior through inputs and outputs · 2. No check of internal calls · 3. Integration tests from entry to exit as the default · 4. Substitutes only past the exit boundary · 5. Unit tests where combinations demand them · 6. Expected values from the requirement · 7. 1 behavior per test · 8. Given, when, then · 9. A name of outcome and condition · 10. Realistic data and named conditions · 11. A hard test points at the production code · 12. Test files by behavior · 13. Coverage finds gaps · 14. Tests that call a real outside system
+Contents: 1. Behavior through inputs and outputs · 2. No check of internal calls · 3. Integration tests from entry to exit as the default · 4. Substitutes only past the exit boundary · 5. Unit tests where combinations demand them · 6. Expected values from the requirement · 7. 1 behavior per test · 8. Given, when, then · 9. A name of outcome and condition · 10. Realistic data and named conditions · 11. A hard test points at the production code · 12. Test files by behavior, in mirrored folders · 13. Coverage finds gaps · 14. Tests that call a real outside system
 
 ## 1. Behavior through inputs and outputs
 
@@ -59,7 +59,7 @@ Write each test in 3 blocks, setup, action and check, separated by blank lines. 
 
 ## 9. A name of outcome and condition
 
-Name each test for the expected outcome and the condition that produces it, in business words, in the form should, outcome, when, condition, in the casing of the language. Use this form also where the other tests of the repository use another form; this clause is a rule of the skill, narrower than the book. The name tells the reader which rule the test protects without reading the body.
+Name each test for the expected outcome and the condition that produces it, in business words, in the form should, outcome, when, condition, in the casing of the language. Use this form also where the other tests of the repository use another form; the rule on another form in the repository is a rule of the skill, narrower than the book. The name tells the reader which rule the test protects without reading the body.
 
 - Book (*How to Verify Correctness*, *How to Structure Tests*): "A good name states the expected outcome and any conditions that produce it, so reviewers can decide whether this test matches the requirement they are checking." · "The pattern `should<Outcome>When<Condition>` captures them in a consistent format that becomes predictable across the codebase."
 
@@ -76,9 +76,9 @@ Read a test that is hard to write as feedback on the design, and fix the product
 
 - Book (*How to Verify Correctness*, *How Tests Expose Design Problems*): "The fix is not better testing techniques but simpler production code that keeps its details behind its boundaries, which makes both code and tests easier to work with." · "The need to mock some methods while keeping others real indicates the code mixes different abstraction levels and should separate orchestration from logic." · "The urge to test a private method directly signals logic that needs its own class."
 
-## 12. Test files by behavior
+## 12. Test files by behavior, in mirrored folders
 
-Start with 1 test file per production class. Split it into 1 file per behavior, named with the class and then the behavior, when a shared setup no longer fits every test. The wish to divide a test file into sections with comments is the same signal; split the file instead. Do not log in tests: a test shows its result through its assertions. The signal from comment sections and the rule against logs in tests are rules of the skill, narrower than the book.
+Start with 1 test file per production class. Split it into 1 file per behavior, named with the class and then the behavior, when a shared setup no longer fits every test. The wish to divide a test file into sections with comments is the same signal; split the file instead. Put each test file in the test folder that mirrors the folder of the code it tests, so a test of a file at the root of the code sits at the root of the tests, and put test support that has no production counterpart, such as substitutes, builders and test data, in a folder named for what it holds. The place of a test then predicts what it tests, and a change to the folders of the code shows in the tests too. Do not log in tests: a test shows its result through its assertions. The signal from comment sections, the mirrored test folders and the rule against logs in tests are rules of the skill, narrower than the book.
 
 - Book (*How to Verify Correctness*, *How to Structure Tests*): "one test class per production class remains a reasonable place to start" · "the signal to split arrives when shared setup no longer applies to every test" · "Each name still starts with the class, which keeps its tests together in the directory"
 

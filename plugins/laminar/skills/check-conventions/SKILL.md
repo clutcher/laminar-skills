@@ -35,8 +35,8 @@ Read the diff with `git diff --find-renames <range>`, and read every changed fil
 Load the rules in this order, and keep the file and the number of each rule, because a finding names them.
 
 1. The project conventions: every `.md` file under `.claude/rules/conventions/` of the checked repository, also in subfolders, whose `paths:` match a changed file, and every file there with no `paths:`. `${CLAUDE_SKILL_DIR}/references/project-conventions.md` gives the form of these files. Where the folder does not exist, check only the rules of the skill, and say so in the report.
-2. The common pitfalls: section 7 of `${CLAUDE_SKILL_DIR}/../code-style/SKILL.md`, every bullet.
-3. Every rule marked narrower than the book in the files under `${CLAUDE_SKILL_DIR}/../code-style/references/`. Find them with a search for `narrower than the book` with the Grep tool. The mark covers only the paragraph or the bullet it stands in, which can hold several rules; every other rule of the same section is a direction of the book.
+2. The common pitfalls: section 7 of `${CLAUDE_SKILL_DIR}/../code-style/SKILL.md`, every bullet, with the limits of the reference section it names. A form that those limits allow is no finding.
+3. Every rule marked narrower than the book in the files under `${CLAUDE_SKILL_DIR}/../code-style/references/`. Find them with a search for `narrower than the book` with the Grep tool. A mark that names its rules, such as "The returned expression is a rule of the skill", covers only the rules it names. A mark that names no rule, such as "These are rules of the skill, narrower than the book", covers the sentence it stands in and the sentences before it, back to the previous mark or to the start of its paragraph or bullet. Every other rule of the section is a direction of the book.
 4. The conventions files under `${CLAUDE_SKILL_DIR}/../code-style/conventions/` for the change: `java.md`, `typescript.md` or `python.md` for each language of a changed file, `spring.md` only where the changed code or the build file already uses Spring, and `docs.md` where the change holds documentation or an instruction file for agents. Every rule of a conventions file counts, also a rule that stands in a `Limits` bullet of a section.
 
 ## 3. Which rule wins
@@ -71,8 +71,8 @@ Each finding takes this form:
 
 ```markdown
 1. **LoanRenewal#renew:42** — Name the extension for its business purpose (code-style pitfalls: Context-Aware Constants) · variable
-   - The line compares the days of a renewal with the bare value 14.
-   - The rule names every value for its business purpose, with its kind last.
+   - The line compares the days since the loan was issued with the bare value 14, and nothing on the line says what 14 controls.
+   - The rule names a value whose line hides its meaning for its business purpose, with its kind last.
    - **Fix:**
      - Add a private constant `RENEWAL_PERIOD_DAYS` and compare with it.
 ```
