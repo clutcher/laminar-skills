@@ -451,10 +451,16 @@ const JUDGES_BY_CHECK = Object.freeze({
   P4: () => ["performance-abstraction"],
 });
 
+const A_FILE_NAME = /\.[A-Za-z0-9]+$/;
+
+const SCRIPT_FINDINGS_ON_A_TEST_FILE_NAME = Object.freeze(["simplicity-module"]);
+
 const judgesThatAnswer = expected => {
   const rule = ruleNamedBy(leadWordOf(expected));
   const judges = rule && JUDGES_BY_CHECK[rule.id];
-  return judges ? judges(expected.kind.toLowerCase()) : [];
+  if (!judges) return [];
+  const onAFileName = expected.kind.toLowerCase() === "class" && A_FILE_NAME.test(expected.name || "");
+  return [...judges(expected.kind.toLowerCase()), ...(onAFileName ? SCRIPT_FINDINGS_ON_A_TEST_FILE_NAME : [])];
 };
 
 function warnOnUnansweredChecks(expectedItems, judgeTypes) {
