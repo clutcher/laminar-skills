@@ -29,6 +29,8 @@ The base is the default branch as the remote holds it. Run `git fetch <remote> <
 
 The first command takes 1 of `--range`, for a pull request, a branch, a commit, a tag or "my changes", with `<remote>/<default>...HEAD` or the base you were given where the user names none; `--files`, for named files, a folder, a module or a package; and `--diff`, for a patch text, and only where no tree is available. `--exclude` takes path prefixes the review leaves out entirely, which the banner then names as reviewed by nobody.
 
+Where the user gives a range, such as `HEAD~1..HEAD` for 1 fix commit or 2 commit ids, pass it as it is: the base above is only for a review where the user names none. The review then marks only the hunks of that range as the change and judges only the abstractions they touch, and a range that changes only blank lines or formatting plans no check.
+
 A range with 2 ends, such as `<remote>/<default>...HEAD`, reads only commits, so changes the user has not committed are not reviewed. Where the user asks for those changes too, pass 1 end only, such as `--range <remote>/<default>`: the script then compares that base with the user's checkout, which holds the changes not committed, and a new file that git does not track yet is still left out.
 
 For a pull request or a branch, fetch its head first and pass the head as a ref where one exists, such as `--range <remote>/<default>...<remote>/<branch>`, and not as a bare commit id, because a later review of the same branch then uses the same worktree again. The script reads a range with 2 ends in a worktree of its own, never in the user's checkout.
