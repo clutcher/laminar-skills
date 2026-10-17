@@ -6,13 +6,13 @@ import { findAgentFile } from "../../checks/CheckText.mjs";
 import { scriptsFolder } from "../../files/scriptSources.mjs";
 import { resolveAbsolutePath } from "../../files/paths.mjs";
 import { readJsonFile, writeJsonFile } from "../../files/jsonFile.mjs";
+import { SavedByKey } from "./SavedByKey.mjs";
 
 export const JUDGE_RETURN_FORMAT = 1;
 export const JUDGE_RETURN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 export const MAX_SAVED_JUDGE_RETURNS = 4096;
 export const JUDGE_CACHE_FILE = "judge-cache.json";
 
-const SAVED_ENDING = ".json";
 const JUDGE_WORKFLOW_FILE = path.join(scriptsFolder, "..", "..", "..", "workflows", "review-judge.js");
 const RUN_FOLDER_MARK = "<run>";
 const REPOSITORY_MARK = "<repo>";
@@ -82,54 +82,23 @@ export class JudgeReturnKeys {
   }
 }
 
-const isFresh = (file, now, lifetimeMs) => {
-  try { return now - fs.statSync(file).mtimeMs < lifetimeMs; } catch { return false; }
-};
-
 export class JudgeReturnCache {
-  constructor(folder = resolveDefaultJudgeReturnFolder(), { lifetimeMs = JUDGE_RETURN_LIFETIME_MS, maxFiles = MAX_SAVED_JUDGE_RETURNS } = {}) {
-    this.folder = folder;
-    this.lifetimeMs = lifetimeMs;
-    this.maxFiles = maxFiles;
-  }
-
-  resolveFile(key) {
-    return path.join(this.folder, `${key.slice(0, 40)}${SAVED_ENDING}`);
+  constructor(folder = resolveDefaultJudgeReturnFolder()) {
+    this.saved = new SavedByKey(folder, { lifetimeMs: JUDGE_RETURN_LIFETIME_MS, maxFiles: MAX_SAVED_JUDGE_RETURNS, pruneOnWrite: false, refreshOnRead: true });
   }
 
   read(key) {
-    if (!key || !this.folder) return null;
-    const file = this.resolveFile(key);
-    if (!isFresh(file, Date.now(), this.lifetimeMs)) return null;
-    try {
-      const saved = JSON.parse(fs.readFileSync(file, "utf8"));
-      return saved.key === key && saved.returnsByTail && typeof saved.returnsByTail === "object" ? saved.returnsByTail : null;
-    } catch { return null; }
+    const returnsByTail = this.saved.read(key);
+    return returnsByTail && typeof returnsByTail === "object" ? returnsByTail : null;
   }
 
   write(key, tail, returned) {
-    if (!key || !tail || !this.folder) return;
-    try {
-      fs.mkdirSync(this.folder, { recursive: true });
-      const file = this.resolveFile(key);
-      const written = `${file}.${process.pid}.${crypto.randomBytes(4).toString("hex")}`;
-      fs.writeFileSync(written, JSON.stringify({ key, returnsByTail: { ...(this.read(key) || {}), [tail]: returned } }));
-      fs.renameSync(written, file);
-    } catch { return; }
+    if (!tail) return;
+    this.saved.write(key, { ...(this.read(key) || {}), [tail]: returned });
   }
 
   prune() {
-    try {
-      const now = Date.now();
-      const saved = fs.readdirSync(this.folder)
-        .filter(name => name.endsWith(SAVED_ENDING))
-        .map(name => path.join(this.folder, name))
-        .map(file => { try { return { file, used: fs.statSync(file).mtimeMs }; } catch { return null; } })
-        .filter(Boolean)
-        .sort((left, right) => right.used - left.used);
-      for (const { file, used } of saved) if (now - used >= this.lifetimeMs) fs.rmSync(file, { force: true });
-      for (const { file } of saved.slice(this.maxFiles)) fs.rmSync(file, { force: true });
-    } catch { return; }
+    try { this.saved.prune(); } catch { return; }
   }
 }
 
@@ -145,7 +114,7 @@ export function findSavedJudgeReturns(runFolder, everyCodeUnderReview, { fileFor
   for (const codeUnderReview of everyCodeUnderReview) {
     const key = keys.createKey(codeUnderReview, resolveCodeUnderReviewFile(fileForm, codeUnderReview));
     const saved = readTheCache && key ? cache.read(key) : null;
-    unitsById[codeUnderReview.id] = { key, ...(saved ? { saved } : {}) };
+    unitsById[codeUnderReview.id] = { key, checks: codeUnderReview.checks.map(check => check.id), ...(saved ? { saved } : {}) };
     if (saved) savedTailsById[codeUnderReview.id] = Object.keys(saved);
   }
   writeJsonFile(path.join(runFolder, JUDGE_CACHE_FILE), unitsById);
@@ -160,21 +129,30 @@ const unstampedOf = (returnedItems, codeUnderReviewId) => (returnedItems || [])
 
 const readCalls = calls => (Array.isArray(calls) ? calls : []).filter(call => Array.isArray(call) && call.length === 2 && call.every(field => typeof field === "string" && field));
 
+export const NO_SAVED_RETURN_FOUND = "the judge workflow reused a saved judge return that the run folder no longer holds, so its checks are reported as failed";
+
 export class JudgeCacheUse {
-  constructor(runFolder, { cache = new JudgeReturnCache() } = {}) {
+  constructor(runFolder) {
     const file = path.join(runFolder, JUDGE_CACHE_FILE);
     this.unitsById = isAFile(file) ? readJsonFile(file) : {};
-    this.cache = cache;
+    this.cache = new JudgeReturnCache();
+    this.reusedCount = 0;
+  }
+
+  findSavedReturn(codeUnderReviewId, tail) {
+    return ((this.unitsById[codeUnderReviewId] || {}).saved || {})[tail] || null;
   }
 
   addTheSavedReturns(returned) {
-    const answered = readCalls((returned.judgeCache || {}).hits)
-      .map(([codeUnderReviewId, tail]) => [codeUnderReviewId, ((this.unitsById[codeUnderReviewId] || {}).saved || {})[tail]])
-      .filter(([, saved]) => saved);
+    const hits = readCalls((returned.judgeCache || {}).hits).map(([codeUnderReviewId, tail]) => [codeUnderReviewId, this.findSavedReturn(codeUnderReviewId, tail)]);
+    const answered = hits.filter(([, saved]) => saved);
+    const lost = hits.filter(([, saved]) => !saved).map(([codeUnderReviewId]) => codeUnderReviewId);
+    this.reusedCount = answered.length;
     return {
       ...returned,
       findings: [...(returned.findings || []), ...answered.flatMap(([codeUnderReviewId, saved]) => stampedWith(saved.findings, codeUnderReviewId))],
       covered: [...(returned.covered || []), ...answered.flatMap(([codeUnderReviewId, saved]) => stampedWith(saved.covered, codeUnderReviewId))],
+      notRun: [...(returned.notRun || []), ...lost.flatMap(codeUnderReviewId => ((this.unitsById[codeUnderReviewId] || {}).checks || []).map(check => ({ codeUnderReviewId, check, reason: NO_SAVED_RETURN_FOUND })))],
     };
   }
 
