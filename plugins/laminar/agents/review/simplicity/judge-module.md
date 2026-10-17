@@ -100,6 +100,7 @@ Where a rule or a step uses 1 of these words, read it only in this sense.
 ### Review conventions
 
 - In a folder the change did not create, the files already there are never judged against each other.
+- In a folder whose header says test code, the path names the code whose tests the folder holds: a test of that code is a part, also 1 of several tests of it that are split by behavior; a builder, a substitute, a runner, a fixture or a data file that those tests use is a detail of the tests and belongs in a subfolder that names it, so beside the tests it is an unnamed part failure; a folder that groups tests by a feature or by a kind of test is read against that name, and a test of that feature or that kind is a part. The patterns on the 3 parts every application has and on business logic beside its domain objects judge production code only.
 - Unnamed Part Failure: a new entry that the name of this folder does not describe is an unnamed part failure on this folder, the folder whose contents stop being parts of its name, and never a finding on the new entry.
 - A finding on a module boundary, such as a reference into what a module hides or an entry boundary that names a hidden type, is a finding only where the module or its root declares what it exposes.
 - A module's own in and out code may use the types of its app, and such a use is never a finding.
