@@ -12,6 +12,12 @@ const FRAMEWORK_STRATEGIES = Object.freeze([CLASS_FINDER_REGISTRY, METHOD_FINDER
   .flatMap(registry => registry.listEveryStrategy())
   .filter(declaresFrameworkMarksOrDependencies));
 
+const opensTests = strategy => Boolean(strategy.testCodeMarks) && strategy.testCodeMarks.testOpeners.length > 0;
+
+const TEST_RUNNER_NAMES = new Set(FRAMEWORK_STRATEGIES.filter(opensTests).map(strategy => strategy.framework));
+
+export const isATestRunner = framework => TEST_RUNNER_NAMES.has(framework.name);
+
 const compareByName = (left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
 
 export function findFrameworksMarkedIn(filePath, lines) {

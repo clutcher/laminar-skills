@@ -1,7 +1,7 @@
 import { ABSTRACTION_KINDS as KINDS_OF_AN_ABSTRACTION, Scale } from "../../../code/index.mjs";
 import { CHECKS_BY_ID_MAP, TRACKS } from "../../../checks/CheckCatalog.mjs";
 import { readFileName } from "../../../files/paths.mjs";
-import { formatPlacedSliceLine } from "../formats/SliceFormat.mjs";
+import { APPLICATION_ROOT_SECTION, formatPlacedSliceLine } from "../formats/SliceFormat.mjs";
 import { MODULE_BOUNDARY_FACT_SECTIONS } from "../abstractions/slices/CodeSlice.mjs";
 import { JUDGE_TYPE_BY_SCALE_MAP, JUDGE_TYPE_BY_TRACK_MAP } from "../../../checks/JudgeType.mjs";
 import { findTheSingleLetterName, findTheTestNameWithNoShould, listNotesOfWorkWithNoTicket, listPhaseCommentsInProductionCode } from "./ScriptSettledForms.mjs";
@@ -200,6 +200,43 @@ const ABSTRACTION_KINDS = Object.freeze([
   },
 ]);
 
+const THE_PREDICTION_OF_AN_APPLICATION = "Integration tests are the starting point for every application, regardless of what kind of users it serves.";
+
+const readTheApplicationFolder = application => application.path || ".";
+
+const buildNoTestRunnerFindingTexts = application => {
+  const applicationName = formatInlineCode(application.displayName);
+  return {
+    summary: `${applicationName} has no test runner and no test, so no test can show that its main paths work`,
+    prediction: THE_PREDICTION_OF_AN_APPLICATION,
+    found: `The build files of ${applicationName} declare no test runner, and ${applicationName} holds no test file.`,
+  };
+};
+
+const APPLICATION_WITH_NO_TEST_RUNNER = Object.freeze({
+  section: APPLICATION_ROOT_SECTION,
+  track: TRACKS.TEST_PLAN,
+  check: CHECKS_BY_ID_MAP.CD4,
+  standsInFor: JUDGE_TYPE_BY_TRACK_MAP[TRACKS.TEST_PLAN],
+  listPlaces: () => [],
+  listFiles: application => [readTheApplicationFolder(application)],
+  buildEvidence: application => [{ file: readTheApplicationFolder(application), lines: [] }],
+  buildFindingTexts: application => buildNoTestRunnerFindingTexts(application),
+});
+
+export const isAnApplicationWithNoTestRunner = abstraction => Boolean(abstraction) && abstraction.scale === Scale.APPLICATION.name && Boolean((abstraction.facts || {}).hasNoTestRunner);
+
+const listApplicationsWithNoTestRunner = (applications, keepsJudgeType, keepsScale) => (keepsScale(Scale.APPLICATION.name) && keepsJudgeType(APPLICATION_WITH_NO_TEST_RUNNER.standsInFor)
+  ? applications.filter(isAnApplicationWithNoTestRunner)
+  : []);
+
+const createCodeUnderReviewOfAnApplication = (application, kind, settled, id) => ({
+  ...createCodeUnderReviewOfAnAbstractionTheScriptSettled(application, kind, settled, id),
+  path: readTheApplicationFolder(application),
+  lines: null,
+  slice: { sections: [{ section: kind.section, lines: [`${readTheApplicationFolder(application)}/`] }] },
+});
+
 const createCodeUnderReviewOfTheScript = (abstraction, kind, settled, id) => ({
   id,
   abstractionId: abstraction.id,
@@ -253,7 +290,7 @@ const createCodeUnderReviewOfAnAbstractionTheScriptSettled =(abstraction, kind, 
 const createFinding = (kind, settled, id, changedLines) => ({
   codeUnderReviewId: id,
   check: (kind.check || CHECKS_BY_ID_MAP.S2).id,
-  evidence: buildEvidenceOfPlaces(kind.listPlaces(settled)),
+  evidence: kind.buildEvidence ? kind.buildEvidence(settled) : buildEvidenceOfPlaces(kind.listPlaces(settled)),
   confidence: "high",
   inChange: kind.listFiles(settled).some(filePath => Boolean(changedLines[filePath])),
   scriptRaised: true,
@@ -275,14 +312,16 @@ const listAbstractionFactsTheScriptSettles = (selectedAbstractions, keepsJudgeTy
   .filter(kind => keepsJudgeType(kind.standsInFor))
   .flatMap(kind => selectedAbstractions.flatMap(abstraction => kind.listSettled(abstraction).map(settledFact => ({ abstraction, kind, settledFact }))));
 
-export function buildScriptFindings(abstractions, changedLines = {}, { selectedAbstractions = [], keepsJudgeType = KEEPS_EVERY_JUDGE_TYPE, keepsScale = KEEPS_EVERY_SCALE } = {}) {
+export function buildScriptFindings(abstractions, changedLines = {}, { selectedAbstractions = [], applications = [], keepsJudgeType = KEEPS_EVERY_JUDGE_TYPE, keepsScale = KEEPS_EVERY_SCALE } = {}) {
   const modulesKept = keepsScale(Scale.MODULE.name) ? abstractions.filter(isAModule) : [];
   const settledFactsOfModules = modulesKept.flatMap(listSettledFacts)
     .filter(settled => !settled.kind.standsInFor || keepsJudgeType(settled.kind.standsInFor))
     .map(settled => ({ ...settled, createCodeUnderReview: chooseHowToCreateTheCodeUnderReview(settled.kind) }));
   const settledFactsOfAbstractions = listAbstractionFactsTheScriptSettles(selectedAbstractions.filter(abstraction => keepsScale(abstraction.scale)), keepsJudgeType)
     .map(settled => ({ ...settled, createCodeUnderReview: createCodeUnderReviewOfAnAbstractionTheScriptSettled }));
-  return [...settledFactsOfModules, ...settledFactsOfAbstractions].map(({ abstraction, kind, settledFact, createCodeUnderReview }, at) => {
+  const settledFactsOfApplications = listApplicationsWithNoTestRunner(applications, keepsJudgeType, keepsScale)
+    .map(application => ({ abstraction: application, kind: APPLICATION_WITH_NO_TEST_RUNNER, settledFact: application, createCodeUnderReview: createCodeUnderReviewOfAnApplication }));
+  return [...settledFactsOfModules, ...settledFactsOfAbstractions, ...settledFactsOfApplications].map(({ abstraction, kind, settledFact, createCodeUnderReview }, at) => {
     const id = `${SCRIPT_ID_MARK}${at + 1}`;
     return { codeUnderReview: createCodeUnderReview(abstraction, kind, settledFact, id), finding: createFinding(kind, settledFact, id, changedLines) };
   });

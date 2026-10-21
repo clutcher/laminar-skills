@@ -28,7 +28,7 @@ import { NO_FILTER } from "./selection/ReviewFilter.mjs";
 import { isAnIoPathsCodeUnderReview, buildJudgeWaves } from "./agents/JudgeWaves.mjs";
 import { createPropertyWhenNotEmpty, writeJsonFile } from "../../files/jsonFile.mjs";
 import { formatChangedTestListLines, formatChangedTestListText, formatTestListLines, formatTestListText, formatTestNameListLines, formatTestNameListText, formatTestPlanText, holdsTheChangedTestsInline, holdsTheTestNamesInline } from "./relations/TestPlanText.mjs";
-import { buildScriptFindings } from "./settled/ScriptFindings.mjs";
+import { buildScriptFindings, isAnApplicationWithNoTestRunner } from "./settled/ScriptFindings.mjs";
 import { createCodeUnderReviewId } from "./formats/CodeUnderReviewIds.mjs";
 
 export const TEST_PLAN_SLICE_LINES = 1000;
@@ -216,6 +216,7 @@ export class PrepareStep {
     this.codeUnderReview = [];
     this.scriptFindings = buildScriptFindings(this.walk.listEveryAbstraction().filter(abstraction => this.filter.keepsPath(abstraction.path)), this.extracted.changedLines || {}, {
       selectedAbstractions: this.walk.collectSelectedAbstractions().filter(abstraction => this.filter.keepsPath(abstraction.path)),
+      applications: this.walk.findApplicationsWithChangedCode(abstraction => this.filter.keepsPath(abstraction.path)),
       keepsJudgeType: judgeType => this.filter.keepsJudgeType(judgeType),
       keepsScale: scale => this.filter.keepsScale(scale),
     });
@@ -227,7 +228,7 @@ export class PrepareStep {
     for (const { abstraction, tracks } of judged) {
       for (const { track, checks } of tracks) this.codeUnderReview.push(createCodeUnderReview(abstraction, track, checks, number++));
     }
-    const boundaries = this.keepsSystemTrack(TRACKS.TEST_PLAN) && this.filter.keepsScale(Scale.APPLICATION.name) ? this.walk.findBoundariesOwingATest().filter(({ abstraction }) => keeps(abstraction)) : [];
+    const boundaries = this.keepsSystemTrack(TRACKS.TEST_PLAN) && this.filter.keepsScale(Scale.APPLICATION.name) ? this.walk.findBoundariesOwingATest().filter(({ abstraction, application }) => keeps(abstraction) && !isAnApplicationWithNoTestRunner(application)) : [];
     for (const plan of buildTestPlans(boundaries, TEST_PLAN_SLICE_LINES)) {
       this.codeUnderReview.push(createTestPlanCodeUnderReview(plan, number++));
     }

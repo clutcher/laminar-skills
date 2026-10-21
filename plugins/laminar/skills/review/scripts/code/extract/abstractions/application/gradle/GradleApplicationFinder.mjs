@@ -7,4 +7,6 @@ export class GradleApplicationFinder extends GenericApplicationFinder {
   buildFileSuffixes = [];
   buildScriptPatterns = [/\.gradle(?:\.kts)?$/];
   dependencyFormats = [{ name: /^build\.gradle(?:\.kts)?$/, readLines: lines => findLinesInsideBlocks(lines, /^dependencies\s*\{/) }];
+  declaresTheTestRunner = true;
+  testSetupPatterns = [/\btest(?:Implementation|RuntimeOnly|CompileOnly|Compile|Api)\b/, /\buseJUnit(?:Platform)?\b/, /\buseTestNG\b/, /\bkotlin\s*\(\s*["']test/];
 }

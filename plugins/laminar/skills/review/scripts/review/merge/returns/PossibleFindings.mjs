@@ -19,7 +19,9 @@ export const isOnTheTestPlan = possibleFinding => possibleFinding.track === TEST
 
 export const isOnTheIoPaths = possibleFinding => possibleFinding.track === IO_PATHS_TRACK;
 
-export const isPlacedByItsAbstractionPlace = possibleFinding => TRACKS_PLACED_BY_THE_ABSTRACTION_PLACE.has(possibleFinding.track);
+const isRaisedByTheScript = possibleFinding => possibleFinding.scriptRaised === true;
+
+export const isPlacedByItsAbstractionPlace = possibleFinding => TRACKS_PLACED_BY_THE_ABSTRACTION_PLACE.has(possibleFinding.track) && !isRaisedByTheScript(possibleFinding);
 
 export const isOnAnEntryBoundary = possibleFinding => possibleFinding.track === ENTRY_BOUNDARY_TRACK;
 
@@ -215,7 +217,7 @@ export class PossibleFindings {
     const orderByCodeUnderReviewIdMap = new Map();
     return findings.map(finding => {
       const codeUnderReview = this.preparedRun.findCodeUnderReview(finding.codeUnderReviewId) || NO_ABSTRACTION;
-      if (isPlacedByItsAbstractionPlace(codeUnderReview)) return this.buildPossibleFindingAtTheAbstractionPlace(finding, codeUnderReview, takeNextOrder(orderByCodeUnderReviewIdMap, finding.codeUnderReviewId));
+      if (isPlacedByItsAbstractionPlace(codeUnderReview) && !isRaisedByTheScript(finding)) return this.buildPossibleFindingAtTheAbstractionPlace(finding, codeUnderReview, takeNextOrder(orderByCodeUnderReviewIdMap, finding.codeUnderReviewId));
       return this.buildPossibleFindingOfAnAbstraction(finding, codeUnderReview);
     });
   }

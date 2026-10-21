@@ -33,4 +33,8 @@ export const APPLICATION_FINDER_REGISTRY = new FinderRegistry({
 
 export const findFinderReadingTheFile = filePath => APPLICATION_FINDER_REGISTRY.finders.find(finder => readsTheDependenciesOf(finder, filePath)) || null;
 
-export const isABuildFile = filePath => APPLICATION_FINDER_REGISTRY.finders.some(finder => finder.recognizesTheBuildFile(readFileName(filePath)));
+export const findFinderDeclaringTheApplication = rootPath => APPLICATION_FINDER_REGISTRY.finders.find(finder => finder.declaresAnApplicationIn(readFileName(rootPath))) || null;
+
+export const findFinderOfASharedBuildScript = filePath => APPLICATION_FINDER_REGISTRY.finders.find(finder => finder.recognizesTheBuildFile(readFileName(filePath)) && !finder.declaresAnApplicationIn(readFileName(filePath))) || null;
+
+export const isABuildFile =filePath => APPLICATION_FINDER_REGISTRY.finders.some(finder => finder.recognizesTheBuildFile(readFileName(filePath)));

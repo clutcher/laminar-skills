@@ -11,6 +11,12 @@ export class GenericApplicationFinder extends AbstractionFinder {
     this.buildFileSuffixes = [];
     this.buildScriptPatterns = [];
     this.dependencyFormats = [];
+    this.declaresTheTestRunner = false;
+    this.testSetupPatterns = [];
+  }
+
+  declaresATestSetup(buildFileLines) {
+    return buildFileLines.some(line => this.testSetupPatterns.some(pattern => pattern.test(line)));
   }
 
   appliesTo(context) {

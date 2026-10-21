@@ -25,7 +25,9 @@ export const parseOwnLinesOfTheSlice = abstraction => listOwnSliceLines(abstract
 
 export const listEverySliceLine = abstraction => readSliceSections(abstraction).flatMap(section => section.lines);
 
-export const FILE_LIST_SECTIONS = new Set(["fileList", "siblings", "moduleRoot", "moduleShape", "moduleTree", "createdSubfolders"]);
+export const APPLICATION_ROOT_SECTION = "applicationRoot";
+
+export const FILE_LIST_SECTIONS = new Set(["fileList", "siblings", "moduleRoot", "moduleShape", "moduleTree", "createdSubfolders", APPLICATION_ROOT_SECTION]);
 
 const STOPPED_LINE_PATTERN = /^Stopped: limit \d+$/;
 

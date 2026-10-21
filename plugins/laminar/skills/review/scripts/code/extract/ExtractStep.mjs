@@ -33,6 +33,8 @@ import { CreatedFolders } from "../inputs/change/CreatedFolders.mjs";
 import { readDependencies } from "./abstractions/application/generic/dependencies/RepositoryDependencies.mjs";
 import { isABuildFile } from "./abstractions/application/index.mjs";
 import { ApplicationFrameworks } from "./abstractions/application/generic/frameworks/ApplicationFrameworks.mjs";
+import { ApplicationTestRunners } from "./abstractions/application/generic/testing/ApplicationTestRunners.mjs";
+import { readTrackedPaths } from "../inputs/repository/TrackedFiles.mjs";
 import { groupMemberItems } from "./abstractions/variable/generic/fields/FieldItems.mjs";
 import { CallGraphs } from "./calls/CallGraphs.mjs";
 import { RepositoryWalk } from "./walk/RepositoryWalk.mjs";
@@ -195,6 +197,7 @@ export class ExtractStep {
     this.applications = new ApplicationFrameworks(this.roots, this.dependencies.files);
     const families = this.listFamiliesOfTheRepository();
     this.walk = new RepositoryWalk(this.change, this.cachedSourceIndex, this.applications).run(families);
+    this.testRunners = this.readTheTestRunners();
     this.testRecognition = new TestRecognition({ change: this.change, walk: this.walk, applications: this.applications });
     this.abstractionFacts = new AbstractionFacts({ walk: this.walk, addedLinesByPathMap: this.addedLinesByPathMap });
     this.callGraphs = new CallGraphs(this.repositoryText, this.change, this.walk, this.cachedSourceIndex).readEvery(families);
@@ -243,6 +246,16 @@ export class ExtractStep {
       typeNamesByPathMap.get(type.place.file).push(type.name);
     }
     return typeNamesByPathMap;
+  }
+
+  readTheTestRunners() {
+    const repository = findRepositoryToRead(this.change);
+    return new ApplicationTestRunners({
+      roots: this.roots,
+      applications: this.applications,
+      repositoryPaths: (repository && readTrackedPaths(repository)) || this.listWalkedPaths(),
+      readFileLines: filePath => this.repositoryText.readFileLines(filePath),
+    });
   }
 
   readTheTestLayout() {
@@ -361,6 +374,7 @@ export class ExtractStep {
         boundaryRank: BOUNDARY_RANKS.SYSTEM_BOUNDARY,
         lines: null,
       })));
+      systems.get(deployable).facts = this.testRunners.readTheFacts(deployable);
     }
     return systems.get(deployable);
   }

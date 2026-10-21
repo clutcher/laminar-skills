@@ -14,4 +14,6 @@ export class MavenApplicationFinder extends GenericApplicationFinder {
   buildFileNames = ["pom.xml"];
   buildFileSuffixes = [];
   dependencyFormats = [{ name: /^pom\.xml$/, readLines: findMavenLines }];
+  declaresTheTestRunner = true;
+  testSetupPatterns = [/<scope>\s*test\s*<\/scope>/, /<artifactId>\s*maven-(?:surefire|failsafe)-plugin\s*<\/artifactId>/];
 }

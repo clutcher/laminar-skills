@@ -18,6 +18,12 @@ const schedulesItsOwnScale = abstraction => {
   return abstraction.scale === Scale.METHOD.name || (abstraction.scale === Scale.MODULE.name && holdsABoundaryFact(abstraction));
 };
 
+const SCALES_OF_CODE = new Set([Scale.CLASS.name, Scale.METHOD.name, Scale.VARIABLE.name]);
+
+const isCode = abstraction => SCALES_OF_CODE.has(abstraction.scale);
+
+const listEveryAbstractionUnder = abstraction => abstraction.children.flatMap(child => [child, ...listEveryAbstractionUnder(child)]);
+
 export class AbstractionTreeWalk {
   constructor(abstractions) {
     this.abstractions = abstractions;
@@ -48,6 +54,10 @@ export class AbstractionTreeWalk {
     };
     for (const root of this.abstractions) visit(root, null);
     return found;
+  }
+
+  findApplicationsWithChangedCode(keeps) {
+    return this.abstractions.filter(root => root.scale === Scale.APPLICATION.name && listEveryAbstractionUnder(root).some(abstraction => isCode(abstraction) && keeps(abstraction)));
   }
 
   findBoundariesOwingATest() {

@@ -130,7 +130,7 @@ const LIMIT_FINDERS_BY_TRACK_MAP = Object.freeze({
 });
 
 const findTheLimits = (finding, codeUnderReview, run) => {
-  const findLimits = codeUnderReview ? LIMIT_FINDERS_BY_TRACK_MAP[codeUnderReview.track] : null;
+  const findLimits = codeUnderReview && !finding.scriptRaised ? LIMIT_FINDERS_BY_TRACK_MAP[codeUnderReview.track] : null;
   return findLimits ? findLimits(finding, codeUnderReview, run) : [];
 };
 
