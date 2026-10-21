@@ -41,6 +41,7 @@ const buildProperties = finding => {
   const properties = {
     abstraction: formatDisplayNameText(finding) || abstraction.displayName || "",
     scale: String(finding.scale || abstraction.scale || ""),
+    test_code: Boolean(finding.isTest),
     check: finding.check,
     mechanism: convertToText(finding.mechanism || finding.decision || finding.prevention),
     direction: formatDirectionOfTheFinding(finding),
