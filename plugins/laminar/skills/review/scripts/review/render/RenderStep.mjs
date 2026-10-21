@@ -50,14 +50,14 @@ export class RenderStep {
     this.reviewed = readJsonFile(path.join(runFolder, REVIEW_ABSTRACTIONS_FILE));
     this.prepared = readJsonFile(path.join(runFolder, "prepare.json"));
     this.acrossApplications = findAcrossApplicationsCounts(this.prepared);
-    this.scope = buildScope(this.prepared, readJsonFileIfPresent(path.join(runFolder, COST_PLAN_FILE), null), readJsonFileIfPresent(path.join(runFolder, FULL_COST_PLAN_FILE), null));
     this.merged = readJsonFile(path.join(runFolder, "merge.json"));
     this.returns = VerifyReturns.readFrom(verdictsFiles);
   }
 
   run() {
     this.covered = new TestCoveredPaths(this.merged.coveredPaths, this.returns, { mode: this.prepared.mode });
-    this.settled = new SettledFindings([...numberThePossibleFindings(this.merged.groups), ...this.covered.pathsToTest], this.returns, this.covered.listNumbers(), this.prepared.codeUnderReview || []);
+    this.settled = new SettledFindings([...numberThePossibleFindings(this.merged.groups), ...this.covered.pathsToTest], this.returns, this.covered.listNumbers(), this.prepared.codeUnderReview || [], (this.prepared.filter || {}).scales || []);
+    this.scope = buildScope(this.prepared, readJsonFileIfPresent(path.join(this.runFolder, COST_PLAN_FILE), null), readJsonFileIfPresent(path.join(this.runFolder, FULL_COST_PLAN_FILE), null), this.settled.countLeftOutByScale());
     this.sweep = addTheFindingsToTheSweep(this.merged.sweep, this.covered.pathsToTest.flatMap(group => group.possibleFindings));
     this.changeSummary = formatChangeSummary(this.reviewed);
     this.banner = this.formatBanner();

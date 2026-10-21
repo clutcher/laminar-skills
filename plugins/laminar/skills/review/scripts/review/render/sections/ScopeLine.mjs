@@ -4,13 +4,14 @@ const formatCount = number => Number(number).toLocaleString("en-US");
 
 const findJudgeCalls = plan => plan && plan.upTo ? plan.upTo.judgeCalls : null;
 
-export function buildScope(prepared, plan, fullPlan) {
+export function buildScope(prepared, plan, fullPlan, leftOutCountByScaleMap = null) {
   const filter = prepared.filter;
   if (!filter) return null;
   return {
     judges: filter.judges || [],
     paths: filter.paths || [],
     scales: filter.scales || [],
+    leftOut: leftOutCountByScaleMap,
     judgeCallsPlanned: findJudgeCalls(fullPlan),
     judgeCallsInThisRun: findJudgeCalls(plan),
   };
@@ -20,7 +21,13 @@ const isSet = value => value !== null && !(Array.isArray(value) && !value.length
 
 export const selectScopeProperties = scope => Object.fromEntries(Object.entries(scope).filter(([, value]) => isSet(value)));
 
-const formatScalesPhrase = ({ scales }) => scales.length ? `scales: ${scales.map(scale => scale.toLowerCase()).join(", ")}` : "";
+const formatLeftOutPhrase = leftOutCountByScaleMap => Object.entries(leftOutCountByScaleMap || {}).map(([scale, count]) => `${scale.toLowerCase()} ${formatCount(count)}`).join(", ");
+
+const formatScalesPhrase = ({ scales, leftOut }) => {
+  if (!scales.length) return "";
+  const leftOutPhrase = formatLeftOutPhrase(leftOut);
+  return `scales: ${scales.map(scale => scale.toLowerCase()).join(", ")}${leftOutPhrase ? ` · left out: ${leftOutPhrase}` : ""}`;
+};
 
 const formatJudgesPhrase = ({ judges }) => judges.length ? `judges: ${judges.map(judgeType => judgeType.replace(JUDGE_TYPE_PREFIX_PATTERN, "")).join(", ")}` : "";
 

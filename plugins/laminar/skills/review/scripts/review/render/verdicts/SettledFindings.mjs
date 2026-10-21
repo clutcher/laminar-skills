@@ -6,6 +6,7 @@ import { isAConsideration } from "../../merge/filing/Considerations.mjs";
 import { buildPlaceKey, stripLeadingDotSlash } from "../../merge/abstractions/AbstractionsAtPlaces.mjs";
 import { listMatchingKeyPlaces } from "../../merge/filing/ConfidenceCeilings.mjs";
 import { isRefuted, VerifyReturns } from "./VerifyReturns.mjs";
+import { Scale } from "../../../code/index.mjs";
 
 const CONFIDENCE_LEVELS = Object.freeze(["high", "moderate", "low"]);
 
@@ -24,6 +25,8 @@ const NO_VERDICT = Object.freeze({ decision: "" });
 const NO_SECOND_READ = Object.freeze({ refutation: null, notVerified: "", notSentToTheRefuter: false });
 
 const FEWEST_COMBINED_CHECKS = 2;
+
+const SCALES_A_FILTER_CAN_LEAVE_OUT = Object.freeze([Scale.APPLICATION, Scale.MODULE, Scale.CLASS, Scale.METHOD, Scale.VARIABLE].map(scale => scale.name));
 
 const chooseLevel = (given, fallback) => CONFIDENCE_LEVELS.includes(given) ? given : fallback;
 
@@ -284,7 +287,7 @@ const listVerdictsOfTheGroup = (group, returns) => [
 ];
 
 export class SettledFindings {
-  constructor(groups, givenReturns, numbersSettledElsewhere = [], everyCodeUnderReview = []) {
+  constructor(groups, givenReturns, numbersSettledElsewhere = [], everyCodeUnderReview = [], scalesAskedFor = []) {
     const matchingKeyPlacesByIdMap = new Map(everyCodeUnderReview.map(codeUnderReview => [codeUnderReview.id, listMatchingKeyPlaces(codeUnderReview)]));
     this.matchingKeyPlacesOf = codeUnderReviewId => matchingKeyPlacesByIdMap.get(codeUnderReviewId) || [];
     const returns = givenReturns instanceof Map ? VerifyReturns.fromVerdictsByItem(givenReturns) : givenReturns;
@@ -295,6 +298,8 @@ export class SettledFindings {
     this.notSentToTheRefuter = [];
     this.items = [];
     this.considerations = [];
+    this.scalesAskedFor = scalesAskedFor;
+    this.leftOut = [];
     this.unmatchedVerdicts = [...findUnmatchedItemVerdicts(groups, returns.itemVerdictsByItemMap), ...findUnmatchedNumberedVerdicts(groups, returns.numberedVerdicts, numbersSettledElsewhere)];
     for (const group of groups) this.settle(group, returns);
     this.items.sort((left, right) => compareOrder(left.lead, right.lead));
@@ -308,8 +313,10 @@ export class SettledFindings {
     const ruled = keepThePlacesOfSurvivors(group.possibleFindings.map(finding => ruleFinding(finding, group, returns, combines)), this.matchingKeyPlacesOf);
     const standing = foldTheCombines(ruled.filter(ruledFinding => !isRejected(ruledFinding)));
     this.rejected.push(...ruled.filter(isRejected).map(ruledFinding => ruledFinding.finding));
-    if (!standing.length) return;
-    const settledFindings = standing.map(ruledFinding => ruledFinding.finding);
+    const standingFindings = standing.map(ruledFinding => ruledFinding.finding);
+    this.leftOut.push(...standingFindings.filter(finding => !this.isAtAScaleAskedFor(finding)));
+    const settledFindings = standingFindings.filter(finding => this.isAtAScaleAskedFor(finding));
+    if (!settledFindings.length) return;
     this.notVerified.push(...settledFindings.filter(finding => finding.notVerified));
     this.notSentToTheRefuter.push(...settledFindings.filter(finding => finding.notSentToTheRefuter));
     const findings = settledFindings.filter(finding => !isAConsideration(finding));
@@ -318,6 +325,18 @@ export class SettledFindings {
     this.considered.push(...considered);
     if (findings.length) this.items.push({ ...group, findings, lead: findings[0] });
     if (considered.length) this.considerations.push({ ...group, findings: considered, lead: considered[0] });
+  }
+
+  isAtAScaleAskedFor(finding) {
+    const scale = String(finding.scale || "");
+    return !this.scalesAskedFor.length || !SCALES_A_FILTER_CAN_LEAVE_OUT.includes(scale) || this.scalesAskedFor.includes(scale);
+  }
+
+  countLeftOutByScale() {
+    if (!this.scalesAskedFor.length) return null;
+    return Object.fromEntries(SCALES_A_FILTER_CAN_LEAVE_OUT
+      .filter(scale => !this.scalesAskedFor.includes(scale))
+      .map(scale => [scale, this.leftOut.filter(finding => String(finding.scale) === scale).length]));
   }
 
   countByConfidence() {
