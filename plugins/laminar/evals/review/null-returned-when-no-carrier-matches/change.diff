@@ -1,0 +1,47 @@
+diff --git a/parcels/src/main/java/com/example/parceldepot/carrier/CarrierDirectory.java b/parcels/src/main/java/com/example/parceldepot/carrier/CarrierDirectory.java
+--- a/parcels/src/main/java/com/example/parceldepot/carrier/CarrierDirectory.java
++++ b/parcels/src/main/java/com/example/parceldepot/carrier/CarrierDirectory.java
+@@ -1,5 +1,7 @@
+ package com.example.parceldepot.carrier;
+ 
++import org.jspecify.annotations.Nullable;
++
+ import java.util.List;
+ import java.util.Map;
+ 
+@@ -14,4 +16,8 @@ public class CarrierDirectory {
+     public List<Carrier> listCarriers() {
+         return List.copyOf(carriersByCode.values());
+     }
++
++    public @Nullable Carrier findCarrier(String carrierCode) {
++        return carriersByCode.get(carrierCode);
++    }
+ }
+diff --git a/parcels/src/main/java/com/example/parceldepot/routing/ParcelRouter.java b/parcels/src/main/java/com/example/parceldepot/routing/ParcelRouter.java
+new file mode 100644
+--- /dev/null
++++ b/parcels/src/main/java/com/example/parceldepot/routing/ParcelRouter.java
+@@ -0,0 +1,22 @@
++package com.example.parceldepot.routing;
++
++import com.example.parceldepot.carrier.Carrier;
++import com.example.parceldepot.carrier.CarrierDirectory;
++
++public class ParcelRouter {
++
++    private final CarrierDirectory carrierDirectory;
++
++    public ParcelRouter(CarrierDirectory carrierDirectory) {
++        this.carrierDirectory = carrierDirectory;
++    }
++
++    public Route routeParcel(Parcel parcel) {
++        Carrier carrier = carrierDirectory.findCarrier(parcel.carrierCode());
++        if (carrier == null) {
++            return Route.toManualDesk(parcel);
++        }
++
++        return Route.toCarrierBay(parcel, carrier);
++    }
++}

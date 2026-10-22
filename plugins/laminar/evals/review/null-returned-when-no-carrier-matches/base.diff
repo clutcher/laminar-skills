@@ -1,0 +1,61 @@
+diff --git a/parcels/src/main/java/com/example/parceldepot/carrier/Carrier.java b/parcels/src/main/java/com/example/parceldepot/carrier/Carrier.java
+new file mode 100644
+--- /dev/null
++++ b/parcels/src/main/java/com/example/parceldepot/carrier/Carrier.java
+@@ -0,0 +1,4 @@
++package com.example.parceldepot.carrier;
++
++public record Carrier(String code, String name, String pickupBay) {
++}
+diff --git a/parcels/src/main/java/com/example/parceldepot/carrier/CarrierDirectory.java b/parcels/src/main/java/com/example/parceldepot/carrier/CarrierDirectory.java
+new file mode 100644
+--- /dev/null
++++ b/parcels/src/main/java/com/example/parceldepot/carrier/CarrierDirectory.java
+@@ -0,0 +1,17 @@
++package com.example.parceldepot.carrier;
++
++import java.util.List;
++import java.util.Map;
++
++public class CarrierDirectory {
++
++    private final Map<String, Carrier> carriersByCode;
++
++    public CarrierDirectory(Map<String, Carrier> carriersByCode) {
++        this.carriersByCode = Map.copyOf(carriersByCode);
++    }
++
++    public List<Carrier> listCarriers() {
++        return List.copyOf(carriersByCode.values());
++    }
++}
+diff --git a/parcels/src/main/java/com/example/parceldepot/routing/Parcel.java b/parcels/src/main/java/com/example/parceldepot/routing/Parcel.java
+new file mode 100644
+--- /dev/null
++++ b/parcels/src/main/java/com/example/parceldepot/routing/Parcel.java
+@@ -0,0 +1,4 @@
++package com.example.parceldepot.routing;
++
++public record Parcel(String trackingNumber, String carrierCode, int weightGrams) {
++}
+diff --git a/parcels/src/main/java/com/example/parceldepot/routing/Route.java b/parcels/src/main/java/com/example/parceldepot/routing/Route.java
+new file mode 100644
+--- /dev/null
++++ b/parcels/src/main/java/com/example/parceldepot/routing/Route.java
+@@ -0,0 +1,16 @@
++package com.example.parceldepot.routing;
++
++import com.example.parceldepot.carrier.Carrier;
++
++public record Route(String trackingNumber, String destinationBay) {
++
++    private static final String MANUAL_DESK_BAY = "manual-desk";
++
++    public static Route toCarrierBay(Parcel parcel, Carrier carrier) {
++        return new Route(parcel.trackingNumber(), carrier.pickupBay());
++    }
++
++    public static Route toManualDesk(Parcel parcel) {
++        return new Route(parcel.trackingNumber(), MANUAL_DESK_BAY);
++    }
++}

@@ -1,0 +1,32 @@
+diff --git a/delivery/src/checkout/slot-offer.ts b/delivery/src/checkout/slot-offer.ts
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/checkout/slot-offer.ts
+@@ -0,0 +1,12 @@
++import { CalendarStore } from "../slots/depot-calendar";
++import { fetchOpenSlots } from "../slots/open-slots";
++
++export type SlotOffer = {
++  day: string;
++  startTimes: string[];
++};
++
++export async function createSlotOffer(calendarStore: CalendarStore, depotId: string, day: string): Promise<SlotOffer> {
++  const openSlots = await fetchOpenSlots(calendarStore, depotId, day);
++  return { day, startTimes: openSlots.map(slot => slot.startsAt) };
++}
+diff --git a/delivery/src/slots/open-slots.ts b/delivery/src/slots/open-slots.ts
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/slots/open-slots.ts
+@@ -0,0 +1,10 @@
++import { CalendarStore, DeliverySlot } from "./depot-calendar";
++
++export async function fetchOpenSlots(calendarStore: CalendarStore, depotId: string, day: string): Promise<DeliverySlot[]> {
++  const calendar = await calendarStore.findCalendar(depotId, day);
++  if (!calendar) {
++    return [];
++  }
++
++  return calendar.slots.filter(slot => slot.freeCapacity > 0);
++}

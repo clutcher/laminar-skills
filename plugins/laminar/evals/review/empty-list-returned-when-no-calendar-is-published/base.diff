@@ -1,0 +1,36 @@
+diff --git a/delivery/package.json b/delivery/package.json
+new file mode 100644
+--- /dev/null
++++ b/delivery/package.json
+@@ -0,0 +1,12 @@
++{
++  "name": "delivery",
++  "version": "1.0.0",
++  "type": "module",
++  "scripts": {
++    "test": "vitest run"
++  },
++  "devDependencies": {
++    "typescript": "5.6.3",
++    "vitest": "2.1.4"
++  }
++}
+diff --git a/delivery/src/slots/depot-calendar.ts b/delivery/src/slots/depot-calendar.ts
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/slots/depot-calendar.ts
+@@ -0,0 +1,14 @@
++export type DeliverySlot = {
++  startsAt: string;
++  freeCapacity: number;
++};
++
++export type DepotCalendar = {
++  depotId: string;
++  day: string;
++  slots: DeliverySlot[];
++};
++
++export interface CalendarStore {
++  findCalendar(depotId: string, day: string): Promise<DepotCalendar | undefined>;
++}
