@@ -1,0 +1,38 @@
+diff --git a/bakery/src/main/java/com/example/bakery/order/OrderCheckout.java b/bakery/src/main/java/com/example/bakery/order/OrderCheckout.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/order/OrderCheckout.java
+@@ -0,0 +1,33 @@
++package com.example.bakery.order;
++
++import com.example.bakery.payment.PaymentDeclinedException;
++import com.example.bakery.payment.PaymentGateway;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++
++public class OrderCheckout {
++
++    private static final Logger log = LoggerFactory.getLogger(OrderCheckout.class);
++
++    private final PaymentGateway paymentGateway;
++    private final DispatchDesk dispatchDesk;
++
++    public OrderCheckout(PaymentGateway paymentGateway, DispatchDesk dispatchDesk) {
++        this.paymentGateway = paymentGateway;
++        this.dispatchDesk = dispatchDesk;
++    }
++
++    public void checkOutOrder(Order order) {
++        Receipt receipt = chargeOrder(order);
++        dispatchDesk.dispatchOrder(receipt);
++    }
++
++    private Receipt chargeOrder(Order order) {
++        try {
++            paymentGateway.charge(order.customerId(), order.total());
++        } catch (PaymentDeclinedException exception) {
++            log.warn("charge failed for order {}", order.orderId(), exception);
++        }
++        return Receipt.createPaid(order);
++    }
++}

@@ -1,0 +1,63 @@
+diff --git a/bakery/src/main/java/com/example/bakery/order/DispatchDesk.java b/bakery/src/main/java/com/example/bakery/order/DispatchDesk.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/order/DispatchDesk.java
+@@ -0,0 +1,6 @@
++package com.example.bakery.order;
++
++public interface DispatchDesk {
++
++    void dispatchOrder(Receipt receipt);
++}
+diff --git a/bakery/src/main/java/com/example/bakery/order/Order.java b/bakery/src/main/java/com/example/bakery/order/Order.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/order/Order.java
+@@ -0,0 +1,6 @@
++package com.example.bakery.order;
++
++import java.math.BigDecimal;
++
++public record Order(String orderId, String customerId, BigDecimal total) {
++}
+diff --git a/bakery/src/main/java/com/example/bakery/order/Receipt.java b/bakery/src/main/java/com/example/bakery/order/Receipt.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/order/Receipt.java
+@@ -0,0 +1,10 @@
++package com.example.bakery.order;
++
++import java.math.BigDecimal;
++
++public record Receipt(String orderId, BigDecimal paidAmount) {
++
++    public static Receipt createPaid(Order order) {
++        return new Receipt(order.orderId(), order.total());
++    }
++}
+diff --git a/bakery/src/main/java/com/example/bakery/payment/PaymentDeclinedException.java b/bakery/src/main/java/com/example/bakery/payment/PaymentDeclinedException.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/payment/PaymentDeclinedException.java
+@@ -0,0 +1,8 @@
++package com.example.bakery.payment;
++
++public class PaymentDeclinedException extends RuntimeException {
++
++    public PaymentDeclinedException(String orderId) {
++        super("payment declined for order " + orderId);
++    }
++}
+diff --git a/bakery/src/main/java/com/example/bakery/payment/PaymentGateway.java b/bakery/src/main/java/com/example/bakery/payment/PaymentGateway.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/payment/PaymentGateway.java
+@@ -0,0 +1,8 @@
++package com.example.bakery.payment;
++
++import java.math.BigDecimal;
++
++public interface PaymentGateway {
++
++    void charge(String customerId, BigDecimal amount);
++}

@@ -1,0 +1,52 @@
+diff --git a/bakery/src/main/java/com/example/bakery/standing/StandingOrderExport.java b/bakery/src/main/java/com/example/bakery/standing/StandingOrderExport.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/standing/StandingOrderExport.java
+@@ -0,0 +1,47 @@
++package com.example.bakery.standing;
++
++import com.example.bakery.pricing.PriceSource;
++import com.example.bakery.pricing.PriceSourceException;
++import com.example.bakery.pricing.PriceTable;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++public class StandingOrderExport {
++
++    private static final Logger log = LoggerFactory.getLogger(StandingOrderExport.class);
++
++    private final PriceSource priceSource;
++
++    public StandingOrderExport(PriceSource priceSource) {
++        this.priceSource = priceSource;
++    }
++
++    public String exportStandingOrder(StandingOrder standingOrder) {
++        PriceTable prices = fetchPricesOrEmpty(standingOrder);
++        List<String> rows = standingOrder.lines().stream()
++                .map(line -> formatRow(line, prices))
++                .toList();
++        return "product code;product name;weekly quantity;unit price\n" + String.join("\n", rows);
++    }
++
++    private PriceTable fetchPricesOrEmpty(StandingOrder standingOrder) {
++        List<String> productCodes = standingOrder.lines().stream()
++                .map(StandingOrder.Line::productCode)
++                .toList();
++        try {
++            return priceSource.fetchPrices(productCodes);
++        } catch (PriceSourceException exception) {
++            log.warn("price source failed for standing order {}", standingOrder.standingOrderId(), exception);
++            return PriceTable.createEmpty();
++        }
++    }
++
++    private String formatRow(StandingOrder.Line line, PriceTable prices) {
++        BigDecimal unitPrice = prices.findUnitPrice(line.productCode());
++        String unitPriceText = unitPrice == null ? "" : unitPrice.toPlainString();
++        return String.join(";", line.productCode(), line.productName(), String.valueOf(line.weeklyQuantity()), unitPriceText);
++    }
++}

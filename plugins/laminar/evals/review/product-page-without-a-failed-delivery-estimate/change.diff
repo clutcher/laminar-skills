@@ -1,0 +1,37 @@
+diff --git a/bakery/src/main/java/com/example/bakery/shop/ProductPageService.java b/bakery/src/main/java/com/example/bakery/shop/ProductPageService.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/shop/ProductPageService.java
+@@ -0,0 +1,32 @@
++package com.example.bakery.shop;
++
++import com.example.bakery.delivery.DeliveryEstimate;
++import com.example.bakery.delivery.EstimateService;
++import com.example.bakery.delivery.EstimateServiceException;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++
++public class ProductPageService {
++
++    private static final Logger log = LoggerFactory.getLogger(ProductPageService.class);
++
++    private final EstimateService estimateService;
++
++    public ProductPageService(EstimateService estimateService) {
++        this.estimateService = estimateService;
++    }
++
++    public ProductPage createProductPage(Product product) {
++        DeliveryEstimate deliveryEstimate = fetchEstimateOrNone(product);
++        return new ProductPage(product, deliveryEstimate);
++    }
++
++    private DeliveryEstimate fetchEstimateOrNone(Product product) {
++        try {
++            return estimateService.fetchEstimate(product.productCode());
++        } catch (EstimateServiceException exception) {
++            log.warn("estimate service failed for product {}", product.productCode(), exception);
++            return DeliveryEstimate.none();
++        }
++    }
++}

@@ -1,0 +1,45 @@
+diff --git a/bakery/src/main/java/com/example/bakery/invoicing/InvoiceBuilder.java b/bakery/src/main/java/com/example/bakery/invoicing/InvoiceBuilder.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/invoicing/InvoiceBuilder.java
+@@ -0,0 +1,40 @@
++package com.example.bakery.invoicing;
++
++import com.example.bakery.pricing.PriceService;
++import com.example.bakery.pricing.PriceServiceException;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++public class InvoiceBuilder {
++
++    private final PriceService priceService;
++
++    public InvoiceBuilder(PriceService priceService) {
++        this.priceService = priceService;
++    }
++
++    public Invoice createInvoice(String customerId, List<OrderLine> orderLines) {
++        List<Invoice.Line> lines = orderLines.stream()
++                .map(this::createLine)
++                .toList();
++        BigDecimal total = lines.stream()
++                .map(Invoice.Line::amount)
++                .reduce(BigDecimal.ZERO, BigDecimal::add);
++        return new Invoice(customerId, lines, total);
++    }
++
++    private Invoice.Line createLine(OrderLine orderLine) {
++        BigDecimal unitPrice = findUnitPrice(orderLine.productCode());
++        BigDecimal amount = unitPrice.multiply(BigDecimal.valueOf(orderLine.quantity()));
++        return new Invoice.Line(orderLine.productCode(), orderLine.quantity(), unitPrice, amount);
++    }
++
++    private BigDecimal findUnitPrice(String productCode) {
++        try {
++            return priceService.fetchUnitPrice(productCode);
++        } catch (PriceServiceException exception) {
++            return BigDecimal.ZERO;
++        }
++    }
++}

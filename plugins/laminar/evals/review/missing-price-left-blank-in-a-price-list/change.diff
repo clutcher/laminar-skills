@@ -1,0 +1,50 @@
+diff --git a/bakery/src/main/java/com/example/bakery/catalogue/PriceListView.java b/bakery/src/main/java/com/example/bakery/catalogue/PriceListView.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/catalogue/PriceListView.java
+@@ -0,0 +1,45 @@
++package com.example.bakery.catalogue;
++
++import com.example.bakery.pricing.PriceService;
++import com.example.bakery.pricing.PriceServiceException;
++import org.jspecify.annotations.Nullable;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++public class PriceListView {
++
++    private static final Logger log = LoggerFactory.getLogger(PriceListView.class);
++
++    private final PriceService priceService;
++
++    public PriceListView(PriceService priceService) {
++        this.priceService = priceService;
++    }
++
++    public List<PriceListRow> createRows(List<String> productCodes) {
++        return productCodes.stream()
++                .map(this::createRow)
++                .toList();
++    }
++
++    private PriceListRow createRow(String productCode) {
++        BigDecimal unitPrice = findUnitPrice(productCode);
++        if (unitPrice == null) {
++            return new PriceListRow(productCode, "");
++        }
++
++        return new PriceListRow(productCode, unitPrice.toPlainString());
++    }
++
++    private @Nullable BigDecimal findUnitPrice(String productCode) {
++        try {
++            return priceService.fetchUnitPrice(productCode);
++        } catch (PriceServiceException exception) {
++            log.warn("price service failed for product {}", productCode, exception);
++            return null;
++        }
++    }
++}

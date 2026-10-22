@@ -1,0 +1,50 @@
+diff --git a/bakery/src/main/java/com/example/bakery/invoicing/Invoice.java b/bakery/src/main/java/com/example/bakery/invoicing/Invoice.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/invoicing/Invoice.java
+@@ -0,0 +1,10 @@
++package com.example.bakery.invoicing;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++public record Invoice(String customerId, List<Line> lines, BigDecimal total) {
++
++    public record Line(String productCode, int quantity, BigDecimal unitPrice, BigDecimal amount) {
++    }
++}
+diff --git a/bakery/src/main/java/com/example/bakery/invoicing/OrderLine.java b/bakery/src/main/java/com/example/bakery/invoicing/OrderLine.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/invoicing/OrderLine.java
+@@ -0,0 +1,4 @@
++package com.example.bakery.invoicing;
++
++public record OrderLine(String productCode, int quantity) {
++}
+diff --git a/bakery/src/main/java/com/example/bakery/pricing/PriceService.java b/bakery/src/main/java/com/example/bakery/pricing/PriceService.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/pricing/PriceService.java
+@@ -0,0 +1,8 @@
++package com.example.bakery.pricing;
++
++import java.math.BigDecimal;
++
++public interface PriceService {
++
++    BigDecimal fetchUnitPrice(String productCode);
++}
+diff --git a/bakery/src/main/java/com/example/bakery/pricing/PriceServiceException.java b/bakery/src/main/java/com/example/bakery/pricing/PriceServiceException.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/pricing/PriceServiceException.java
+@@ -0,0 +1,8 @@
++package com.example.bakery.pricing;
++
++public class PriceServiceException extends RuntimeException {
++
++    public PriceServiceException(String productCode, Throwable cause) {
++        super("price service failed for product " + productCode, cause);
++    }
++}

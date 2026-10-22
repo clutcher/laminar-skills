@@ -147,6 +147,11 @@ It reaches a finding whose second place is outside the change.
 | `session-value-cast-with-no-check` | A | a new `CurrentVoyageService`, the 1 owner of a session key, casts the value it reads from a store of untyped values to a voyage with no check of its type; the case requires Remove Edge Cases and allows Fail Fast beside it | measured |
 | `null-returned-when-no-carrier-matches` | B | clean: a new `findCarrier` in a fictional parcel-depot domain returns null where no carrier has the code, and a new `routeParcel` sends that parcel to the manual desk, so neither Fail Fast nor Remove Edge Cases is raised | measured |
 | `empty-list-returned-when-no-calendar-is-published` | B | clean: a new TypeScript `fetchOpenSlots` returns an empty list where a depot has published no calendar for the day, and nothing in the repository says such a day is a broken state, so neither Fail Fast nor Remove Edge Cases is raised | measured |
+| `charge-failure-dropped-behind-a-paid-receipt` | B | a new `chargeOrder` in a fictional bakery domain logs a declined charge and still returns a paid receipt, which its caller dispatches, so Fail Fast is raised | measured |
+| `zero-price-summed-into-an-invoice` | B | a new `findUnitPrice` turns a failed price lookup into a zero price that the invoice multiplies and sums as if it were real, so Fail Fast is raised | measured |
+| `missing-price-left-blank-in-a-price-list` | B | clean: a new price list logs a failed price lookup and leaves that price cell blank, so the rows state nothing false and Fail Fast is not raised | measured |
+| `export-written-without-a-failed-price-source` | B | clean: a new standing order export logs a failed price source and still writes the file with blank price cells, so Fail Fast is not raised | measured |
+| `product-page-without-a-failed-delivery-estimate` | B | clean: a new product page logs a failed delivery estimate and shows the page with the named empty estimate, so Fail Fast is not raised | measured |
 | `four-checks-wrapping-the-order-steps` | A | the book's `processOrder` with 4 preconditions that each wrap the next in another `if` block, so all 4 stay open at the business steps; the invalid order the method drops in silence is not graded | measured |
 | `four-nested-checks-around-an-action` | A | the book's 4 nested `if` statements around 1 action, with a method around them because the book prints none | measured |
 | `confirmation-built-inline-from-order-fields` | A | the book's first `sendOrderConfirmation`, which reads 8 fields of the order inline, details of 3 parts it never names | measured |
@@ -423,6 +428,11 @@ They measure 1 ruling from 2 sides: a category is no Exclude Illegal States find
 `null-returned-when-no-carrier-matches` and `empty-list-returned-when-no-calendar-is-published` are written fresh, in a fictional parcel-depot domain in Java and a fictional delivery-slot domain in TypeScript, after the sections *Remove Edge Cases* and *Fail Fast* of *How Abstraction Design Prevents Errors*, in the chapter *What Correctness Means*.
 Writing them fresh is what makes them publishable.
 They measure 1 ruling from 2 sides: a find of 1 item that returns null where nothing matches, and an operation that gives a missing input the empty answer to its own question, are normal results and no finding under either decision.
+They are tier B, because the types the new code reads are not changed and a patch cannot carry them.
+
+`charge-failure-dropped-behind-a-paid-receipt`, `zero-price-summed-into-an-invoice`, `missing-price-left-blank-in-a-price-list`, `export-written-without-a-failed-price-source` and `product-page-without-a-failed-delivery-estimate` are written fresh in a fictional bakery domain, in Java, after the section *Fail Fast* of *How Abstraction Design Prevents Errors*, in the chapter *What Correctness Means*.
+Writing them fresh is what makes them publishable.
+They measure 1 ruling from 2 sides: a method that catches a failure and goes on is a finding where its result then claims a success that did not happen or holds a value made up in place of the lost one, and no finding where its result only leaves out the data the failure lost and the failure is logged with the source that failed.
 They are tier B, because the types the new code reads are not changed and a patch cannot carry them.
 
 `three-open-constructs-around-a-boarding-pass` is written fresh in the same fictional harbour-ferry domain, after the section *What Limits Understanding* of the chapter *What Simple Means*.

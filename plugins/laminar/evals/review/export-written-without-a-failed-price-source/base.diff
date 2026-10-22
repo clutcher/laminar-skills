@@ -1,0 +1,62 @@
+diff --git a/bakery/src/main/java/com/example/bakery/pricing/PriceSource.java b/bakery/src/main/java/com/example/bakery/pricing/PriceSource.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/pricing/PriceSource.java
+@@ -0,0 +1,8 @@
++package com.example.bakery.pricing;
++
++import java.util.List;
++
++public interface PriceSource {
++
++    PriceTable fetchPrices(List<String> productCodes);
++}
+diff --git a/bakery/src/main/java/com/example/bakery/pricing/PriceSourceException.java b/bakery/src/main/java/com/example/bakery/pricing/PriceSourceException.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/pricing/PriceSourceException.java
+@@ -0,0 +1,8 @@
++package com.example.bakery.pricing;
++
++public class PriceSourceException extends RuntimeException {
++
++    public PriceSourceException(String message, Throwable cause) {
++        super(message, cause);
++    }
++}
+diff --git a/bakery/src/main/java/com/example/bakery/pricing/PriceTable.java b/bakery/src/main/java/com/example/bakery/pricing/PriceTable.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/pricing/PriceTable.java
+@@ -0,0 +1,17 @@
++package com.example.bakery.pricing;
++
++import org.jspecify.annotations.Nullable;
++
++import java.math.BigDecimal;
++import java.util.Map;
++
++public record PriceTable(Map<String, BigDecimal> unitPricesByProductCode) {
++
++    public static PriceTable createEmpty() {
++        return new PriceTable(Map.of());
++    }
++
++    public @Nullable BigDecimal findUnitPrice(String productCode) {
++        return unitPricesByProductCode.get(productCode);
++    }
++}
+diff --git a/bakery/src/main/java/com/example/bakery/standing/StandingOrder.java b/bakery/src/main/java/com/example/bakery/standing/StandingOrder.java
+new file mode 100644
+--- /dev/null
++++ b/bakery/src/main/java/com/example/bakery/standing/StandingOrder.java
+@@ -0,0 +1,9 @@
++package com.example.bakery.standing;
++
++import java.util.List;
++
++public record StandingOrder(String standingOrderId, List<Line> lines) {
++
++    public record Line(String productCode, String productName, int weeklyQuantity) {
++    }
++}
