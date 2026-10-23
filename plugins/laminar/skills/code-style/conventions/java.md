@@ -30,7 +30,7 @@ Where a value is 1 of a closed set of cases, use a sealed interface with a recor
 
 ## 5. Failures as unchecked exceptions with an error kind
 
-Signal a failure with an exception that extends RuntimeException. Before you write a second exception type, compare its data with the exceptions the code already has: where the failures carry the same data, such as the id of a missing item, write 1 exception with an enum of the kinds of error, nested in the exception (modules, section 3), and let the place that turns it into a response read the kind (methods, section 12). Where a kind carries data of its own, such as the items it rejects, give that kind an exception type of its own, so no caller reads data that its kind never has (correctness, section 2). Do not declare checked exceptions. A checked exception forces recovery code into every caller, while 1 global place should turn every failure into a response (correctness, section 10).
+Signal a failure with an exception that extends RuntimeException. Before you write a second exception type, compare its data with the exceptions the code already has: where the failures carry the same data, such as the id of a missing item, write 1 exception with an enum of the kinds of error named ErrorType, nested in the exception (modules, section 3), and let the place that turns it into a response read the kind (methods, section 12). Where a kind carries data of its own, such as the items it rejects, give that kind an exception type of its own, so no caller reads data that its kind never has (correctness, section 2). Do not declare checked exceptions. A checked exception forces recovery code into every caller, while 1 global place should turn every failure into a response (correctness, section 10).
 
 ## 6. Fields, constructor, methods in a fixed order
 
@@ -54,7 +54,7 @@ A class that holds only static functions is final and has a private constructor.
 
 Read this section only where the code already uses the library.
 
-- Lombok: on a record, use the builder of Lombok with the step prefix with, so each step reads with and the field it sets (naming, section 3), and the with methods of Lombok, and the builder of an existing value to change 1 field in a copy. Declare a logger by hand as a private static final field, not through a Lombok annotation.
+- Lombok: on a record, use the builder of Lombok with its default steps, named by the field they set, and never with a step prefix, because MapStruct reads a step named with and a field as a property of that whole name, so the prefix breaks every mapper into the record. Use the with methods of Lombok, or the builder of an existing value, to change 1 field in a copy (naming, section 3). Declare a logger by hand as a private static final field, not through a Lombok annotation.
 - MapStruct: Mapper is the role word only for a MapStruct mapper, after its subject, such as OrderMapper; a conversion class written by hand ends in Converter, such as OrderConverter. Map between the types of 2 boundaries in a MapStruct mapper, not field by field in a controller or a service, and use its built-in support for maps and collections. Name each mapper method with a verb, such as map or convert, and never starting with to or from (naming, section 3). Map only at a boundary between modules or at an entry boundary, never into a second storage copy of a domain object (classes, section 11).
 - Multimaps: where code keeps several values for 1 key, use the multimap of the library the project has, not a map of lists or parallel lists that it fills by hand.
 
