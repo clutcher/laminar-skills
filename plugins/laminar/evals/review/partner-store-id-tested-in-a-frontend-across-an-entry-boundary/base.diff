@@ -1,0 +1,124 @@
+diff --git a/orders-api/build.gradle.kts b/orders-api/build.gradle.kts
+new file mode 100644
+--- /dev/null
++++ b/orders-api/build.gradle.kts
+@@ -0,0 +1,7 @@
++plugins {
++    java
++}
++
++dependencies {
++    implementation("org.springframework.boot:spring-boot-starter-graphql:3.3.4")
++}
+diff --git a/orders-api/src/main/java/com/example/freshlane/order/GroceryOrder.java b/orders-api/src/main/java/com/example/freshlane/order/GroceryOrder.java
+new file mode 100644
+--- /dev/null
++++ b/orders-api/src/main/java/com/example/freshlane/order/GroceryOrder.java
+@@ -0,0 +1,6 @@
++package com.example.freshlane.order;
++
++import java.time.LocalDate;
++
++public record GroceryOrder(String orderNumber, String storeId, LocalDate deliveryDate) {
++}
+diff --git a/orders-api/src/main/java/com/example/freshlane/order/OrderBook.java b/orders-api/src/main/java/com/example/freshlane/order/OrderBook.java
+new file mode 100644
+--- /dev/null
++++ b/orders-api/src/main/java/com/example/freshlane/order/OrderBook.java
+@@ -0,0 +1,8 @@
++package com.example.freshlane.order;
++
++import java.util.List;
++
++public interface OrderBook {
++
++    List<GroceryOrder> ordersOf(String shopperId);
++}
+diff --git a/orders-api/src/main/java/com/example/freshlane/web/OrderQueries.java b/orders-api/src/main/java/com/example/freshlane/web/OrderQueries.java
+new file mode 100644
+--- /dev/null
++++ b/orders-api/src/main/java/com/example/freshlane/web/OrderQueries.java
+@@ -0,0 +1,23 @@
++package com.example.freshlane.web;
++
++import com.example.freshlane.order.GroceryOrder;
++import com.example.freshlane.order.OrderBook;
++import java.util.List;
++import org.springframework.graphql.data.method.annotation.Argument;
++import org.springframework.graphql.data.method.annotation.QueryMapping;
++import org.springframework.stereotype.Controller;
++
++@Controller
++public class OrderQueries {
++
++    private final OrderBook orderBook;
++
++    public OrderQueries(OrderBook orderBook) {
++        this.orderBook = orderBook;
++    }
++
++    @QueryMapping
++    public List<GroceryOrder> ordersOfShopper(@Argument String shopperId) {
++        return orderBook.ordersOf(shopperId);
++    }
++}
+diff --git a/orders-api/src/main/resources/graphql/orders.graphqls b/orders-api/src/main/resources/graphql/orders.graphqls
+new file mode 100644
+--- /dev/null
++++ b/orders-api/src/main/resources/graphql/orders.graphqls
+@@ -0,0 +1,8 @@
++type Query {
++  ordersOfShopper(shopperId: ID!): [Order!]!
++}
++
++type Order {
++  orderNumber: String!
++  deliveryDate: String!
++}
+diff --git a/shopper-web/package.json b/shopper-web/package.json
+new file mode 100644
+--- /dev/null
++++ b/shopper-web/package.json
+@@ -0,0 +1,7 @@
++{
++  "name": "shopper-web",
++  "private": true,
++  "dependencies": {
++    "react": "18.3.1"
++  }
++}
+diff --git a/shopper-web/src/order/OrderCard.tsx b/shopper-web/src/order/OrderCard.tsx
+new file mode 100644
+--- /dev/null
++++ b/shopper-web/src/order/OrderCard.tsx
+@@ -0,0 +1,10 @@
++import { OrderSummary } from "./OrderSummary";
++
++export function OrderCard({ order }: { order: OrderSummary }) {
++  return (
++    <article className="order-card">
++      <h3>{order.orderNumber}</h3>
++      <p>{order.deliveryDate}</p>
++    </article>
++  );
++}
+diff --git a/shopper-web/src/order/OrderSummary.ts b/shopper-web/src/order/OrderSummary.ts
+new file mode 100644
+--- /dev/null
++++ b/shopper-web/src/order/OrderSummary.ts
+@@ -0,0 +1,4 @@
++export interface OrderSummary {
++  orderNumber: string;
++  deliveryDate: string;
++}
+diff --git a/shopper-web/src/order/ordersOfShopper.graphql b/shopper-web/src/order/ordersOfShopper.graphql
+new file mode 100644
+--- /dev/null
++++ b/shopper-web/src/order/ordersOfShopper.graphql
+@@ -0,0 +1,6 @@
++query OrdersOfShopper($shopperId: ID!) {
++  ordersOfShopper(shopperId: $shopperId) {
++    orderNumber
++    deliveryDate
++  }
++}

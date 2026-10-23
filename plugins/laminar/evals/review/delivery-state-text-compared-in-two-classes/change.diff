@@ -1,0 +1,77 @@
+diff --git a/delivery/src/main/java/com/example/freshlane/delivery/Delivery.java b/delivery/src/main/java/com/example/freshlane/delivery/Delivery.java
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/main/java/com/example/freshlane/delivery/Delivery.java
+@@ -0,0 +1,37 @@
++package com.example.freshlane.delivery;
++
++import java.util.List;
++
++public class Delivery {
++
++    public static final String PACKED = "PACKED";
++    public static final String ON_ROUTE = "ON_ROUTE";
++    public static final String DELIVERED = "DELIVERED";
++    public static final List<String> ALL_STATES = List.of(PACKED, ON_ROUTE, DELIVERED);
++
++    private final String orderNumber;
++    private final String state;
++    private final String handoverKind;
++
++    public Delivery(String orderNumber, String state, String handoverKind) {
++        this.orderNumber = orderNumber;
++        this.state = state;
++        this.handoverKind = handoverKind;
++    }
++
++    public String orderNumber() {
++        return orderNumber;
++    }
++
++    public String handoverKind() {
++        return handoverKind;
++    }
++
++    public boolean isOnRoute() {
++        return state.equals(ON_ROUTE);
++    }
++
++    public boolean isDelivered() {
++        return state.equals(DELIVERED);
++    }
++}
+diff --git a/delivery/src/main/java/com/example/freshlane/tipping/TipPrompt.java b/delivery/src/main/java/com/example/freshlane/tipping/TipPrompt.java
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/main/java/com/example/freshlane/tipping/TipPrompt.java
+@@ -0,0 +1,12 @@
++package com.example.freshlane.tipping;
++
++import com.example.freshlane.delivery.Delivery;
++
++public class TipPrompt {
++
++    private static final String HANDED_OVER_AT_THE_DOOR = "DOOR";
++
++    public boolean asksForTip(Delivery delivery) {
++        return delivery.isDelivered() && HANDED_OVER_AT_THE_DOOR.equals(delivery.handoverKind());
++    }
++}
+diff --git a/delivery/src/main/java/com/example/freshlane/tracking/TrackingNotice.java b/delivery/src/main/java/com/example/freshlane/tracking/TrackingNotice.java
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/main/java/com/example/freshlane/tracking/TrackingNotice.java
+@@ -0,0 +1,13 @@
++package com.example.freshlane.tracking;
++
++import com.example.freshlane.delivery.Delivery;
++
++public class TrackingNotice {
++
++    public String noticeFor(Delivery delivery) {
++        if (delivery.isOnRoute()) {
++            return "Your driver is on the way";
++        }
++        return "We will tell you when your driver leaves";
++    }
++}

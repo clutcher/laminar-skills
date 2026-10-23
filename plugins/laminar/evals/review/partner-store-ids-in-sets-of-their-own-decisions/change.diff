@@ -1,0 +1,72 @@
+diff --git a/delivery/src/main/java/com/example/freshlane/pickup/EarlyPickupRule.java b/delivery/src/main/java/com/example/freshlane/pickup/EarlyPickupRule.java
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/main/java/com/example/freshlane/pickup/EarlyPickupRule.java
+@@ -0,0 +1,22 @@
++package com.example.freshlane.pickup;
++
++import java.time.LocalTime;
++import java.util.Set;
++
++public class EarlyPickupRule {
++
++    private static final Set<String> STORES_OPEN_FOR_EARLY_PICKUP = Set.of("ST-0412", "ST-0977");
++    private static final LocalTime EARLY_PICKUP_START = LocalTime.of(6, 0);
++    private static final LocalTime STANDARD_PICKUP_START = LocalTime.of(8, 0);
++
++    public boolean opensEarlyForPickup(String storeId) {
++        return STORES_OPEN_FOR_EARLY_PICKUP.contains(storeId);
++    }
++
++    public LocalTime firstPickupTime(String storeId) {
++        if (opensEarlyForPickup(storeId)) {
++            return EARLY_PICKUP_START;
++        }
++        return STANDARD_PICKUP_START;
++    }
++}
+diff --git a/delivery/src/main/java/com/example/freshlane/roster/DriverShiftPlanner.java b/delivery/src/main/java/com/example/freshlane/roster/DriverShiftPlanner.java
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/main/java/com/example/freshlane/roster/DriverShiftPlanner.java
+@@ -0,0 +1,22 @@
++package com.example.freshlane.roster;
++
++import com.example.freshlane.order.GroceryOrder;
++import com.example.freshlane.pickup.EarlyPickupRule;
++import java.util.List;
++
++public class DriverShiftPlanner {
++
++    private final EarlyPickupRule earlyPickupRule;
++
++    public DriverShiftPlanner(EarlyPickupRule earlyPickupRule) {
++        this.earlyPickupRule = earlyPickupRule;
++    }
++
++    public int countDriversForEarlyShift(List<GroceryOrder> ordersOfTheDay) {
++        return (int) ordersOfTheDay.stream()
++                .map(GroceryOrder::storeId)
++                .distinct()
++                .filter(earlyPickupRule::opensEarlyForPickup)
++                .count();
++    }
++}
+diff --git a/delivery/src/main/java/com/example/freshlane/van/ChilledVanRule.java b/delivery/src/main/java/com/example/freshlane/van/ChilledVanRule.java
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/main/java/com/example/freshlane/van/ChilledVanRule.java
+@@ -0,0 +1,13 @@
++package com.example.freshlane.van;
++
++import com.example.freshlane.order.GroceryOrder;
++import java.util.Set;
++
++public class ChilledVanRule {
++
++    private static final Set<String> STORES_WITHOUT_A_COLD_ROOM = Set.of("ST-0977");
++
++    public boolean needsChilledVan(GroceryOrder order) {
++        return order.holdsChilledLines() && STORES_WITHOUT_A_COLD_ROOM.contains(order.storeId());
++    }
++}

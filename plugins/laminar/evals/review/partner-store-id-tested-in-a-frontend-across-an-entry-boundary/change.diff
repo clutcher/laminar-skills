@@ -1,0 +1,51 @@
+diff --git a/orders-api/src/main/resources/graphql/orders.graphqls b/orders-api/src/main/resources/graphql/orders.graphqls
+--- a/orders-api/src/main/resources/graphql/orders.graphqls
++++ b/orders-api/src/main/resources/graphql/orders.graphqls
+@@ -4,5 +4,6 @@ type Query {
+ 
+ type Order {
+   orderNumber: String!
++  storeId: String!
+   deliveryDate: String!
+ }
+diff --git a/shopper-web/src/order/OrderCard.tsx b/shopper-web/src/order/OrderCard.tsx
+--- a/shopper-web/src/order/OrderCard.tsx
++++ b/shopper-web/src/order/OrderCard.tsx
+@@ -1,10 +1,17 @@
+ import { OrderSummary } from "./OrderSummary";
+ 
++const STORE_WITH_KERBSIDE_BAYS = "ST-0412";
++const STORES_WITH_AN_INDOOR_MAP = new Set(["ST-0412", "ST-0977"]);
++
+ export function OrderCard({ order }: { order: OrderSummary }) {
++  const parksAtKerbside = order.storeId === STORE_WITH_KERBSIDE_BAYS;
++  const showsStoreMap = STORES_WITH_AN_INDOOR_MAP.has(order.storeId);
+   return (
+     <article className="order-card">
+       <h3>{order.orderNumber}</h3>
+       <p>{order.deliveryDate}</p>
++      {parksAtKerbside && <p className="pickup-note">Park in a kerbside bay and we bring the bags out</p>}
++      {showsStoreMap && <a href={`/stores/${order.storeId}/map`}>Open the store map</a>}
+     </article>
+   );
+ }
+diff --git a/shopper-web/src/order/OrderSummary.ts b/shopper-web/src/order/OrderSummary.ts
+--- a/shopper-web/src/order/OrderSummary.ts
++++ b/shopper-web/src/order/OrderSummary.ts
+@@ -1,4 +1,5 @@
+ export interface OrderSummary {
+   orderNumber: string;
++  storeId: string;
+   deliveryDate: string;
+ }
+diff --git a/shopper-web/src/order/ordersOfShopper.graphql b/shopper-web/src/order/ordersOfShopper.graphql
+--- a/shopper-web/src/order/ordersOfShopper.graphql
++++ b/shopper-web/src/order/ordersOfShopper.graphql
+@@ -1,6 +1,7 @@
+ query OrdersOfShopper($shopperId: ID!) {
+   ordersOfShopper(shopperId: $shopperId) {
+     orderNumber
++    storeId
+     deliveryDate
+   }
+ }

@@ -1,0 +1,33 @@
+diff --git a/delivery/src/main/java/com/example/freshlane/order/GroceryOrder.java b/delivery/src/main/java/com/example/freshlane/order/GroceryOrder.java
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/main/java/com/example/freshlane/order/GroceryOrder.java
+@@ -0,0 +1,6 @@
++package com.example.freshlane.order;
++
++import java.time.LocalDate;
++
++public record GroceryOrder(String orderNumber, String storeId, LocalDate deliveryDate, boolean holdsChilledLines) {
++}
+diff --git a/delivery/src/main/java/com/example/freshlane/partner/PartnerStore.java b/delivery/src/main/java/com/example/freshlane/partner/PartnerStore.java
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/main/java/com/example/freshlane/partner/PartnerStore.java
+@@ -0,0 +1,4 @@
++package com.example.freshlane.partner;
++
++public record PartnerStore(String storeId, String displayName, String streetAddress) {
++}
+diff --git a/delivery/src/main/java/com/example/freshlane/partner/PartnerStoreRegistry.java b/delivery/src/main/java/com/example/freshlane/partner/PartnerStoreRegistry.java
+new file mode 100644
+--- /dev/null
++++ b/delivery/src/main/java/com/example/freshlane/partner/PartnerStoreRegistry.java
+@@ -0,0 +1,8 @@
++package com.example.freshlane.partner;
++
++import java.util.List;
++
++public interface PartnerStoreRegistry {
++
++    List<PartnerStore> fetchRegisteredStores();
++}

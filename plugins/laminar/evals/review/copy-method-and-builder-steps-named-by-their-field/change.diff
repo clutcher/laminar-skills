@@ -1,0 +1,116 @@
+diff --git a/orchard/src/main/java/com/example/orchard/picking/HarvestCrate.java b/orchard/src/main/java/com/example/orchard/picking/HarvestCrate.java
+new file mode 100644
+--- /dev/null
++++ b/orchard/src/main/java/com/example/orchard/picking/HarvestCrate.java
+@@ -0,0 +1,8 @@
++package com.example.orchard.picking;
++
++public record HarvestCrate(String crateLabel, String appleVariety, double weightKilograms) {
++
++    public HarvestCrate withWeightKilograms(double weighedKilograms) {
++        return new HarvestCrate(crateLabel, appleVariety, weighedKilograms);
++    }
++}
+diff --git a/orchard/src/main/java/com/example/orchard/picking/PickingRound.java b/orchard/src/main/java/com/example/orchard/picking/PickingRound.java
+new file mode 100644
+--- /dev/null
++++ b/orchard/src/main/java/com/example/orchard/picking/PickingRound.java
+@@ -0,0 +1,75 @@
++package com.example.orchard.picking;
++
++import java.time.LocalTime;
++import java.util.ArrayList;
++import java.util.List;
++
++public class PickingRound {
++
++    private final String orchardRow;
++    private final String picker;
++    private final LocalTime startTime;
++    private final List<HarvestCrate> crates;
++
++    private PickingRound(String orchardRow, String picker, LocalTime startTime, List<HarvestCrate> crates) {
++        this.orchardRow = orchardRow;
++        this.picker = picker;
++        this.startTime = startTime;
++        this.crates = List.copyOf(crates);
++    }
++
++    public static Builder builder() {
++        return new Builder();
++    }
++
++    public String orchardRow() {
++        return orchardRow;
++    }
++
++    public String picker() {
++        return picker;
++    }
++
++    public LocalTime startTime() {
++        return startTime;
++    }
++
++    public List<HarvestCrate> crates() {
++        return crates;
++    }
++
++    public static final class Builder {
++
++        private String orchardRow;
++        private String picker;
++        private LocalTime startTime;
++        private final List<HarvestCrate> crates = new ArrayList<>();
++
++        public Builder orchardRow(String orchardRow) {
++            this.orchardRow = orchardRow;
++            return this;
++        }
++
++        public Builder picker(String picker) {
++            this.picker = picker;
++            return this;
++        }
++
++        public Builder startTime(LocalTime startTime) {
++            this.startTime = startTime;
++            return this;
++        }
++
++        public Builder crates(List<HarvestCrate> crates) {
++            this.crates.addAll(crates);
++            return this;
++        }
++
++        public PickingRound build() {
++            if (orchardRow == null || picker == null || startTime == null) {
++                throw new IllegalStateException("A picking round needs an orchard row, a picker and a start time");
++            }
++            return new PickingRound(orchardRow, picker, startTime, crates);
++        }
++    }
++}
+diff --git a/orchard/src/main/java/com/example/orchard/picking/PickingRoundPlanner.java b/orchard/src/main/java/com/example/orchard/picking/PickingRoundPlanner.java
+new file mode 100644
+--- /dev/null
++++ b/orchard/src/main/java/com/example/orchard/picking/PickingRoundPlanner.java
+@@ -0,0 +1,18 @@
++package com.example.orchard.picking;
++
++import java.time.LocalTime;
++import java.util.List;
++
++public class PickingRoundPlanner {
++
++    private static final LocalTime MORNING_ROUND_START_TIME = LocalTime.of(6, 30);
++
++    public PickingRound planMorningRound(String orchardRow, String picker, List<HarvestCrate> emptyCrates) {
++        return PickingRound.builder()
++            .orchardRow(orchardRow)
++            .picker(picker)
++            .startTime(MORNING_ROUND_START_TIME)
++            .crates(emptyCrates)
++            .build();
++    }
++}
