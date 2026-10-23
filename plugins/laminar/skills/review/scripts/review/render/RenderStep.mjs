@@ -42,6 +42,8 @@ const formatTargetLine = reviewed => `${isAPatchReview(reviewed) ? "patch" : "re
 
 const formatRepairedWord = repaired => repaired.length ? `, ${repaired.length} repaired from the numbering of the code under review` : "";
 
+const formatReusedJudgeCallsWord = counts => (counts || {}).cachedJudgeCalls ? `, ${counts.cachedJudgeCalls} of ${counts.judgeCalls} judge call(s) reused from saved judge returns` : "";
+
 const formatLinesNotInTheCodeWord = counts => (counts || {}).linesNotInTheCode ? `, ${counts.linesNotInTheCode} named line(s) not in the code` : "";
 
 export class RenderStep {
@@ -69,7 +71,7 @@ export class RenderStep {
     const prepared = this.prepared.counts || {};
     const sweep = this.sweep;
     const confidence = this.settled.countByConfidence();
-    return `**Run** · ${formatTargetLine(this.reviewed)} · ${counts.files || 0} file(s), ${counts.abstractions || 0} abstraction(s) · ${prepared.codeUnderReview || 0} abstraction(s) under review, ${formatSweepWords(sweep)} · findings: ${this.settled.kept.length} kept (${confidence.high} high, ${confidence.moderate} moderate, ${confidence.low} low), ${this.settled.considered.length} to consider (${this.settled.countConsideredInExistingCode()} in ${EXISTING_CODE}), ${this.settled.rejected.length} rejected, ${this.settled.notVerified.length} not verified, ${(this.merged.dropped || []).length} dropped by the line check${formatLinesNotInTheCodeWord(this.merged.counts)}${formatRepairedWord(this.merged.repaired || [])} · run folder: ${resolveAbsolutePath(this.runFolder)}`;
+    return `**Run** · ${formatTargetLine(this.reviewed)} · ${counts.files || 0} file(s), ${counts.abstractions || 0} abstraction(s) · ${prepared.codeUnderReview || 0} abstraction(s) under review${formatReusedJudgeCallsWord(this.merged.counts)}, ${formatSweepWords(sweep)} · findings: ${this.settled.kept.length} kept (${confidence.high} high, ${confidence.moderate} moderate, ${confidence.low} low), ${this.settled.considered.length} to consider (${this.settled.countConsideredInExistingCode()} in ${EXISTING_CODE}), ${this.settled.rejected.length} rejected, ${this.settled.notVerified.length} not verified, ${(this.merged.dropped || []).length} dropped by the line check${formatLinesNotInTheCodeWord(this.merged.counts)}${formatRepairedWord(this.merged.repaired || [])} · run folder: ${resolveAbsolutePath(this.runFolder)}`;
   }
 
   readIo() {

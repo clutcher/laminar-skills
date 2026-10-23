@@ -4,7 +4,7 @@
 //   node grade.mjs --build <dir> <case-dir>     make the fixture in <dir>, print the range or the diff path
 //   node grade.mjs <case-dir> <review.md>       print one line per expected result, then a summary; an expected item under ## To consider matches only an item under that heading of the run
 //   node grade.mjs <case-dir> <review.md> --usage <usage.json>   also print one line per budget
-//   node grade.mjs --judges <case-dir>          print the --judges flag of the case's judges.txt, or nothing; stop with an error where <case-dir> holds no expected.md
+//   node grade.mjs --judges <case-dir>          print the prepare flags of the case: --no-judge-cache, and the --judges flag of its judges.txt where it has one; stop with an error where <case-dir> holds no expected.md
 //
 // Node with no dependencies. It writes only inside <dir> and runs git only there.
 import fs from "node:fs";
@@ -564,7 +564,7 @@ if (argv[0] === "--judges") {
   const caseDir = path.resolve(argv[1]);
   if (!fs.existsSync(path.join(caseDir, EXPECTED_FILE))) { console.error(`no eval case at ${caseDir}: it holds no ${EXPECTED_FILE}`); process.exit(2); }
   const judgeTypes = judgeTypesOf(caseDir);
-  if (judgeTypes && judgeTypes.length) console.log(`--judges ${judgeTypes.join(",")}`);
+  console.log(judgeTypes && judgeTypes.length ? `--no-judge-cache --judges ${judgeTypes.join(",")}` : "--no-judge-cache");
   process.exit(0);
 }
 const usageAt = argv.indexOf("--usage");

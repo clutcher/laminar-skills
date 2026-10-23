@@ -6,6 +6,7 @@ import { PrepareStep, REVIEW_ABSTRACTIONS_FILE } from "./review/prepare/PrepareS
 import { CodeGraphWalks } from "./review/prepare/abstractions/CodeGraphWalks.mjs";
 import { FilterStop, ReviewFilter } from "./review/prepare/selection/ReviewFilter.mjs";
 import { MergeStep } from "./review/merge/MergeStep.mjs";
+import { findSavedJudgeReturns } from "./review/cache/JudgeReturnCache.mjs";
 import { formatSweepWords } from "./review/merge/draft/Sweep.mjs";
 import { RenderStep } from "./review/render/RenderStep.mjs";
 import { resolveAbsolutePath } from "./files/paths.mjs";
@@ -15,7 +16,7 @@ import { RunFileStop } from "./files/runFile.mjs";
 
 const SUBCOMMANDS = ["extract", "prepare", "merge", "render"];
 
-const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --diff <patch>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
+const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --diff <patch>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--no-judge-cache] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
 
 const PREPARE_RETURN_FILE = "prepare-return.json";
 
@@ -32,7 +33,7 @@ const MERGE_RETURN_META = { name: "merge-return", description: "The merge return
 const splitList = given => String(given || "").split(",").map(piece => piece.trim()).filter(Boolean);
 
 function parseArguments(argv) {
-  const parsed = { files: [], exclude: [], judges: [], paths: [], scales: [], findings: [], verdicts: [] };
+  const parsed = { files: [], exclude: [], judges: [], paths: [], scales: [], findings: [], verdicts: [], readTheJudgeCache: true };
   for (let index = 0; index < argv.length; index++) {
     const name = argv[index];
     if (name === "--run") parsed.run = argv[++index];
@@ -45,6 +46,7 @@ function parseArguments(argv) {
     else if (name === "--judges") parsed.judges = splitList(argv[++index]);
     else if (name === "--paths") parsed.paths = splitList(argv[++index]);
     else if (name === "--scales") parsed.scales = splitList(argv[++index]);
+    else if (name === "--no-judge-cache") parsed.readTheJudgeCache = false;
     else if (name === "--files") { while (index + 1 < argv.length && !argv[index + 1].startsWith("--")) parsed.files.push(argv[++index]); }
     else { console.error(`unknown argument ${name}`); process.exit(2); }
   }
@@ -115,6 +117,7 @@ function printThePrepareSummary(runFolder, written) {
   const byTrack = Object.entries(written.counts.byTrack).map(([track, count]) => `${track} ${count}`).join(", ");
   console.log(`prepare: ${written.counts.codeUnderReview} abstraction(s) under review (${byTrack}), ${written.counts.checks} check(s), ${written.counts.screenBatches} screen batch(es), ${written.counts.endCalls} end call(s), ${written.counts.ioRuleScreenCalls} I/O rule screen call(s), ${written.counts.ioEndMethods} I/O end method(s), ${written.counts.codeUnderReview} file(s) written to code-under-review/, written to ${REVIEW_ABSTRACTIONS_FILE}, prepare.json, ${PREPARE_RETURN_FILE} and ${PREPARE_RETURN_WORKFLOW_FILE}`);
   console.log(`prepare: ${written.costPlan}, written to cost-plan.json`);
+  console.log(`prepare: ${Object.keys(written.judgeCache).length} judge call(s) hold a saved judge return, which the judge workflow uses where its message is the same`);
   for (const note of written.notAnswered) {
     console.log(`prepare: ${note.reason}`);
     for (const type of note.classes) console.log(`prepare: - ${type.name}, ${type.path}`);
@@ -138,6 +141,7 @@ const prepareReturnOf = (runFolder, written) => ({
   ioGroups: written.ioGroups,
   ioPaths: written.ioPaths,
   waves: written.waves,
+  judgeCache: written.judgeCache,
 });
 
 function prepare(parsed) {
@@ -147,7 +151,9 @@ function prepare(parsed) {
   writeJsonFile(path.join(parsed.run, REVIEW_ABSTRACTIONS_FILE), reviewAbstractions);
   const step = new PrepareStep(reviewAbstractions, { filter }).run();
   const costPlanLine = step.writeTo(parsed.run);
-  const written = step.buildPreparedReturn(costPlanLine);
+  const preparedReturn = step.buildPreparedReturn(costPlanLine);
+  const judgeCache = findSavedJudgeReturns(parsed.run, step.codeUnderReview, { fileForm: preparedReturn.fileForm, repositoryRoot: step.readRepositoryRoot(), readTheCache: parsed.readTheJudgeCache });
+  const written = { ...preparedReturn, judgeCache };
   printThePrepareSummary(parsed.run, written);
   const returned = prepareReturnOf(parsed.run, written);
   writeJsonFile(path.join(parsed.run, PREPARE_RETURN_FILE), returned);
@@ -158,6 +164,7 @@ function prepare(parsed) {
 function merge(parsed) {
   if (!parsed.findings.length) { console.error(USAGE); process.exit(2); }
   const written = new MergeStep(parsed.run, parsed.findings).run().writeTo();
+  console.log(`merge: ${written.counts.cachedJudgeCalls} judge call(s) answered from the saved judge returns`);
   console.log(`merge: ${written.counts.possibleFindings} possible finding(s), ${written.counts.dropped} dropped by the line check, ${written.counts.refiled} re-filed under the check their decision names, ${written.counts.filedUnderAnotherCheck} dropped as filed under a check their call did not answer, ${written.counts.linesNotInTheCode} named line(s) not in the code, ${written.counts.items} item(s) in the draft, ${formatSweepWords(written.sweep)}, written to merge.json and draft.md`);
   console.log(`merge: ${written.counts.refuterCalls} refuter call(s), ${written.counts.excludedFromRefutation} possible finding(s) left out of the refuter, ${written.counts.verifyWaves} verify wave(s), written to refute/, verify/, ${MERGE_RETURN_FILE} and ${MERGE_RETURN_WORKFLOW_FILE}`);
   const returned = { step: "merge", runFolder: resolveAbsolutePath(parsed.run), counts: written.counts, draft: written.draft, draftLines: written.draftLines, verify: written.verify };

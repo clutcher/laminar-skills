@@ -1,0 +1,167 @@
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { readUserCacheRoot } from "../../code/index.mjs";
+import { findAgentFile } from "../../checks/CheckText.mjs";
+import { scriptsFolder } from "../../files/scriptSources.mjs";
+import { resolveAbsolutePath } from "../../files/paths.mjs";
+import { readJsonFile, writeJsonFile } from "../../files/jsonFile.mjs";
+import { SavedByKey } from "./SavedByKey.mjs";
+
+export const JUDGE_RETURN_FORMAT = 1;
+export const JUDGE_RETURN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
+export const MAX_SAVED_JUDGE_RETURNS = 4096;
+export const JUDGE_CACHE_FILE = "judge-cache.json";
+
+const JUDGE_WORKFLOW_FILE = path.join(scriptsFolder, "..", "..", "..", "workflows", "review-judge.js");
+const RUN_FOLDER_MARK = "<run>";
+const REPOSITORY_MARK = "<repo>";
+const OWN_ID_MARK = "<id>";
+const NAMED_PATH_PATTERN = /(?:[A-Za-z]:)?[\w@.+-]*(?:\/[\w@.+-]+)+/g;
+
+export const resolveDefaultJudgeReturnFolder = () => path.join(readUserCacheRoot(), "laminar-review", "judge-returns");
+
+const computeSha256 = hashedValues => {
+  const hash = crypto.createHash("sha256");
+  for (const hashedValue of hashedValues) hash.update(String(hashedValue)).update("\u0000");
+  return hash.digest("hex");
+};
+
+const readTextOrNothing = file => { try { return fs.readFileSync(file, "utf8"); } catch { return ""; } };
+
+const isAFile = file => { try { return fs.statSync(file).isFile(); } catch { return false; } };
+
+const isInsideFolder = (file, folder) => Boolean(folder) && (file === folder || file.startsWith(`${folder}/`));
+
+const escapeForPattern = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const stampsByJudgeTypeMap = new Map();
+
+const readJudgeStamp = judgeType => {
+  if (!stampsByJudgeTypeMap.has(judgeType)) stampsByJudgeTypeMap.set(judgeType, computeSha256([JUDGE_RETURN_FORMAT, readTextOrNothing(findAgentFile(judgeType)), readTextOrNothing(JUDGE_WORKFLOW_FILE)]));
+  return stampsByJudgeTypeMap.get(judgeType);
+};
+
+export class JudgeReturnKeys {
+  constructor(runFolder, repositoryRoot) {
+    this.runFolder = resolveAbsolutePath(runFolder);
+    this.repositoryRoot = repositoryRoot ? resolveAbsolutePath(repositoryRoot) : "";
+  }
+
+  replaceTheRoots(text) {
+    const roots = [[this.runFolder, RUN_FOLDER_MARK], [this.repositoryRoot, REPOSITORY_MARK]]
+      .filter(([root]) => root)
+      .sort(([left], [right]) => right.length - left.length);
+    return roots.reduce((replaced, [root, mark]) => replaced.split(root).join(mark), text);
+  }
+
+  replaceTheOwnId(text, codeUnderReviewId) {
+    return text.replace(new RegExp(`\\b${escapeForPattern(codeUnderReviewId)}\\b`, "g"), OWN_ID_MARK);
+  }
+
+  resolveNamedFile(named) {
+    const absolute = path.isAbsolute(named) ? resolveAbsolutePath(named) : this.repositoryRoot ? resolveAbsolutePath(path.join(this.repositoryRoot, named)) : "";
+    return absolute && isAFile(absolute) ? absolute : "";
+  }
+
+  readNamedFileHash(file) {
+    if (isInsideFolder(file, this.runFolder)) return computeSha256([this.replaceTheRoots(readTextOrNothing(file))]);
+    return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  }
+
+  listNamedFileHashes(text) {
+    const files = [...new Set((text.match(NAMED_PATH_PATTERN) || []).map(named => this.resolveNamedFile(named)).filter(Boolean))].sort();
+    return files.flatMap(file => [this.replaceTheRoots(file), this.readNamedFileHash(file)]);
+  }
+
+  createKey(codeUnderReview, file) {
+    const text = readTextOrNothing(path.join(this.runFolder, file));
+    if (!text) return "";
+    const comparable = this.replaceTheOwnId(this.replaceTheRoots(text), codeUnderReview.id);
+    return computeSha256([readJudgeStamp(codeUnderReview.judgeType), codeUnderReview.judgeType, comparable, ...this.listNamedFileHashes(text)]);
+  }
+}
+
+export class JudgeReturnCache {
+  constructor(folder = resolveDefaultJudgeReturnFolder()) {
+    this.saved = new SavedByKey(folder, { lifetimeMs: JUDGE_RETURN_LIFETIME_MS, maxFiles: MAX_SAVED_JUDGE_RETURNS, pruneOnWrite: false, refreshOnRead: true });
+  }
+
+  read(key) {
+    const returnsByTail = this.saved.read(key);
+    return returnsByTail && typeof returnsByTail === "object" ? returnsByTail : null;
+  }
+
+  write(key, tail, returned) {
+    if (!tail) return;
+    this.saved.write(key, { ...(this.read(key) || {}), [tail]: returned });
+  }
+
+  prune() {
+    try { this.saved.prune(); } catch { return; }
+  }
+}
+
+const THE_ID = "{id}";
+const THE_JUDGE_TYPE = "{judgeType}";
+
+const resolveCodeUnderReviewFile = (fileForm, codeUnderReview) => fileForm.replace(THE_ID, codeUnderReview.id).replace(THE_JUDGE_TYPE, codeUnderReview.judgeType);
+
+export function findSavedJudgeReturns(runFolder, everyCodeUnderReview, { fileForm, repositoryRoot = "", cache = new JudgeReturnCache(), readTheCache = true } = {}) {
+  const keys = new JudgeReturnKeys(runFolder, repositoryRoot);
+  const unitsById = {};
+  const savedTailsById = {};
+  for (const codeUnderReview of everyCodeUnderReview) {
+    const key = keys.createKey(codeUnderReview, resolveCodeUnderReviewFile(fileForm, codeUnderReview));
+    const saved = readTheCache && key ? cache.read(key) : null;
+    unitsById[codeUnderReview.id] = { key, checks: codeUnderReview.checks.map(check => check.id), ...(saved ? { saved } : {}) };
+    if (saved) savedTailsById[codeUnderReview.id] = Object.keys(saved);
+  }
+  writeJsonFile(path.join(runFolder, JUDGE_CACHE_FILE), unitsById);
+  return savedTailsById;
+}
+
+const stampedWith = (returnedItems, codeUnderReviewId) => (returnedItems || []).map(returnedItem => ({ ...returnedItem, codeUnderReviewId }));
+
+const unstampedOf = (returnedItems, codeUnderReviewId) => (returnedItems || [])
+  .filter(returnedItem => returnedItem.codeUnderReviewId === codeUnderReviewId)
+  .map(({ codeUnderReviewId: unused, ...returnedItem }) => returnedItem);
+
+const readCalls = calls => (Array.isArray(calls) ? calls : []).filter(call => Array.isArray(call) && call.length === 2 && call.every(field => typeof field === "string" && field));
+
+export const NO_SAVED_RETURN_FOUND = "the judge workflow reused a saved judge return that the run folder no longer holds, so its checks are reported as failed";
+
+export class JudgeCacheUse {
+  constructor(runFolder) {
+    const file = path.join(runFolder, JUDGE_CACHE_FILE);
+    this.unitsById = isAFile(file) ? readJsonFile(file) : {};
+    this.cache = new JudgeReturnCache();
+    this.reusedCount = 0;
+  }
+
+  findSavedReturn(codeUnderReviewId, tail) {
+    return ((this.unitsById[codeUnderReviewId] || {}).saved || {})[tail] || null;
+  }
+
+  addTheSavedReturns(returned) {
+    const hits = readCalls((returned.judgeCache || {}).hits).map(([codeUnderReviewId, tail]) => [codeUnderReviewId, this.findSavedReturn(codeUnderReviewId, tail)]);
+    const answered = hits.filter(([, saved]) => saved);
+    const lost = hits.filter(([, saved]) => !saved).map(([codeUnderReviewId]) => codeUnderReviewId);
+    this.reusedCount = answered.length;
+    return {
+      ...returned,
+      findings: [...(returned.findings || []), ...answered.flatMap(([codeUnderReviewId, saved]) => stampedWith(saved.findings, codeUnderReviewId))],
+      covered: [...(returned.covered || []), ...answered.flatMap(([codeUnderReviewId, saved]) => stampedWith(saved.covered, codeUnderReviewId))],
+      notRun: [...(returned.notRun || []), ...lost.flatMap(codeUnderReviewId => ((this.unitsById[codeUnderReviewId] || {}).checks || []).map(check => ({ codeUnderReviewId, check, reason: NO_SAVED_RETURN_FOUND })))],
+    };
+  }
+
+  keepTheFreshReturns(returned) {
+    const fresh = readCalls((returned.judgeCache || {}).fresh);
+    for (const [codeUnderReviewId, tail] of fresh) {
+      const key = (this.unitsById[codeUnderReviewId] || {}).key;
+      this.cache.write(key, tail, { findings: unstampedOf(returned.findings, codeUnderReviewId), covered: unstampedOf(returned.covered, codeUnderReviewId) });
+    }
+    if (fresh.length) this.cache.prune();
+  }
+}
