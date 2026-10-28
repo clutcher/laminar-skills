@@ -60,7 +60,7 @@ Write each test in 3 blocks, setup, action and check, separated by blank lines. 
 
 ## 9. A name of outcome and condition
 
-Name each test for the expected outcome and the condition that produces it, in business words, in the form should, outcome, when, condition, in the casing of the language. Use this form also where the other tests of the repository use another form; the rule on another form in the repository is a rule of the skill, narrower than the book. The name tells the reader which rule the test protects without reading the body.
+Name each test for the expected outcome and the condition that produces it, in business words. Write the name in the form should, outcome, when, condition, in the casing of the language, also where the other tests of the repository use another form. This form, with its use beside another form in the repository, is a rule of the skill, narrower than the book, which asks only that the name state the outcome and the condition, and gives this form as 1 format for them. The name tells the reader which rule the test protects without reading the body.
 
 - Book (*How to Verify Correctness*, *How to Structure Tests*): "A good name states the expected outcome and any conditions that produce it, so reviewers can decide whether this test matches the requirement they are checking." · "The pattern `should<Outcome>When<Condition>` captures them in a consistent format that becomes predictable across the codebase."
 

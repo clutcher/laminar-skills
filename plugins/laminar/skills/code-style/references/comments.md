@@ -39,6 +39,6 @@ When every attempt to encapsulate leaves a long list of unrelated inputs, or the
 
 ## 6. The phase marks of a test
 
-Mark the given, when and then blocks of a test, because the marks show a schema the reader already knows (see tests). In production code, the blank lines alone group the code.
+Mark the given, when and then blocks of a test, because the marks show a schema the reader already knows (see tests). Where the test framework offers named step calls, the step calls mark the phases in place of the comments. In production code, the blank lines alone group the code.
 
 - Book (*The Common Pitfalls*, *Visual Separation*): "Together they look like the test the reader already knows, so the whole compresses and no longer needs to be read line by line." · "Production code needs no such comments: the operations in each group already reveal its purpose, so the blank lines group the code on their own."
