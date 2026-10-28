@@ -1,0 +1,237 @@
+diff --git a/lending/pom.xml b/lending/pom.xml
+new file mode 100644
+index 0000000..123e0a3
+--- /dev/null
++++ b/lending/pom.xml
+@@ -0,0 +1,6 @@
++<project>
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example</groupId>
++    <artifactId>lending</artifactId>
++    <version>1.0.0</version>
++</project>
+diff --git a/lending/src/main/java/com/example/lending/catalogue/Copy.java b/lending/src/main/java/com/example/lending/catalogue/Copy.java
+new file mode 100644
+index 0000000..8282343
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/catalogue/Copy.java
+@@ -0,0 +1,6 @@
++package com.example.lending.catalogue;
++
++import com.example.lending.money.Money;
++
++public record Copy(String barcode, String title, Money replacementPrice) {
++}
+diff --git a/lending/src/main/java/com/example/lending/counter/ReturnCounter.java b/lending/src/main/java/com/example/lending/counter/ReturnCounter.java
+new file mode 100644
+index 0000000..905a69b
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/counter/ReturnCounter.java
+@@ -0,0 +1,22 @@
++package com.example.lending.counter;
++
++import com.example.lending.desk.LoanDesk;
++import com.example.lending.loans.Loan;
++import com.example.lending.money.Money;
++
++import java.time.LocalDate;
++
++public class ReturnCounter {
++
++    private final LoanDesk loanDesk;
++
++    public ReturnCounter(LoanDesk loanDesk) {
++        this.loanDesk = loanDesk;
++    }
++
++    public ReturnReceipt acceptReturn(Loan loan, LocalDate returnedOn) {
++        loanDesk.returnCopy(loan);
++        Money lateFee = loanDesk.calculateLateFee(loanDesk.readDueDate(loan), returnedOn);
++        return new ReturnReceipt(loan.copy().barcode(), returnedOn, lateFee);
++    }
++}
+diff --git a/lending/src/main/java/com/example/lending/counter/ReturnReceipt.java b/lending/src/main/java/com/example/lending/counter/ReturnReceipt.java
+new file mode 100644
+index 0000000..6f6ff7c
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/counter/ReturnReceipt.java
+@@ -0,0 +1,8 @@
++package com.example.lending.counter;
++
++import com.example.lending.money.Money;
++
++import java.time.LocalDate;
++
++public record ReturnReceipt(String barcode, LocalDate returnedOn, Money lateFee) {
++}
+diff --git a/lending/src/main/java/com/example/lending/desk/DeskOpeningHours.java b/lending/src/main/java/com/example/lending/desk/DeskOpeningHours.java
+new file mode 100644
+index 0000000..e95739b
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/desk/DeskOpeningHours.java
+@@ -0,0 +1,11 @@
++package com.example.lending.desk;
++
++import java.time.DayOfWeek;
++import java.time.LocalTime;
++
++public record DeskOpeningHours(DayOfWeek day, LocalTime opensAt, LocalTime closesAt) {
++
++    public boolean isOpenAt(LocalTime time) {
++        return !time.isBefore(opensAt) && time.isBefore(closesAt);
++    }
++}
+diff --git a/lending/src/main/java/com/example/lending/desk/LateFeeTable.java b/lending/src/main/java/com/example/lending/desk/LateFeeTable.java
+new file mode 100644
+index 0000000..263554e
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/desk/LateFeeTable.java
+@@ -0,0 +1,4 @@
++package com.example.lending.desk;
++
++public record LateFeeTable(long centsPerDay, long maximumCents) {
++}
+diff --git a/lending/src/main/java/com/example/lending/desk/LoanDesk.java b/lending/src/main/java/com/example/lending/desk/LoanDesk.java
+new file mode 100644
+index 0000000..21dd0ab
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/desk/LoanDesk.java
+@@ -0,0 +1,79 @@
++package com.example.lending.desk;
++
++import com.example.lending.catalogue.Copy;
++import com.example.lending.loans.Loan;
++import com.example.lending.members.Member;
++import com.example.lending.money.Money;
++import com.example.lending.notices.ReminderSender;
++
++import java.time.LocalDate;
++import java.time.temporal.ChronoUnit;
++import java.util.ArrayList;
++import java.util.List;
++
++public class LoanDesk {
++
++    public static final int LOAN_DAYS = 21;
++
++    private final List<Loan> openLoans = new ArrayList<>();
++
++    private final LateFeeTable lateFeeTable;
++
++    private final ReminderSender reminderSender;
++
++    public LoanDesk(LateFeeTable lateFeeTable, ReminderSender reminderSender) {
++        this.lateFeeTable = lateFeeTable;
++        this.reminderSender = reminderSender;
++    }
++
++    public Loan lendCopy(Member member, Copy copy, LocalDate lentOn) {
++        if (!member.canBorrow()) {
++            throw new IllegalStateException("member " + member.cardNumber() + " cannot borrow");
++        }
++
++        Loan loan = new Loan(member, copy, lentOn);
++        openLoans.add(loan);
++        return loan;
++    }
++
++    public void returnCopy(Loan loan) {
++        openLoans.remove(loan);
++    }
++
++    public Loan renewLoan(Loan loan, LocalDate renewedOn) {
++        openLoans.remove(loan);
++        Loan renewed = new Loan(loan.member(), loan.copy(), renewedOn);
++        openLoans.add(renewed);
++        return renewed;
++    }
++
++    public long countOpenLoansOf(Member member) {
++        return openLoans.stream()
++                .filter(loan -> loan.member().equals(member))
++                .count();
++    }
++
++    public LocalDate readDueDate(Loan loan) {
++        return loan.lentOn().plusDays(LoanDesk.LOAN_DAYS);
++    }
++
++    public List<Loan> listOverdueLoans(LocalDate today) {
++        return openLoans.stream()
++                .filter(loan -> readDueDate(loan).isBefore(today))
++                .toList();
++    }
++
++    public Money calculateLateFee(LocalDate dueDate, LocalDate returnedOn) {
++        long daysLate = ChronoUnit.DAYS.between(dueDate, returnedOn);
++        if (daysLate <= 0) {
++            return Money.zero();
++        }
++
++        return Money.ofCents(daysLate * lateFeeTable.centsPerDay());
++    }
++
++    public void sendOverdueReminder(Loan loan, LocalDate dueDate) {
++        String message = "Please return " + loan.copy().title() + ", which was due on " + dueDate;
++        reminderSender.send(loan.member().cardNumber(), message);
++    }
++}
+diff --git a/lending/src/main/java/com/example/lending/loans/Loan.java b/lending/src/main/java/com/example/lending/loans/Loan.java
+new file mode 100644
+index 0000000..6e0981c
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/loans/Loan.java
+@@ -0,0 +1,9 @@
++package com.example.lending.loans;
++
++import com.example.lending.catalogue.Copy;
++import com.example.lending.members.Member;
++
++import java.time.LocalDate;
++
++public record Loan(Member member, Copy copy, LocalDate lentOn) {
++}
+diff --git a/lending/src/main/java/com/example/lending/members/Member.java b/lending/src/main/java/com/example/lending/members/Member.java
+new file mode 100644
+index 0000000..a1ed251
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/members/Member.java
+@@ -0,0 +1,4 @@
++package com.example.lending.members;
++
++public record Member(String cardNumber, String name, boolean canBorrow) {
++}
+diff --git a/lending/src/main/java/com/example/lending/money/Money.java b/lending/src/main/java/com/example/lending/money/Money.java
+new file mode 100644
+index 0000000..697619c
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/money/Money.java
+@@ -0,0 +1,16 @@
++package com.example.lending.money;
++
++public record Money(long cents) {
++
++    public static Money zero() {
++        return new Money(0);
++    }
++
++    public static Money ofCents(long cents) {
++        return new Money(cents);
++    }
++
++    public Money plus(Money other) {
++        return new Money(cents + other.cents);
++    }
++}
+diff --git a/lending/src/main/java/com/example/lending/notices/ReminderSender.java b/lending/src/main/java/com/example/lending/notices/ReminderSender.java
+new file mode 100644
+index 0000000..a570165
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/notices/ReminderSender.java
+@@ -0,0 +1,6 @@
++package com.example.lending.notices;
++
++public interface ReminderSender {
++
++    void send(String cardNumber, String message);
++}

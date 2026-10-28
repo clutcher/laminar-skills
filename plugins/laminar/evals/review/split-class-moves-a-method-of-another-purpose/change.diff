@@ -1,0 +1,147 @@
+diff --git a/lending/src/main/java/com/example/lending/counter/ReturnCounter.java b/lending/src/main/java/com/example/lending/counter/ReturnCounter.java
+index 905a69b..5aaf020 100644
+--- a/lending/src/main/java/com/example/lending/counter/ReturnCounter.java
++++ b/lending/src/main/java/com/example/lending/counter/ReturnCounter.java
+@@ -1,22 +1,26 @@
+ package com.example.lending.counter;
+ 
+-import com.example.lending.desk.LoanDesk;
++import com.example.lending.fees.LoanChargeCalculator;
+ import com.example.lending.loans.Loan;
++import com.example.lending.loans.LoanService;
+ import com.example.lending.money.Money;
+ 
+ import java.time.LocalDate;
+ 
+ public class ReturnCounter {
+ 
+-    private final LoanDesk loanDesk;
++    private final LoanService loanService;
+ 
+-    public ReturnCounter(LoanDesk loanDesk) {
+-        this.loanDesk = loanDesk;
++    private final LoanChargeCalculator loanChargeCalculator;
++
++    public ReturnCounter(LoanService loanService, LoanChargeCalculator loanChargeCalculator) {
++        this.loanService = loanService;
++        this.loanChargeCalculator = loanChargeCalculator;
+     }
+ 
+     public ReturnReceipt acceptReturn(Loan loan, LocalDate returnedOn) {
+-        loanDesk.returnCopy(loan);
+-        Money lateFee = loanDesk.calculateLateFee(loanDesk.readDueDate(loan), returnedOn);
++        loanService.returnCopy(loan);
++        Money lateFee = loanChargeCalculator.calculateLateFee(loanService.readDueDate(loan), returnedOn);
+         return new ReturnReceipt(loan.copy().barcode(), returnedOn, lateFee);
+     }
+ }
+diff --git a/lending/src/main/java/com/example/lending/fees/LoanChargeCalculator.java b/lending/src/main/java/com/example/lending/fees/LoanChargeCalculator.java
+new file mode 100644
+index 0000000..de7218c
+--- /dev/null
++++ b/lending/src/main/java/com/example/lending/fees/LoanChargeCalculator.java
+@@ -0,0 +1,35 @@
++package com.example.lending.fees;
++
++import com.example.lending.desk.LateFeeTable;
++import com.example.lending.loans.Loan;
++import com.example.lending.money.Money;
++import com.example.lending.notices.ReminderSender;
++
++import java.time.LocalDate;
++import java.time.temporal.ChronoUnit;
++
++public class LoanChargeCalculator {
++
++    private final LateFeeTable lateFeeTable;
++
++    private final ReminderSender reminderSender;
++
++    public LoanChargeCalculator(LateFeeTable lateFeeTable, ReminderSender reminderSender) {
++        this.lateFeeTable = lateFeeTable;
++        this.reminderSender = reminderSender;
++    }
++
++    public Money calculateLateFee(LocalDate dueDate, LocalDate returnedOn) {
++        long daysLate = ChronoUnit.DAYS.between(dueDate, returnedOn);
++        if (daysLate <= 0) {
++            return Money.zero();
++        }
++
++        return Money.ofCents(Math.min(daysLate * lateFeeTable.centsPerDay(), lateFeeTable.maximumCents()));
++    }
++
++    public void sendOverdueReminder(Loan loan, LocalDate dueDate) {
++        String message = "Please return " + loan.copy().title() + ", which was due on " + dueDate;
++        reminderSender.send(loan.member().cardNumber(), message);
++    }
++}
+diff --git a/lending/src/main/java/com/example/lending/desk/LoanDesk.java b/lending/src/main/java/com/example/lending/loans/LoanService.java
+similarity index 54%
+rename from lending/src/main/java/com/example/lending/desk/LoanDesk.java
+rename to lending/src/main/java/com/example/lending/loans/LoanService.java
+index 21dd0ab..c92341e 100644
+--- a/lending/src/main/java/com/example/lending/desk/LoanDesk.java
++++ b/lending/src/main/java/com/example/lending/loans/LoanService.java
+@@ -1,31 +1,18 @@
+-package com.example.lending.desk;
++package com.example.lending.loans;
+ 
+ import com.example.lending.catalogue.Copy;
+-import com.example.lending.loans.Loan;
+ import com.example.lending.members.Member;
+-import com.example.lending.money.Money;
+-import com.example.lending.notices.ReminderSender;
+ 
+ import java.time.LocalDate;
+-import java.time.temporal.ChronoUnit;
+ import java.util.ArrayList;
+ import java.util.List;
+ 
+-public class LoanDesk {
++public class LoanService {
+ 
+     public static final int LOAN_DAYS = 21;
+ 
+     private final List<Loan> openLoans = new ArrayList<>();
+ 
+-    private final LateFeeTable lateFeeTable;
+-
+-    private final ReminderSender reminderSender;
+-
+-    public LoanDesk(LateFeeTable lateFeeTable, ReminderSender reminderSender) {
+-        this.lateFeeTable = lateFeeTable;
+-        this.reminderSender = reminderSender;
+-    }
+-
+     public Loan lendCopy(Member member, Copy copy, LocalDate lentOn) {
+         if (!member.canBorrow()) {
+             throw new IllegalStateException("member " + member.cardNumber() + " cannot borrow");
+@@ -54,7 +41,7 @@ public class LoanDesk {
+     }
+ 
+     public LocalDate readDueDate(Loan loan) {
+-        return loan.lentOn().plusDays(LoanDesk.LOAN_DAYS);
++        return loan.lentOn().plusDays(LoanService.LOAN_DAYS);
+     }
+ 
+     public List<Loan> listOverdueLoans(LocalDate today) {
+@@ -62,18 +49,4 @@ public class LoanDesk {
+                 .filter(loan -> readDueDate(loan).isBefore(today))
+                 .toList();
+     }
+-
+-    public Money calculateLateFee(LocalDate dueDate, LocalDate returnedOn) {
+-        long daysLate = ChronoUnit.DAYS.between(dueDate, returnedOn);
+-        if (daysLate <= 0) {
+-            return Money.zero();
+-        }
+-
+-        return Money.ofCents(daysLate * lateFeeTable.centsPerDay());
+-    }
+-
+-    public void sendOverdueReminder(Loan loan, LocalDate dueDate) {
+-        String message = "Please return " + loan.copy().title() + ", which was due on " + dueDate;
+-        reminderSender.send(loan.member().cardNumber(), message);
+-    }
+ }
