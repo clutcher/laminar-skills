@@ -31,7 +31,7 @@ The script found the entry methods and the calls by the names in the text and di
 2. The code under review holds every line the check needs.
 3. Name the values that come in at each entry method: its parameters, and the fields of a request or a message it takes.
 4. Follow each value down the calls to the abstraction under review. Note every check of the value on the way: at the entry method, such as a rule that its signature or its request type declares, and on each line below it.
-5. On `inner`, answer 3 questions in order. Does the abstraction under review check a value that came in at an entry method, in its own lines or by a call to an abstraction that only checks that value? Does the same check already stand at every entry method under `Entry methods`? Does a value reach a line under `Sinks` with no check since it came in?
+5. On `inner`, answer 3 questions in order. Does the abstraction under review check a value that came in at an entry method, in its own lines or by a call to an abstraction that only checks that value, and does that check test whether the value is well formed or is 1 of the values it may take, or test it against the state of a record that the work reads or changes? Does the same check already stand at every entry method under `Entry methods`? Does a value reach a line under `Sinks` with no check since it came in?
 6. On `entry`, answer 2 questions in order. Which values does the entry method pass inward with no check? Does such a value reach a line under `Sinks`, or a method under `Passed to` that uses it with no check?
 7. Say only what the code shows, never why a decision was made.
 
@@ -48,12 +48,12 @@ The script found the entry methods and the calls by the names in the text and di
 ### Derived patterns
 
 - Validate at the Boundary: derived from the rule that "Some of that data can come from an attacker looking for a missing check": an outside value that reaches a database query, a shell command, a file path or text put together from pieces, with no check since it entered, is outside data treated as safe.
-- Validate at the Boundary: derived from the rule that the entry boundary is the one place for the check on outside data, "the outer edge of the system where data from outside comes in, so it is the one place where this check makes sense": a check of a value that comes in at an entry boundary, run inside an operation that the entry boundary calls, such as the first lines of an operation that only entry methods call, is not at the entry boundary.
+- Validate at the Boundary: derived from the rule that the entry boundary is the one place for the check on outside data, "the outer edge of the system where data from outside comes in, so it is the one place where this check makes sense": a check of a value that comes in at an entry boundary, run inside an operation that the entry boundary calls, such as the first lines of an operation that only entry methods call, is not at the entry boundary, unless the check guards a rule of the domain, a state that the work itself can reach, and not whether the value is well formed or is 1 of the values it may take, also where the list of those values is read while the operation runs: a check of the value against the state of a record that the work reads or changes, such as a balance, a count of open items or the stock on hand, is no finding, because "Yet even a validated input can drive the abstraction into a bad state while it runs".
 
 ### Review conventions
 
 - Validate at the Boundary: an abstraction that only checks a value, such as a validator, is the check itself, so it is no finding; the finding lands on the operation that runs the check, by its own lines or by a call to that abstraction.
-- Validate at the Boundary: a check at the entry boundary covers only the rule it states, so a check inside of another rule of the same value, such as a check of its range after a check of its presence, is no repeat of it; that inner check is still a check of outside data that is not at the entry boundary.
+- Validate at the Boundary: a check at the entry boundary covers only the rule it states, so a check inside of another rule of the same value, such as a check of its range after a check of its presence, is no repeat of it; that inner check is still a check of outside data that is not at the entry boundary, unless it tests the value against the state of a record that the work reads or changes, which is a rule of the domain.
 
 ## When to report
 
