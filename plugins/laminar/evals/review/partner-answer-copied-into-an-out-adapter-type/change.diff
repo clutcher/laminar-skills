@@ -1,0 +1,180 @@
+diff --git a/greenhouse/pom.xml b/greenhouse/pom.xml
+new file mode 100644
+--- /dev/null
++++ b/greenhouse/pom.xml
+@@ -0,0 +1,16 @@
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <groupId>com.example</groupId>
++    <artifactId>greenhouse</artifactId>
++    <version>1.0.0</version>
++    <dependencies>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-web</artifactId>
++        </dependency>
++        <dependency>
++            <groupId>com.fasterxml.jackson.core</groupId>
++            <artifactId>jackson-databind</artifactId>
++        </dependency>
++    </dependencies>
++</project>
+diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/api/WateringPlan.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/api/WateringPlan.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/api/WateringPlan.java
+@@ -0,0 +1,8 @@
++package com.example.greenhouse.irrigation.app.api;
++
++import java.time.LocalDate;
++
++public interface WateringPlan {
++
++    int wateringMinutesFor(String plotCode, LocalDate day);
++}
+diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/IrrigationPlanner.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/IrrigationPlanner.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/IrrigationPlanner.java
+@@ -0,0 +1,33 @@
++package com.example.greenhouse.irrigation.app.domain;
++
++import com.example.greenhouse.irrigation.app.api.WateringPlan;
++import com.example.greenhouse.irrigation.app.domain.model.DayOutlook;
++import com.example.greenhouse.irrigation.app.domain.model.Plot;
++import com.example.greenhouse.irrigation.app.spi.PlotStore;
++import com.example.greenhouse.irrigation.app.spi.WeatherSource;
++
++import java.time.LocalDate;
++
++public class IrrigationPlanner implements WateringPlan {
++
++    private final PlotStore plotStore;
++    private final WeatherSource weatherSource;
++
++    public IrrigationPlanner(PlotStore plotStore, WeatherSource weatherSource) {
++        this.plotStore = plotStore;
++        this.weatherSource = weatherSource;
++    }
++
++    @Override
++    public int wateringMinutesFor(String plotCode, LocalDate day) {
++        Plot plot = plotStore.plotOf(plotCode);
++        DayOutlook outlook = weatherSource.outlookFor(plot.stationCode(), day);
++        if (outlook.rainChancePercent() >= 70 && outlook.rainMillimeters() >= 5.0) {
++            return 0;
++        }
++        if (outlook.highestTemperature() >= 30.0) {
++            return plot.baseMinutes() * 2;
++        }
++        return plot.baseMinutes();
++    }
++}
+diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/model/DayOutlook.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/model/DayOutlook.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/model/DayOutlook.java
+@@ -0,0 +1,4 @@
++package com.example.greenhouse.irrigation.app.domain.model;
++
++public record DayOutlook(double rainMillimeters, int rainChancePercent, double highestTemperature) {
++}
+diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/model/Plot.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/model/Plot.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/model/Plot.java
+@@ -0,0 +1,4 @@
++package com.example.greenhouse.irrigation.app.domain.model;
++
++public record Plot(String code, String cropName, String stationCode, int baseMinutes) {
++}
+diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/spi/PlotStore.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/spi/PlotStore.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/spi/PlotStore.java
+@@ -0,0 +1,8 @@
++package com.example.greenhouse.irrigation.app.spi;
++
++import com.example.greenhouse.irrigation.app.domain.model.Plot;
++
++public interface PlotStore {
++
++    Plot plotOf(String plotCode);
++}
+diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/spi/WeatherSource.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/spi/WeatherSource.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/spi/WeatherSource.java
+@@ -0,0 +1,10 @@
++package com.example.greenhouse.irrigation.app.spi;
++
++import com.example.greenhouse.irrigation.app.domain.model.DayOutlook;
++
++import java.time.LocalDate;
++
++public interface WeatherSource {
++
++    DayOutlook outlookFor(String stationCode, LocalDate day);
++}
+diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/out/weather/ForecastReply.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/out/weather/ForecastReply.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse/src/main/java/com/example/greenhouse/irrigation/out/weather/ForecastReply.java
+@@ -0,0 +1,12 @@
++package com.example.greenhouse.irrigation.out.weather;
++
++public record ForecastReply(
++        String stationRef,
++        String issuedAtIso,
++        double tempMaxC,
++        double precipMm,
++        int precipProbabilityPct,
++        String windDirCode,
++        double windKph,
++        String qualityFlag) {
++}
+diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/out/weather/WeatherSourceUsingMeteoPartner.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/out/weather/WeatherSourceUsingMeteoPartner.java
+new file mode 100644
+--- /dev/null
++++ b/greenhouse/src/main/java/com/example/greenhouse/irrigation/out/weather/WeatherSourceUsingMeteoPartner.java
+@@ -0,0 +1,40 @@
++package com.example.greenhouse.irrigation.out.weather;
++
++import com.example.greenhouse.irrigation.app.domain.model.DayOutlook;
++import com.example.greenhouse.irrigation.app.spi.WeatherSource;
++import com.fasterxml.jackson.databind.ObjectMapper;
++
++import java.io.IOException;
++import java.net.URI;
++import java.net.http.HttpClient;
++import java.net.http.HttpRequest;
++import java.net.http.HttpResponse;
++import java.time.LocalDate;
++
++public class WeatherSourceUsingMeteoPartner implements WeatherSource {
++
++    private final HttpClient httpClient;
++    private final ObjectMapper objectMapper;
++    private final String partnerBaseUrl;
++
++    public WeatherSourceUsingMeteoPartner(HttpClient httpClient, ObjectMapper objectMapper, String partnerBaseUrl) {
++        this.httpClient = httpClient;
++        this.objectMapper = objectMapper;
++        this.partnerBaseUrl = partnerBaseUrl;
++    }
++
++    @Override
++    public DayOutlook outlookFor(String stationCode, LocalDate day) {
++        HttpRequest request = HttpRequest.newBuilder(URI.create(partnerBaseUrl + "/v2/forecast?station=" + stationCode + "&date=" + day)).GET().build();
++        try {
++            String body = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body();
++            return mapIntoOutlook(objectMapper.readValue(body, ForecastReply.class));
++        } catch (IOException | InterruptedException e) {
++            throw new IllegalStateException("The weather partner gave no forecast for station " + stationCode, e);
++        }
++    }
++
++    private DayOutlook mapIntoOutlook(ForecastReply reply) {
++        return new DayOutlook(reply.precipMm(), reply.precipProbabilityPct(), reply.tempMaxC());
++    }
++}

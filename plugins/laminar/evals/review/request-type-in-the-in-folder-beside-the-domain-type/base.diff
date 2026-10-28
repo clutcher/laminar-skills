@@ -1,0 +1,29 @@
+diff --git a/kennel/package.json b/kennel/package.json
+new file mode 100644
+--- /dev/null
++++ b/kennel/package.json
+@@ -0,0 +1,10 @@
++{
++  "name": "kennel",
++  "version": "1.0.0",
++  "dependencies": {
++    "express": "4.19.2"
++  },
++  "devDependencies": {
++    "typescript": "5.4.5"
++  }
++}
+diff --git a/kennel/tsconfig.json b/kennel/tsconfig.json
+new file mode 100644
+--- /dev/null
++++ b/kennel/tsconfig.json
+@@ -0,0 +1,9 @@
++{
++  "compilerOptions": {
++    "target": "ES2022",
++    "module": "commonjs",
++    "strict": true,
++    "outDir": "dist"
++  },
++  "include": ["src"]
++}

@@ -1,0 +1,106 @@
+diff --git a/kennel/src/boarding/app/api/stay-booking.ts b/kennel/src/boarding/app/api/stay-booking.ts
+new file mode 100644
+--- /dev/null
++++ b/kennel/src/boarding/app/api/stay-booking.ts
+@@ -0,0 +1,5 @@
++import { Stay } from "../domain/model/stay";
++
++export interface StayBooking {
++  bookStay(stay: Stay): Promise<number>;
++}
+diff --git a/kennel/src/boarding/app/domain/model/stay.ts b/kennel/src/boarding/app/domain/model/stay.ts
+new file mode 100644
+--- /dev/null
++++ b/kennel/src/boarding/app/domain/model/stay.ts
+@@ -0,0 +1,17 @@
++export class Stay {
++  readonly petName: string;
++  readonly ownerPhone: string;
++  readonly arrivesOn: Date;
++  readonly leavesOn: Date;
++
++  constructor(petName: string, ownerPhone: string, arrivesOn: Date, leavesOn: Date) {
++    this.petName = petName;
++    this.ownerPhone = ownerPhone;
++    this.arrivesOn = arrivesOn;
++    this.leavesOn = leavesOn;
++  }
++
++  nights(): number {
++    return Math.round((this.leavesOn.getTime() - this.arrivesOn.getTime()) / 86400000);
++  }
++}
+diff --git a/kennel/src/boarding/app/domain/stay-service.ts b/kennel/src/boarding/app/domain/stay-service.ts
+new file mode 100644
+--- /dev/null
++++ b/kennel/src/boarding/app/domain/stay-service.ts
+@@ -0,0 +1,14 @@
++import { StayBooking } from "../api/stay-booking";
++import { StayStore } from "../spi/stay-store";
++import { Stay } from "./model/stay";
++
++const PRICE_PER_NIGHT_IN_CENTS = 3200;
++
++export class StayService implements StayBooking {
++  constructor(private readonly stayStore: StayStore) {}
++
++  async bookStay(stay: Stay): Promise<number> {
++    await this.stayStore.saveStay(stay);
++    return stay.nights() * PRICE_PER_NIGHT_IN_CENTS;
++  }
++}
+diff --git a/kennel/src/boarding/app/spi/stay-store.ts b/kennel/src/boarding/app/spi/stay-store.ts
+new file mode 100644
+--- /dev/null
++++ b/kennel/src/boarding/app/spi/stay-store.ts
+@@ -0,0 +1,5 @@
++import { Stay } from "../domain/model/stay";
++
++export interface StayStore {
++  saveStay(stay: Stay): Promise<void>;
++}
+diff --git a/kennel/src/boarding/in/rest/stay-controller.ts b/kennel/src/boarding/in/rest/stay-controller.ts
+new file mode 100644
+--- /dev/null
++++ b/kennel/src/boarding/in/rest/stay-controller.ts
+@@ -0,0 +1,22 @@
++import { Request, Response, Router } from "express";
++import { StayBooking } from "../../app/api/stay-booking";
++import { Stay } from "../../app/domain/model/stay";
++import { StayRequest } from "./stay-request";
++
++export function createStayRouter(stayBooking: StayBooking): Router {
++  const router = Router();
++  router.post("/stays", async (request: Request, response: Response) => {
++    const stayRequest = readStayRequest(request.body);
++    const priceInCents = await stayBooking.bookStay(mapIntoStay(stayRequest));
++    response.status(201).json({ priceInCents });
++  });
++  return router;
++}
++
++function readStayRequest(body: Record<string, string>): StayRequest {
++  return new StayRequest(body.petName, body.ownerPhone, new Date(body.arrivesOn), new Date(body.leavesOn));
++}
++
++function mapIntoStay(stayRequest: StayRequest): Stay {
++  return new Stay(stayRequest.petName, stayRequest.ownerPhone, stayRequest.arrivesOn, stayRequest.leavesOn);
++}
+diff --git a/kennel/src/boarding/in/rest/stay-request.ts b/kennel/src/boarding/in/rest/stay-request.ts
+new file mode 100644
+--- /dev/null
++++ b/kennel/src/boarding/in/rest/stay-request.ts
+@@ -0,0 +1,13 @@
++export class StayRequest {
++  readonly petName: string;
++  readonly ownerPhone: string;
++  readonly arrivesOn: Date;
++  readonly leavesOn: Date;
++
++  constructor(petName: string, ownerPhone: string, arrivesOn: Date, leavesOn: Date) {
++    this.petName = petName;
++    this.ownerPhone = ownerPhone;
++    this.arrivesOn = arrivesOn;
++    this.leavesOn = leavesOn;
++  }
++}
