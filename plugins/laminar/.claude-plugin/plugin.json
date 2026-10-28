@@ -2,7 +2,7 @@
   "name": "laminar",
   "description": "Reviews code against the three qualities of high-quality code in Laminar Software Design: simple to understand and change, correct in behavior, and fast enough for its purpose. A simplicity finding names the cognitive failure a reader meets, a correctness finding names the missing prevention decision or the missing test, and a performance finding names the waste a known alternative avoids. A coding style skill gives the same book's design directions, each with its reason, for any code that is written or changed.",
   "keywords": ["code-review", "software-design", "simplicity", "correctness", "performance", "laminar"],
-  "version": "0.68.1",
+  "version": "0.69.0",
   "license": "MIT AND CC-BY-4.0",
   "homepage": "https://github.com/clutcher/laminar-skills",
   "author": {
