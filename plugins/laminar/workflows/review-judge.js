@@ -412,7 +412,7 @@ const SCHEMA_OF_ANY_CHECK_BY_JUDGE_TYPE = {
   'judge-design-leaked-details': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE } })),
   'judge-design-entry-boundary': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE }, ...THE_QUESTION_TO_THE_AUTHOR })),
   'judge-design-missing-boundary': judgeSchemaOf(findingOf({ abstractionPlace: A_LINE, alsoAt: { type: 'array', items: A_SECOND_PLACE }, ...THE_BELONGING_ANSWERS })),
-  'judge-correctness-prevention': judgeSchemaOf(findingOf({ decision: A_TEXT, established: A_TEXT, alsoAt: { type: 'array', items: A_SECOND_PLACE } }, ['decision'])),
+  'judge-correctness-prevention': judgeSchemaOf(findingOf({ decision: A_TEXT, established: A_TEXT, alsoAt: { type: 'array', items: A_SECOND_PLACE }, ...THE_QUESTION_TO_THE_AUTHOR }, ['decision'])),
   'judge-correctness-validate-at-the-boundary': judgeSchemaOf(findingOf({ alsoAt: { type: 'array', items: A_SECOND_PLACE } }, ['alsoAt'])),
   'judge-correctness-simplicity-test-method': judgeSchemaOf(findingOf({ ...THE_PREDICTION, ...THE_BELONGING_ANSWERS, established: A_TEXT })),
   'judge-correctness-test-plan': TEST_PLAN_SCHEMA,
