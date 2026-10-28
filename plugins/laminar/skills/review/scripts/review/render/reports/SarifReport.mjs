@@ -1,4 +1,4 @@
-import { CHECK_WORDS, findCheckWords } from "../../../checks/CheckWords.mjs";
+import { CHECK_WORDS, findCheckWords, SCALE_ORDER } from "../../../checks/CheckWords.mjs";
 import { convertToText } from "../sections/ReturnedValueText.mjs";
 import { formatLeadWords, formatDisplayNameText, formatDirectionText, formatDirectionsWithTheirLeads } from "../sections/ItemText.mjs";
 import { selectScopeProperties } from "../sections/ScopeLine.mjs";
@@ -159,20 +159,23 @@ const buildConsiderationResult = (finding, changeKinds) => {
   return { ...result, level: LEVELS.CONSIDERATION, message: { text: formatQuestion(finding) }, properties: buildConsiderationProperties(finding, changeKinds) };
 };
 
+const listTheScalesOfTheRun = scope => scope && scope.scales.length ? scope.scales : SCALE_ORDER;
+
+const buildScopeProperties = scope => selectScopeProperties({ ...(scope || {}), scales: listTheScalesOfTheRun(scope) });
+
 const runPropertiesOf = (scope, acrossApplications) => ({
-  ...(scope ? { scope: selectScopeProperties(scope) } : {}),
+  scope: buildScopeProperties(scope),
   ...(acrossApplications ? { entryBoundaries: { ...acrossApplications } } : {}),
 });
 
 export function buildSarifReport(kept, version, scope = null, acrossApplications = null, considered = [], changeKinds = new ChangeKindsOfTheReport()) {
-  const properties = runPropertiesOf(scope, acrossApplications);
   return JSON.stringify({
     $schema: SCHEMA_URL,
     version: "2.1.0",
     runs: [{
       tool: { driver: { name: DRIVER_NAME, version, informationUri: INFORMATION_URI, rules: sarifRules } },
       results: [...kept.map(finding => buildResult(finding, changeKinds)), ...considered.map(finding => buildConsiderationResult(finding, changeKinds))],
-      ...(Object.keys(properties).length ? { properties } : {}),
+      properties: runPropertiesOf(scope, acrossApplications),
     }],
   }, null, 2) + "\n";
 }
