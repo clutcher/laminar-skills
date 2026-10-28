@@ -1,4 +1,4 @@
-import { CHANGE_KINDS, liesInAnotherApplication, findDriver, FILE_STATUS, holdsANonBlankLine, holdsKeyTreesAt, findInnermostHolding, isATypesOnlyFile, liesInTheTypeOutsideItsMethods, Scale, doesSpanHoldLine, TEST_PLACEMENTS, VISIBILITIES } from "../../../../code/index.mjs";
+import { CHANGE_KINDS, liesInAnotherApplication, findDriver, FILE_STATUS, holdsANonBlankLine, holdsKeyTreesAt, findInnermostHolding, isATypesOnlyFile, liesInTheTypeOutsideItsMethods, readVisibilityOfDeclaration, Scale, doesSpanHoldLine, TEST_PLACEMENTS, VISIBILITIES } from "../../../../code/index.mjs";
 import { isAReadIdentifierOccurrence } from "../walks/decisions/SameDecisionWalk.mjs";
 import { MAX_CONTEXT_LINES, ReferenceContext } from "../references/ReferenceContext.mjs";
 import { ReferenceOrder } from "../references/ReferenceOrder.mjs";
@@ -39,6 +39,7 @@ const MAX_CROSS_MODULE_REFERENCES = 12;
 export const MAX_CALLING_METHODS = 3;
 export const MAX_CALLING_METHOD_LINES = 12;
 export const MAX_CALLED_BODY_LINES = 12;
+const MAX_CALL_DEPTH = 2;
 
 const listPathsShownAfterTheChange = change => change.files.filter(file => file.existsAfterTheChange).map(file => file.path);
 
@@ -225,16 +226,59 @@ const listNumbersWithinSpan = span => Array.from({ length: Math.max(0, span.to -
 
 const isEveryLineKnown = (textByLineMap, span) => listNumbersWithinSpan(span).every(line => textByLineMap.has(line));
 
-const findIndexOfTheFirstCall = (ownLines, callLines) => {
+const findIndexOfTheFirstCall = (callerLineNumbers, callLines) => {
   const calling = new Set(callLines);
-  return ownLines.findIndex(line => calling.has(Number(findLineNumber(line))));
+  return callerLineNumbers.findIndex(line => calling.has(line));
 };
 
-const selectFirstCalled = callsAt => callsAt
+const selectFirstCalled = (callsAt, room = MAX_CALLING_METHODS) => callsAt
   .filter(({ at }) => at >= 0)
   .sort((left, right) => left.at - right.at)
-  .slice(0, MAX_CALLING_METHODS)
+  .slice(0, room)
   .map(({ method }) => method);
+
+const selectCalledDownToTheDepth = (ownLineNumbers, outsideMethods, findFirstCall, isFollowedPastTheFirstCall) => {
+  const called = [];
+  let callerLineNumbers = ownLineNumbers;
+  for (let depth = 1; depth <= MAX_CALL_DEPTH && called.length < MAX_CALLING_METHODS; depth += 1) {
+    const reachable = outsideMethods.filter(method => !called.includes(method) && (depth === 1 || isFollowedPastTheFirstCall(method)));
+    const calledAtThisDepth = selectFirstCalled(reachable.map(method => ({ method, at: findFirstCall(method, callerLineNumbers) })), MAX_CALLING_METHODS - called.length);
+    called.push(...calledAtThisDepth);
+    callerLineNumbers = calledAtThisDepth.flatMap(method => listNumbersWithinSpan(method.span));
+  }
+  return called;
+};
+
+const TRY_OR_CATCH_LINE_PATTERN = /^\s*(?:\}\s*)?(?:try|catch|except|rescue|finally|ensure)\b/;
+const CATCH_LINE_PATTERN = /^\s*(?:\}\s*)?(?:catch|except|rescue)\b/;
+const RETURN_PATTERN = /(?<![\w$])return(?![\w$])/;
+
+const isATryCatchOrReturnLine = text => TRY_OR_CATCH_LINE_PATTERN.test(text) || RETURN_PATTERN.test(text);
+
+const CONDITION_OPENING_PATTERN = /^\s*(?:\}\s*)?(?:if|else|elif|elsif|unless|case|when|default|switch|match|for|foreach|while|until|do|loop)\b/;
+
+const readIndentation = text => text.length - text.trimStart().length;
+
+const findTheOpeningOfTheCondition = (line, bodyLines, textOf) => {
+  const indentation = readIndentation(textOf(line));
+  const opening = bodyLines.filter(above => above < line && textOf(above).trim() && readIndentation(textOf(above)) < indentation).pop();
+  return opening !== undefined && CONDITION_OPENING_PATTERN.test(textOf(opening)) ? [opening] : [];
+};
+
+const listLinesKeptWhenTheBodyIsCut = (bodyLines, textByLineMap) => {
+  const textOf = line => String(textByLineMap.get(line) ?? "");
+  const followsACatch = line => CATCH_LINE_PATTERN.test(textOf(line - 1));
+  const keptLines = bodyLines.filter((line, index) => index > 0 && (isATryCatchOrReturnLine(textOf(line)) || followsACatch(line)));
+  return [...new Set([bodyLines[0], ...keptLines.flatMap(line => [...findTheOpeningOfTheCondition(line, bodyLines, textOf), line])])];
+};
+
+const selectBodyLinesWithinRoom = (span, textByLineMap) => {
+  const bodyLines = listNumbersWithinSpan(span);
+  if (bodyLines.length <= MAX_CALLED_BODY_LINES) return bodyLines;
+  const kept = listLinesKeptWhenTheBodyIsCut(bodyLines, textByLineMap).slice(0, MAX_CALLED_BODY_LINES);
+  const others = bodyLines.filter(line => !kept.includes(line)).slice(0, MAX_CALLED_BODY_LINES - kept.length);
+  return [...kept, ...others].sort((left, right) => left - right);
+};
 
 const selectTheHeadsWithin = (reading, span) => reading.tags
   .filter(tag => doesSpanHoldLine(span, tag.line))
@@ -529,7 +573,7 @@ export class SliceBuilder {
     const methods = selectMethodsWithinSpan(reading, span);
     const textByLineMap = this.readWholeTextByLineMap(path);
     const constantOf = this.createConstantFinder(path, reading, textByLineMap, span, methods);
-    const called = selectFirstCalled(methods.map(method => ({ method, at: findIndexOfTheFirstCall(ownLines, this.references.lines.listCallLinesInFile(abstraction.path, method.name)) })));
+    const called = selectFirstCalled(methods.map(method => ({ method, at: findIndexOfTheFirstCall(readLineNumbers(ownLines), this.references.lines.listCallLinesInFile(abstraction.path, method.name)) })));
     return this.listBodyAndConstantLines(path, called, textByLineMap, constantOf);
   }
 
@@ -545,14 +589,15 @@ export class SliceBuilder {
     const findConstructedClass = method => classes
       .filter(type => doesSpanHoldLine(type.span, method.span.from) && (type.name === method.name || driver.isAConstructor(method.tag)))
       .reduce((innermostClass, type) => (!innermostClass || type.span.from > innermostClass.span.from ? type : innermostClass), null);
-    const findFirstCallOfTheMethod = method => {
+    const findFirstCallOfTheMethod = (method, callerLineNumbers) => {
       const constructed = findConstructedClass(method);
-      const calls = [findIndexOfTheFirstCall(ownLines, this.references.lines.listCallLinesInFile(abstraction.path, method.name)), constructed ? findIndexOfTheFirstCall(ownLines, this.references.lines.listCallLinesInFile(abstraction.path, constructed.name)) : -1].filter(at => at >= 0);
+      const calls = [findIndexOfTheFirstCall(callerLineNumbers, this.references.lines.listCallLinesInFile(abstraction.path, method.name)), constructed ? findIndexOfTheFirstCall(callerLineNumbers, this.references.lines.listCallLinesInFile(abstraction.path, constructed.name)) : -1].filter(at => at >= 0);
       return calls.length ? Math.min(...calls) : -1;
     };
     const liesOutsideTheAbstraction = method => !doesSpanHoldLine(abstraction.lines, method.span.from);
     const constantOf = this.createConstantFinder(abstraction.path, reading, textByLineMap, fileSpan, methods);
-    const called = selectFirstCalled(methods.filter(liesOutsideTheAbstraction).map(method => ({ method, at: findFirstCallOfTheMethod(method) })));
+    const isPrivate = method => readVisibilityOfDeclaration(driver, method.tag) === VISIBILITIES.PRIVATE;
+    const called = selectCalledDownToTheDepth(readLineNumbers(ownLines), methods.filter(liesOutsideTheAbstraction), findFirstCallOfTheMethod, isPrivate);
     return this.listBodyAndConstantLines(abstraction.path, called, textByLineMap, constantOf, formatLineOfTheOwnFile)
       .filter(line => !doesSpanHoldLine(abstraction.lines, findPlaceOfSliceLine(abstraction.path, line).line));
   }
@@ -560,7 +605,7 @@ export class SliceBuilder {
   listBodyAndConstantLines(filePath, called, textByLineMap, constantOf, formatLine = formatPlacedSliceLine) {
     const shown = new Set();
     for (const method of called) {
-      const methodLines = listNumbersWithinSpan(method.span).slice(0, MAX_CALLED_BODY_LINES);
+      const methodLines = selectBodyLinesWithinRoom(method.span, textByLineMap);
       for (const line of [...this.listConstantLinesReadByTheMethod(filePath, methodLines, constantOf), ...methodLines]) shown.add(line);
     }
     return [...shown].filter(line => textByLineMap.has(line)).sort((left, right) => left - right)
