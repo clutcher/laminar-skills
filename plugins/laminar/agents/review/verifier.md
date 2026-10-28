@@ -61,7 +61,7 @@ A verify file that opens with `Covered path:` holds 1 covered path and no item. 
 ### Patterns
 
 - A name built from detail words, words for operations inside a part, or several parts in 1 long phrase, names no part, because "a name built from details leaves a detail among the parts even behind a boundary"; each operation it lists is still judged for belonging.
-- A prediction failure can come from the signature: "Parameters that are too broad accept an entire object when the method uses only a fraction, which hides what the method actually depends on."
+- Prediction Failure: a parameter too broad hides what the method depends on, because parameters "should match what the method name describes": "when a method touches only one field of a large object, the parameter carries too much".
 
 ### Derived patterns
 
