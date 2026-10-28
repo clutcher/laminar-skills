@@ -89,7 +89,7 @@ export const DIRECTION_BY_JUDGE_TYPE_MAP = Object.freeze({
   }),
 });
 
-export const DIRECTION_BY_RELATION_MAP = Object.freeze({
+export const DIRECTION_BY_DESIGN_RELATION_MAP =Object.freeze({
   [DESIGN_RELATION_KINDS.REBUILT_VALUE]: Object.freeze({
     D3: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "move this method onto the value type", "belong on the new class and tend to move there"),
   }),
@@ -131,7 +131,7 @@ const NO_OVERRIDES = Object.freeze({});
 export const findDirection = (check, { judgeType = "", scale = "", relation = "" } = {}) => {
   const checkWords = findCheckWords(check);
   if (!checkWords) return NO_DIRECTION;
-  return (DIRECTION_BY_RELATION_MAP[relation] || NO_OVERRIDES)[checkWords.id]
+  return (DIRECTION_BY_DESIGN_RELATION_MAP[relation] || NO_OVERRIDES)[checkWords.id]
     || (DIRECTION_BY_JUDGE_TYPE_MAP[judgeType] || NO_OVERRIDES)[checkWords.id]
     || (DIRECTION_BY_SCALE_MAP[scale] || NO_OVERRIDES)[checkWords.id]
     || DIRECTION_BY_CHECK_MAP[checkWords.id]
