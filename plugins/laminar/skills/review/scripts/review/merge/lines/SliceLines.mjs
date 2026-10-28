@@ -78,7 +78,7 @@ const buildFilesListedOnlyByCodeUnderReview = everyCodeUnderReview => new Map((e
 
 export const flattenText = given => String(given == null ? "" : given).replace(/\s+/g, " ").trim();
 
-const collectEveryAbstraction = abstractions => {
+export const collectEveryAbstraction = abstractions => {
   const found = [];
   const visit = abstraction => { found.push(abstraction); for (const child of abstraction.children || []) visit(child); };
   for (const root of abstractions || []) visit(root);

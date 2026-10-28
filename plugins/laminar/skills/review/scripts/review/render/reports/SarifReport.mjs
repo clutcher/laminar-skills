@@ -48,12 +48,19 @@ const buildRelatedAbstractions = (finding, changeKinds) => RELATED_ABSTRACTION_R
   .filter(place => isPlace(place) && place.displayName)
   .map(place => ({ abstraction: place.displayName, role, changeKind: changeKinds.readKindAtThePlace(place) })));
 
+const readTheScale = (finding, abstraction, displayName) => {
+  const scale = finding.scale || abstraction.scale;
+  if (!scale) throw new Error(`the finding of the check ${finding.check} on ${displayName || "an abstraction with no display name"} has no scale`);
+  return String(scale);
+};
+
 const buildProperties = (finding, changeKinds) => {
   const abstraction = finding.abstraction || {};
   const relatedAbstractions = buildRelatedAbstractions(finding, changeKinds);
+  const displayName = formatDisplayNameText(finding) || abstraction.displayName || "";
   const properties = {
-    abstraction: formatDisplayNameText(finding) || abstraction.displayName || "",
-    scale: String(finding.scale || abstraction.scale || ""),
+    abstraction: displayName,
+    scale: readTheScale(finding, abstraction, displayName),
     changeKind: changeKinds.readKindOfTheFinding(finding),
     test_code: Boolean(finding.isTest),
     check: finding.check,

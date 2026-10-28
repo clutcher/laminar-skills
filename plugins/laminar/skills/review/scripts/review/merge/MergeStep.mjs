@@ -25,6 +25,7 @@ import { isSettledByTheScript, splitJudgeFindingsTheScriptSettled, applyTheScrip
 import { IoScreenResultWriter } from "./IoScreenResultWriter.mjs";
 import { splitSetFindingsFoldedIntoAUse } from "./filing/FallbackUseFold.mjs";
 import { VerifyHandOff } from "./verify/VerifyHandOff.mjs";
+import { CalledCodeUnderReview } from "./verify/CalledCodeUnderReview.mjs";
 
 const DRAFT_FILE = "draft.md";
 const DRAFT_LINES_FILE = "draft-lines.md";
@@ -100,7 +101,7 @@ export class MergeStep {
     this.groups = numberThePossibleFindingsOfTheDraft(applyTheScriptVerdict(marked));
     this.coveredPaths = numberCoveredPathsAfter(findTheLastPossibleFindingNumber(this.groups), covered.kept.map(possibleFinding => this.repairTheAbstractionPlace(possibleFinding)));
     this.items = buildDraftItems(this.findGroupsToVerify(), this.sliceLines, this.preparedRun.changedLines);
-    this.verifyHandOff = new VerifyHandOff(this.runFolder, { groups: this.groups, items: this.items, coveredPaths: this.coveredPaths, everyCodeUnderReview: codeUnderReview });
+    this.verifyHandOff = new VerifyHandOff(this.runFolder, { groups: this.groups, items: this.items, coveredPaths: this.coveredPaths, everyCodeUnderReview: codeUnderReview, calledCodeUnderReview: new CalledCodeUnderReview(this.preparedRun.reviewedAbstractions, codeUnderReview) });
     this.sweep = buildSweep(this.preparedRun.prepared.codeUnderReview || [], this.possibleFindingSource.judgeReturn.listNotRunChecks(), this.possibleFindings);
     this.ioScreen = this.possibleFindingSource.judgeReturn.readIoScreen();
     this.ioScreenOutcome = new IoScreenResultWriter(this.runFolder, this.preparedRun, this.ioScreen, this.ruleCache);

@@ -4,6 +4,7 @@ import { readCheckRules } from "../../../checks/CheckText.mjs";
 import { getOrReadAndRemember } from "../../../collections/memos.mjs";
 import { resolveAbsolutePath } from "../../../files/paths.mjs";
 import { buildCodeUnderReviewFile } from "../abstractions/CodeUnderReviewPlaces.mjs";
+import { NO_CALLED_CODE_UNDER_REVIEW } from "./CalledCodeUnderReview.mjs";
 import { isReadByTheRefuter, readJudgeTypeOf } from "./RefuterSelection.mjs";
 import { buildCoveredPathFileText, buildRefuteFileText } from "./RefuteFileText.mjs";
 import { buildVerifyFileText } from "./VerifyFileText.mjs";
@@ -24,8 +25,11 @@ const isNumbered = possibleFinding => Number.isInteger(possibleFinding.number);
 
 const buildCoveredPathTuple = covered => [covered.number, [covered.number]];
 
-const listCodeUnderReviewKeys = (possibleFindings, group) => [...new Map(possibleFindings
-  .map(possibleFinding => [`${possibleFinding.codeUnderReviewId}|${readJudgeTypeOf(possibleFinding, group)}`, { id: possibleFinding.codeUnderReviewId, judgeType: readJudgeTypeOf(possibleFinding, group) }])).values()];
+const listCodeUnderReviewKeys = (possibleFindings, group, calledCodeUnderReview) => {
+  const ownKeys = possibleFindings.map(possibleFinding => ({ id: possibleFinding.codeUnderReviewId, judgeType: readJudgeTypeOf(possibleFinding, group) }));
+  const calledKeys = possibleFindings.flatMap(possibleFinding => calledCodeUnderReview.listCalledAtThePlacesOf(possibleFinding, readJudgeTypeOf(possibleFinding, group)));
+  return [...new Map([...ownKeys, ...calledKeys].map(key => [`${key.id}|${key.judgeType}`, key])).values()];
+};
 
 const groupChecksByJudgeType = (possibleFindings, group) => possibleFindings.reduce((checksByJudgeType, possibleFinding) => {
   const judgeType = readJudgeTypeOf(possibleFinding, group);
@@ -34,8 +38,9 @@ const groupChecksByJudgeType = (possibleFindings, group) => possibleFindings.red
 }, {});
 
 export class VerifyHandOff {
-  constructor(runFolder, { groups, items, coveredPaths, everyCodeUnderReview }) {
+  constructor(runFolder, { groups, items, coveredPaths, everyCodeUnderReview, calledCodeUnderReview = NO_CALLED_CODE_UNDER_REVIEW }) {
     this.runFolder = runFolder;
+    this.calledCodeUnderReview = calledCodeUnderReview;
     this.items = items;
     this.coveredPaths = (coveredPaths || []).filter(isNumbered);
     this.groupByIdMap = new Map(groups.map(group => [group.id, group]));
@@ -118,7 +123,7 @@ export class VerifyHandOff {
       item,
       possibleFindings,
       rulesByJudgeType: Object.fromEntries(Object.entries(checksByJudgeType).map(([judgeType, checks]) => [judgeType, this.readRules(judgeType, checks)])),
-      codeUnderReviewFiles: listCodeUnderReviewKeys(possibleFindings, group).map(key => this.readCodeUnderReviewFile(key)),
+      codeUnderReviewFiles: listCodeUnderReviewKeys(possibleFindings, group, this.calledCodeUnderReview).map(key => this.readCodeUnderReviewFile(key)),
     });
   }
 

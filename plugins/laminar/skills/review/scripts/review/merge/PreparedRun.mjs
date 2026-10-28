@@ -24,6 +24,7 @@ export class PreparedRun {
     this.changedLines = new ChangedLinesText(reviewed.changedLines);
     this.entryBoundaries = reviewed.entryBoundaries || [];
     this.codeForms = reviewed.codeForms || [];
+    this.reviewedAbstractions = reviewed.abstractions || [];
     this.abstractionsOfTheChange = reviewed.abstractionsOfTheChange || [];
     this.publicChangeKinds = PublicChangeKinds.createFromJSON(reviewed.publicChangeKinds);
   }
