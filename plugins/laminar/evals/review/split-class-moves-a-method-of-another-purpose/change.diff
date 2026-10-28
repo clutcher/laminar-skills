@@ -1,7 +1,7 @@
-diff --git a/lending/src/main/java/com/example/lending/counter/ReturnCounter.java b/lending/src/main/java/com/example/lending/counter/ReturnCounter.java
+diff --git a/lending/src/main/java/com/example/lending/counter/ReturnDesk.java b/lending/src/main/java/com/example/lending/counter/ReturnDesk.java
 index 905a69b..5aaf020 100644
---- a/lending/src/main/java/com/example/lending/counter/ReturnCounter.java
-+++ b/lending/src/main/java/com/example/lending/counter/ReturnCounter.java
+--- a/lending/src/main/java/com/example/lending/counter/ReturnDesk.java
++++ b/lending/src/main/java/com/example/lending/counter/ReturnDesk.java
 @@ -1,22 +1,26 @@
  package com.example.lending.counter;
  
@@ -13,16 +13,16 @@ index 905a69b..5aaf020 100644
  
  import java.time.LocalDate;
  
- public class ReturnCounter {
+ public class ReturnDesk {
  
 -    private final LoanDesk loanDesk;
 +    private final LoanService loanService;
  
--    public ReturnCounter(LoanDesk loanDesk) {
+-    public ReturnDesk(LoanDesk loanDesk) {
 -        this.loanDesk = loanDesk;
 +    private final LoanChargeCalculator loanChargeCalculator;
 +
-+    public ReturnCounter(LoanService loanService, LoanChargeCalculator loanChargeCalculator) {
++    public ReturnDesk(LoanService loanService, LoanChargeCalculator loanChargeCalculator) {
 +        this.loanService = loanService;
 +        this.loanChargeCalculator = loanChargeCalculator;
      }

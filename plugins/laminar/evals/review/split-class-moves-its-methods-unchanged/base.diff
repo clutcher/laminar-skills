@@ -22,11 +22,11 @@ index 0000000..8282343
 +
 +public record Copy(String barcode, String title, Money replacementPrice) {
 +}
-diff --git a/lending/src/main/java/com/example/lending/counter/ReturnCounter.java b/lending/src/main/java/com/example/lending/counter/ReturnCounter.java
+diff --git a/lending/src/main/java/com/example/lending/counter/ReturnDesk.java b/lending/src/main/java/com/example/lending/counter/ReturnDesk.java
 new file mode 100644
 index 0000000..905a69b
 --- /dev/null
-+++ b/lending/src/main/java/com/example/lending/counter/ReturnCounter.java
++++ b/lending/src/main/java/com/example/lending/counter/ReturnDesk.java
 @@ -0,0 +1,22 @@
 +package com.example.lending.counter;
 +
@@ -36,11 +36,11 @@ index 0000000..905a69b
 +
 +import java.time.LocalDate;
 +
-+public class ReturnCounter {
++public class ReturnDesk {
 +
 +    private final LoanDesk loanDesk;
 +
-+    public ReturnCounter(LoanDesk loanDesk) {
++    public ReturnDesk(LoanDesk loanDesk) {
 +        this.loanDesk = loanDesk;
 +    }
 +
