@@ -71,14 +71,14 @@ Then write 3 sections in this order: `## Production code`, `## Tests` and `## Do
 Each finding takes this form:
 
 ```markdown
-1. **LoanRenewal#renew:42**: Name the extension for its business purpose (code-style pitfalls: Context-Aware Constants) · variable
+1. **LoanRenewal#renew (src/loans/LoanRenewal.java:42)**: Name the extension for its business purpose (code-style pitfalls: Context-Aware Constants) · variable
    - The line compares the days since the loan was issued with the bare value 14, and nothing on the line says what 14 controls.
    - The rule names a value whose line hides its meaning for its business purpose, with its kind last.
    - **Fix:**
      - Add a private constant `RENEWAL_PERIOD_DAYS` and compare with it.
 ```
 
-The first line names the place, as `Type#method:line`, `Type:line` or `path:line` where no type holds the line, then a colon and a space, then an action in the imperative, then the id of the rule in brackets, then ` · ` and the scale as 1 bare lowercase word, last on the line. A tool reads this line, so keep its form exact. Each bullet under it is 1 sentence. Where you ask a question, write `- **Question:**` with the question, in place of the fix.
+The first line names the place in exactly 1 of 3 forms, and in no other: `Type#method (path:line)` for a method, `Type (path:line)` for a type, and `path:line` where no type holds the line. Then it holds a colon and a space, then an action in the imperative that never ends in text in brackets, then the id of the rule in brackets, then ` · ` and the scale as 1 bare lowercase word, last on the line. A tool reads this line, so keep its form exact. Each bullet under it is 1 sentence. Where you ask a question, write `- **Question:**` with the question, in place of the fix.
 
 End with a table of the findings per source and scale, 1 row for each project file, each `code-style` file and the pitfalls, for each scale it has a reported finding in. A contradiction counts in the row of its project file:
 
