@@ -210,22 +210,29 @@ const PRINCIPLE_VERBS = Object.freeze({
   [PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION]: "Restore single level of abstraction",
 });
 
-export const formatDirectionText = (check, judgeType = "") => {
-  const direction = findDirection(check, judgeType);
+export const formatDirectionText = (check, situation = {}) => {
+  const direction = findDirection(check, situation);
   if (!direction.text) return "";
   const principleVerb = PRINCIPLE_VERBS[direction.principle];
   return principleVerb ? `${principleVerb}: ${formatPhrase(direction.text)}` : formatSentence(direction.text);
 };
 
-const readJudgeTypeOfTheDirection = finding => finding.standsInFor || finding.judgeType || "";
+const readSituationOfTheDirection = finding => ({ judgeType: finding.standsInFor || finding.judgeType || "", scale: finding.scale || "", relation: finding.relation || "" });
 
-const listDirectionsOfTheFinding = finding => (finding.combined ? finding.combined.findings : [finding])
-  .map(directedFinding => ({ lead: readLead(directedFinding.check), text: formatDirectionText(directedFinding.check, readJudgeTypeOfTheDirection(directedFinding)) }))
+const listDirectionsOfTheFinding =finding => (finding.combined ? finding.combined.findings : [finding])
+  .map(directedFinding => ({ lead: readLead(directedFinding.check), text: formatDirectionText(directedFinding.check, readSituationOfTheDirection(directedFinding)) }))
   .filter(direction => direction.text);
 
 const keepTheFirstOfEachText = directions => directions.filter((direction, order) => directions.findIndex(other => other.text === direction.text) === order);
 
+const formatDirectionWithItsLead = direction => `${direction.lead}: ${direction.text}`;
+
 export const formatDirectionOfTheFinding = finding => keepTheFirstOfEachText(listDirectionsOfTheFinding(finding)).map(direction => direction.text).join(" ");
+
+export const formatDirectionsWithTheirLeads = finding => {
+  const directions = keepTheFirstOfEachText(listDirectionsOfTheFinding(finding));
+  return directions.length > 1 ? directions.map(formatDirectionWithItsLead).join(" ") : formatDirectionOfTheFinding(finding);
+};
 
 const formatDirectionLines = (directions, condition) => directions.length > 1
   ? [`- ${DIRECTION_LABELS.MANY}${condition}:`, ...directions.map(direction => `${NESTED_POINT_INDENT}- ${direction.lead}: ${direction.text}`)]

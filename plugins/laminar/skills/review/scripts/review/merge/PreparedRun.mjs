@@ -1,5 +1,5 @@
 import path from "node:path";
-import { chooseRepositoryToRead } from "../../code/index.mjs";
+import { chooseRepositoryToRead, PublicChangeKinds } from "../../code/index.mjs";
 import { buildFileAndLineKey } from "./abstractions/AbstractionsAtPlaces.mjs";
 import { ChangedLinesText } from "../prepare/formats/ChangedLinesText.mjs";
 import { REVIEW_ABSTRACTIONS_FILE } from "../prepare/PrepareStep.mjs";
@@ -25,6 +25,7 @@ export class PreparedRun {
     this.entryBoundaries = reviewed.entryBoundaries || [];
     this.codeForms = reviewed.codeForms || [];
     this.abstractionsOfTheChange = reviewed.abstractionsOfTheChange || [];
+    this.publicChangeKinds = PublicChangeKinds.createFromJSON(reviewed.publicChangeKinds);
   }
 
   findEntryMethodOfTheClassAt(file, line) {

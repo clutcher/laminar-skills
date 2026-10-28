@@ -14,7 +14,13 @@ const findTheSmallestHolding = (declarations, scale, line) => declarations
 
 const stripLeadingDotSlash = given => String(given || "").replace(/^\.\//, "");
 
-const indexByPath = entries => new Map(entries.map(entry => [entry.path, entry]));
+const stripTrailingSlash = given => given.replace(/\/+$/, "");
+
+const isTheChildOfTheFolder = (listedPath, folder, named) => listedPath === named
+  || listedPath === `${folder}/${named}`
+  || (listedPath.startsWith(`${folder}/`) && listedPath.endsWith(`/${named}`));
+
+const indexByPath =entries => new Map(entries.map(entry => [entry.path, entry]));
 
 export class PublicChangeKinds {
   constructor({ kindBase = null, files = [], folders = [], applications = [], renames = [] } = {}) {
@@ -37,6 +43,16 @@ export class PublicChangeKinds {
   readKindOfTheApplication(folder) {
     const found = this.applicationsByPathMap.get(stripLeadingDotSlash(folder));
     return found ? found.kind : PUBLIC_CHANGE_KINDS.UNCHANGED;
+  }
+
+  readKindOfTheChildOfTheFolder(folder, child) {
+    const named = stripTrailingSlash(stripLeadingDotSlash(child));
+    const found = [...this.files, ...this.folders].find(listed => isTheChildOfTheFolder(listed.path, folder, named));
+    return found ? found.kind : PUBLIC_CHANGE_KINDS.UNCHANGED;
+  }
+
+  holdsAnyKind() {
+    return this.files.length > 0 || this.folders.length > 0;
   }
 
   readKindAtThePlace(filePath, line) {

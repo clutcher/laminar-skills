@@ -1,6 +1,7 @@
 import { Scale } from "../code/index.mjs";
 import { TRACKS } from "./CheckCatalog.mjs";
-import { JUDGE_TYPE_BY_TRACK_MAP } from "./JudgeType.mjs";
+import { JUDGE_TYPE_BY_SCALE_MAP, JUDGE_TYPE_BY_TRACK_MAP } from "./JudgeType.mjs";
+import { RELATION_KINDS } from "../review/prepare/relations/DesignRelationCodeUnderReview.mjs";
 
 export const TRACK_WORDS = Object.freeze(["Simplicity", "Design", "Correctness · Prevention", "Correctness · Detection", "Performance"]);
 
@@ -42,8 +43,8 @@ const OWNS_THE_IO = "all four fixes work only when an abstraction owns the I/O";
 const createDirection = (principle, practice, text, ...passages) => Object.freeze({ principle, practice, text, passages: Object.freeze(passages) });
 
 export const DIRECTION_BY_CHECK_MAP = Object.freeze({
-  S1: createDirection(PRINCIPLES.ENCAPSULATION, "Have a Single Owner", "move the repeated decision into one method every place calls, or drop it where not needed", "The fix is encapsulation: one abstraction owns the decision, and every caller reaches it through that boundary."),
-  S2: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "rename it to match what it does, or change the code to match the name", "Prediction failure responds to encapsulation through naming: when the name accurately predicts what is inside, the reader trusts the boundary instead of revising a model already built.", "A naming problem needs a more precise name, while an abstraction problem needs the behavior redistributed across different abstractions."),
+  S1: createDirection(PRINCIPLES.ENCAPSULATION, "Have a Single Owner", "give the decision 1 owner that every place uses, or drop a copy that no place needs", "The fix is encapsulation: one abstraction owns the decision, and every caller reaches it through that boundary."),
+  S2: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "change the code to do what the name says, or rename it where the code is right", "Prediction failure responds to encapsulation through naming: when the name accurately predicts what is inside, the reader trusts the boundary instead of revising a model already built.", "A naming problem needs a more precise name, while an abstraction problem needs the behavior redistributed across different abstractions."),
   S4: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Visual Separation", "split the test into exactly given, when and then, or into several tests", "The rule, then, is to match Given-When-Then exactly, because a test that drifts loses the schema and falls back on the principles to stay simple."),
   S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the low-level steps into a named method, or move this call up to the caller", "An unnamed part failure disappears through the same consistency, because only parts remain inside the abstraction and the name predicts every one of them.", "they belong elsewhere: above as a coordinator, or below as a detail"),
   S6: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, "Guard Clauses", "return early, or move the nested block into a named method", "So the fix is to flatten the nesting, because what costs is the number of open constructs."),
@@ -63,7 +64,7 @@ export const DIRECTION_BY_CHECK_MAP = Object.freeze({
   CD6: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "remove the unit test, or keep it only for branches integration tests miss", "Unit tests belong where combinatorial logic demands them, not as a default practice applied to every function or class"),
   CD7: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "extend the test to run from the entry point to the outside system, or add one", "Only tests that span the full path verify the outcomes users care about, which makes such tests the natural default."),
   P1: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "replace the call in the loop with one batch call, or load all data before the loop", "Batch operations instead of issuing them in loops", OWNS_THE_IO),
-  P2: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "load the data once and pass it to each step, or cache it", "Fetch shared data once per operation: load it at the start and pass the result to every step that needs it, instead of refetching independently from each step.", OWNS_THE_IO),
+  P2: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "load the data once and pass it to each step, or keep it until this operation ends", "Fetch shared data once per operation: load it at the start and pass the result to every step that needs it, instead of refetching independently from each step.", OWNS_THE_IO),
   P3: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "select only the fields or rows the operation uses", "Request only the data the operation needs", OWNS_THE_IO),
   P4: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "create the client or connection once and reuse it, or take it from a pool", "Pool expensive resources instead of creating them per operation", OWNS_THE_IO),
 });
@@ -75,6 +76,27 @@ export const DIRECTION_BY_JUDGE_TYPE_MAP = Object.freeze({
   }),
   [JUDGE_TYPE_BY_TRACK_MAP[TRACKS.TEST_METHOD]]: Object.freeze({
     S2: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "rename the test to say the expected outcome and the condition", "A good name states the expected outcome and any conditions that produce it, so reviewers can decide whether this test matches the requirement they are checking."),
+  }),
+  [JUDGE_TYPE_BY_SCALE_MAP[Scale.CLASS.name]]: Object.freeze({
+    S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the methods and fields that do not fit into a new class, or rename the class", "Methods that use a completely different set of objects to do their work belong behind different boundaries."),
+  }),
+  [JUDGE_TYPE_BY_SCALE_MAP[Scale.MODULE.name]]: Object.freeze({
+    S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the file into a subfolder named for its purpose, or into the folder it fits", "Each file at the root is a detail of one of these parts, so every class belongs inside the module named after its part."),
+  }),
+});
+
+export const DIRECTION_BY_RELATION_MAP = Object.freeze({
+  [RELATION_KINDS.REBUILT_VALUE]: Object.freeze({
+    D3: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "move this method onto the value type, or rename it to say what it builds", "belong on the new class and tend to move there"),
+  }),
+  [RELATION_KINDS.IN_OUT_OPERATION]: Object.freeze({
+    D3: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the business rule into the domain, so this method only translates", "the domain holds only business logic with no infrastructure to keep in mind, and the classes in `in/` and `out/` only translate, never decide"),
+  }),
+});
+
+export const DIRECTION_BY_SCALE_MAP = Object.freeze({
+  [Scale.APPLICATION.name]: Object.freeze({
+    CD4: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "declare a test runner, then add a test from the entry point to the outside system", "Integration tests are the starting point for every application, regardless of what kind of users it serves."),
   }),
 });
 
@@ -100,9 +122,14 @@ export const readTrackRank = track => { const at = TRACK_WORDS.indexOf(track); r
 
 export const readScaleRank = scale => { const at = SCALE_ORDER.indexOf(String(scale || "").toUpperCase()); return at < 0 ? SCALE_ORDER.length : at; };
 
-export const findDirection = (check, judgeType = "") => {
+const NO_OVERRIDES = Object.freeze({});
+
+export const findDirection = (check, { judgeType = "", scale = "", relation = "" } = {}) => {
   const checkWords = findCheckWords(check);
   if (!checkWords) return NO_DIRECTION;
-  const overrides = DIRECTION_BY_JUDGE_TYPE_MAP[judgeType] || {};
-  return overrides[checkWords.id] || DIRECTION_BY_CHECK_MAP[checkWords.id] || NO_DIRECTION;
+  return (DIRECTION_BY_RELATION_MAP[relation] || NO_OVERRIDES)[checkWords.id]
+    || (DIRECTION_BY_JUDGE_TYPE_MAP[judgeType] || NO_OVERRIDES)[checkWords.id]
+    || (DIRECTION_BY_SCALE_MAP[scale] || NO_OVERRIDES)[checkWords.id]
+    || DIRECTION_BY_CHECK_MAP[checkWords.id]
+    || NO_DIRECTION;
 };

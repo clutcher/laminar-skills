@@ -1,6 +1,6 @@
 import { CHECK_WORDS, findCheckWords } from "../../../checks/CheckWords.mjs";
 import { convertToText } from "../sections/ReturnedValueText.mjs";
-import { formatLeadWords, formatDisplayNameText, formatDirectionText, formatDirectionOfTheFinding } from "../sections/ItemText.mjs";
+import { formatLeadWords, formatDisplayNameText, formatDirectionText, formatDirectionsWithTheirLeads } from "../sections/ItemText.mjs";
 import { selectScopeProperties } from "../sections/ScopeLine.mjs";
 import { ChangeKindsOfTheReport } from "./ChangeKindsOfTheReport.mjs";
 
@@ -58,7 +58,7 @@ const buildProperties = (finding, changeKinds) => {
     test_code: Boolean(finding.isTest),
     check: finding.check,
     mechanism: convertToText(finding.mechanism || finding.decision || finding.prevention),
-    direction: formatDirectionOfTheFinding(finding),
+    direction: formatDirectionsWithTheirLeads(finding),
     confidence: finding.confidence,
     what_would_confirm: finding.confidence === "high" ? "" : convertToText(finding.whatWouldConfirm),
     ...buildTestPlanProperties(finding),

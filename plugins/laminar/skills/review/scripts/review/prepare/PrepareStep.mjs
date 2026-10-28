@@ -267,6 +267,19 @@ export class PrepareStep {
       .filter(({ track, checks }) => checks.length && this.filter.keepsJudgeType(readJudgeType({ track, scale: abstraction.scale })));
   }
 
+  isLeftOutByThePaths(abstraction) {
+    return abstraction.scale === Scale.MODULE.name
+      && this.filter.keepsScale(abstraction.scale)
+      && !this.filter.keepsPath(abstraction.path)
+      && this.filter.namesAPathInside(abstraction.path)
+      && this.findKeptTracks(abstraction).length > 0;
+  }
+
+  buildTheModulesLeftOutByThePaths() {
+    const leftOutCount = this.walk.collectSelectedAbstractions().filter(abstraction => this.isLeftOutByThePaths(abstraction)).length;
+    return leftOutCount ? { leftOutByThePaths: { [Scale.MODULE.name]: leftOutCount } } : {};
+  }
+
   keepsSystemTrack(track) {
     return this.filter.keepsJudgeType(readJudgeType({ track, scale: Scale.APPLICATION.name }));
   }
@@ -420,6 +433,7 @@ export class PrepareStep {
       entryBoundaries: this.entryBoundaries.counts,
       boundaryPaths: this.boundaryPaths.counts,
       waves: this.waves,
+      ...this.buildTheModulesLeftOutByThePaths(),
     };
   }
 

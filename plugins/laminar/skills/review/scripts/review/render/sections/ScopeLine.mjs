@@ -4,14 +4,18 @@ const formatCount = number => Number(number).toLocaleString("en-US");
 
 const findJudgeCalls = plan => plan && plan.upTo ? plan.upTo.judgeCalls : null;
 
+const wasAskedAtTheCostCheck = fullPlan => Boolean(fullPlan && fullPlan.passesThreshold);
+
 export function buildScope(prepared, plan, fullPlan, leftOutCountByScaleMap = null) {
   const filter = prepared.filter;
   if (!filter) return null;
   return {
+    askedAtTheCostCheck: wasAskedAtTheCostCheck(fullPlan),
     judges: filter.judges || [],
     paths: filter.paths || [],
     scales: filter.scales || [],
     leftOut: leftOutCountByScaleMap,
+    leftOutByThePaths: prepared.leftOutByThePaths || null,
     judgeCallsPlanned: findJudgeCalls(fullPlan),
     judgeCallsInThisRun: findJudgeCalls(plan),
   };
@@ -31,7 +35,13 @@ const formatScalesPhrase = ({ scales, leftOut }) => {
 
 const formatJudgesPhrase = ({ judges }) => judges.length ? `judges: ${judges.map(judgeType => judgeType.replace(JUDGE_TYPE_PREFIX_PATTERN, "")).join(", ")}` : "";
 
-const formatPathsPhrase = ({ paths }) => paths.length ? `paths: ${paths.join(", ")}` : "";
+export const formatLeftOutByThePaths = leftOutByThePaths => `a path names a file, so the folders that hold it are not judged · left out: ${formatLeftOutPhrase(leftOutByThePaths)}`;
+
+const formatPathsPhrase = ({ paths, leftOutByThePaths }) => {
+  if (!paths.length) return "";
+  const leftOutPhrase = formatLeftOutPhrase(leftOutByThePaths);
+  return `paths: ${paths.join(", ")}${leftOutPhrase ? ` · left out: ${leftOutPhrase}` : ""}`;
+};
 
 const formatJudgeCallsPhrase = ({ judgeCallsPlanned, judgeCallsInThisRun }) => {
   if (judgeCallsInThisRun === null) return "";
@@ -52,7 +62,11 @@ export function formatAcrossApplicationsLine(counts) {
   return `**Across applications** · ${formatCounted(counts.boundaries, "entry boundary", "entry boundaries")} in ${formatCounted(counts.applications, "application", "applications")} · ${judged} · callers are searched in this repository only, and callers in other repositories are not seen`;
 }
 
+const FILTERED_AT_THE_COST_CHECK = "filtered at the cost check";
+
+const FILTERED_WHEN_THE_REVIEW_STARTED = "filtered when the review was started";
+
 export function formatScopeLine(scope) {
   if (!scope) return "";
-  return ["**Scope** · filtered at the cost check", formatScalesPhrase(scope), formatJudgesPhrase(scope), formatPathsPhrase(scope), formatJudgeCallsPhrase(scope)].filter(Boolean).join(" · ");
+  return [`**Scope** · ${scope.askedAtTheCostCheck ? FILTERED_AT_THE_COST_CHECK : FILTERED_WHEN_THE_REVIEW_STARTED}`, formatScalesPhrase(scope), formatJudgesPhrase(scope), formatPathsPhrase(scope), formatJudgeCallsPhrase(scope)].filter(Boolean).join(" · ");
 }

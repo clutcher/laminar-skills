@@ -8,6 +8,7 @@ import { FilterStop, ReviewFilter } from "./review/prepare/selection/ReviewFilte
 import { MergeStep } from "./review/merge/MergeStep.mjs";
 import { formatSweepWords } from "./review/merge/draft/Sweep.mjs";
 import { RenderStep } from "./review/render/RenderStep.mjs";
+import { formatLeftOutByThePaths } from "./review/render/sections/ScopeLine.mjs";
 import { resolveAbsolutePath } from "./files/paths.mjs";
 import { readJsonFile, writeJsonFile } from "./files/jsonFile.mjs";
 import { writeWorkflowReturnFile } from "./files/workflowReturnFile.mjs";
@@ -128,6 +129,7 @@ function printThePrepareSummary(runFolder, written) {
   const byTrack = Object.entries(written.counts.byTrack).map(([track, count]) => `${track} ${count}`).join(", ");
   console.log(`prepare: ${written.counts.codeUnderReview} abstraction(s) under review (${byTrack}), ${written.counts.checks} check(s), ${written.counts.screenBatches} screen batch(es), ${written.counts.endCalls} end call(s), ${written.counts.ioRuleScreenCalls} I/O rule screen call(s), ${written.counts.ioEndMethods} I/O end method(s), ${written.counts.codeUnderReview} file(s) written to code-under-review/, written to ${REVIEW_ABSTRACTIONS_FILE}, prepare.json, ${PREPARE_RETURN_FILE} and ${PREPARE_RETURN_WORKFLOW_FILE}`);
   console.log(`prepare: ${written.costPlan}, written to cost-plan.json`);
+  if (written.leftOutByThePaths) console.log(`prepare: ${formatLeftOutByThePaths(written.leftOutByThePaths)}`);
   for (const note of written.notAnswered) {
     console.log(`prepare: ${note.reason}`);
     for (const type of note.classes) console.log(`prepare: - ${type.name}, ${type.path}`);
@@ -151,6 +153,7 @@ const prepareReturnOf = (runFolder, written) => ({
   ioGroups: written.ioGroups,
   ioPaths: written.ioPaths,
   waves: written.waves,
+  ...(written.leftOutByThePaths ? { leftOutByThePaths: written.leftOutByThePaths } : {}),
 });
 
 function prepare(parsed) {

@@ -1,4 +1,4 @@
-import { isOwnCodeAt, isTestPath, readOwnSpans, doesSpanHoldLine, CHANGE_KINDS, Scale } from "../../../code/index.mjs";
+import { isOwnCodeAt, isTestPath, readOwnSpans, doesSpanHoldLine, CHANGE_KINDS, Scale, PUBLIC_CHANGE_KINDS, PublicChangeKinds } from "../../../code/index.mjs";
 import { METHOD_MARK, buildPlaceKey, AbstractionsAtPlaces, stripLeadingDotSlash } from "../abstractions/AbstractionsAtPlaces.mjs";
 import { PreparedRun } from "../PreparedRun.mjs";
 import { JudgeReturn } from "./JudgeReturn.mjs";
@@ -48,17 +48,39 @@ const indexTheAbstractionsJudged = codeUnderReview => {
 
 const isMarkedExistingCodeByTheJudge = finding => finding.inChange === false;
 
+const KINDS_THAT_PUT_A_MODULE_FINDING_IN_THE_CHANGE = new Set([PUBLIC_CHANGE_KINDS.MODIFIED, PUBLIC_CHANGE_KINDS.CREATED]);
+
+const putsAModuleFindingInTheChange = publicChangeKind => KINDS_THAT_PUT_A_MODULE_FINDING_IN_THE_CHANGE.has(publicChangeKind);
+
+const doesTheModuleFindingMeetTheChange = (finding, module, publicChangeKinds) => putsAModuleFindingInTheChange(publicChangeKinds.readKindOfTheFolder(module.path))
+  || (finding.evidence || []).some(named => named.file && putsAModuleFindingInTheChange(publicChangeKinds.readKindOfTheChildOfTheFolder(module.path, named.file)));
+
+const isAModule = abstraction => Boolean(abstraction) && abstraction.scale === Scale.MODULE.name;
+
+const isTheModuleFindingInTheChange = (finding, module, changedLines, publicChangeKinds) => {
+  if (finding.inChange === true) return true;
+  if (publicChangeKinds.holdsAnyKind()) return doesTheModuleFindingMeetTheChange(finding, module, publicChangeKinds);
+  if (isCreatedInTheChange(module) && !isMarkedExistingCodeByTheJudge(finding)) return true;
+  return doesTheFileListMeetTheChange(finding, module, changedLines);
+};
+
 const isTheFindingInTheChange = (finding, abstraction, changedLines) => {
   if (finding.inChange === true) return true;
   if (abstraction && isCreatedInTheChange(abstraction) && !isMarkedExistingCodeByTheJudge(finding)) return true;
-  if (abstraction && abstraction.scale === Scale.MODULE.name) return doesTheFileListMeetTheChange(finding, abstraction, changedLines);
   return doesEvidenceMeetTheChange(finding, changedLines);
 };
 
-export const markTheFindingsInTheChange = (findings, changedLines, codeUnderReview = []) => {
-  if (!changedLines.holdsAnyChange()) return findings;
+const NO_PUBLIC_CHANGE_KINDS = new PublicChangeKinds();
+
+const markTheFinding = (finding, abstraction, changedLines, publicChangeKinds) => {
+  if (isAModule(abstraction)) return { ...finding, inChange: isTheModuleFindingInTheChange(finding, abstraction, changedLines, publicChangeKinds) };
+  return changedLines.holdsAnyChange() ? { ...finding, inChange: isTheFindingInTheChange(finding, abstraction, changedLines) } : finding;
+};
+
+export const markTheFindingsInTheChange = (findings, changedLines, codeUnderReview = [], publicChangeKinds = NO_PUBLIC_CHANGE_KINDS) => {
+  if (!changedLines.holdsAnyChange() && !publicChangeKinds.holdsAnyKind()) return findings;
   const findTheAbstractionJudged = indexTheAbstractionsJudged(codeUnderReview);
-  return findings.map(finding => ({ ...finding, inChange: isTheFindingInTheChange(finding, findTheAbstractionJudged(finding), changedLines) }));
+  return findings.map(finding => markTheFinding(finding, findTheAbstractionJudged(finding), changedLines, publicChangeKinds));
 };
 
 export const buildPlaceAndFirstOwnLineKey = finding => `${buildPlaceKey(finding)}::${finding.ownLines ? finding.ownLines.from : ""}`;
@@ -137,6 +159,8 @@ const readAbstractionOfTheFinding = (finding, codeUnderReview) => {
   return field ? { ...codeUnderReview, name: field.name, displayName: field.displayName, lines: field.lines } : codeUnderReview;
 };
 
+const readTheRelationOf = codeUnderReview => (codeUnderReview.relation ? { relation: codeUnderReview.relation } : {});
+
 const buildAbstractionFields = abstraction => ({
   scale: abstraction.scale,
   name: abstraction.name,
@@ -200,6 +224,7 @@ export class PossibleFindings {
       ownLines: codeUnderReview.lines || null,
       isTest: Boolean(codeUnderReview.isTest),
       judgeType: codeUnderReview.judgeType || "",
+      ...readTheRelationOf(codeUnderReview),
     };
   }
 
@@ -210,6 +235,7 @@ export class PossibleFindings {
       possibleFindingId: `${buildPossibleFindingId(finding.codeUnderReviewId, finding.check)}|${order}`,
       track: codeUnderReview.track,
       judgeType: codeUnderReview.judgeType || "",
+      ...readTheRelationOf(codeUnderReview),
     });
   }
 

@@ -50,6 +50,10 @@ export class ReviewFilter {
     return !this.paths.length || this.paths.some(prefix => isUnder(String(given || ""), prefix));
   }
 
+  namesAPathInside(folder) {
+    return this.paths.some(prefix => prefix !== folder && isUnder(prefix, String(folder || "")));
+  }
+
   keepsScale(scale) {
     return !this.scales.length || this.scales.includes(String(scale));
   }
