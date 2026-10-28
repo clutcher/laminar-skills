@@ -13,6 +13,8 @@ const collectEntryMethodsByClassPlace = codeUnderReview => new Map(listTopClasse
   .filter(topClass => (topClass.methods || []).length === 1)
   .map(topClass => [buildFileAndLineKey(topClass.path, topClass.line), { file: topClass.path, line: topClass.methods[0].line }]));
 
+const readTheChangedLinesOfTheMark = reviewed => reviewed.changedLinesOfTheKindBase || reviewed.changedLines;
+
 export class PreparedRun {
   constructor(runFolder) {
     const prepared = readJsonFile(path.join(runFolder, "prepare.json"));
@@ -21,7 +23,7 @@ export class PreparedRun {
     this.scriptFindings = preparedScriptFindings.map(scriptFinding => scriptFinding.finding);
     this.repository = chooseRepositoryToRead(this.prepared.mode, this.prepared.target) || "";
     const reviewed = readJsonFile(path.join(runFolder, REVIEW_ABSTRACTIONS_FILE));
-    this.changedLines = new ChangedLinesText(reviewed.changedLines);
+    this.changedLinesOfTheMark = new ChangedLinesText(readTheChangedLinesOfTheMark(reviewed));
     this.entryBoundaries = reviewed.entryBoundaries || [];
     this.codeForms = reviewed.codeForms || [];
     this.reviewedAbstractions = reviewed.abstractions || [];

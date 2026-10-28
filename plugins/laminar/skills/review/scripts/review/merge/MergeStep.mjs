@@ -84,7 +84,7 @@ export class MergeStep {
     const keptAndFoldedSetFindings = splitSetFindingsFoldedIntoAUse(keptAndFoldedJudgeFindings.kept, codeUnderReview);
     this.foldedIntoAUse = keptAndFoldedSetFindings.folded;
     const placedFindings = placeTheFindingsByTheirCodeUnderReview(keptAndFoldedSetFindings.kept, codeUnderReview);
-    const markedFindings = markTheFindingsInTheChange([...placedFindings, ...this.preparedRun.scriptFindings], this.preparedRun.changedLines, codeUnderReview, this.preparedRun.publicChangeKinds);
+    const markedFindings = markTheFindingsInTheChange([...placedFindings, ...this.preparedRun.scriptFindings], this.preparedRun.changedLinesOfTheMark, codeUnderReview, this.preparedRun.publicChangeKinds);
     const runFacts = { mode: this.preparedRun.prepared.mode, applicationRoots: this.listApplicationRoots() };
     const findingsWithTheirConsiderations = markTheConsiderations(markedFindings, codeUnderReview, runFacts);
     const findingsWithinTheirCeilings = applyTheConfidenceCeilings(findingsWithTheirConsiderations, codeUnderReview, runFacts);
@@ -100,7 +100,7 @@ export class MergeStep {
     const marked = new CodeFormMarker(this.preparedRun.codeForms).markGroups(new EntryBoundaryMarker(this.preparedRun.entryBoundaries).markGroups(addTheApplicationsOfTheirPlaces(grouped, this.listApplicationRoots())));
     this.groups = numberThePossibleFindingsOfTheDraft(applyTheScriptVerdict(marked));
     this.coveredPaths = numberCoveredPathsAfter(findTheLastPossibleFindingNumber(this.groups), covered.kept.map(possibleFinding => this.repairTheAbstractionPlace(possibleFinding)));
-    this.items = buildDraftItems(this.findGroupsToVerify(), this.sliceLines, this.preparedRun.changedLines);
+    this.items = buildDraftItems(this.findGroupsToVerify(), this.sliceLines, this.preparedRun.changedLinesOfTheMark);
     this.verifyHandOff = new VerifyHandOff(this.runFolder, { groups: this.groups, items: this.items, coveredPaths: this.coveredPaths, everyCodeUnderReview: codeUnderReview, calledCodeUnderReview: new CalledCodeUnderReview(this.preparedRun.reviewedAbstractions, codeUnderReview) });
     this.sweep = buildSweep(this.preparedRun.prepared.codeUnderReview || [], this.possibleFindingSource.judgeReturn.listNotRunChecks(), this.possibleFindings);
     this.ioScreen = this.possibleFindingSource.judgeReturn.readIoScreen();

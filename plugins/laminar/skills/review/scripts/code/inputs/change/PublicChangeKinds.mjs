@@ -57,7 +57,7 @@ export class PublicChangeKinds {
 
   readKindAtThePlace(filePath, line) {
     const file = this.filesByPathMap.get(stripLeadingDotSlash(filePath));
-    if (!file) return PUBLIC_CHANGE_KINDS.UNCHANGED;
+    if (!file) return this.readKindOfTheFolder(stripTrailingSlash(stripLeadingDotSlash(filePath)));
     for (const scale of SCALES_THAT_HOLD_A_PLACE) {
       const holding = findTheSmallestHolding(file.declarations, scale, Number(line));
       if (holding) return holding.kind;

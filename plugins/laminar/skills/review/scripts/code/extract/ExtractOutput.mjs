@@ -70,13 +70,14 @@ export class ExtractOutput {
   }
 
   buildExtractedReview(graphAbstractionsOf) {
-    const { change } = this.step;
+    const { change, kindChange } = this.step;
     return {
       counts: this.buildCounts(),
       notParsed: this.step.notParsed,
       ...createPropertyWhenNotEmpty("leftOutFiles", this.step.leftOutFiles),
       dependencies: this.step.dependencies || readDependencies(change),
       changedLinesOfTheChange: readChangedLinesOfTheChange(change.files, { namesWholeFiles: change.namesWholeFiles }),
+      ...(kindChange ? { changedLinesOfTheKindBase: readChangedLinesOfTheChange(kindChange.files, { namesWholeFiles: kindChange.namesWholeFiles }) } : {}),
       abstractions: this.tree.collectExtractedAbstractions(graphAbstractionsOf),
       decisionSearches: this.step.decisionSearches.map(({ abstraction, path: filePath, addedLines }) => ({ abstraction: abstraction.id, path: filePath, addedLines })),
       literalConstants: this.step.literalConstants.map(({ abstraction, constants }) => ({ abstraction: abstraction.id, constants })),

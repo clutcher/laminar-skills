@@ -141,6 +141,7 @@ export class CodeGraphWalks {
       abstractions: this.tree.convertToJson(),
       abstractionsOfTheChange: this.listAbstractionsOfTheChange(),
       changedLines: this.extractedReview.changedLinesOfTheChange,
+      ...(this.extractedReview.changedLinesOfTheKindBase ? { changedLinesOfTheKindBase: this.extractedReview.changedLinesOfTheKindBase } : {}),
       dependencies: this.extractedReview.dependencies,
       chainGroups: this.relations.chainGroups,
       parameterRelations: this.relations.parameterRelations,
