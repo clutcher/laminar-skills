@@ -1,6 +1,7 @@
 import { formatChangedLinesLine, formatRootLine, formatSliceBlock, formatTestFriction } from "../formats/CodeUnderReviewText.mjs";
 import { NO_CHANGED_LINES_TEXT } from "../formats/ChangedLinesText.mjs";
-import { isACoreOperation, isAMemberGroupsRelation, isAnInOutOperation, isARebuiltValue, RELATION_KINDS, readRelationPlaces } from "./DesignRelationCodeUnderReview.mjs";
+import { isACoreOperation, isAMemberGroupsRelation, isAnInOutOperation, isARebuiltValue, readRelationPlaces } from "./DesignRelationCodeUnderReview.mjs";
+import { DESIGN_RELATION_KINDS } from "../../../checks/DesignRelationKinds.mjs";
 
 const formatSpan = span => (span.from === span.to ? `${span.from}` : `${span.from}-${span.to}`);
 
@@ -196,7 +197,7 @@ const formatHead = designRelation => `### ${designRelation.id} · ${designRelati
 const formatHeadLines = (designRelation, repositoryRoot) => [formatHead(designRelation), formatRootLine(repositoryRoot), ...(isACoreOperation(designRelation) || isAnInOutOperation(designRelation) || isARebuiltValue(designRelation) || isAMemberGroupsRelation(designRelation) ? [`Path: ${designRelation.path}`] : [])];
 
 const formatRelationBlocks = designRelation => {
-  if (designRelation.relation === RELATION_KINDS.CHAIN_GROUP) return formatChainGroupBlocks(designRelation);
+  if (designRelation.relation === DESIGN_RELATION_KINDS.CHAIN_GROUP) return formatChainGroupBlocks(designRelation);
   if (isACoreOperation(designRelation)) return formatCoreOperationBlocks(designRelation);
   if (isAnInOutOperation(designRelation)) return formatInOutOperationBlocks(designRelation);
   if (isARebuiltValue(designRelation)) return formatRebuiltValueBlocks(designRelation);

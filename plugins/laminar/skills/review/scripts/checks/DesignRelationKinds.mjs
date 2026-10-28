@@ -1,0 +1,1 @@
+export const DESIGN_RELATION_KINDS = Object.freeze({ CHAIN_GROUP: "chain group", PARAMETER_TYPE: "parameter type", CORE_OPERATION: "core operation", IN_OUT_OPERATION: "in or out operation", REBUILT_VALUE: "rebuilt value", MEMBER_GROUPS: "member groups" });

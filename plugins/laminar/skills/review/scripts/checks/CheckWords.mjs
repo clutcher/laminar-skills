@@ -1,7 +1,7 @@
 import { Scale } from "../code/index.mjs";
 import { TRACKS } from "./CheckCatalog.mjs";
 import { JUDGE_TYPE_BY_SCALE_MAP, JUDGE_TYPE_BY_TRACK_MAP } from "./JudgeType.mjs";
-import { RELATION_KINDS } from "../review/prepare/relations/DesignRelationCodeUnderReview.mjs";
+import { DESIGN_RELATION_KINDS } from "./DesignRelationKinds.mjs";
 
 export const TRACK_WORDS = Object.freeze(["Simplicity", "Design", "Correctness · Prevention", "Correctness · Detection", "Performance"]);
 
@@ -86,10 +86,10 @@ export const DIRECTION_BY_JUDGE_TYPE_MAP = Object.freeze({
 });
 
 export const DIRECTION_BY_RELATION_MAP = Object.freeze({
-  [RELATION_KINDS.REBUILT_VALUE]: Object.freeze({
+  [DESIGN_RELATION_KINDS.REBUILT_VALUE]: Object.freeze({
     D3: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "move this method onto the value type, or rename it to say what it builds", "belong on the new class and tend to move there"),
   }),
-  [RELATION_KINDS.IN_OUT_OPERATION]: Object.freeze({
+  [DESIGN_RELATION_KINDS.IN_OUT_OPERATION]: Object.freeze({
     D3: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the business rule into the domain, so this method only translates", "the domain holds only business logic with no infrastructure to keep in mind, and the classes in `in/` and `out/` only translate, never decide"),
   }),
 });

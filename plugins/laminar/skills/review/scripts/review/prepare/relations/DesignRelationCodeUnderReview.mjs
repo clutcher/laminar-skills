@@ -2,10 +2,9 @@ import { Scale } from "../../../code/index.mjs";
 import { TRACKS } from "../../../checks/CheckCatalog.mjs";
 import { CHAIN_GROUP_CHECKS, CORE_OPERATION_CHECKS, MEMBER_GROUP_CHECKS, PARAMETER_RELATION_CHECKS } from "../selection/TrackSelection.mjs";
 import { readJudgeType } from "../../../checks/JudgeType.mjs";
+import { DESIGN_RELATION_KINDS } from "../../../checks/DesignRelationKinds.mjs";
 import { formatPlacedSliceLine, listPlacesShownInSections, readSliceSections } from "../formats/SliceFormat.mjs";
 import { numberCodeUnderReviewFrom } from "../formats/CodeUnderReviewIds.mjs";
-
-export const RELATION_KINDS = Object.freeze({ CHAIN_GROUP: "chain group", PARAMETER_TYPE: "parameter type", CORE_OPERATION: "core operation", IN_OUT_OPERATION: "in or out operation", REBUILT_VALUE: "rebuilt value", MEMBER_GROUPS: "member groups" });
 
 const createChecks = checks => checks.map(check => ({ id: check.id, name: check.name, fields: [] }));
 
@@ -34,7 +33,7 @@ const createChainGroupCodeUnderReview = group => {
     path: start.path,
     lines: { from: start.from, to: start.to },
     slice: null,
-    relation: RELATION_KINDS.CHAIN_GROUP,
+    relation: DESIGN_RELATION_KINDS.CHAIN_GROUP,
     abstractionIds: group.abstractionIds,
     methods: group.methods,
     stops: group.stops,
@@ -52,7 +51,7 @@ const createParameterRelationCodeUnderReview = relation => ({
   lines: { from: relation.from, to: relation.to },
   typeLines: relation.lines,
   slice: null,
-  relation: RELATION_KINDS.PARAMETER_TYPE,
+  relation: DESIGN_RELATION_KINDS.PARAMETER_TYPE,
   abstractionIds: [relation.abstractionId],
 });
 
@@ -83,12 +82,12 @@ const createCoreOperationCodeUnderReview = relation => ({
   isTest: false,
   lines: { from: relation.from, to: relation.to },
   slice: createCoreOperationSlice(relation),
-  relation: RELATION_KINDS.CORE_OPERATION,
+  relation: DESIGN_RELATION_KINDS.CORE_OPERATION,
 });
 
-export const isACoreOperation = designRelation => designRelation.relation === RELATION_KINDS.CORE_OPERATION;
+export const isACoreOperation = designRelation => designRelation.relation === DESIGN_RELATION_KINDS.CORE_OPERATION;
 
-export const isAnInOutOperation = designRelation => designRelation.relation === RELATION_KINDS.IN_OUT_OPERATION;
+export const isAnInOutOperation = designRelation => designRelation.relation === DESIGN_RELATION_KINDS.IN_OUT_OPERATION;
 
 const createInOutOperationCodeUnderReview = relation => ({
   ...relation,
@@ -101,10 +100,10 @@ const createInOutOperationCodeUnderReview = relation => ({
   lines: { from: relation.from, to: relation.to },
   methodLines: relation.lines,
   slice: { sections: [{ section: "inOutMethod", lines: readPlacedLines(relation.path, relation.lines) }] },
-  relation: RELATION_KINDS.IN_OUT_OPERATION,
+  relation: DESIGN_RELATION_KINDS.IN_OUT_OPERATION,
 });
 
-export const isARebuiltValue = designRelation => designRelation.relation === RELATION_KINDS.REBUILT_VALUE;
+export const isARebuiltValue = designRelation => designRelation.relation === DESIGN_RELATION_KINDS.REBUILT_VALUE;
 
 const createRebuiltValueCodeUnderReview = relation => ({
   ...relation,
@@ -117,10 +116,10 @@ const createRebuiltValueCodeUnderReview = relation => ({
   lines: { from: relation.from, to: relation.to },
   methodLines: relation.lines,
   slice: { sections: [{ section: "rebuiltMethod", lines: readPlacedLines(relation.path, relation.lines) }] },
-  relation: RELATION_KINDS.REBUILT_VALUE,
+  relation: DESIGN_RELATION_KINDS.REBUILT_VALUE,
 });
 
-export const isAMemberGroupsRelation = designRelation => designRelation.relation === RELATION_KINDS.MEMBER_GROUPS;
+export const isAMemberGroupsRelation = designRelation => designRelation.relation === DESIGN_RELATION_KINDS.MEMBER_GROUPS;
 
 const findAbstractionById = (abstractions, id) => {
   for (const abstraction of abstractions || []) {
@@ -144,7 +143,7 @@ export const createMemberGroupsCodeUnderReview = (relation, abstractions) => {
     lines: { from: relation.from, to: relation.to },
     slice: classAbstraction.slice || null,
     testFriction: classAbstraction.testFriction || [],
-    relation: RELATION_KINDS.MEMBER_GROUPS,
+    relation: DESIGN_RELATION_KINDS.MEMBER_GROUPS,
   };
 };
 
@@ -176,7 +175,7 @@ const readOperationPlaces = operations => (operations || []).flatMap(operation =
 
 export const readRelationPlaces = designRelation => {
   if (!isADesignCodeUnderReview(designRelation)) return [];
-  if (designRelation.relation === RELATION_KINDS.CHAIN_GROUP) {
+  if (designRelation.relation === DESIGN_RELATION_KINDS.CHAIN_GROUP) {
     return [...(designRelation.methods || []), ...(designRelation.stops || [])].flatMap(method => readPlacesOfLines(method.path, method.lines));
   }
   if (isAnInOutOperation(designRelation)) return readPlacesOfLines(designRelation.path, designRelation.methodLines);
