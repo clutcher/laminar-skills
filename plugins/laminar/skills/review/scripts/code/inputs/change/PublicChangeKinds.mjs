@@ -16,11 +16,15 @@ const stripLeadingDotSlash = given => String(given || "").replace(/^\.\//, "");
 
 const stripTrailingSlash = given => given.replace(/\/+$/, "");
 
-const isTheChildOfTheFolder = (listedPath, folder, named) => listedPath === named
-  || listedPath === `${folder}/${named}`
-  || (listedPath.startsWith(`${folder}/`) && listedPath.endsWith(`/${named}`));
+const readTheParentFolder = listedPath => listedPath.includes("/") ? listedPath.slice(0, listedPath.lastIndexOf("/")) : "";
 
-const indexByPath =entries => new Map(entries.map(entry => [entry.path, entry]));
+const isDirectlyInsideTheFolder = (listedPath, folder) => readTheParentFolder(listedPath) === stripTrailingSlash(stripLeadingDotSlash(folder));
+
+const isNamedBy = (listedPath, named) => listedPath === named || listedPath.endsWith(`/${named}`);
+
+const isTheChildOfTheFolder = (listedPath, folder, named) => isDirectlyInsideTheFolder(listedPath, folder) && isNamedBy(listedPath, named);
+
+const indexByPath = listedKinds => new Map(listedKinds.map(listedKind => [listedKind.path, listedKind]));
 
 export class PublicChangeKinds {
   constructor({ kindBase = null, files = [], folders = [], applications = [], renames = [] } = {}) {
