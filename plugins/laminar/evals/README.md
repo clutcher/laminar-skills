@@ -629,7 +629,7 @@ They are tier B, because the script reads the files of each folder and the folde
 
 `split-class-moves-its-methods-unchanged` and its twin `split-class-moves-a-method-of-another-purpose` are written fresh in a fictional library-lending domain, in Java.
 Writing them fresh is what makes them publishable.
-They measure that a move changes the holder and not the moved: a method whose body is unchanged after the rename map gets no method checks, while the class that receives it and the folder the file left are judged, and a moved method with 1 edited line is judged as a method.
+They measure that a move changes the enclosing abstraction and not the moved method: a method whose body is unchanged after the rename map gets no method checks, while the class that receives it and the folder the file left are judged, and a moved method with 1 edited line is judged as a method.
 They are tier B, because the old class and the folder it leaves are in the base state, and the review reads the move and the rename from the 2 commits.
 
 `lease-end-before-its-start-accepted-at-creation` is written fresh in a fictional allotment-garden domain, in Java.
