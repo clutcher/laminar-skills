@@ -89,7 +89,7 @@ export const DIRECTION_BY_JUDGE_TYPE_MAP = Object.freeze({
   }),
 });
 
-export const DIRECTION_BY_DESIGN_RELATION_MAP =Object.freeze({
+export const DIRECTION_BY_DESIGN_RELATION_MAP = Object.freeze({
   [DESIGN_RELATION_KINDS.REBUILT_VALUE]: Object.freeze({
     D3: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "move this method onto the value type", "belong on the new class and tend to move there"),
   }),
