@@ -52,10 +52,11 @@ Let each test check 1 behavior. Use several assertions where 1 behavior gives se
 
 ## 8. Given, when, then
 
-Write each test in 3 blocks, setup, action and check, separated by blank lines. Keep to the shape exactly. Mark the 3 blocks with the comments given, when and then, each the bare word in lower case with nothing after it, as in the book's listings. Using these words rather than arrange, act and assert is a rule of the skill, narrower than the book, which calls it "the same test structure that unit testing knows as Arrange-Act-Assert". The shape is a schema that nearly every developer knows, so the whole test reads as 1 item. The phase marks are the 1 kind of comment a test keeps. This is the book's pattern *Visual Separation*.
+Write each test in 3 blocks, setup, action and check, separated by blank lines. Keep to the shape exactly. Mark the 3 blocks with the comments given, when and then, each the bare word in lower case with nothing after it, as in the book's listings. Using these words rather than arrange, act and assert is a rule of the skill, narrower than the book, which calls it "the same test structure that unit testing knows as Arrange-Act-Assert". The shape is a schema that nearly every developer knows, so the whole test reads as 1 item. The phase marks are the 1 kind of comment a test keeps. Where the test framework offers named step calls, the step calls mark the 3 phases in place of the comments, and the test keeps no phase comment: an and step belongs to the phase it follows, and a background step is a given. This is the book's pattern *Visual Separation*.
 
 - Book (*The Common Pitfalls*, *Visual Separation*): "The rule, then, is to match Given-When-Then exactly, because a test that drifts loses the schema and falls back on the principles to stay simple."
 - Book (*How to Verify Correctness*, *How to Structure Tests*): "Comments mark the phases explicitly"
+- Book (*The Common Pitfalls*, *How Naming Goes Wrong*): "Comments earn their place only when they carry knowledge that no name or structure can express"
 
 ## 9. A name of outcome and condition
 

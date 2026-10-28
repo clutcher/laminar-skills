@@ -12,7 +12,7 @@ Write a domain value as a record, and a part of it as a nested record. A record 
 
 ## 2. Null for a missing item, and no Optional
 
-Do not use Optional. A method that finds 1 item that can be missing returns null and carries a nullable marker on its return type, in the interface and in every implementation, a substitute in a test too, and its name says it finds. A method that returns a collection returns an empty collection, never null (correctness, section 6). The marker tells the reader where a missing value can appear, with no wrapper type to unpack.
+Do not use Optional. A method that finds 1 item that can be missing returns null and carries a nullable marker on its return type, in the interface and in every implementation, a substitute in a test too, and its name says it finds. In Java only a method named to find returns null for a missing item, which is narrower than naming, section 3, where get may return no item too. A method that returns a collection returns an empty collection, never null (correctness, section 6). The marker tells the reader where a missing value can appear, with no wrapper type to unpack.
 
 - Limits: null is for the result of a find, not for a state. When you declare a field that is null in some states of its object, such as a value that a later step of its life sets, give each state its own type (correctness, section 2). Where the field stays in 1 type, a factory on the type builds the state in which it is missing, and a method of the type answers whether it is missing, so no caller passes or compares null for it (classes, section 6).
 
