@@ -4,6 +4,7 @@ import { MAX_CONTEXT_LINES, ReferenceContext } from "../references/ReferenceCont
 import { ReferenceOrder } from "../references/ReferenceOrder.mjs";
 import { SourceRoots } from "./SourceRoots.mjs";
 import { FolderChildren } from "./FolderChildren.mjs";
+import { ImportersInTheFolder } from "./ImportersInTheFolder.mjs";
 import { FieldTypeHeads } from "./FieldTypeHeads.mjs";
 import { readKeyTreeSections } from "./KeyTreeSlice.mjs";
 import { FIELD_READING_SECTIONS, FILE_LIST_SECTIONS, formatStoppedLine, isAStoppedLine, findLineNumber, numberLines, formatPlacedSliceLine, findPlaceOfSliceLine, readListedPath } from "../../formats/SliceFormat.mjs";
@@ -348,6 +349,7 @@ export class SliceBuilder {
     this.headsByPathMap = new Map();
     this.typesByPathMap = new Map();
     this.folderChildren = new FolderChildren(change, listPathsShownAfterTheChange(change));
+    this.importersInTheFolder = new ImportersInTheFolder(references.graph);
     this.fieldTypeHeads = new FieldTypeHeads(references);
     this.referenceContext = references.graph ? new ReferenceContext(references, change.files.map(file => file.path)) : NO_CONTEXT;
     this.referenceOrder = references.graph ? new ReferenceOrder(references, decisionSearches) : NO_ORDER;
@@ -366,7 +368,8 @@ export class SliceBuilder {
         createdSubfolders: listCreatedSubfolderLines(abstraction),
         ...buildModuleBoundaryFactSections(abstraction.module || {}),
         [CHILD_COUNT]: this.listChildCountWithoutTheTestsBeside(abstraction),
-        fileList: leaveOutTheListedPaths(this.folderChildren.readFileListOneLevelDeeper(abstraction.path), listTheTestsBesideTheirFiles(abstraction)),
+        fileList: leaveOutTheListedPaths(this.folderChildren.readFileListOneLevelDeeper(abstraction.path), listTheTestsBesideTheirFiles(abstraction))
+          .map(line => this.importersInTheFolder.noteTheImporters(line)),
         siblings: this.folderChildren.listSiblingsShown(abstraction),
       });
     }

@@ -4,6 +4,8 @@ const OWN_LINES = "ownLines";
 
 export const FROM_THE_CHANGE_ONLY = "file list: from the change only";
 
+export const formatImportersInTheFolderNote = (fileListLine, importerNames) => `${fileListLine} · imported by: ${importerNames.join(", ")}`;
+
 export const numberLines = (lines, from) => lines.map((text, offset) => `${from + offset}: ${text}`);
 
 export { formatPlacedSliceLine } from "../../../code/index.mjs";
