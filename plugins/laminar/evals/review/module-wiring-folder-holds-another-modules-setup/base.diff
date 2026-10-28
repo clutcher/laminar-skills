@@ -1,0 +1,128 @@
+diff --git a/allotment-office/src/main/java/com/example/allotment/waitinglist/app/api/ApiForWaitingList.java b/allotment-office/src/main/java/com/example/allotment/waitinglist/app/api/ApiForWaitingList.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/waitinglist/app/api/ApiForWaitingList.java
+@@ -0,0 +1,8 @@
++package com.example.allotment.waitinglist.app.api;
++
++import com.example.allotment.waitinglist.app.domain.model.WaitingListPlace;
++
++public interface ApiForWaitingList {
++
++    WaitingListPlace joinWaitingList(String gardenerId);
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/waitinglist/app/domain/model/WaitingListPlace.java b/allotment-office/src/main/java/com/example/allotment/waitinglist/app/domain/model/WaitingListPlace.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/waitinglist/app/domain/model/WaitingListPlace.java
+@@ -0,0 +1,6 @@
++package com.example.allotment.waitinglist.app.domain.model;
++
++import java.time.LocalDate;
++
++public record WaitingListPlace(String gardenerId, int position, LocalDate joinedOn) {
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/waitinglist/app/domain/services/WaitingListService.java b/allotment-office/src/main/java/com/example/allotment/waitinglist/app/domain/services/WaitingListService.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/waitinglist/app/domain/services/WaitingListService.java
+@@ -0,0 +1,25 @@
++package com.example.allotment.waitinglist.app.domain.services;
++
++import com.example.allotment.waitinglist.app.api.ApiForWaitingList;
++import com.example.allotment.waitinglist.app.domain.model.WaitingListPlace;
++import com.example.allotment.waitinglist.app.spi.WaitingListRepository;
++import java.time.Clock;
++import java.time.LocalDate;
++
++public class WaitingListService implements ApiForWaitingList {
++
++    private final WaitingListRepository waitingListRepository;
++    private final Clock clock;
++
++    public WaitingListService(WaitingListRepository waitingListRepository, Clock clock) {
++        this.waitingListRepository = waitingListRepository;
++        this.clock = clock;
++    }
++
++    @Override
++    public WaitingListPlace joinWaitingList(String gardenerId) {
++        int position = waitingListRepository.countWaitingGardeners() + 1;
++        WaitingListPlace place = new WaitingListPlace(gardenerId, position, LocalDate.now(clock));
++        return waitingListRepository.savePlace(place);
++    }
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/waitinglist/app/spi/WaitingListRepository.java b/allotment-office/src/main/java/com/example/allotment/waitinglist/app/spi/WaitingListRepository.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/waitinglist/app/spi/WaitingListRepository.java
+@@ -0,0 +1,10 @@
++package com.example.allotment.waitinglist.app.spi;
++
++import com.example.allotment.waitinglist.app.domain.model.WaitingListPlace;
++
++public interface WaitingListRepository {
++
++    int countWaitingGardeners();
++
++    WaitingListPlace savePlace(WaitingListPlace place);
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/waitinglist/in/rest/WaitingListController.java b/allotment-office/src/main/java/com/example/allotment/waitinglist/in/rest/WaitingListController.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/waitinglist/in/rest/WaitingListController.java
+@@ -0,0 +1,22 @@
++package com.example.allotment.waitinglist.in.rest;
++
++import com.example.allotment.waitinglist.app.api.ApiForWaitingList;
++import com.example.allotment.waitinglist.app.domain.model.WaitingListPlace;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class WaitingListController {
++
++    private final ApiForWaitingList apiForWaitingList;
++
++    public WaitingListController(ApiForWaitingList apiForWaitingList) {
++        this.apiForWaitingList = apiForWaitingList;
++    }
++
++    @PostMapping("/waiting-list")
++    public WaitingListPlace joinWaitingList(@RequestParam String gardenerId) {
++        return apiForWaitingList.joinWaitingList(gardenerId);
++    }
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/waitinglist/out/db/WaitingListRepositoryUsingJdbc.java b/allotment-office/src/main/java/com/example/allotment/waitinglist/out/db/WaitingListRepositoryUsingJdbc.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/waitinglist/out/db/WaitingListRepositoryUsingJdbc.java
+@@ -0,0 +1,27 @@
++package com.example.allotment.waitinglist.out.db;
++
++import com.example.allotment.waitinglist.app.domain.model.WaitingListPlace;
++import com.example.allotment.waitinglist.app.spi.WaitingListRepository;
++import org.springframework.jdbc.core.simple.JdbcClient;
++
++public class WaitingListRepositoryUsingJdbc implements WaitingListRepository {
++
++    private final JdbcClient jdbcClient;
++
++    public WaitingListRepositoryUsingJdbc(JdbcClient jdbcClient) {
++        this.jdbcClient = jdbcClient;
++    }
++
++    @Override
++    public int countWaitingGardeners() {
++        return jdbcClient.sql("select count(*) from waiting_list_place").query(Integer.class).single();
++    }
++
++    @Override
++    public WaitingListPlace savePlace(WaitingListPlace place) {
++        jdbcClient.sql("insert into waiting_list_place (gardener_id, position, joined_on) values (?, ?, ?)")
++                .params(place.gardenerId(), place.position(), place.joinedOn())
++                .update();
++        return place;
++    }
++}

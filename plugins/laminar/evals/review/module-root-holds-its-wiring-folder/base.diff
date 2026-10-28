@@ -1,0 +1,144 @@
+diff --git a/allotment-office/src/main/java/com/example/allotment/plotletting/app/api/ApiForPlotLetting.java b/allotment-office/src/main/java/com/example/allotment/plotletting/app/api/ApiForPlotLetting.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/plotletting/app/api/ApiForPlotLetting.java
+@@ -0,0 +1,8 @@
++package com.example.allotment.plotletting.app.api;
++
++import com.example.allotment.plotletting.app.domain.model.PlotLease;
++
++public interface ApiForPlotLetting {
++
++    PlotLease letPlot(String plotNumber, String gardenerId);
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/plotletting/app/domain/model/PlotLease.java b/allotment-office/src/main/java/com/example/allotment/plotletting/app/domain/model/PlotLease.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/plotletting/app/domain/model/PlotLease.java
+@@ -0,0 +1,6 @@
++package com.example.allotment.plotletting.app.domain.model;
++
++import java.time.LocalDate;
++
++public record PlotLease(String plotNumber, String gardenerId, LocalDate startDate) {
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/plotletting/app/domain/services/PlotLettingService.java b/allotment-office/src/main/java/com/example/allotment/plotletting/app/domain/services/PlotLettingService.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/plotletting/app/domain/services/PlotLettingService.java
+@@ -0,0 +1,28 @@
++package com.example.allotment.plotletting.app.domain.services;
++
++import com.example.allotment.plotletting.app.api.ApiForPlotLetting;
++import com.example.allotment.plotletting.app.domain.model.PlotLease;
++import com.example.allotment.plotletting.app.spi.PlotLeaseRepository;
++import java.time.Clock;
++import java.time.LocalDate;
++
++public class PlotLettingService implements ApiForPlotLetting {
++
++    private final PlotLeaseRepository plotLeaseRepository;
++    private final Clock clock;
++
++    public PlotLettingService(PlotLeaseRepository plotLeaseRepository, Clock clock) {
++        this.plotLeaseRepository = plotLeaseRepository;
++        this.clock = clock;
++    }
++
++    @Override
++    public PlotLease letPlot(String plotNumber, String gardenerId) {
++        if (plotLeaseRepository.isPlotLet(plotNumber)) {
++            throw new IllegalStateException("Plot " + plotNumber + " is already let");
++        }
++
++        PlotLease lease = new PlotLease(plotNumber, gardenerId, LocalDate.now(clock));
++        return plotLeaseRepository.saveLease(lease);
++    }
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/plotletting/app/spi/PlotLeaseRepository.java b/allotment-office/src/main/java/com/example/allotment/plotletting/app/spi/PlotLeaseRepository.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/plotletting/app/spi/PlotLeaseRepository.java
+@@ -0,0 +1,10 @@
++package com.example.allotment.plotletting.app.spi;
++
++import com.example.allotment.plotletting.app.domain.model.PlotLease;
++
++public interface PlotLeaseRepository {
++
++    boolean isPlotLet(String plotNumber);
++
++    PlotLease saveLease(PlotLease lease);
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/plotletting/in/rest/PlotLettingController.java b/allotment-office/src/main/java/com/example/allotment/plotletting/in/rest/PlotLettingController.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/plotletting/in/rest/PlotLettingController.java
+@@ -0,0 +1,23 @@
++package com.example.allotment.plotletting.in.rest;
++
++import com.example.allotment.plotletting.app.api.ApiForPlotLetting;
++import com.example.allotment.plotletting.app.domain.model.PlotLease;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class PlotLettingController {
++
++    private final ApiForPlotLetting apiForPlotLetting;
++
++    public PlotLettingController(ApiForPlotLetting apiForPlotLetting) {
++        this.apiForPlotLetting = apiForPlotLetting;
++    }
++
++    @PostMapping("/plots/{plotNumber}/lease")
++    public PlotLease letPlot(@PathVariable String plotNumber, @RequestParam String gardenerId) {
++        return apiForPlotLetting.letPlot(plotNumber, gardenerId);
++    }
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/plotletting/out/db/PlotLeaseRepositoryUsingJpa.java b/allotment-office/src/main/java/com/example/allotment/plotletting/out/db/PlotLeaseRepositoryUsingJpa.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/plotletting/out/db/PlotLeaseRepositoryUsingJpa.java
+@@ -0,0 +1,25 @@
++package com.example.allotment.plotletting.out.db;
++
++import com.example.allotment.plotletting.app.domain.model.PlotLease;
++import com.example.allotment.plotletting.app.spi.PlotLeaseRepository;
++import org.springframework.data.jpa.repository.JpaRepository;
++
++public class PlotLeaseRepositoryUsingJpa implements PlotLeaseRepository {
++
++    private final JpaRepository<PlotLeaseRow, String> plotLeaseRows;
++
++    public PlotLeaseRepositoryUsingJpa(JpaRepository<PlotLeaseRow, String> plotLeaseRows) {
++        this.plotLeaseRows = plotLeaseRows;
++    }
++
++    @Override
++    public boolean isPlotLet(String plotNumber) {
++        return plotLeaseRows.existsById(plotNumber);
++    }
++
++    @Override
++    public PlotLease saveLease(PlotLease lease) {
++        plotLeaseRows.save(new PlotLeaseRow(lease.plotNumber(), lease.gardenerId(), lease.startDate()));
++        return lease;
++    }
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/plotletting/out/db/PlotLeaseRow.java b/allotment-office/src/main/java/com/example/allotment/plotletting/out/db/PlotLeaseRow.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/plotletting/out/db/PlotLeaseRow.java
+@@ -0,0 +1,9 @@
++package com.example.allotment.plotletting.out.db;
++
++import jakarta.persistence.Entity;
++import jakarta.persistence.Id;
++import java.time.LocalDate;
++
++@Entity
++public record PlotLeaseRow(@Id String plotNumber, String gardenerId, LocalDate startDate) {
++}

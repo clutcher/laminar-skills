@@ -1,0 +1,112 @@
+diff --git a/greenhouse-desk/src/watering/app/api/ApiForWateringSchedules.ts b/greenhouse-desk/src/watering/app/api/ApiForWateringSchedules.ts
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-desk/src/watering/app/api/ApiForWateringSchedules.ts
+@@ -0,0 +1,5 @@
++import { WateringSchedule } from "../domain/model/WateringSchedule";
++
++export interface ApiForWateringSchedules {
++  planWatering(bedNumber: string, litresPerDay: number): Promise<WateringSchedule>;
++}
+diff --git a/greenhouse-desk/src/watering/app/domain/model/WateringSchedule.ts b/greenhouse-desk/src/watering/app/domain/model/WateringSchedule.ts
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-desk/src/watering/app/domain/model/WateringSchedule.ts
+@@ -0,0 +1,5 @@
++export interface WateringSchedule {
++  readonly bedNumber: string;
++  readonly litresPerDay: number;
++  readonly startHour: number;
++}
+diff --git a/greenhouse-desk/src/watering/app/domain/services/WateringScheduleService.ts b/greenhouse-desk/src/watering/app/domain/services/WateringScheduleService.ts
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-desk/src/watering/app/domain/services/WateringScheduleService.ts
+@@ -0,0 +1,19 @@
++import { ApiForWateringSchedules } from "../../api/ApiForWateringSchedules";
++import { WateringScheduleStore } from "../../spi/WateringScheduleStore";
++import { WateringSchedule } from "../model/WateringSchedule";
++
++export class WateringScheduleService implements ApiForWateringSchedules {
++  constructor(
++    private readonly wateringScheduleStore: WateringScheduleStore,
++    private readonly earliestStartHour: number,
++  ) {}
++
++  async planWatering(bedNumber: string, litresPerDay: number): Promise<WateringSchedule> {
++    if (litresPerDay <= 0) {
++      throw new Error(`Bed ${bedNumber} needs a positive amount of water`);
++    }
++
++    const schedule: WateringSchedule = { bedNumber, litresPerDay, startHour: this.earliestStartHour };
++    return this.wateringScheduleStore.saveSchedule(schedule);
++  }
++}
+diff --git a/greenhouse-desk/src/watering/app/spi/WateringScheduleStore.ts b/greenhouse-desk/src/watering/app/spi/WateringScheduleStore.ts
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-desk/src/watering/app/spi/WateringScheduleStore.ts
+@@ -0,0 +1,5 @@
++import { WateringSchedule } from "../domain/model/WateringSchedule";
++
++export interface WateringScheduleStore {
++  saveSchedule(schedule: WateringSchedule): Promise<WateringSchedule>;
++}
+diff --git a/greenhouse-desk/src/watering/container.ts b/greenhouse-desk/src/watering/container.ts
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-desk/src/watering/container.ts
+@@ -0,0 +1,15 @@
++import { Pool } from "pg";
++import { Router } from "express";
++import { WateringScheduleService } from "./app/domain/services/WateringScheduleService";
++import { createWateringScheduleRoutes } from "./in/rest/WateringScheduleRoutes";
++import { WateringScheduleStoreUsingPostgres } from "./out/db/WateringScheduleStoreUsingPostgres";
++
++export interface WateringSettings {
++  readonly earliestStartHour: number;
++}
++
++export function createWateringRoutes(pool: Pool, settings: WateringSettings): Router {
++  const wateringScheduleStore = new WateringScheduleStoreUsingPostgres(pool);
++  const wateringScheduleService = new WateringScheduleService(wateringScheduleStore, settings.earliestStartHour);
++  return createWateringScheduleRoutes(wateringScheduleService);
++}
+diff --git a/greenhouse-desk/src/watering/in/rest/WateringScheduleRoutes.ts b/greenhouse-desk/src/watering/in/rest/WateringScheduleRoutes.ts
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-desk/src/watering/in/rest/WateringScheduleRoutes.ts
+@@ -0,0 +1,13 @@
++import { Router } from "express";
++import { ApiForWateringSchedules } from "../../app/api/ApiForWateringSchedules";
++
++export function createWateringScheduleRoutes(apiForWateringSchedules: ApiForWateringSchedules): Router {
++  const router = Router();
++
++  router.post("/beds/:bedNumber/watering", async (request, response) => {
++    const schedule = await apiForWateringSchedules.planWatering(request.params.bedNumber, Number(request.body.litresPerDay));
++    response.status(201).json(schedule);
++  });
++
++  return router;
++}
+diff --git a/greenhouse-desk/src/watering/out/db/WateringScheduleStoreUsingPostgres.ts b/greenhouse-desk/src/watering/out/db/WateringScheduleStoreUsingPostgres.ts
+new file mode 100644
+--- /dev/null
++++ b/greenhouse-desk/src/watering/out/db/WateringScheduleStoreUsingPostgres.ts
+@@ -0,0 +1,15 @@
++import { Pool } from "pg";
++import { WateringScheduleStore } from "../../app/spi/WateringScheduleStore";
++import { WateringSchedule } from "../../app/domain/model/WateringSchedule";
++
++export class WateringScheduleStoreUsingPostgres implements WateringScheduleStore {
++  constructor(private readonly pool: Pool) {}
++
++  async saveSchedule(schedule: WateringSchedule): Promise<WateringSchedule> {
++    await this.pool.query(
++      "insert into watering_schedule (bed_number, litres_per_day, start_hour) values ($1, $2, $3)",
++      [schedule.bedNumber, schedule.litresPerDay, schedule.startHour],
++    );
++    return schedule;
++  }
++}

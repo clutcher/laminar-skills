@@ -1,0 +1,71 @@
+diff --git a/allotment-office/src/main/java/com/example/allotment/waitinglist/config/AllotmentOfficeClockConfiguration.java b/allotment-office/src/main/java/com/example/allotment/waitinglist/config/AllotmentOfficeClockConfiguration.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/waitinglist/config/AllotmentOfficeClockConfiguration.java
+@@ -0,0 +1,15 @@
++package com.example.allotment.waitinglist.config;
++
++import java.time.Clock;
++import java.time.ZoneId;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++
++@Configuration
++public class AllotmentOfficeClockConfiguration {
++
++    @Bean("clock")
++    public Clock createClock() {
++        return Clock.system(ZoneId.of("Europe/Amsterdam"));
++    }
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/waitinglist/config/PlotLettingModuleConfiguration.java b/allotment-office/src/main/java/com/example/allotment/waitinglist/config/PlotLettingModuleConfiguration.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/waitinglist/config/PlotLettingModuleConfiguration.java
+@@ -0,0 +1,17 @@
++package com.example.allotment.waitinglist.config;
++
++import com.example.allotment.plotletting.app.api.ApiForPlotLetting;
++import com.example.allotment.plotletting.app.domain.services.PlotLettingService;
++import com.example.allotment.plotletting.app.spi.PlotLeaseRepository;
++import java.time.Clock;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++
++@Configuration
++public class PlotLettingModuleConfiguration {
++
++    @Bean("apiForPlotLetting")
++    public ApiForPlotLetting createApiForPlotLetting(PlotLeaseRepository plotLeaseRepository, Clock clock) {
++        return new PlotLettingService(plotLeaseRepository, clock);
++    }
++}
+diff --git a/allotment-office/src/main/java/com/example/allotment/waitinglist/config/WaitingListModuleConfiguration.java b/allotment-office/src/main/java/com/example/allotment/waitinglist/config/WaitingListModuleConfiguration.java
+new file mode 100644
+--- /dev/null
++++ b/allotment-office/src/main/java/com/example/allotment/waitinglist/config/WaitingListModuleConfiguration.java
+@@ -0,0 +1,24 @@
++package com.example.allotment.waitinglist.config;
++
++import com.example.allotment.waitinglist.app.api.ApiForWaitingList;
++import com.example.allotment.waitinglist.app.domain.services.WaitingListService;
++import com.example.allotment.waitinglist.app.spi.WaitingListRepository;
++import com.example.allotment.waitinglist.out.db.WaitingListRepositoryUsingJdbc;
++import java.time.Clock;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++import org.springframework.jdbc.core.simple.JdbcClient;
++
++@Configuration
++public class WaitingListModuleConfiguration {
++
++    @Bean("waitingListRepository")
++    public WaitingListRepository createWaitingListRepository(JdbcClient jdbcClient) {
++        return new WaitingListRepositoryUsingJdbc(jdbcClient);
++    }
++
++    @Bean("apiForWaitingList")
++    public ApiForWaitingList createApiForWaitingList(WaitingListRepository waitingListRepository, Clock clock) {
++        return new WaitingListService(waitingListRepository, clock);
++    }
++}
