@@ -147,6 +147,7 @@ It reaches a finding whose second place is outside the change.
 | `partner-store-ids-in-sets-of-their-own-decisions` | B | clean: in a fictional grocery-delivery domain, 2 new rules each test the id of a partner store, an entity that is registered as data, against a set of their own named for the decision, the same id stands in both sets, and a third class asks 1 of the rules about the id, so every other id takes the normal path and Exclude Illegal States is not raised | copied from `null-returned-when-no-carrier-matches`, not measured |
 | `delivery-state-text-compared-in-two-classes` | A | in the same grocery-delivery domain, a new `Delivery` holds its state as text that 2 of its methods compare with constants, beside a constant that lists every state, and a new `TipPrompt` compares a handover kind held as text with 1 named code, so Exclude Illegal States is raised on the class; a finding on `TipPrompt` under the same check is allowed and not required | copied from `status-held-as-a-string`, not measured |
 | `guarded-list-handed-out-whole` | A | a new `Voyage` refuses a passenger once it is full, and hands out the list it holds, so any caller can add a passenger past the capacity | measured |
+| `lease-end-before-its-start-accepted-at-creation` | A | in a fictional allotment-garden domain, in Java, a new `PlotLease` refuses to move its end to a day that is not after its start, while its constructor takes any start and end with no check, so a caller can create a lease that ends before it starts: Protect the State on the constructor; a sibling `ShedLease` whose constructor refuses the same combination is no finding | estimated from `guarded-list-handed-out-whole` for 2 classes, not measured |
 | `session-value-cast-with-no-check` | A | a new `CurrentVoyageService`, the 1 owner of a session key, casts the value it reads from a store of untyped values to a voyage with no check of its type; the case requires Remove Edge Cases and allows Fail Fast beside it | measured |
 | `null-returned-when-no-carrier-matches` | B | clean: a new `findCarrier` in a fictional parcel-depot domain returns null where no carrier has the code, and a new `routeParcel` sends that parcel to the manual desk, so neither Fail Fast nor Remove Edge Cases is raised | measured |
 | `empty-list-returned-when-no-calendar-is-published` | B | clean: a new TypeScript `fetchOpenSlots` returns an empty list where a depot has published no calendar for the day, and nothing in the repository says such a day is a broken state, so neither Fail Fast nor Remove Edge Cases is raised | measured |
@@ -630,6 +631,10 @@ They are tier B, because the script reads the files of each folder and the folde
 Writing them fresh is what makes them publishable.
 They measure that a move changes the holder and not the moved: a method whose body is unchanged after the rename map gets no method checks, while the class that receives it and the folder the file left are judged, and a moved method with 1 edited line is judged as a method.
 They are tier B, because the old class and the folder it leaves are in the base state, and the review reads the move and the rename from the 2 commits.
+
+`lease-end-before-its-start-accepted-at-creation` is written fresh in a fictional allotment-garden domain, in Java.
+Writing it fresh is what makes it publishable.
+It measures that a constructor accepting a combination its own class refuses later is a finding, and that the same class refusing it at creation is none.
 
 Every case whose row names the book comes by the second route: its code is a listing from the book *Laminar Software Design*, and its expectation is the verdict the book's own text states on that listing.
 The book is published, so its listings may be published as fixtures.

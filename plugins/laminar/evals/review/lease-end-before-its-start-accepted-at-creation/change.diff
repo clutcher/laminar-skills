@@ -1,0 +1,63 @@
+diff --git a/allotment/src/main/java/com/example/allotment/lease/PlotLease.java b/allotment/src/main/java/com/example/allotment/lease/PlotLease.java
+new file mode 100644
+--- /dev/null
++++ b/allotment/src/main/java/com/example/allotment/lease/PlotLease.java
+@@ -0,0 +1,25 @@
++package com.example.allotment.lease;
++
++import java.time.LocalDate;
++
++public class PlotLease {
++
++    private final LocalDate startsOn;
++    private LocalDate endsOn;
++
++    public PlotLease(LocalDate startsOn, LocalDate endsOn) {
++        this.startsOn = startsOn;
++        this.endsOn = endsOn;
++    }
++
++    public void moveEndTo(LocalDate newEnd) {
++        if (!newEnd.isAfter(startsOn)) {
++            throw new IllegalArgumentException("A plot lease ends after it starts");
++        }
++        this.endsOn = newEnd;
++    }
++
++    public LocalDate endsOn() {
++        return endsOn;
++    }
++}
+diff --git a/allotment/src/main/java/com/example/allotment/lease/ShedLease.java b/allotment/src/main/java/com/example/allotment/lease/ShedLease.java
+new file mode 100644
+--- /dev/null
++++ b/allotment/src/main/java/com/example/allotment/lease/ShedLease.java
+@@ -0,0 +1,28 @@
++package com.example.allotment.lease;
++
++import java.time.LocalDate;
++
++public class ShedLease {
++
++    private final LocalDate startsOn;
++    private LocalDate endsOn;
++
++    public ShedLease(LocalDate startsOn, LocalDate endsOn) {
++        if (!endsOn.isAfter(startsOn)) {
++            throw new IllegalArgumentException("A shed lease ends after it starts");
++        }
++        this.startsOn = startsOn;
++        this.endsOn = endsOn;
++    }
++
++    public void moveEndTo(LocalDate newEnd) {
++        if (!newEnd.isAfter(startsOn)) {
++            throw new IllegalArgumentException("A shed lease ends after it starts");
++        }
++        this.endsOn = newEnd;
++    }
++
++    public LocalDate endsOn() {
++        return endsOn;
++    }
++}
