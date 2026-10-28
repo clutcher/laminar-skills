@@ -1,0 +1,65 @@
+diff --git a/pilot-station/config/pilots.yaml b/pilot-station/config/pilots.yaml
+new file mode 100644
+--- /dev/null
++++ b/pilot-station/config/pilots.yaml
+@@ -0,0 +1,4 @@
++pilots:
++  on-call-rota: weekly
++  boarding-lead-minutes: 45
++  max-vessel-draught-metres: 14.5
+diff --git a/pilot-station/db/berths.sql b/pilot-station/db/berths.sql
+new file mode 100644
+--- /dev/null
++++ b/pilot-station/db/berths.sql
+@@ -0,0 +1,8 @@
++SELECT berth_code, max_draught_metres
++FROM berths
++WHERE harbour_code = :harbour_code
++ORDER BY berth_code;
++
++UPDATE berths
++SET occupied_by_vessel = :vessel_code
++WHERE berth_code = :berth_code;
+diff --git a/pilot-station/scripts/lib/tides.sh b/pilot-station/scripts/lib/tides.sh
+new file mode 100644
+--- /dev/null
++++ b/pilot-station/scripts/lib/tides.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++
++fetch_tide_table() {
++  local station_code="$1"
++  curl --silent --fail "https://tides.pilot-station.example/tables/${station_code}.csv"
++}
++
++format_tide_time() {
++  local tide_line="$1"
++  local high_water_at
++  high_water_at=$(cut -d',' -f2 <<< "$tide_line")
++  date --date="$high_water_at" '+%H:%M'
++}
++
++is_tide_window_open() {
++  local tide_height_metres="$1"
++  local vessel_draught_metres="$2"
++  awk -v height="$tide_height_metres" -v draught="$vessel_draught_metres" 'BEGIN { exit !(height > draught + 0.5) }'
++}
+diff --git a/pilot-station/scripts/schedule-boarding.sh b/pilot-station/scripts/schedule-boarding.sh
+new file mode 100644
+--- /dev/null
++++ b/pilot-station/scripts/schedule-boarding.sh
+@@ -0,0 +1,14 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++source "$(dirname "$0")/lib/tides.sh"
++
++station_code="$1"
++vessel_draught_metres="$2"
++
++fetch_tide_table "$station_code" | while IFS= read -r tide_line; do
++  tide_height_metres=$(cut -d',' -f3 <<< "$tide_line")
++  if is_tide_window_open "$tide_height_metres" "$vessel_draught_metres"; then
++    echo "Boarding window at $(format_tide_time "$tide_line")"
++  fi
++done
