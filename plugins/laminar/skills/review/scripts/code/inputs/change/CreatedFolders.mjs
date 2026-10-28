@@ -34,6 +34,10 @@ export class CreatedFolders {
     return this.readsTheBase && folder !== THE_REPOSITORY_ROOT && !this.before.holds(folder);
   }
 
+  existsAfterTheChange(folder) {
+    return this.readsTheBase && this.after.holds(folder);
+  }
+
   findTopCreated(folder) {
     let top = folder;
     while (this.isCreated(readFolderPath(top))) top = readFolderPath(top);

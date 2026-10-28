@@ -15,6 +15,7 @@ export const readDescribedFields = abstraction => ({
   usedIn: abstraction.usedIn,
   path: abstraction.path,
   changeKind: abstraction.changeKind,
+  ...(abstraction.publicChangeKind ? { publicChangeKind: abstraction.publicChangeKind } : {}),
   visibility: abstraction.visibility,
   isTest: abstraction.isTest,
   ...(abstraction.testKind ? { testKind: abstraction.testKind } : {}),
@@ -47,7 +48,7 @@ export function formatDisplayName(scale, name, enclosingName) {
 }
 
 export class ReviewTreeAbstraction {
-  constructor({ id, scale, name, enclosingTypeName: enclosingName = null, displayName = formatDisplayName(scale, name, enclosingName), path: filePath, changeKind, visibility, boundaryRank, lines, referenceLines = [], fields = null, usedIn = "", isTest = isTestPath(filePath) }) {
+  constructor({ id, scale, name, enclosingTypeName: enclosingName = null, displayName = formatDisplayName(scale, name, enclosingName), path: filePath, changeKind, publicChangeKind = null, visibility, boundaryRank, lines, referenceLines = [], fields = null, usedIn = "", isTest = isTestPath(filePath) }) {
     Object.assign(this, {
       id,
       scale,
@@ -57,6 +58,7 @@ export class ReviewTreeAbstraction {
       usedIn,
       path: filePath,
       changeKind,
+      publicChangeKind,
       visibility,
       isTest,
       boundaryRank,

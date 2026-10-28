@@ -7,7 +7,7 @@ import { findRepositoryToRead } from "../inputs/change/ChangeReader.mjs";
 import { FILE_STATUS } from "../inputs/change/Hunk.mjs";
 import { RepositoryText } from "../inputs/repository/RepositoryText.mjs";
 import { CachedSourceIndex } from "../inputs/repository/index/CachedSourceIndex.mjs";
-import { CHANGE_KINDS, readDeclaredMemberChangeKind, readFileChangeKind } from "../inputs/change/AbstractionChange.mjs";
+import { CHANGE_KINDS, changesTheCode, readDeclaredMemberChangeKind, readFileChangeKind } from "../inputs/change/AbstractionChange.mjs";
 import { readBoundaryRank } from "./tree/BoundaryRank.mjs";
 import { BOUNDARY_RANKS } from "../graph/abstractions/Role.mjs";
 import { ChangeMarker } from "../inputs/change/ChangeMarker.mjs";
@@ -46,6 +46,7 @@ import { TestRecognition } from "./tree/TestRecognition.mjs";
 import { TestLayout } from "./tree/TestLayout.mjs";
 import { TestPlacements } from "../inputs/source/TestPlacement.mjs";
 import { AbstractionFacts, INTERACTION_LINES } from "./tree/AbstractionFacts.mjs";
+import { PublicChangeKindReading } from "./kinds/PublicChangeKindReading.mjs";
 
 const isATopLevelType = type => isADeclaredType(type) && Boolean(type.place) && !(type.parent && isADeclaredType(type.parent));
 
@@ -160,11 +161,19 @@ const groupTheReadingsByFolder = readings => {
 
 const holdsOnlyBuildFiles = module => module.readings.every(changedFileReading => isABuildFile(changedFileReading.file.path));
 
+const listTheFoldersFilesLeft = files => files
+  .filter(file => file.status === FILE_STATUS.RENAMED && file.oldPath && readFolderPath(file.oldPath) !== readFolderPath(file.path))
+  .map(file => readFolderPath(file.oldPath));
+
+const listTheAbstractionAndItsDescendants = abstraction => [abstraction, ...abstraction.children.flatMap(listTheAbstractionAndItsDescendants)];
+
 const leaveOutTheFoldersOfBuildFilesOnly = changedFolders => new Map([...changedFolders].filter(([, module]) => !holdsOnlyBuildFiles(module)));
 
 export class ExtractStep {
-  constructor(change, { indexCacheFolder } = {}) {
+  constructor(change, { indexCacheFolder, kindBase = null, kindChange = null } = {}) {
     this.change = change;
+    this.kindBase = kindBase;
+    this.kindChange = kindChange;
     this.tree = new AbstractionTree();
     this.cachedSourceIndex = new CachedSourceIndex(change.repository, { cacheFolder: indexCacheFolder });
     this.repositoryText = new RepositoryText(change.repository, change.mode, change.files, { cachedSourceIndex: this.cachedSourceIndex });
@@ -210,6 +219,7 @@ export class ExtractStep {
     this.publishedSets = this.moduleOpenings.readThePublishedSets();
     this.moduleOpenings.giveTheOpeningRoles(this.publishedSets);
     this.shapeFacts = this.readTheShapeFacts();
+    this.readTheChangeKinds();
     const readings = this.readTheChangedFiles();
     this.countTheTrivialHunks(readings);
     const changedFolders = groupTheReadingsByFolder(readings);
@@ -219,7 +229,41 @@ export class ExtractStep {
     for (const changedFileReading of readings) this.addFile(changedFileReading, parents);
     new CommentPlacement({ tree: this.tree, addedLinesByPathMap: this.addedLinesByPathMap, createMemberAbstraction: fields => this.createMemberAbstraction(fields), readBoundaryRankAtLine: (filePath, visibility, line) => this.readBoundaryRankAtLine(filePath, visibility, line) }).placeTheComments(readings, parents);
     this.leaveOutTheDroppedFilesWithNoAbstraction();
+    this.markTheMovedMethods();
+    this.giveThePublicChangeKinds();
     return this.tree;
+  }
+
+  readTheChangeKinds() {
+    const options = { roots: this.roots, readDeclarationsOf: filePath => this.walk.findDeclarationsAt(filePath) };
+    this.publicChangeKindReading = new PublicChangeKindReading(this.kindChange || this.change, { ...options, kindBase: this.kindBase });
+    this.changeKindReadingOfTheReview = this.kindChange ? new PublicChangeKindReading(this.change, options) : this.publicChangeKindReading;
+  }
+
+  markTheMovedMethods() {
+    const movedMethods = this.tree.listEveryAbstraction()
+      .filter(abstraction => changesTheCode(abstraction.changeKind) && this.changeKindReadingOfTheReview.isAMovedMethod(abstraction));
+    const moved = new Set(movedMethods.flatMap(listTheAbstractionAndItsDescendants));
+    for (const abstraction of moved) abstraction.changeKind = CHANGE_KINDS.MOVED;
+    this.decisionSearches = this.decisionSearches.filter(({ abstraction }) => !moved.has(abstraction));
+    this.literalConstants = this.literalConstants.filter(({ abstraction }) => !moved.has(abstraction));
+  }
+
+  giveThePublicChangeKinds() {
+    const visit = (abstraction, parent) => {
+      abstraction.publicChangeKind = this.publicChangeKindReading.readKindOfTheAbstraction(abstraction, parent);
+      for (const child of abstraction.children) visit(child, abstraction);
+    };
+    for (const root of this.tree.roots) visit(root, null);
+  }
+
+  readThePublicChangeKinds() {
+    return this.publicChangeKindReading.buildPublicChangeKinds();
+  }
+
+  listTheFoldersAFileLeft(foldersWithReadings) {
+    return [...new Set(listTheFoldersFilesLeft(this.change.files))]
+      .filter(folder => !foldersWithReadings.has(folder) && this.createdFolders.existsAfterTheChange(folder));
   }
 
   buildImportsOfTheWalkedFiles() {
@@ -324,7 +368,8 @@ export class ExtractStep {
     this.createdSubfoldersByJoinedFolderMap = this.createdFolders.readCreatedSubfoldersByJoinedFolder(foldersWithReadings);
     this.pathEndFoldersReadAlone = this.createdFolders.findPathEndsReadAlone(foldersWithReadings);
     this.openedByTheChange = this.moduleOpenings.collectFoldersOpenedByTheChange();
-    this.moduleFolders = new Set([...modules.keys(), ...this.pathEndFoldersReadAlone, ...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange]);
+    this.foldersAFileLeft = new Set(this.listTheFoldersAFileLeft(foldersWithReadings));
+    this.moduleFolders = new Set([...modules.keys(), ...this.pathEndFoldersReadAlone, ...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange, ...this.foldersAFileLeft]);
   }
 
   addTheModules(changedFolders, modules) {
@@ -338,7 +383,7 @@ export class ExtractStep {
       this.addModule({ ...NO_FILES_OF_ITS_OWN, folder }, systemsByFolderMap);
     }
     const foldersWithAModule = new Set([...modules.keys(), ...this.pathEndFoldersReadAlone]);
-    for (const folder of [...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange]) {
+    for (const folder of [...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange, ...this.foldersAFileLeft]) {
       if (foldersWithAModule.has(folder)) continue;
       foldersWithAModule.add(folder);
       this.addModule({ ...NO_FILES_OF_ITS_OWN, folder }, systemsByFolderMap);
@@ -381,7 +426,7 @@ export class ExtractStep {
 
   readModuleChangeKind(module) {
     if (this.createdFolders.isCreated(module.folder)) return CHANGE_KINDS.CREATED;
-    if (this.createdSubfoldersByJoinedFolderMap.has(module.folder) || this.openedByTheChange.has(module.folder)) return CHANGE_KINDS.BOUNDARY_CHANGED;
+    if (this.createdSubfoldersByJoinedFolderMap.has(module.folder) || this.openedByTheChange.has(module.folder) || this.foldersAFileLeft.has(module.folder)) return CHANGE_KINDS.BOUNDARY_CHANGED;
     return [...module.statuses].some(status => BOUNDARY_MOVING_FILE_STATUS.has(status))
       ? CHANGE_KINDS.BOUNDARY_CHANGED : CHANGE_KINDS.INTERNALS_CHANGED;
   }

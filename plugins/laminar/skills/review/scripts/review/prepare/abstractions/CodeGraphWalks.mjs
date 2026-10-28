@@ -151,6 +151,7 @@ export class CodeGraphWalks {
       entryBoundaries: this.relations.entryBoundaries,
       boundaryPaths: this.boundaryPaths,
       ...createPropertyWhenNotEmpty("codeForms", this.codeForms),
+      ...(this.extractedReview.publicChangeKinds ? { publicChangeKinds: this.extractedReview.publicChangeKinds } : {}),
     };
   }
 

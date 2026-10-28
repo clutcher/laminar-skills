@@ -8,6 +8,7 @@ import { TestCoveredPaths } from "./verdicts/TestCoveredPaths.mjs";
 import { buildReaderReport } from "./reports/ReaderReport.mjs";
 import { buildEvidenceReport } from "./reports/EvidenceReport.mjs";
 import { buildSarifReport } from "./reports/SarifReport.mjs";
+import { ChangeKindsOfTheReport } from "./reports/ChangeKindsOfTheReport.mjs";
 import { formatChangeSummary } from "./sections/ChangeSummary.mjs";
 import { findAcrossApplicationsCounts, formatAcrossApplicationsLine, formatScopeLine, buildScope } from "./sections/ScopeLine.mjs";
 import { EXISTING_CODE } from "./sections/ItemText.mjs";
@@ -72,6 +73,10 @@ export class RenderStep {
     return `**Run** · ${formatTargetLine(this.reviewed)} · ${counts.files || 0} file(s), ${counts.abstractions || 0} abstraction(s) · ${prepared.codeUnderReview || 0} abstraction(s) under review, ${formatSweepWords(sweep)} · findings: ${this.settled.kept.length} kept (${confidence.high} high, ${confidence.moderate} moderate, ${confidence.low} low), ${this.settled.considered.length} to consider (${this.settled.countConsideredInExistingCode()} in ${EXISTING_CODE}), ${this.settled.rejected.length} rejected, ${this.settled.notVerified.length} not verified, ${(this.merged.dropped || []).length} dropped by the line check${formatLinesNotInTheCodeWord(this.merged.counts)}${formatRepairedWord(this.merged.repaired || [])} · run folder: ${resolveAbsolutePath(this.runFolder)}`;
   }
 
+  readTheChangeKinds() {
+    return new ChangeKindsOfTheReport({ publicChangeKinds: this.reviewed.publicChangeKinds, abstractions: this.reviewed.abstractions || [], codeUnderReview: this.prepared.codeUnderReview || [] });
+  }
+
   readIo() {
     return {
       ends: this.prepared.ioEnds || [],
@@ -98,7 +103,7 @@ export class RenderStep {
     const files = {
       "review.md": buildReaderReport({ ...shared, leftOutFiles: this.reviewed.leftOutFiles || [] }),
       "review-evidence.md": buildEvidenceReport({ ...shared, sweep: this.sweep, notAnswered: this.prepared.notAnswered || [], leftOutFiles: this.reviewed.leftOutFiles || [], io: this.readIo() }),
-      "review.sarif": buildSarifReport(this.settled.kept, version, this.scope, this.acrossApplications, this.settled.considered),
+      "review.sarif": buildSarifReport(this.settled.kept, version, this.scope, this.acrossApplications, this.settled.considered, this.readTheChangeKinds()),
     };
     for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(this.runFolder, name), text);
     return {

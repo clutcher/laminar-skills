@@ -80,6 +80,7 @@ export class ExtractOutput {
       abstractions: this.tree.collectExtractedAbstractions(graphAbstractionsOf),
       decisionSearches: this.step.decisionSearches.map(({ abstraction, path: filePath, addedLines }) => ({ abstraction: abstraction.id, path: filePath, addedLines })),
       literalConstants: this.step.literalConstants.map(({ abstraction, constants }) => ({ abstraction: abstraction.id, constants })),
+      publicChangeKinds: this.step.readThePublicChangeKinds().toJSON(),
     };
   }
 }

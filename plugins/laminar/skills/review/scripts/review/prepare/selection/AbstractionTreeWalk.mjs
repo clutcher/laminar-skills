@@ -13,9 +13,11 @@ export const holdsABoundaryFact = abstraction => {
 
 const KINDS_JUDGED_BELOW_THEIR_OWN_SCALE = new Set([CHANGE_KINDS.INTERNALS_CHANGED, CHANGE_KINDS.MOVED]);
 
+const isAMethodWithItsOwnChange = abstraction => abstraction.scale === Scale.METHOD.name && abstraction.changeKind !== CHANGE_KINDS.MOVED;
+
 const schedulesItsOwnScale = abstraction => {
   if (!KINDS_JUDGED_BELOW_THEIR_OWN_SCALE.has(abstraction.changeKind)) return true;
-  return abstraction.scale === Scale.METHOD.name || (abstraction.scale === Scale.MODULE.name && holdsABoundaryFact(abstraction));
+  return isAMethodWithItsOwnChange(abstraction) || (abstraction.scale === Scale.MODULE.name && holdsABoundaryFact(abstraction));
 };
 
 const SCALES_OF_CODE = new Set([Scale.CLASS.name, Scale.METHOD.name, Scale.VARIABLE.name]);

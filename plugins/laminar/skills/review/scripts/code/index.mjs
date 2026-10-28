@@ -46,6 +46,7 @@ export { WALK_DIRECTIONS } from "./graph/chains/Chain.mjs";
 export { ChainWalker, DEFAULT_NAME_MATCHED_TARGETS, findFollowedRelations, isWithinTheNameMatchedLimit } from "./graph/chains/ChainWalker.mjs";
 export { CodeGraph } from "./graph/CodeGraph.mjs";
 export { ReviewedChange } from "./inputs/change/ReviewedChange.mjs";
+export { PUBLIC_CHANGE_KINDS, PublicChangeKinds } from "./inputs/change/PublicChangeKinds.mjs";
 export { FileDeclarations, findNamedPlaces } from "./graph/abstractions/FileDeclarations.mjs";
 export { readDeclaredAbstractions } from "./graph/abstractions/DeclaredAbstractions.mjs";
 export { PLACED_LINE_PATTERN, buildShortenedPlace, compareByPathAndLine, findInnermostHolding, liesInTheTypeOutsideItsMethods, formatPlacedSliceLine, formatPlaceKey, doesSpanHoldLine } from "./graph/abstractions/Place.mjs";

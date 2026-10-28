@@ -15,7 +15,7 @@ import { RunFileStop } from "./files/runFile.mjs";
 
 const SUBCOMMANDS = ["extract", "prepare", "merge", "render"];
 
-const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --diff <patch>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
+const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --diff <patch>] [--kind-base <revision>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
 
 const PREPARE_RETURN_FILE = "prepare-return.json";
 
@@ -38,6 +38,7 @@ function parseArguments(argv) {
     if (name === "--run") parsed.run = argv[++index];
     else if (name === "--repo") parsed.repo = argv[++index];
     else if (name === "--range") parsed.revisions = argv[++index];
+    else if (name === "--kind-base") parsed.kindBase = argv[++index];
     else if (name === "--diff") parsed.diff = argv[++index];
     else if (name === "--findings") parsed.findings.push(...splitList(argv[++index]));
     else if (name === "--verdicts") parsed.verdicts.push(...splitList(argv[++index]));
@@ -63,6 +64,11 @@ function runOrStopOnAWorktreeStop(run) {
   }
 }
 
+const buildTheKindRevisions = (kindBase, revisions) => {
+  const head = findHeadOfRevisions(revisions);
+  return head ? `${kindBase}..${head}` : kindBase;
+};
+
 function readChangeOfRevisions(repository, parsed) {
   const head = findHeadOfRevisions(parsed.revisions);
   const headTree = head ? runOrStopOnAWorktreeStop(() => {
@@ -70,17 +76,24 @@ function readChangeOfRevisions(repository, parsed) {
     sweepUnusedReviewWorktreesBeside(worktree);
     return worktree.prepareAtTheHead();
   }) : null;
-  return ChangeReader.createFromRevisions(repository, parsed.revisions, parsed.files, parsed.exclude, headTree);
+  const change = ChangeReader.createFromRevisions(repository, parsed.revisions, parsed.files, parsed.exclude, headTree);
+  const kindChange = parsed.kindBase ? ChangeReader.createFromRevisions(repository, buildTheKindRevisions(parsed.kindBase, parsed.revisions), parsed.files, parsed.exclude, headTree) : null;
+  return { change, kindChange };
+}
+
+function readChangeOfOneSide(parsed, repository) {
+  if (parsed.kindBase) { console.error("extract: --kind-base needs --range"); process.exit(2); }
+  if (parsed.diff) return ChangeReader.createFromPatch(parsed.diff, repository, parsed.exclude);
+  if (parsed.files.length) return ChangeReader.createFromNamedFiles(repository, parsed.files, parsed.exclude);
+  console.error(USAGE);
+  return process.exit(2);
 }
 
 function readChange(parsed) {
   const repository = parsed.repo ? resolveAbsolutePath(parsed.repo) : null;
-  if (parsed.diff) return ChangeReader.createFromPatch(parsed.diff, repository, parsed.exclude);
-  if (!repository) { console.error(USAGE); process.exit(2); }
-  if (parsed.revisions) return readChangeOfRevisions(repository, parsed);
-  if (parsed.files.length) return ChangeReader.createFromNamedFiles(repository, parsed.files, parsed.exclude);
-  console.error(USAGE);
-  return process.exit(2);
+  if (!repository && !parsed.diff) { console.error(USAGE); process.exit(2); }
+  if (parsed.revisions && !parsed.diff) return readChangeOfRevisions(repository, parsed);
+  return { change: readChangeOfOneSide(parsed, repository), kindChange: null };
 }
 
 function printTheExtractSummary(runFolder, written, indexUse, filesWithNoLanguageDriver) {
@@ -92,8 +105,8 @@ function printTheExtractSummary(runFolder, written, indexUse, filesWithNoLanguag
 }
 
 function extract(parsed) {
-  const change = readChange(parsed);
-  const step = new ExtractStep(change);
+  const { change, kindChange } = readChange(parsed);
+  const step = new ExtractStep(change, { kindBase: parsed.kindBase || null, kindChange });
   const tree = step.run();
   const written = new ExtractOutput(step, tree).writeAndSummarize(parsed.run);
   printTheExtractSummary(parsed.run, written, step.cachedSourceIndex.readIndexUse(), step.listFilesWithNoLanguageDriver());
