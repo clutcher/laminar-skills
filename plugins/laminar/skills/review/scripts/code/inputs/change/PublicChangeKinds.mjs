@@ -55,6 +55,10 @@ export class PublicChangeKinds {
     return found ? found.kind : PUBLIC_CHANGE_KINDS.UNCHANGED;
   }
 
+  namesAKindBase() {
+    return this.kindBase !== null;
+  }
+
   holdsAnyKind() {
     return this.files.length > 0 || this.folders.length > 0;
   }

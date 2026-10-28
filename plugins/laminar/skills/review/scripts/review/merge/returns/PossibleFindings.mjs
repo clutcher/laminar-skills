@@ -32,7 +32,14 @@ const listEvidenceLines = named => [].concat(named.lines || named.line || []).ma
 const doesEvidenceMeetTheChange = (finding, changedLines) => (finding.evidence || [])
   .some(named => named.file && changedLines.meetsTheChange(stripLeadingDotSlash(named.file), listEvidenceLines(named)));
 
-const isCreatedInTheChange = abstraction => abstraction.changeKind === CHANGE_KINDS.CREATED;
+const readTheFirstLine = abstraction => (abstraction.lines || {}).from || 0;
+
+const isCreatedSinceTheKindBase = (abstraction, publicChangeKinds) => publicChangeKinds
+  .readKindAtTheScale(abstraction.scale, abstraction.path, readTheFirstLine(abstraction)) === PUBLIC_CHANGE_KINDS.CREATED;
+
+const isCreatedInTheChange = (abstraction, publicChangeKinds) => publicChangeKinds.namesAKindBase()
+  ? isCreatedSinceTheKindBase(abstraction, publicChangeKinds)
+  : abstraction.changeKind === CHANGE_KINDS.CREATED;
 
 const doesTheListedFileMeetTheChange = (module, file, changedLines) => changedLines.touches(file)
   || changedLines.touches(`${module.path}/${file}`)
@@ -48,6 +55,8 @@ const indexTheAbstractionsJudged = codeUnderReview => {
 
 const isMarkedExistingCodeByTheJudge = finding => finding.inChange === false;
 
+const isMarkedInTheChangeByTheJudge = finding => finding.inChange === true;
+
 const KINDS_THAT_PUT_A_MODULE_FINDING_IN_THE_CHANGE = new Set([PUBLIC_CHANGE_KINDS.MODIFIED, PUBLIC_CHANGE_KINDS.CREATED]);
 
 const putsAModuleFindingInTheChange = publicChangeKind => KINDS_THAT_PUT_A_MODULE_FINDING_IN_THE_CHANGE.has(publicChangeKind);
@@ -58,15 +67,15 @@ const doesTheModuleFindingMeetTheChange = (finding, module, publicChangeKinds) =
 const isAModule = abstraction => Boolean(abstraction) && abstraction.scale === Scale.MODULE.name;
 
 const isTheModuleFindingInTheChange = (finding, module, changedLines, publicChangeKinds) => {
-  if (finding.inChange === true) return true;
+  if (isMarkedInTheChangeByTheJudge(finding)) return true;
   if (publicChangeKinds.holdsAnyKind()) return doesTheModuleFindingMeetTheChange(finding, module, publicChangeKinds);
-  if (isCreatedInTheChange(module) && !isMarkedExistingCodeByTheJudge(finding)) return true;
+  if (isCreatedInTheChange(module, publicChangeKinds) && !isMarkedExistingCodeByTheJudge(finding)) return true;
   return doesTheFileListMeetTheChange(finding, module, changedLines);
 };
 
-const isTheFindingInTheChange = (finding, abstraction, changedLines) => {
-  if (finding.inChange === true) return true;
-  if (abstraction && isCreatedInTheChange(abstraction) && !isMarkedExistingCodeByTheJudge(finding)) return true;
+const isTheFindingInTheChange = (finding, abstraction, changedLines, publicChangeKinds) => {
+  if (isMarkedInTheChangeByTheJudge(finding)) return true;
+  if (abstraction && isCreatedInTheChange(abstraction, publicChangeKinds) && !isMarkedExistingCodeByTheJudge(finding)) return true;
   return doesEvidenceMeetTheChange(finding, changedLines);
 };
 
@@ -74,11 +83,14 @@ const NO_PUBLIC_CHANGE_KINDS = new PublicChangeKinds();
 
 const markTheFinding = (finding, abstraction, changedLines, publicChangeKinds) => {
   if (isAModule(abstraction)) return { ...finding, inChange: isTheModuleFindingInTheChange(finding, abstraction, changedLines, publicChangeKinds) };
-  return changedLines.holdsAnyChange() ? { ...finding, inChange: isTheFindingInTheChange(finding, abstraction, changedLines) } : finding;
+  if (changedLines.holdsAnyChange()) return { ...finding, inChange: isTheFindingInTheChange(finding, abstraction, changedLines, publicChangeKinds) };
+  return publicChangeKinds.namesAKindBase() ? { ...finding, inChange: isMarkedInTheChangeByTheJudge(finding) } : finding;
 };
 
+const canMarkAnyFinding = (changedLines, publicChangeKinds) => changedLines.holdsAnyChange() || publicChangeKinds.holdsAnyKind() || publicChangeKinds.namesAKindBase();
+
 export const markTheFindingsInTheChange = (findings, changedLines, codeUnderReview = [], publicChangeKinds = NO_PUBLIC_CHANGE_KINDS) => {
-  if (!changedLines.holdsAnyChange() && !publicChangeKinds.holdsAnyKind()) return findings;
+  if (!canMarkAnyFinding(changedLines, publicChangeKinds)) return findings;
   const findTheAbstractionJudged = indexTheAbstractionsJudged(codeUnderReview);
   return findings.map(finding => markTheFinding(finding, findTheAbstractionJudged(finding), changedLines, publicChangeKinds));
 };
