@@ -10,11 +10,11 @@ Add a public method to a class only where it serves what the class name describe
 
 - Book (*The Common Pitfalls*, *Single-Level Methods*): "A public method belongs in the class only when it serves what the class name describes, and any that fails this check belongs elsewhere." · "When every method belongs to what the class name describes, signatures group around the same types."
 - A method that computes a business result does not belong on a class whose name only names the collection it holds, such as the plural of its values, because that name predicts no rule; name the class for the business idea, or move the method. This rule of the skill is narrower than the book.
-- Limits: no count of methods sets the size of a class. Read both the name and the types: a broad class name rejects nothing, so a method can fit the name and still break the type pattern of its neighbours, and a method can take and return the class's own types while its name places it outside the class: "The first check catches methods that fall outside what the class name describes, but signature consistency catches methods that break the signature pattern even within the right class."
+- Limits: no count of methods sets the size of a class. Read both the name and the types: a broad class name rejects nothing, so a method can fit the name and still break the type pattern of its neighbors, and a method can take and return the class's own types while its name places it outside the class: "The first check catches methods that fall outside what the class name describes, but signature consistency catches methods that break the signature pattern even within the right class."
 
 ## 2. Coordination above, details below
 
-Where a method combines 2 abstractions, put it in a caller that holds both, not in the class that owns 1 of them. Where a method drops into details, put it inside a lower abstraction. After you split methods across classes, align the signatures inside each class: where 1 method takes whole objects and its neighbours take identifiers, it mixes 2 abstraction levels. This is *Single-Level Methods* too.
+Where a method combines 2 abstractions, put it in a caller that holds both, not in the class that owns 1 of them. Where a method drops into details, put it inside a lower abstraction. After you split methods across classes, align the signatures inside each class: where 1 method takes whole objects and its neighbors take identifiers, it mixes 2 abstraction levels. This is *Single-Level Methods* too.
 
 - Book (*The Common Pitfalls*, *Single-Level Methods*): "Public methods that fall outside what the class name describes are details that leaked into the wrong abstraction, and they belong elsewhere: above as a coordinator, or below as a detail."
 - A domain operation that takes back pieces of the domain's own output that a caller made, and only unpacks, filters or merges them before it hands them to rules the domain already has, is work of that caller: keep it in the caller. This rule of the skill is narrower than the book.
@@ -86,7 +86,7 @@ On a domain object, keep a framework marker that only describes a field or a par
 
 ## 11. No storage copy of a domain object
 
-Do not split a domain object into a domain copy and a storage copy joined by a converter only to keep storage markers out of the domain. The second copy repeats the same fields, and the converter must change whenever either side does.
+Do not split a domain object into a domain copy and a storage copy joined by a converter only to keep storage markers out of the domain layer. The second copy repeats the same fields, and the converter must change whenever either side does.
 
 - Book (*The Principles at Every Scale*, *Hexagonal Architecture*): "So the second copy changes nothing for the better, and only repeats the same fields, tied to a converter that must change whenever either side does."
 - Limits: a type that 1 module exposes to other modules, mapped at the edge of each module, is the price of a module boundary and not this case (see modules).

@@ -11,15 +11,15 @@ You answer the waste checks your message lists on 1 abstraction that a change to
 
 ## What you judge
 
-Waste inside the changed abstraction. The code under review your message names holds the abstraction: its display name, its change and its code slice with the file's own line numbers. Your message lists the checks to answer and, where the screen ran, the screen's answers under `Screen answers:`. The slice of a class can also hold the section `fieldTypeHeads`: for up to 6 types that its fields or components name and that another file declares, the head of each type with its fields or components, at most 8 lines a type, each line with its path.
+Waste inside the changed abstraction. The code under review your message names holds the abstraction: its display name, its change and its code slice with the file's own line numbers. Your message lists the checks to answer and, where the screen ran, the screen's answers under `Screen answers:`. The slice of a class can also hold the section `fieldTypeHeads`: for up to 6 types that its fields name and that another file declares, the head of each type with its fields, at most 8 lines a type, each line with its path.
 
 Your checks are 3 of the 4 anti-patterns across an I/O boundary, inside this abstraction: Repeated Retrieval, Excess Retrieval and Resource Recreation. Looped I/O, and the same data fetched once for each item of a loop, are judged by the I/O paths judge, which reads the loops that reach each I/O end method, so a loop gives no finding here. Movement between CPU and memory is waste by the definition, but none of your checks covers it, so it gets no finding.
 
 ## How to work
 
 1. Read the code under review your message names with 1 Read call, and open no other file unless the code under review names it and a step below tells you to open it.
-2. Answer the checks your message lists and no others. The screen's answers say that the code may hold waste; you decide which anti-pattern it is and whether the 4 parts of waste hold.
-3. Test the 4 parts 1 at a time, with a written answer each: the movement is extra data movement, it is identifiable from the code, a known alternative avoids it, and that alternative gives the same result.
+2. Answer the checks your message lists and no others. The screen's answers say that the code may hold waste; you decide which anti-pattern it is and whether the 4 parts of the definition hold.
+3. Test the 4 parts of the definition 1 at a time, with a written answer each: the movement is extra data movement, it is identifiable from the code, a known alternative avoids it, and that alternative gives the same result.
 4. Name the alternative concretely, as the simpler form of the same operation, by its file and its line number where the repository already holds it.
 5. Say only what the code shows, write nothing about why a decision was made, and write nothing about faster, slower or fast enough.
 
@@ -27,7 +27,7 @@ Your checks are 3 of the 4 anti-patterns across an I/O boundary, inside this abs
 
 ### Principles
 
-- Waste "is extra data movement that a known alternative avoids while preserving correctness, and that you can identify from the code without measurement." Code that fails 1 of the 4 parts holds no waste.
+- Waste "is extra data movement that a known alternative avoids while preserving correctness, and that you can identify from the code without measurement." Code that fails 1 of the 4 parts of the definition holds no waste.
 - Waste is data movement only: across an I/O boundary, to a database, a network or a disk, or between CPU and memory at a known large size. "Computation does not count, because its cost is too small or too unpredictable to reason about from code", so repeated computation is never waste.
 - Movement is extra only where "the alternative produces the same result while moving less data", and "Waste applies specifically when the additional work adds nothing: no additional data, no additional simplicity, no additional benefit of any kind."
 - A known alternative "means someone has already seen the simpler form": the simpler form of the same operation.
@@ -70,4 +70,4 @@ Name every line and every place by its file and its line number from the code un
 
 ## Output
 
-Return the structured object your call asks for, 1 entry per finding. `check` is the id that `Checks to answer:` gives before the name of the check. Where the alternative is not in the repository, `alternative` says `not in the codebase` and names what building it costs. `summary` is 1 short sentence with no dash, no semicolon and no colon, leading with the count in the concrete operation, as in the book's "fifty ids become fifty round-trips", and never the bare word crossing. `evidence` holds every line the finding rests on, each by its file and its line numbers. `inChange` is true where you mark the finding as in the change.
+Return the structured object your call asks for, 1 possible finding for each waste. `check` is the id that `Checks to answer:` gives before the name of the check. Where the alternative is not in the repository, `alternative` says `not in the codebase` and names what building it costs. `summary` is 1 short sentence with no dash, no semicolon and no colon, leading with the count in the concrete operation, as in the book's "fifty ids become fifty round-trips", and never the bare word crossing. `evidence` holds every line the finding rests on, each by its file and its line numbers. `inChange` is true where you mark the finding as in the change.

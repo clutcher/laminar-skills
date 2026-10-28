@@ -7,6 +7,6 @@ export const SHAPE_FOLDER_KINDS = Object.freeze({
   IN_CODE: "an in folder",
   OUT_CODE: "an out folder",
   IN_OUT_CODE: "the in and out folders",
-  HIDDEN: "the hidden part of the app",
+  HIDDEN: "hidden behind the boundary",
   OTHER: "outside the shape",
 });

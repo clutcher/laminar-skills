@@ -20,8 +20,8 @@ const buildExposureFindingTexts = ({ type, opening, module, users }) => {
   const moduleName = formatInlineCode(readFileName(module));
   const typeName = formatInlineCode(type.name);
   return {
-    summary: `${typeName} sits in the hidden part of the app of ${moduleName}, yet a declaration opens it to other modules`,
-    prediction: `The hidden part of the app of ${moduleName} holds classes the module keeps for itself.`,
+    summary: `${typeName} is hidden behind the boundary of ${moduleName}, yet a declaration opens it to other modules`,
+    prediction: `The classes hidden behind the boundary of ${moduleName} are the ones the module keeps for itself.`,
     found: `${formatInlineCode(readFileName(opening.path))} opens ${typeName} to other modules, and ${users.length ? describeTheUsers(users) : "no other module uses it yet"}.`,
     boundary: opening.text,
   };

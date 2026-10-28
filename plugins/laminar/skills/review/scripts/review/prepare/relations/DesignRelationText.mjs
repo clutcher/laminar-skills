@@ -102,15 +102,15 @@ const formatGroupName = (folders, level) => folders.map(folder => readRelativeFo
 
 const formatCoreLine = core => `Core: ${core.folders.join(" + ")} · imported by ${core.importedBy.map(group => formatGroupName(group, core.level)).join(", ")} · imports none of them · no calls outside the process`;
 
-const formatImplementedByPhrase = neighbour => (neighbour.implementation ? ` · implemented by ${quoteName(neighbour.implementation.name)} · ${neighbour.implementation.path}:${formatSpan(neighbour.implementation)}` : "");
+const formatImplementedByPhrase = operation => (operation.implementation ? ` · implemented by ${quoteName(operation.implementation.name)} · ${operation.implementation.path}:${formatSpan(operation.implementation)}` : "");
 
 const formatOwnOutputLines = coreOperation => (coreOperation.ownOutput.length
   ? coreOperation.ownOutput.map(taken => `Own output taken back: ${quoteName(taken.operation)} takes ${quoteName(taken.parameterType)}, the result of ${quoteName(taken.resultOf)}`)
   : ["Own output taken back: none"]);
 
-const formatNeighbourBlock = neighbour => [
-  `Neighbour: ${quoteName(neighbour.name)} · ${neighbour.path}:${formatSpan(neighbour)}${formatImplementedByPhrase(neighbour)}`,
-  fenceLines([...neighbour.interfaceLines, ...neighbour.implementationLines]),
+const formatNeighborBlock = neighbor => [
+  `Neighbor: ${quoteName(neighbor.name)} · ${neighbor.path}:${formatSpan(neighbor)}${formatImplementedByPhrase(neighbor)}`,
+  fenceLines([...neighbor.interfaceLines, ...neighbor.implementationLines]),
 ].join("\n");
 
 const formatCoreOperationBlocks = coreOperation => [
@@ -120,8 +120,8 @@ const formatCoreOperationBlocks = coreOperation => [
     ...formatOwnOutputLines(coreOperation),
     fenceLines([...coreOperation.interfaceLines, ...coreOperation.implementationLines]),
   ].join("\n"),
-  `Neighbours: ${coreOperation.neighbours.length} of ${coreOperation.neighbourCount}`,
-  ...coreOperation.neighbours.map(formatNeighbourBlock),
+  `Neighbors: ${coreOperation.neighbours.length} of ${coreOperation.neighbourCount}`,
+  ...coreOperation.neighbours.map(formatNeighborBlock),
 ];
 
 const formatInOutOperationBlocks = inOutOperation => [
