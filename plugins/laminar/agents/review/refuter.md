@@ -1,6 +1,6 @@
 ---
 name: review-refuter
-description: Internal to the Laminar review workflow: tries to show 1 possible finding is wrong.
+description: "Internal to the Laminar review workflow: tries to show 1 possible finding is wrong."
 model: sonnet
 effort: medium
 omitClaudeMd: true

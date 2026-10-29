@@ -1,6 +1,6 @@
 ---
 name: review-judge-correctness-test-plan
-description: Internal to the Laminar review workflow: writes the test plan of 1 application.
+description: "Internal to the Laminar review workflow: writes the test plan of 1 application."
 model: sonnet
 effort: medium
 omitClaudeMd: true

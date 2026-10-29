@@ -1,6 +1,6 @@
 ---
 name: review-judge-correctness-validate-at-the-boundary
-description: Internal to the Laminar review workflow: judges 1 boundary path against Validate at the Boundary.
+description: "Internal to the Laminar review workflow: judges 1 boundary path against Validate at the Boundary."
 model: sonnet
 effort: low
 omitClaudeMd: true

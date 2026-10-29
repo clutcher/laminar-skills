@@ -1,6 +1,6 @@
 # The scale of a finding
 
-Every finding carries 1 scale, in the words of `laminar:review`: `application`, `module`, `class`, `method` or `variable`. The review also knows `system`, the root above every application of the repository. A convention governs code inside 1 application, so no finding of this check carries `system`, and `scales: system` keeps no finding.
+Every finding carries 1 scale, in the words of the skill `review` of the plugin laminar: `application`, `module`, `class`, `method` or `variable`. The review also knows `system`, the root above every application of the repository. A convention governs code inside 1 application, so no finding of this check carries `system`, and `scales: system` keeps no finding.
 
 The changed line decides the scale, by the smallest piece that the finding asks the author to change:
 

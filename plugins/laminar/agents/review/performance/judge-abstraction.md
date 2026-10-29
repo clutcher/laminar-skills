@@ -1,6 +1,6 @@
 ---
 name: review-judge-performance-abstraction
-description: Internal to the Laminar review workflow: judges 1 abstraction for waste inside it.
+description: "Internal to the Laminar review workflow: judges 1 abstraction for waste inside it."
 model: sonnet
 effort: low
 omitClaudeMd: true

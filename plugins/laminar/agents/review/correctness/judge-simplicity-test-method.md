@@ -1,6 +1,6 @@
 ---
 name: review-judge-correctness-simplicity-test-method
-description: Internal to the Laminar review workflow: judges 1 test method.
+description: "Internal to the Laminar review workflow: judges 1 test method."
 model: sonnet
 effort: low
 omitClaudeMd: true

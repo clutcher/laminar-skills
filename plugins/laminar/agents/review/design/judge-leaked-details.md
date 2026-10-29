@@ -1,6 +1,6 @@
 ---
 name: review-judge-design-leaked-details
-description: Internal to the Laminar review workflow: judges 1 design relation for leaked details.
+description: "Internal to the Laminar review workflow: judges 1 design relation for leaked details."
 model: sonnet
 effort: low
 omitClaudeMd: true

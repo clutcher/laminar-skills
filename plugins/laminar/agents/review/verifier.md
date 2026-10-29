@@ -1,6 +1,6 @@
 ---
 name: review-verifier
-description: Internal to the Laminar review workflow: rules on the refuted possible findings of 1 item.
+description: "Internal to the Laminar review workflow: rules on the refuted possible findings of 1 item."
 model: opus
 effort: medium
 omitClaudeMd: true

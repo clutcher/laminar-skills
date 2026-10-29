@@ -1,6 +1,6 @@
 ---
 name: review-screen-io
-description: Internal to the Laminar review workflow: writes the I/O rules of 1 review.
+description: "Internal to the Laminar review workflow: writes the I/O rules of 1 review."
 model: sonnet
 effort: low
 omitClaudeMd: true

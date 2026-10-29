@@ -1,6 +1,6 @@
 ---
 name: review-judge-design-over-extraction
-description: Internal to the Laminar review workflow: judges 1 group of chains of called methods for over-extraction.
+description: "Internal to the Laminar review workflow: judges 1 group of chains of called methods for over-extraction."
 model: sonnet
 effort: low
 omitClaudeMd: true

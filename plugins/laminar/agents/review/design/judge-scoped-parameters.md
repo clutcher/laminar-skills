@@ -1,6 +1,6 @@
 ---
 name: review-judge-design-scoped-parameters
-description: Internal to the Laminar review workflow: judges 1 parameter type for scoped parameters.
+description: "Internal to the Laminar review workflow: judges 1 parameter type for scoped parameters."
 model: sonnet
 effort: low
 omitClaudeMd: true

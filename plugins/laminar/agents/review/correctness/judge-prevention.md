@@ -1,6 +1,6 @@
 ---
 name: review-judge-correctness-prevention
-description: Internal to the Laminar review workflow: judges 1 abstraction against the decisions that prevent errors.
+description: "Internal to the Laminar review workflow: judges 1 abstraction against the decisions that prevent errors."
 model: sonnet
 effort: low
 omitClaudeMd: true

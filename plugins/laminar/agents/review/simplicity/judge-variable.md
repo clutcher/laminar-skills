@@ -1,6 +1,6 @@
 ---
 name: review-judge-simplicity-variable
-description: Internal to the Laminar review workflow: judges 1 named value for simplicity.
+description: "Internal to the Laminar review workflow: judges 1 named value for simplicity."
 model: sonnet
 effort: medium
 omitClaudeMd: true

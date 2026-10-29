@@ -1,6 +1,6 @@
 ---
 name: review-screen-presence
-description: Internal to the Laminar review workflow: answers the presence questions on 1 batch of abstractions.
+description: "Internal to the Laminar review workflow: answers the presence questions on 1 batch of abstractions."
 model: sonnet
 effort: low
 omitClaudeMd: true

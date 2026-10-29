@@ -1,6 +1,6 @@
 ---
 name: review-judge-design-entry-boundary
-description: Internal to the Laminar review workflow: judges the entry boundaries of 1 schema type or 1 controller.
+description: "Internal to the Laminar review workflow: judges the entry boundaries of 1 schema type or 1 controller."
 model: sonnet
 effort: low
 omitClaudeMd: true

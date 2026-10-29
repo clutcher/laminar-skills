@@ -1,6 +1,6 @@
 ---
 name: review-judge-simplicity-decision
-description: Internal to the Laminar review workflow: judges 1 abstraction for a decision that also lives in another place.
+description: "Internal to the Laminar review workflow: judges 1 abstraction for a decision that also lives in another place."
 model: sonnet
 effort: low
 omitClaudeMd: true

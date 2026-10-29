@@ -1,6 +1,6 @@
 ---
 name: review-judge-performance-io-paths
-description: Internal to the Laminar review workflow: judges the loops that reach 1 I/O end method.
+description: "Internal to the Laminar review workflow: judges the loops that reach 1 I/O end method."
 model: sonnet
 effort: low
 omitClaudeMd: true

@@ -1,6 +1,6 @@
 ---
 name: review-judge-simplicity-class
-description: Internal to the Laminar review workflow: judges 1 class for simplicity.
+description: "Internal to the Laminar review workflow: judges 1 class for simplicity."
 model: sonnet
 effort: high
 omitClaudeMd: true

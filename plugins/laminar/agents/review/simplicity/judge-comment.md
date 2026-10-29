@@ -1,6 +1,6 @@
 ---
 name: review-judge-simplicity-comment
-description: Internal to the Laminar review workflow: judges the comments of 1 abstraction.
+description: "Internal to the Laminar review workflow: judges the comments of 1 abstraction."
 model: sonnet
 effort: low
 omitClaudeMd: true

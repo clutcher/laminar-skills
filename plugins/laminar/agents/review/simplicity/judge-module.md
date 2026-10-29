@@ -1,6 +1,6 @@
 ---
 name: review-judge-simplicity-module
-description: Internal to the Laminar review workflow: judges 1 module for simplicity.
+description: "Internal to the Laminar review workflow: judges 1 module for simplicity."
 model: sonnet
 effort: low
 omitClaudeMd: true

@@ -1,6 +1,6 @@
 ---
 name: review-judge-design-missing-boundary
-description: Internal to the Laminar review workflow: judges the member groups of 1 class for a missing boundary.
+description: "Internal to the Laminar review workflow: judges the member groups of 1 class for a missing boundary."
 model: sonnet
 effort: low
 omitClaudeMd: true

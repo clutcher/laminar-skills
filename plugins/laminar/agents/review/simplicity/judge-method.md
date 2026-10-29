@@ -1,6 +1,6 @@
 ---
 name: review-judge-simplicity-method
-description: Internal to the Laminar review workflow: judges 1 method for simplicity.
+description: "Internal to the Laminar review workflow: judges 1 method for simplicity."
 model: sonnet
 effort: low
 omitClaudeMd: true
