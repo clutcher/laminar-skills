@@ -58,6 +58,25 @@ Each finding names the abstraction, the check, what the review found, a short fi
 /plugin install laminar@laminar-skills
 ```
 
+## Install in GitHub Copilot CLI
+
+GitHub Copilot CLI installs the plugin from the same marketplace, `clutcher/laminar-skills`:
+
+```
+copilot plugin marketplace add clutcher/laminar-skills
+copilot plugin install laminar@laminar-skills
+```
+
+A project can instead declare the marketplace in its `.claude/settings.json` under `extraKnownMarketplaces`, and GitHub Copilot CLI reads it there.
+
+To update the plugin, run:
+
+```
+copilot plugin update laminar@laminar-skills
+```
+
+GitHub Copilot CLI loads the coding style skill and the convention check under their names without the prefix of the plugin, `code-style` and `check-conventions`. The review, its agents and the hooks of the plugin run in Claude Code only. This was checked on GitHub Copilot CLI 1.0.105.
+
 ## Use
 
 Ask Claude Code for a review of a pull request, a branch, a commit, files, a folder or a module, for example `Review my branch against main` or `Run a Laminar Code Review of src/orders`. You can also ask whether code is simple, well named, well structured, well bounded or well tested.
