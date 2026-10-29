@@ -59,10 +59,10 @@ export const DIRECTION_BY_CHECK_MAP = Object.freeze({
   CP6: createDirection(PRINCIPLES.ENCAPSULATION, "Guard Clauses", "validate once where data enters the application, or use a type that cannot hold bad values", "check once at the edge, then trust what flows past it"),
   CP7: createDirection(PRINCIPLES.ENCAPSULATION, "Fail Fast", "stop and signal the failure", "This means the code stops at the first sign of a bad state, rather than running past it."),
   CD2: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "assert on outputs and stored state, not on mocks or internal calls", "So a test provides its inputs, checks the outputs, and ignores whatever happens inside the code."),
-  CD4: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "add a test that runs from the entry point to the outside system, or extend one", "These tests exercise the main paths from entry boundary to exit boundary, verifying that the full processing chain produces correct results."),
-  CD5: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "add unit tests that cover every branch of the logic, or extend the unit tests it has", "Once a class gets unit tests, the unit suite covers all its branches, not only the ones integration misses.", "Unit tests belong where combinatorial logic demands them, not as a default practice applied to every function or class"),
+  CD4: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "add a test that runs from the entry boundary to the outside system, or extend one", "These tests exercise the main paths from entry boundary to exit boundary, verifying that the full processing chain produces correct results."),
+  CD5: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "add unit tests for every branch of the logic, or extend the unit tests of that logic", "Once a class gets unit tests, the unit suite covers all its branches, not only the ones integration misses.", "Unit tests belong where combinatorial logic demands them, not as a default practice applied to every function or class"),
   CD6: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "remove the unit test, or keep it only for logic whose branches multiply the outcomes", "Unit tests belong where combinatorial logic demands them, not as a default practice applied to every function or class"),
-  CD7: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "extend the test to run from the entry point to the outside system, or add one", "Only tests that span the full path verify the outcomes users care about, which makes such tests the natural default."),
+  CD7: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "extend the test to run from the entry boundary to the outside system, or add one", "Only tests that span the full path verify the outcomes users care about, which makes such tests the natural default."),
   P1: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "replace the call in the loop with one batch call, or load all data before the loop", "Batch operations instead of issuing them in loops", OWNS_THE_IO),
   P2: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "load the data once and pass it to each step, or keep it until this operation ends", "Fetch shared data once per operation: load it at the start and pass the result to every step that needs it, instead of refetching independently from each step.", OWNS_THE_IO),
   P3: createDirection(PRINCIPLES.ENCAPSULATION, "Avoid Waste", "select only the fields or rows the operation uses", "Request only the data the operation needs", OWNS_THE_IO),
@@ -82,10 +82,10 @@ export const DIRECTION_BY_JUDGE_TYPE_MAP = Object.freeze({
     D3: createDirection(PRINCIPLES.ENCAPSULATION, "Have a Single Owner", "let the serving application decide the business rule and return the answer for the caller to read", "one abstraction owns the decision, and every caller reaches it through that boundary"),
   }),
   [JUDGE_TYPE_BY_SCALE_MAP[Scale.CLASS.name]]: Object.freeze({
-    S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the methods and fields that do not fit into a new class, or rename the class", "Methods that use a completely different set of objects to do their work belong behind different boundaries."),
+    S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the methods and fields of another part into a new class, or rename the class", "Methods that use a completely different set of objects to do their work belong behind different boundaries."),
   }),
   [JUDGE_TYPE_BY_SCALE_MAP[Scale.MODULE.name]]: Object.freeze({
-    S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the file into a subfolder named for its purpose, or into the folder it fits", "Each file at the root is a detail of one of these parts, so every class belongs inside the module named after its part."),
+    S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the file into a subfolder named for its part, or into the folder it fits", "Each file at the root is a detail of one of these parts, so every class belongs inside the module named after its part."),
   }),
 });
 
@@ -94,13 +94,13 @@ export const DIRECTION_BY_DESIGN_RELATION_MAP = Object.freeze({
     D3: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "move this method onto the value type", "belong on the new class and tend to move there"),
   }),
   [DESIGN_RELATION_KINDS.IN_OUT_OPERATION]: Object.freeze({
-    D3: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the business rule into the domain, so this method only translates", "the domain holds only business logic with no infrastructure to keep in mind, and the classes in `in/` and `out/` only translate, never decide"),
+    D3: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the business rule into the domain layer, so this method only translates", "the domain holds only business logic with no infrastructure to keep in mind, and the classes in `in/` and `out/` only translate, never decide"),
   }),
 });
 
 export const DIRECTION_BY_SCALE_MAP = Object.freeze({
   [Scale.APPLICATION.name]: Object.freeze({
-    CD4: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "declare a test runner, then add a test from the entry point to the outside system", "Integration tests are the starting point for every application, regardless of what kind of users it serves."),
+    CD4: createDirection(PRINCIPLES.NONE, NO_PRACTICE, "declare a test runner, then add a test from the entry boundary to the outside system", "Integration tests are the starting point for every application, regardless of what kind of users it serves."),
   }),
 });
 
