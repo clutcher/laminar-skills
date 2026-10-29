@@ -58,6 +58,12 @@ Each finding names the abstraction, the check, what the review found, a short fi
 /plugin install laminar@laminar-skills
 ```
 
+To update the plugin, run:
+
+```
+claude plugin update laminar@laminar-skills
+```
+
 ## Install in GitHub Copilot CLI
 
 GitHub Copilot CLI installs the plugin from the same marketplace, `clutcher/laminar-skills`:
@@ -67,7 +73,7 @@ copilot plugin marketplace add clutcher/laminar-skills
 copilot plugin install laminar@laminar-skills
 ```
 
-A project can instead declare the marketplace in its `.claude/settings.json` under `extraKnownMarketplaces`, and GitHub Copilot CLI reads it there.
+A project can instead declare the marketplace in its `.claude/settings.json` under `extraKnownMarketplaces`, and enable `laminar@laminar-skills` under `enabledPlugins` of the same file.
 
 To update the plugin, run:
 
@@ -75,7 +81,7 @@ To update the plugin, run:
 copilot plugin update laminar@laminar-skills
 ```
 
-GitHub Copilot CLI loads the coding style skill and the convention check under their names without the prefix of the plugin, `code-style` and `check-conventions`. The review, its agents and the hooks of the plugin run in Claude Code only. This was checked on GitHub Copilot CLI 1.0.105.
+GitHub Copilot CLI loads the 3 skills under their names without the prefix of the plugin, `code-style`, `check-conventions` and `review`, but only 2 of them, `code-style` and `check-conventions`, run there. The review needs the Workflow tool and the agents of the plugin, so the review, its agents and the hooks of the plugin run in Claude Code only. This was checked on GitHub Copilot CLI 1.0.105.
 
 ## Use
 
@@ -135,7 +141,7 @@ Against a repository the review reads callers, folders, tests and the build conf
 
 ## Coding style
 
-The plugin also holds `laminar:code-style`, the same book's design directions for code that is written or changed: a new feature, a bug fix, a pull request comment or the fix of a review finding. Each design direction gives its reason, the cognitive failure it prevents or its correctness or performance reason, so the code an agent writes is code the review accepts. It loads when Claude Code writes code, and you can ask for it by name. It keeps a change to what was asked: it moves an existing abstraction only where the new code needs it, as its own step with no change of behavior, asks before a move that other modules or tests depend on, and fixes a small problem only inside a method the change already edits.
+The plugin also holds `laminar:code-style` (`code-style` in GitHub Copilot CLI), the same book's design directions for code that is written or changed: a new feature, a bug fix, a pull request comment or the fix of a review finding. Each design direction gives its reason, the cognitive failure it prevents or its correctness or performance reason, so the code an agent writes is code the review accepts. It loads when Claude Code writes code, and you can ask for it by name. It keeps a change to what was asked: it moves an existing abstraction only where the new code needs it, as its own step with no change of behavior, asks before a move that other modules or tests depend on, and fixes a small problem only inside a method the change already edits.
 
 Its core is short and holds the order of work, the qualities, the cognitive failures, the 2 principles, the rules for when 2 design directions pull against each other and the common pitfalls. Reference files per area, such as names, methods, classes, modules, tests and performance, hold the full design directions with the book's sentences. A few rules of the author are narrower than the book, such as a verb at the start of every method name, and the skill marks each of them. Files under `conventions/` hold the rules of 1 language or framework, or of documentation and instruction files, and a project's own conventions win on those matters.
 
@@ -143,9 +149,9 @@ It is not a review: it reports nothing, and the review stays the check of the re
 
 ## Convention check
 
-`laminar:check-conventions` checks a change, a pull request, a branch or your working tree, against the rules a writer can miss: the common pitfalls and the rules of `laminar:code-style` that are narrower than the book, its conventions files for the languages of the change, and your project's own conventions. Ask for a convention check, or a check against your team's conventions before a merge. Every finding names the rule it rests on and is input to a discussion, not a gate on the merge; the book's design directions stay with the review. Every finding also names its scale, in the words of the review: application, module, class, method or variable. Add `scales:` with a list in the review's form, such as `/laminar:check-conventions current scales: application,module,class`, to report only those scales; the report then says how many findings it left out at each other scale.
+`laminar:check-conventions` (`check-conventions` in GitHub Copilot CLI) checks a change, a pull request, a branch or your working tree, against the rules a writer can miss: the common pitfalls and the rules of `laminar:code-style` that are narrower than the book, its conventions files for the languages of the change, and your project's own conventions. Ask for a convention check, or a check against your team's conventions before a merge. Every finding names the rule it rests on and is input to a discussion, not a gate on the merge; the book's design directions stay with the review. Every finding also names its scale, in the words of the review: application, module, class, method or variable. Add `scales:` with a list in the review's form, such as `/laminar:check-conventions current scales: application,module,class`, to report only those scales; the report then says how many findings it left out at each other scale.
 
-A project writes its conventions as `.md` files under `.claude/rules/conventions/`, each with its `paths:` and numbered rules, and Claude Code loads a file when it reads or writes a file that matches. A project convention wins over the skill's conventions files, its common pitfalls and its rules narrower than the book, and never over a design direction of the book: the check reports such a contradiction on the convention file. Hooks of the plugin remind Claude Code once per session to load `laminar:code-style` before its first write or shell command, and add the conventions file of a language when it first writes a file in that language with the Write or Edit tool; set `LAMINAR_CONVENTION_HINTS=off` in the `env` of your settings to turn both off.json to turn it off.
+A project writes its conventions as `.md` files under `.claude/rules/conventions/`, each with its `paths:` and numbered rules, and Claude Code loads a file when it reads or writes a file that matches. A project convention wins over the skill's conventions files, its common pitfalls and its rules narrower than the book, and never over a design direction of the book: the check reports such a contradiction on the convention file. Hooks of the plugin remind Claude Code once per session to load `laminar:code-style` before its first write or shell command, and add the conventions file of a language when it first writes a file in that language with the Write or Edit tool; set `LAMINAR_CONVENTION_HINTS=off` in the `env` of your settings to turn both off.
 
 ## What this review is not
 
