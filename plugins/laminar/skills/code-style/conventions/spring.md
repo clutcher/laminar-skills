@@ -2,7 +2,7 @@
 
 Contents: 1. Constructor injection · 2. Inject by the interface · 3. Markers in the domain layer · 4. Configuration classes and properties · 5. Names of classes by role · 6. Strategies collected into a map · 7. Validation markers at the entry · 8. Executors and caches · 9. Tests with the framework · 10. Storage verbs and business verbs
 
-These are rules of this skill for Spring, narrower than the book. Read this file only where the code already uses Spring, together with java.md. Where a project convention under `.claude/rules/conventions/` says otherwise on a Spring matter, follow the project: that override holds for the rules of the skill only, never for the directions of the main set. Each rule keeps to the directions of the main set; where they seem to pull apart, the main set wins.
+These are rules of this skill for Spring, narrower than the book. Read this file, with java.md, only where the code already uses Spring. Where a project convention under `.claude/rules/conventions/` says otherwise on a Spring matter, follow the project: that override holds for the rules of the skill only, never for the design directions of the main set. Each rule keeps to the design directions of the main set, which win where they seem to pull apart.
 
 ## 1. Constructor injection
 
@@ -32,7 +32,7 @@ End a class name with the word for its role where it has one, such as Service, F
 - A Facade is the 1 class that 1 kind of caller calls: it calls services and holds no business rule of its own. Where a module has an api, a controller calls the api, and no Facade stands between them.
 - A Helper is a bean, named with its subject before the word, where every method needs other beans to work. Where its methods need no bean, make them static and move them into the Utils class of the subject (java.md, section 9).
 - Processor is allowed, with its subject before it, like every role word.
-- Do not use Manager or Handler as a role word: name the class for what it does. A name that a framework fixes stays, and so does the book's "single global exception handler", named with its subject before ExceptionHandler (correctness, section 10).
+- Do not use Manager or Handler as a role word: name the class for what it does. A name that a framework fixes stays, and so does the book's "single global exception handler", named for what it handles, before ExceptionHandler (correctness, section 10).
 
 ## 6. Strategies collected into a map
 

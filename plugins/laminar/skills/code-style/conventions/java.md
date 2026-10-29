@@ -2,7 +2,7 @@
 
 Contents: 1. Records for values · 2. Null for a missing item, and no Optional · 3. Streams only where they read better than a loop · 4. A closed switch over a sealed type or an enum · 5. Failures as unchecked exceptions with an error kind · 6. Fields, constructor, methods in a fixed order · 7. Explicit imports · 8. Small forms of the language · 9. A class of static functions · 10. Libraries: Lombok, MapStruct, multimaps · 11. Tests: JUnit and Mockito
 
-These are rules of this skill for Java, narrower than the book. Read this file whenever you write Java. Where a project convention under `.claude/rules/conventions/` says otherwise on a Java matter, follow the project: that override holds for the rules of the skill only, never for the directions of the main set. Each rule keeps to the directions of the main set; where they seem to pull apart, the main set wins.
+These are rules of this skill for Java, narrower than the book. Read this file whenever you write Java. Where a project convention under `.claude/rules/conventions/` says otherwise on a Java matter, follow the project: that override holds for the rules of the skill only, never for the design directions of the main set. Each rule keeps to the design directions of the main set; where they seem to pull apart, the main set wins.
 
 ## 1. Records for values
 

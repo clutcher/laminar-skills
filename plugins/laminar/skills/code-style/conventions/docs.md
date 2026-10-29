@@ -2,7 +2,7 @@
 
 Contents: 1. Documentation in the docs folder · 2. Rules in positive form · 3. Short instruction files
 
-These are rules of this skill for documentation and for instruction files that agents read, such as CLAUDE.md, skill files and rules files, narrower than the book. Read this file whenever you write or change such a file. Where a project convention under `.claude/rules/conventions/` says otherwise on such a matter, follow the project: that override holds for the rules of the skill only, never for the directions of the main set.
+These are rules of this skill for documentation and for instruction files that agents read, such as CLAUDE.md, skill files and rules files, narrower than the book. Read this file whenever you write or change such a file. Where a project convention under `.claude/rules/conventions/` says otherwise on such a matter, follow the project: that override holds for the rules of the skill only, never for the design directions of the main set.
 
 ## 1. Documentation in the docs folder
 

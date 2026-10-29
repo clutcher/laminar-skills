@@ -69,7 +69,7 @@ Name a class for the 1 thing it represents or the 1 work it does. The name sets 
 
 ## 9. Rename or reshape
 
-When you cannot find a short honest name, look at what the abstraction holds before you look for a better name. Where it holds unrelated behavior, move each piece of behavior to the abstraction it belongs to. A name that lists unrelated roles is a signal and not the fix: a longer honest name fixes the prediction failure, but the reader still holds both roles. Where the grouping is right and only the name is imprecise, rename and do not reshape.
+When you cannot find a short honest name, look at what the abstraction holds before you look for a better name. Where it holds unrelated behavior, move each piece of behavior to the abstraction it belongs to. A name that lists unrelated actions is a signal and not the fix: a longer honest name fixes the prediction failure, but the reader still holds both actions. Where the grouping is right and only the name is imprecise, rename and do not reshape.
 
 - Book (*The Encapsulation Principle*, *When No Name Works*): "A naming problem needs a more precise name, while an abstraction problem needs the behavior redistributed across different abstractions." · "when naming an abstraction feels difficult, check what the abstraction contains before searching for a better name"
 - Book (*How to Apply the Principles*, *How the Principles Restore Simplicity*): "Renaming the boundary without fixing the grouping only hides this signal, leaving callers to trust a name the code cannot deliver."

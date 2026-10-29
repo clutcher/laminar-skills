@@ -69,7 +69,7 @@ Do not change an object that the caller passed in, inside a method whose name an
 
 ## 10. Calculation apart from fetching
 
-Put a calculation or a decision in its own method or class that gets all it needs as parameters and gives all it produces as its result. Let the method above it fetch the data, call the calculation and apply the effects. This method above may read data through named calls, because coordination is its role. A method that both fetches and calculates mixes 2 abstraction levels, and its result depends on state that its signature does not show.
+Put a calculation or a decision in its own method or class that gets all it needs as parameters and gives all it produces as its result. Let the method above it fetch the data, call the calculation and apply the effects. This method above may read data through named calls, because it exists to coordinate. A method that both fetches and calculates mixes 2 abstraction levels, and its result depends on state that its signature does not show.
 
 - Book (*The Principles at Every Scale*, *How the Principles Shape Methods*): "So the extraction introduces a second abstraction level where none existed: the higher abstraction level holds data gathering and orchestration, and the lower abstraction level holds pure computation whose signature declares every dependency it needs."
 - Book (*How to Verify Correctness*, *How Tests Expose Design Problems*): "Most of these friction patterns point toward the same refactoring: extract the decision logic from the side effects into its own pure function or class."
