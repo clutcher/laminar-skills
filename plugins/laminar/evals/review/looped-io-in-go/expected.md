@@ -10,4 +10,3 @@
 ## Must not appear
 
 Method `Timetable#TicketCountQueries`, Looped I/O
-Method `Timetable#RoutesWithoutFare`, Looped I/O

@@ -14,4 +14,3 @@ Method `QuoteNoticeService#suppressMemberRefundWhenVoucherFailed`, Incomplete Me
 Class `QuoteNoticeService`, Unit Test Needed
 Class `QuoteNoticeService`, Integration Test Needed
 Class `QuoteNoticeServiceTest`, Unit Test to Remove
-Class `StayQuoteGraphQLControllerMessagesTest`, Partial Path Test

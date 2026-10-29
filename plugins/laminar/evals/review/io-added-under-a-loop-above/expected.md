@@ -9,6 +9,4 @@
 
 ## Must not appear
 
-Method `DueDateLabel#labelFor`, Looped I/O
-Method `TitleLabel#TitleLabel`, Looped I/O
 Method `OverdueNoticeRun#runFor`, Looped I/O

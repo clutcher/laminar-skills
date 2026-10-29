@@ -16,16 +16,13 @@
 
 ## Must not appear
 
-Class `ShipmentAdmission`, Test Behavior
 Class `ShipmentAdmission`, Unit Test Needed
 
-Class `PostalSurchargeTable`, Test Behavior
 Class `PostalSurchargeTable`, Unit Test Needed
 
 Class `LockerSizeAndHandoverRules`, Unit Test Needed
 
 Class `ShipmentBookingController`, Integration Test Needed
-Method `book` in `ShipmentBookingController`, Integration Test Needed
 
 Class `ShipmentBookingControllerTest`, Partial Path Test
 Class `ShipmentBookingControllerTest`, Unit Test to Remove

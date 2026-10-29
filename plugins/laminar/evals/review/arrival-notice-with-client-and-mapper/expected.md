@@ -2,4 +2,4 @@
 
 ## Must not appear
 
-Class `ArrivalNoticeService`, Missing Boundary
+Any other finding

@@ -14,7 +14,3 @@
    - Unnamed Part Failure
 5. Method `BoxOfficeService#getUnpaidReservations`
    - Prediction Failure
-
-## Must not appear
-
-Method `BoxOfficeService#createSeatLabelsForPaidReservations`, Open Construct Overload

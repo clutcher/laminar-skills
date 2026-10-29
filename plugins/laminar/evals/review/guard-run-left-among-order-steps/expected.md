@@ -6,7 +6,3 @@
 
 1. Method `OrderProcessingService#processOrder`
    - Unnamed Part Failure
-
-## Must not appear
-
-Method `OrderProcessingService#processOrder`, Open Construct Overload

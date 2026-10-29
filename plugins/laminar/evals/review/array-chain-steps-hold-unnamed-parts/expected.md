@@ -14,7 +14,3 @@
    - Unnamed Part Failure
 5. Method `VaccinationDesk#getMissedAppointments`
    - Prediction Failure
-
-## Must not appear
-
-Method `VaccinationDesk#createVaccinationLines`, Open Construct Overload

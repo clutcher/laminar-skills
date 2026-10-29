@@ -13,4 +13,3 @@
 Class `AvailabilityInput`, Scoped Parameters, at most 1 at High confidence
 Class `storefront-api:AvailabilityInput` or Class `AvailabilityInput`, Prediction Failure, at most 2 at High confidence
 Class `storefront-api:AvailabilityInput` or Class `AvailabilityInput`, Unnamed Part Failure, at most 2 at High confidence
-Class `storefront-api:AvailabilityInput`, Incomplete Mental Model

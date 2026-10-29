@@ -2,4 +2,4 @@
 
 ## Must not appear
 
-Class `TideTable`, Missing Boundary
+Any other finding

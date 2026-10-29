@@ -10,4 +10,3 @@
 ## Must not appear
 
 Method `OrderProcessingService#processOrder`, Unnamed Part Failure
-Method `OrderProcessingService#processOrder`, Open Construct Overload

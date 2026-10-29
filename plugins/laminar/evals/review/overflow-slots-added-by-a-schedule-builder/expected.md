@@ -2,5 +2,4 @@
 
 ## Must not appear
 
-Method `BerthScheduleBuilder#withOverflowSlotsFor`, Leaked Details
-Method `BerthScheduleService#schedule`, Leaked Details
+Any other finding

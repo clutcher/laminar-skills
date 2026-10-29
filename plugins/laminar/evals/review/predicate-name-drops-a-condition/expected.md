@@ -11,7 +11,5 @@
 
 ## Must not appear
 
-Method `CartLineQuantityNotice#reachesMinimumOrderQuantity`, Open Construct Overload
-Method `CartLineQuantityNotice#noticeFor`, Open Construct Overload
 Method `CartLineQuantityNotice#isRaisedAboveRequestedQuantity`, Unnamed Part Failure
 Method `CartLineQuantityNotice#reachesMinimumOrderQuantity`, Incomplete Mental Model

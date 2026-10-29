@@ -10,6 +10,5 @@
 ## Must not appear
 
 Method `freeSlotsBySize` in `SlotAvailability`, Looped I/O
-Method `overweightParcels` in `ParcelIntake`, Looped I/O
 Method `freeSlotsBySize` in `SlotAvailability`, Repeated Retrieval
 Method `overweightParcels` in `ParcelIntake`, Repeated Retrieval

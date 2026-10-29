@@ -2,4 +2,4 @@
 
 ## Must not appear
 
-Class `BerthBooking`, Incomplete Mental Model
+Any other finding

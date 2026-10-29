@@ -2,4 +2,4 @@
 
 ## Must not appear
 
-Class `TourPriceMergingService`, Leaked Details
+Any other finding
