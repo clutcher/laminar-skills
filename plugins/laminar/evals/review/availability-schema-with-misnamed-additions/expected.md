@@ -4,20 +4,20 @@
 
 ### Production code
 
-1. Variable `roastingSchedules` in `bean-availability-api:Availability`
+1. Variable `orderSchedules` in `product-availability-api:Availability`
    - Prediction Failure
-2. Variable `qty` in `bean-availability-api:RoastingSchedule`
+2. Variable `qty` in `product-availability-api:OrderSchedule`
    - Prediction Failure
-3. Variable `unit` in `bean-availability-api:RoastingSchedule`
+3. Variable `unit` in `product-availability-api:OrderSchedule`
    - Prediction Failure
 
 ## To consider
 
-4. Class `bean-availability-api:Availability`
+4. Class `product-availability-api:Availability`
    - Unnamed Part Failure
 
 ## Must not appear
 
-Variable `roasteryStocks` in `bean-availability-api:Availability`, Prediction Failure
-Variable `incomingShipments` in `bean-availability-api:Availability`, Prediction Failure
-Variable `cancellationTerm` in `bean-availability-api:Availability`, Prediction Failure
+Variable `stockLevels` in `product-availability-api:Availability`, Prediction Failure
+Variable `replenishments` in `product-availability-api:Availability`, Prediction Failure
+Variable `returnTerm` in `product-availability-api:Availability`, Prediction Failure

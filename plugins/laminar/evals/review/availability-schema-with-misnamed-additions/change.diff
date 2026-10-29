@@ -1,22 +1,22 @@
-diff --git a/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls b/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls
---- a/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls
-+++ b/bean-availability-api/src/main/resources/graphql/bean-availability.graphqls
+diff --git a/product-availability-api/src/main/resources/graphql/availability.graphqls b/product-availability-api/src/main/resources/graphql/availability.graphqls
+--- a/product-availability-api/src/main/resources/graphql/availability.graphqls
++++ b/product-availability-api/src/main/resources/graphql/availability.graphqls
 @@ -8,6 +8,8 @@
  type Availability {
-     roasteryStocks: [RoasteryStock!]
-     incomingShipments: [IncomingShipment!]
-+    roastingSchedules: [RoastingSchedule!]
-+    supplyLevel: String
-     cancellationTerm: CancellationTerm
+     stockLevels: [StockLevel!]
+     replenishments: [Replenishment!]
++    orderSchedules: [OrderSchedule!]
++    stockClass: String
+     returnTerm: ReturnTerm
  }
  
 @@ -44,3 +46,9 @@
-     bags: Int!
-     expectedArrivalDate: SecondsSinceEpoch
+     quantity: Int!
+     estimatedShipDate: SecondsSinceEpoch
  }
 +
-+type RoastingSchedule {
++type OrderSchedule {
 +    qty: Int!
 +    unit: String
-+    expectedLandingDate: SecondsSinceEpoch
++    estimatedDeliveryDate: SecondsSinceEpoch
 +}
