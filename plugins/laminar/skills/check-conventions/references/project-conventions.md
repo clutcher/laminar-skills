@@ -2,7 +2,7 @@
 
 Contents: 1. Where the files live · 2. When Claude Code loads them · 3. The form of a file · 4. The id a finding names · 5. An example
 
-A project writes its own conventions in files of 1 form, so a writer reads them while writing and `laminar:check-conventions` checks a change against them. Section 3 of the `SKILL.md` of this skill says which rule wins where a project convention and a rule of `code-style` differ.
+A project writes its own conventions in files of 1 form, so a writer reads them while writing and the `check-conventions` skill of the plugin checks a change against them. Section 3 of the `SKILL.md` of this skill says which rule wins where a project convention and a rule of `code-style` differ.
 
 ## 1. Where the files live
 
