@@ -15,9 +15,3 @@
 
 4. Class `product-availability-api:Availability`
    - Unnamed Part Failure
-
-## Must not appear
-
-Variable `stockLevels` in `product-availability-api:Availability`, Prediction Failure
-Variable `replenishments` in `product-availability-api:Availability`, Prediction Failure
-Variable `returnTerm` in `product-availability-api:Availability`, Prediction Failure

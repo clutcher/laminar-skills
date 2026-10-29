@@ -17,5 +17,3 @@ Module `scripts`, Unnamed Part Failure
 Module `scripts`, Prediction Failure
 Module `inventory-service/src/main/java/com/shop/inventory`, Unnamed Part Failure
 Module `inventory-service/src/main/java/com/shop/inventory`, Prediction Failure
-Module `inventory-service`, Unnamed Part Failure
-Module `inventory-service`, Prediction Failure

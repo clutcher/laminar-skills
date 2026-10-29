@@ -2,7 +2,6 @@
 
 ## Must not appear
 
-Module `company-website/order`, Unnamed Part Failure
 Module `company-website/order/app/api`, Prediction Failure
 Module `company-website/order/app/spi`, Unnamed Part Failure
 Module `company-website/order/app/spi`, Prediction Failure

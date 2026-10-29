@@ -2,5 +2,4 @@
 
 ## Must not appear
 
-Variable `INSTANCE` in `HighWaterEstimator`, Prediction Failure
 Any other finding

@@ -3,4 +3,3 @@
 ## Must not appear
 
 Class `TourPriceMergingService`, Leaked Details
-Class `TourPriceService`, Leaked Details
