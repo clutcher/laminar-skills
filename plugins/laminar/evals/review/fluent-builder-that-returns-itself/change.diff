@@ -94,14 +94,14 @@ new file mode 100644
 +    }
 +
 +    private Section buildCharts(ReportData data) {
-+        return sectionLayout.revenueCharts(data.revenueByMonth());
++        return sectionLayout.revenueCharts(data.revenueByMonth(), data.currency());
 +    }
 +
 +    private Section buildTables(ReportData data) {
-+        return sectionLayout.orderTables(data.ordersByRegion());
++        return sectionLayout.orderTables(data.ordersByRegion(), data.quarter());
 +    }
 +
 +    private Section buildFooter(ReportData data) {
-+        return sectionLayout.footer(data.preparedBy());
++        return sectionLayout.footer(data.preparedBy(), data.preparedOn());
 +    }
 +}
