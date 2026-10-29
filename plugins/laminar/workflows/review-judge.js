@@ -422,7 +422,7 @@ const SCHEMA_OF_ANY_CHECK_BY_JUDGE_TYPE = {
     places: { type: 'array', items: A_PLACE_READING },
     placesLeftUnopened: { type: 'boolean' },
     fact: A_TEXT,
-    mechanism: A_TEXT,
+    failure: A_TEXT,
     ...THE_QUESTION_TO_THE_AUTHOR,
   }, ['places', 'fact'])),
   'judge-simplicity-comment': judgeSchemaOf(findingOf({ ...THE_PREDICTION })),

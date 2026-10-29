@@ -64,7 +64,7 @@ Use a layout that readers recognize for the boundary folders of a module. Keep t
 
 ## 9. The same names in every module
 
-Use the same folder names and the same forms of file names in every module, so the name of a file says its role. A layout that repeats is learned once.
+Use the same folder names and the same forms of file names in every module, so the name of a file says what the file does. A layout that repeats is learned once.
 
 - Book (*The Principles at Every Scale*, *Hexagonal Architecture*): "Because the folders and the names repeat from one module to the next, a practitioner learns the layout once, as a single schema."
 - The book's forms of these names: an interface of what a module offers starts with ApiFor and names the action, a type a module exposes to other modules starts with Public and is used only there, and an implementation at the edge ends with Using and the technology, named once: "a name starting with `ApiFor` is something the module offers, and one starting with `Public` is a type it exposes to other modules" · "The last word of a `Using` name states the technology".

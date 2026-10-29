@@ -18,12 +18,12 @@ const listNamesInTheLead = check => [readLead(check), ...readLead(check).split(L
 
 const isShownByTheLead = (name, check) => listNamesInTheLead(check).some(leadName => isTheSameName(leadName, name));
 
-const findNamesBeyondTheLead = finding => [finding.decision || finding.prevention || readCheckName(finding.check), finding.mechanism]
+const findNamesBeyondTheLead = finding => [readCheckName(finding.check), finding.decision, finding.failure]
   .filter(Boolean)
   .filter((name, at, names) => !isShownByTheLead(name, finding.check) && names.findIndex(other => isTheSameName(other, name)) === at);
 
 const formatNaming = finding => finding.question
-  ? `question ${finding.question}, ${finding.mechanism || ""}`.trim()
+  ? [`question ${finding.question}`, ...findNamesBeyondTheLead(finding)].join(", ")
   : findNamesBeyondTheLead(finding).join(", ");
 
 const LISTED_FIELDS = [["fact", "Fact"],
@@ -259,7 +259,7 @@ export function buildEvidenceReport({ banner, scopeLine, acrossApplicationsLine,
     ...(scopeLine ? [scopeLine] : []),
     ...(acrossApplicationsLine ? [acrossApplicationsLine] : []),
     `## The change\n\n${formatSentence(changeSummary)}`,
-    "## Reasoning\n\nEvery kept finding with its check, the mechanism or the prevention decision behind it, its full evidence, and the confidence the verifier settled, then every item to consider with its evidence and its question.",
+    "## Reasoning\n\nEvery kept finding with its check, the cognitive failure or the prevention decision behind it, its full evidence, and the confidence the verifier settled, then every item to consider with its evidence and its question.",
     ...TRACK_WORDS.map(word => formatTrackSection(word, settled.kept, covered || [])),
     formatConsiderationSection(settled.considered || []),
     formatRejectedSection(settled, rejectedCoveredPaths || []),

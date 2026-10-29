@@ -1,6 +1,6 @@
 # Spring
 
-Contents: 1. Constructor injection · 2. Inject by the interface · 3. Markers in the domain layer · 4. Configuration classes and properties · 5. Names of classes by role · 6. Strategies collected into a map · 7. Validation markers at the entry · 8. Executors and caches · 9. Tests with the framework · 10. Storage verbs and business verbs
+Contents: 1. Constructor injection · 2. Inject by the interface · 3. Markers in the domain layer · 4. Configuration classes and properties · 5. Class names by what they do · 6. Strategies collected into a map · 7. Validation markers at the entry · 8. Executors and caches · 9. Tests with the framework · 10. Storage verbs and business verbs
 
 These are rules of this skill for Spring, narrower than the book. Read this file, with java.md, only where the code already uses Spring. Where a project convention under `.claude/rules/conventions/` says otherwise on a Spring matter, follow the project: that override holds for the rules of the skill only, never for the design directions of the main set. Each rule keeps to the design directions of the main set, which win where they seem to pull apart.
 
@@ -24,15 +24,15 @@ Put the bean wiring of a module into a config folder beside app, in and out, in 
 
 - Where a class needs 1 of 2 or more beans of 1 type, choose the bean in the bean method of the module configuration: that method takes the chosen bean as a parameter, chosen there by its bean name, and passes it to the constructor of the class (section 1). Which bean a class gets is a decision of the wiring. A qualifier on the domain object splits that decision between the configuration and the domain layer, so a reader of the configuration no longer sees the wiring whole. This rule of the skill is narrower than the book, which lets a marker that does nothing when the logic runs stay in the domain layer (section 3).
 
-## 5. Names of classes by role
+## 5. Class names by what they do
 
-End a class name with the word for its role where it has one, such as Service, Facade, Repository, Controller, Converter, Mapper, Validator, Factory, Builder, Processor or Exception, after a business word that says which, such as OrderFacade (naming, section 2). A role word never stands alone, because a general word alone, such as Helper or Mapper, predicts little. Use each role word in 1 sense only, as below. Name the types of a web interface for the call with Request and Response, and a list element in them that is a top-level type with RequestItem or ResponseItem. Name a nested list element for what it is, such as LoanResponse.Book, because the outer name gives the context and stands at each use (java.md, section 7). Request, Response and the 2 Item words stay out of the domain layer (modules, section 5).
+End a class name with a word for what the class does where one exists, such as Service, Facade, Repository, Controller, Converter, Mapper, Validator, Factory, Builder, Processor or Exception, after a business word that says which, such as OrderFacade (naming, section 2). That word never stands alone, because a name such as Helper or Mapper alone predicts little. Use each such word in 1 sense only, as below. Name the types of a web interface for the call with Request and Response, and a list element in them that is a top-level type with RequestItem or ResponseItem. Name a nested list element for what it is, such as LoanResponse.Book, because the outer name gives the context and stands at each use (java.md, section 7). Request, Response and the 2 Item words stay out of the domain layer (modules, section 5).
 
 - Mapper names only a MapStruct mapper; a conversion class written by hand is a Converter (java.md, section 10).
 - A Facade is the 1 class that 1 kind of caller calls: it calls services and holds no business rule of its own. Where a module has an api, a controller calls the api, and no Facade stands between them.
 - A Helper is a bean, named with its subject before the word, where every method needs other beans to work. Where its methods need no bean, make them static and move them into the Utils class of the subject (java.md, section 9).
-- Processor is allowed, with its subject before it, like every role word.
-- Do not use Manager or Handler as a role word: name the class for what it does. A name that a framework fixes stays, and so does the book's "single global exception handler", named for what it handles, before ExceptionHandler (correctness, section 10).
+- Processor is allowed, with its subject before it, like the others.
+- Do not end a class name in Manager or Handler: name the class for what it does. A name that a framework fixes stays, and so does the book's "single global exception handler", named for what it handles, before ExceptionHandler (correctness, section 10).
 
 ## 6. Strategies collected into a map
 

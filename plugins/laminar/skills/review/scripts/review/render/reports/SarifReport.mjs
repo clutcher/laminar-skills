@@ -37,6 +37,12 @@ const buildTestPlanProperties = finding => Object.fromEntries(TEST_PLAN_PROPERTI
   .map(field => [field, convertToText(finding[field])])
   .filter(([, text]) => text));
 
+const REASON_PROPERTIES = Object.freeze(["failure", "decision"]);
+
+const buildReasonProperties = finding => Object.fromEntries(REASON_PROPERTIES
+  .map(field => [field, convertToText(finding[field])])
+  .filter(([, text]) => text));
+
 const RELATED_ABSTRACTION_ROLES = Object.freeze([
   ["alsoAt", "also"],
   ["entry", "entry"],
@@ -64,10 +70,10 @@ const buildProperties = (finding, changeKinds) => {
     changeKind: changeKinds.readKindOfTheFinding(finding),
     test_code: Boolean(finding.isTest),
     check: finding.check,
-    mechanism: convertToText(finding.mechanism || finding.decision || finding.prevention),
     direction: formatDirectionsWithTheirLeads(finding),
     confidence: finding.confidence,
     what_would_confirm: finding.confidence === "high" ? "" : convertToText(finding.whatWouldConfirm),
+    ...buildReasonProperties(finding),
     ...buildTestPlanProperties(finding),
   };
   if (finding.combined) properties.rule_ids = [...finding.combined.checks];
