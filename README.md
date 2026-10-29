@@ -1,14 +1,14 @@
 # Laminar Skills
 
-A Claude Code plugin that reviews code against the three qualities of high-quality code that the book *Laminar Software Design* defines: simple enough for humans to understand and change, works correctly as intended, and performs adequately for its purpose.
+A Claude Code plugin that reviews code against the 3 qualities of high-quality code that the book *Laminar Software Design* defines: simple enough for humans to understand and change, works correctly as intended, and performs adequately for its purpose.
 
-Simplicity is judged from how people read code: each Simplicity and Design finding names the cognitive failure behind it and what it costs the next reader. Correctness is judged as prevention, the design decisions that exclude errors, and as detection, the tests that verify behavior. Performance is judged as waste: extra data movement that a known alternative avoids, such as I/O in a loop. The two principles of the book, encapsulation and single level of abstraction, give the fixed direction of a simplicity fix, and they are not the measure the review judges by.
+Simplicity is judged from how people read code: each Simplicity and Design finding names the cognitive failure behind it and what it costs the next reader. Correctness is judged as prevention, the design decisions that exclude errors, and as detection, the tests that verify behavior. Performance is judged as waste: extra data movement that a known alternative avoids, such as I/O in a loop. The 2 principles of the book, encapsulation and single level of abstraction, give the fixed direction of a simplicity fix, and they are not the measure the review judges by.
 
 It is a design review. It does not hunt logic bugs, so run a bug-focused review beside it where you need one.
 
 ## What a report looks like
 
-The review writes `review.md` for a person to read. This short example comes from a fictional ferry and climbing gym, in the shape of two cases of the eval suite:
+The review writes `review.md` for a person to read. This short example comes from a fictional ferry and climbing gym, in the shape of 2 cases of the eval suite:
 
 ```markdown
 **Run** · repository mode, the tree holds every path of the change · 3 file(s), 9 abstraction(s) · ...
@@ -42,7 +42,7 @@ The review does not judge speed. ...
 The review does not report what a compiler, a linter or a type checker reports ...
 ```
 
-Each finding names the abstraction, the check, what the review found, a short fixed direction for that check, which the script prints with the principle that leads it and no agent writes, and, where it is not high, its confidence with what would confirm it. A question the code cannot settle goes under `## To consider` and is not a finding. Beside `review.md` the review writes `review-evidence.md`, with the file and the line of every finding, and `review.sarif` for a tool. [`reference.md`](plugins/laminar/skills/review/reference.md) explains every section of the three files, every track and every check.
+Each finding names the abstraction, the check, what the review found, a short fixed direction for that check, which the script prints with the principle that leads it and no agent writes, and, where it is not high, its confidence with what would confirm it. A question the code cannot settle goes under `## To consider` and is not a finding. Beside `review.md` the review writes `review-evidence.md`, with the file and the line of every finding, and `review.sarif` for a tool. [`reference.md`](plugins/laminar/skills/review/reference.md) explains every section of the 3 files, every track and every check.
 
 ## Requirements
 
@@ -94,23 +94,23 @@ The eval suite is mostly Java and TypeScript, with some Python, Kotlin, PHP, Gra
 
 ## How the review runs
 
-The review runs in five steps: two script steps, two workflows of small agent calls, and a render.
+The review runs in 5 steps: 2 script steps, 2 workflows of small agent calls, and a render.
 
 A script first extracts every abstraction the change touches, at the scales variable, method, class and module, and finds each application the change touches. A key of a YAML or properties file is read as a class or as a named value. For each one it reads what kind of change it carries, whether its boundary moved, whether it is a test or production code, where its name and its literals appear elsewhere, and the measures the judges read. Nothing here costs a model anything.
 
 A second script then prepares the judges' work: it plans the book's checks, cuts the slices and writes one file of the code under review per abstraction and judge type. An abstraction the change created, or whose boundary it moved, is judged at its own scale; one whose internals changed hands the walk down to what changed inside it; a trivial hunk plans nothing at all. The test plan is planned once for each application the change touched, except an application whose build files declare no test runner and which holds no test file: the script reports it with 1 Integration Test Needed finding instead.
 
-The planned work is then judged on five tracks. Simplicity reads the abstraction against its own internals. Design reads 2 or more abstractions together, a group of chains of called methods, a parameter type with every operation that takes it, a core operation with its neighbours, or a class with the groups its private members form, and reads 1 method alone where it is an in or out operation that decides or a method that rebuilds a value it takes, for over-extraction, for scoped parameters, for leaked details and for a missing boundary; each of its findings leads with the cognitive failure, such as Working Memory Overload (Over-Extraction). Correctness · Prevention reads the same abstraction with its callers, and reads Validate at the Boundary on a boundary path: a changed abstraction with the entry methods that reach it and the calls between them. Correctness · Detection reads a test with the code under test, and reads the tests of each application the change touched as one test plan: the main paths no test runs from entry to exit, the branches no test takes, the unit tests the integration tests already make needless, and the tests that stop short of the path they claim. Performance reads the changed code with what it calls, and every loop that reaches an I/O call. A cheap screen answers presence questions first, so a prevention or a Performance check runs only where the shape it judges is actually there.
+The planned work is then judged on 5 tracks. Simplicity reads the abstraction against its own internals. Design reads 2 or more abstractions together, a group of chains of called methods, a parameter type with every operation that takes it, a core operation with its neighbors, or a class with the groups its private members form, and reads 1 method alone where it is an in or out operation that decides or a method that rebuilds a value it takes, for over-extraction, for scoped parameters, for leaked details and for a missing boundary; each of its findings leads with the cognitive failure, such as Working Memory Overload (Over-Extraction). Correctness · Prevention reads the same abstraction with its callers, and reads Validate at the Boundary on a boundary path: a changed abstraction with the entry methods that reach it and the calls between them. Correctness · Detection reads a test with the code under test, and reads the tests of each application the change touched as one test plan: the main paths no test runs from entry to exit, the branches no test takes, the unit tests the integration tests already make needless, and the tests that stop short of the path they claim. Performance reads the changed code with what it calls, and every loop that reaches an I/O call. A cheap screen answers presence questions first, so a prevention or a Performance check runs only where the shape it judges is there.
 
-**Judging is one small judge call per abstraction**, all of them at once. There is a Simplicity judge for each of the scales variable, method, class and module, one for a test method, which answers its Simplicity and its detection checks together, one for the test plan of an application, one for prevention, one for a boundary path, one for the waste inside an abstraction and one for the loops that reach an I/O call, one for the comments of production code, one for each of the four Design checks, one for the entry boundaries across applications, and one for the decision an abstraction repeats, which asks whether the decision being changed lives in any other place and carries the code toward a single owner. Each judge reads only 1 file the script wrote, and returns possible findings only: a planned check it answers with nothing found is a pass, and no pass is ever written.
+**Judging is one small judge call per abstraction**, all of them at once. There is a Simplicity judge for each of the scales variable, method, class and module, one for a test method, which answers its Simplicity and its detection checks together, one for the test plan of an application, one for prevention, one for a boundary path, one for the waste inside an abstraction and one for the loops that reach an I/O call, one for the comments of production code, one for each of the 4 Design checks, one for the entry boundaries across applications, and one for the decision an abstraction repeats, which asks whether the decision being changed lives in any other place and carries the code toward a single owner. Each judge reads only 1 file the script wrote, and returns possible findings only: a planned check it answers with nothing found is a pass, and no pass is ever written.
 
 Every line a judge names is then read back against the code in script, and a possible finding whose line is not there is dropped before anyone sees it. Each possible finding that survives then gets a second read. A refuter, a separate refuter call for each possible finding, tries to show it wrong by naming a line and a rule. A possible finding it does not refute is kept as the judge wrote it. A refuted one goes to the verifier, which keeps it, lowers its confidence, combines it with another check of the same item, or rejects it by naming a fact in the code. The verifier never raises a confidence.
 
-The three report files are rendered in code from the fields the agents filled, so no model rewrites a finding on its way to the reader.
+The 3 report files are rendered in code from the fields the agents filled, so no model rewrites a finding on its way to the reader.
 
 There is no severity, no ranking and no cap. Every finding is a must, or it is not a finding. A finding carries a confidence instead, and it says what would confirm the cost where the confidence is not high. What the code cannot settle, such as a copy of a decision in another application, which only the author knows to be kept on purpose or not, is never a finding: the report lists it under `To consider`, as a question to the author.
 
-## Two modes
+## 2 modes
 
 Against a repository the review reads callers, folders, tests and the build configuration. Against a bare patch it cannot, and the report says so: the mode is stated in the first line, the test checks read only the tests the patch carries, a finding that a test is needed has low confidence, and a check the patch cannot complete says in its own confidence what would confirm it.
 
@@ -146,7 +146,7 @@ Find the book on [Amazon](https://www.amazon.com/dp/8409859289) and [Google Book
 
 Every check is built on a rule of the book, and the vocabulary the review uses is the vocabulary the book defines. Where the book leaves a question open, the review adds a small number of review conventions of its own, and it takes no side between anemic and rich types, between inheritance and composition, or between test-first and design-first.
 
-A Simplicity or Design finding leads with one of the six cognitive failures of the book. The damage column is the book's own:
+A Simplicity or Design finding leads with one of the 6 cognitive failures of the book. The damage column is the book's own:
 
 | Failure | What it means | Damage, in the book's words |
 |---|---|---|
