@@ -219,7 +219,7 @@ export const formatDirectionText = (check, situation = {}) => {
 
 const readSituationOfTheDirection = finding => ({ judgeType: finding.standsInFor || finding.judgeType || "", scale: finding.scale || "", relation: finding.relation || "" });
 
-const listDirectionsOfTheFinding =finding => (finding.combined ? finding.combined.findings : [finding])
+const listDirectionsOfTheFinding = finding => (finding.combined ? finding.combined.findings : [finding])
   .map(directedFinding => ({ lead: readLead(directedFinding.check), text: formatDirectionText(directedFinding.check, readSituationOfTheDirection(directedFinding)) }))
   .filter(direction => direction.text);
 
