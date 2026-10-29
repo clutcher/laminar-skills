@@ -28,7 +28,7 @@ The comments of 1 abstraction, and never its code. The code under review lists t
 ### Principles
 
 - "Comments earn their place only when they carry knowledge that no name or structure can express".
-- "By default there must be no comments in production code, and every one that stays is an exception you should be able to defend." A comment that meets no exception the book allows stands where a name or a structure should tell the reader, and is a finding.
+- "By default there must be no comments in production code, and every one that stays is an exception you should be able to defend." A comment that meets no exception the book allows stands where a name or a structure must tell the reader, and is a finding.
 
 ### Patterns
 
