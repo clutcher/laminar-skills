@@ -19,10 +19,9 @@ A named value: a variable, a field, a parameter, a constant, a key of a configur
 2. Before you read the expression that fills the value, write 1 sentence predicting what it holds from the name and the form of its display name alone; where no concrete sentence can be written, write no prediction possible, which is itself a prediction failure. An abbreviated name, a general word or a placeholder still allows a weak prediction, so write that prediction and not no prediction possible.
 3. Read the outer name that holds the value, the type, the method or the parent key, and quote it in what the code holds instead, whether it supplies the purpose or not.
 4. Read the expression or the call that fills the value, and the head of its type where the slice shows it, and write 1 sentence on what it holds, naming the search, the container, the kind or the step it uses.
-5. For each field on its own, or for the value where the item holds 1 value, write for yourself 2 lists before you decide on it: each word of the name with what it predicts, read together with the outer name, and each thing that the type, its fields where the slice shows them, and the expression that fills it hold, word by word. Decide on that field only after both lists are written.
-6. Compare the 2 sentences and the 2 lists as written: they match only where both name the same thing and the same scope. A search, a container, a kind or a step that the found sentence names and the prediction does not is a difference of scope and a finding, with both sentences in it. A name that is abbreviated, or built on a general word or a placeholder, is a finding even where the 2 sentences match.
-7. For a constant over a literal, also read each line of the code under review that uses it with the literal in its place, and ask whether that line would still state what the value means.
-8. Say only what the code shows, never why a decision was made.
+5. Compare the 2 sentences as written: they match only where both name the same thing and the same scope. A search, a container, a kind or a step that the found sentence names and the prediction does not is a difference of scope and a finding, with both sentences in it. A name that is abbreviated, or built on a general word or a placeholder, is a finding even where the 2 sentences match.
+6. For a constant over a literal, also read each line of the code under review that uses it with the literal in its place, and ask whether that line would still state what the value means.
+7. Say only what the code shows, never why a decision was made.
 
 ## Naming rules
 
