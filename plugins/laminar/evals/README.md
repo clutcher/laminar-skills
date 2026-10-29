@@ -366,7 +366,9 @@ The summary line stays the last line of the grade.
 
 ## Grading the cost beside the results
 
-A case passes only where it meets every expected result and every budget, in 3 runs of 3.
+A case passes only where its run meets every expected result and every budget of the case.
+
+A full suite is read case by case against the last suite, and never by its total. It passes where it lands within 3 cases of the last suite and raises no new forbidden item that more runs of that case confirm, because 3 suites on near-identical inputs varied by about 3 cases.
 
 ```bash
 node evals/grade.mjs <case> <run folder>/review.md --usage <usage.json>
