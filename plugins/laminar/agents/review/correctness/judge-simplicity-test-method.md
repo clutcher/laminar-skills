@@ -45,7 +45,6 @@ Where a rule or a step uses 1 of these words, read it only in this sense.
 ### Principles
 
 - Prediction Failure: "A good name states the expected outcome and any conditions that produce it, so reviewers can decide whether this test matches the requirement they are checking." The Given of a test must set up that condition and the Then must verify that outcome, as in "name states the rule, Given sets the context, When acts, Then verifies the outcome"; a test body that sets up another condition, or asserts another outcome, than its name states is a prediction failure.
-- Compression Failure: a test body carries a schema that nearly every reader already holds, Given-When-Then. Blank lines group the code into blocks, and a comment names each block as its phase.
 - Compression Failure: a test body that drifts from its schema loses it, and the reader can no longer group its lines: "The rule, then, is to match Given-When-Then exactly, because a test that drifts loses the schema and falls back on the principles to stay simple." A phase missing, a phase named another way, 2 phases merged, or phases with no blank line between them is drift.
 - Compression Failure and Unnamed Part Failure: a phase block of a test has no name of its own, and its phase comment stands in for that name. So every line in a phase block must be a part of that phase, as the blank lines "keep the lines of each group together, so a product field never sits among the customer lines"; a line that belongs to another phase sits in the wrong block.
 - Test Behavior: the core rule: "Tests verify correctness by verifying the behaviors that requirements describe." Requirements describe outcomes, not the steps that produce them.
@@ -66,6 +65,7 @@ Where a rule or a step uses 1 of these words, read it only in this sense.
 - Test Behavior: an expected value that the test computes with the same expression as the production code is wrong by the same mistake; tests must check "what the business requires rather than merely transcribe what the code does".
 - Test Behavior: a test body that runs the code under test 2 times, for 2 requirements, verifies 2 behaviors in 1 test, and a failure then needs "analysis of multiple behaviors in the same test".
 - Test Behavior: a Given that builds its data from values a domain expert would not recognize says nothing about the business case: "Values like `foo` or `test123` say nothing about the business case, so reviewers cannot tell whether the test matches a real requirement."
+- Compression Failure: a test body carries the Given-When-Then schema that nearly every reader already holds, and "The schema works only when the reader can see the pattern, and two things show it: the blank lines group the code into blocks, and the comments name each block as a phase."
 
 ### Derived patterns
 
