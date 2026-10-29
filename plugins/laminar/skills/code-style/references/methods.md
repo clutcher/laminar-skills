@@ -88,7 +88,7 @@ Make the parameters match what the method name describes. Where a method takes p
 - Book (*The Common Pitfalls*, *Scoped Parameters*): "The signal for narrow parameters is traveling companions: when the same three or four values appear together across multiple signatures, they signal a missing name." · "The signal for broad parameters is unused surface: when a method touches only one field of a large object, the parameter carries too much."
 - Book (*The Common Pitfalls*, *Scoped Parameters*): "Because parameters resist compression, the raw count matters" · "Aim for four parameters or fewer"
 - Book (*What Software Design Means*, *When the Qualities Themselves Conflict*): "Extension points, interfaces, and factories for hypothetical future requirements increase cognitive load"
-- Limits: a long list of unrelated inputs that no grouping can name is essential complexity of the domain; organize it and stop reshaping it (see comments).
+- Limits: the limit of 4 parameters or fewer counts the parameters of a method. It does not count the fields of a record or the parameters of a constructor that only stores them in fields, and a constructor that does more counts as a method. A long list of unrelated inputs that no grouping can name is essential complexity of the domain; organize it and stop reshaping it (see comments).
 
 ## 13. The structure of other objects stays hidden
 
