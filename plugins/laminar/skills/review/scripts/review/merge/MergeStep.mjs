@@ -133,6 +133,8 @@ export class MergeStep {
   buildCounts() {
     return {
       possibleFindings: this.possibleFindings.length,
+      judgeCalls: Number((this.possibleFindingSource.judgeReturn.returned.counts || {}).judgeCalls) || 0,
+      cachedJudgeCalls: this.possibleFindingSource.judgeCacheUse.reusedCount,
       dropped: this.dropped.length,
       refiled: this.refiled.length,
       filedUnderAnotherCheck: this.filedUnderAnotherCheck.length,
@@ -157,6 +159,7 @@ export class MergeStep {
 
   writeTo() {
     this.ioScreenOutcome.keepTheRulesInTheCache();
+    this.possibleFindingSource.judgeCacheUse.keepTheFreshReturns(this.possibleFindingSource.judgeReturn.returned);
     const draftLines = this.buildDraftLines();
     const written = {
       counts: this.buildCounts(),

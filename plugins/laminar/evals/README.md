@@ -348,11 +348,11 @@ Then print the judge types the case runs:
 node evals/grade.mjs --judges <case>
 ```
 
-It prints `--judges <list>` from the case's `judges.txt`, or nothing where the case has none. Where `<case>` names no folder that holds an `expected.md`, it stops with an error and a non-zero exit, so a wrong name never runs a case unfiltered.
+It prints `--no-judge-cache --judges <list>` from the case's `judges.txt`, or `--no-judge-cache` alone where the case has none, so every graded run judges the case again instead of reusing a saved judge return. Where `<case>` names no folder that holds an `expected.md`, it stops with an error and a non-zero exit, so a wrong name never runs a case unfiltered.
 
 Then review it with the 5 steps `SKILL.md` holds, with `<dir>` as the target and `main...change` as the range.
 Where the case has no `base.diff`, pass the printed diff path to the extract command as `--diff` instead of `--repo` and `--range`.
-In step 1, append the printed flag to the prepare command, as `runReview.mjs prepare --run <run> --judges <list>`, so the review schedules only the judge types the case grades.
+In step 1, append the printed flags to the prepare command, as `runReview.mjs prepare --run <run> --no-judge-cache --judges <list>`, so the review schedules only the judge types the case grades and measures their cost afresh.
 
 Then grade the `review.md` the run wrote into its run folder:
 
