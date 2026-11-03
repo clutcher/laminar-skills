@@ -7,7 +7,7 @@ import { PLAIN_PATCH_OPTIONS, readGitOutputOrFail, readTopFolderOf } from "../re
 import { movesAmong } from "./MovedFiles.mjs";
 import { joinLinesAsFileText } from "../source/SourceText.mjs";
 
-export const CHANGE_MODES = Object.freeze({ REPOSITORY: "REPOSITORY", PATCH: "PATCH" });
+export const CHANGE_MODES = Object.freeze({ REPOSITORY: "REPOSITORY", PATCH: "PATCH", SHAPE: "SHAPE" });
 
 export const chooseRepositoryToRead = (mode, repository) => (mode === CHANGE_MODES.REPOSITORY && repository ? repository : null);
 

@@ -39,7 +39,11 @@ const numberThePossibleFindings = groups => {
 
 const isAPatchReview = reviewed => String(reviewed.mode || "").toUpperCase() === CHANGE_MODES.PATCH;
 
-const formatTargetLine = reviewed => `${isAPatchReview(reviewed) ? "patch" : "repository"} mode, ${reviewed.modeReason || "no reason recorded"}`;
+const MODE_WORDS = Object.freeze({ [CHANGE_MODES.PATCH]: "patch", [CHANGE_MODES.SHAPE]: "shape" });
+
+const readModeWord = reviewed => MODE_WORDS[String(reviewed.mode || "").toUpperCase()] || "repository";
+
+const formatTargetLine = reviewed => `${readModeWord(reviewed)} mode, ${reviewed.modeReason || "no reason recorded"}`;
 
 const formatRepairedWord = repaired => repaired.length ? `, ${repaired.length} repaired from the numbering of the code under review` : "";
 

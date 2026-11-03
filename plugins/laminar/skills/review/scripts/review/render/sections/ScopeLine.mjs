@@ -1,3 +1,5 @@
+import { CHANGE_MODES } from "../../../code/index.mjs";
+
 const JUDGE_TYPE_PREFIX_PATTERN = /^judge-/;
 
 const formatCount = number => Number(number).toLocaleString("en-US");
@@ -5,6 +7,8 @@ const formatCount = number => Number(number).toLocaleString("en-US");
 const findJudgeCalls = plan => plan && plan.upTo ? plan.upTo.judgeCalls : null;
 
 const wasAskedAtTheCostCheck = fullPlan => Boolean(fullPlan && fullPlan.passesThreshold);
+
+const markAShapeRun = prepared => (prepared.mode === CHANGE_MODES.SHAPE ? true : null);
 
 export function buildScope(prepared, plan, fullPlan, leftOutCountByScaleMap = null) {
   const filter = prepared.filter;
@@ -18,6 +22,7 @@ export function buildScope(prepared, plan, fullPlan, leftOutCountByScaleMap = nu
     leftOutByThePaths: prepared.leftOutByThePaths || null,
     judgeCallsPlanned: findJudgeCalls(fullPlan),
     judgeCallsInThisRun: findJudgeCalls(plan),
+    shapeRun: markAShapeRun(prepared),
   };
 }
 

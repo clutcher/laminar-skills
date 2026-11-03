@@ -1,22 +1,24 @@
 #!/usr/bin/env node
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { ChangeReader, CODE_GRAPH_FILE, ReviewWorktree, sweepUnusedReviewWorktreesBeside, WorktreeStop, findHeadOfRevisions, ExtractOutput, ExtractStep } from "./code/index.mjs";
+import { ChangeReader, CODE_GRAPH_FILE, ReviewWorktree, sweepUnusedReviewWorktreesBeside, WorktreeStop, findHeadOfRevisions, ExtractOutput, ExtractStep, listWhatTheShapeShows, readShapeModel, ShapeModelStop } from "./code/index.mjs";
 import { PrepareStep, REVIEW_ABSTRACTIONS_FILE } from "./review/prepare/PrepareStep.mjs";
 import { CodeGraphWalks } from "./review/prepare/abstractions/CodeGraphWalks.mjs";
+import { ShapeAbstractions } from "./review/prepare/abstractions/shape/ShapeAbstractions.mjs";
 import { FilterStop, ReviewFilter } from "./review/prepare/selection/ReviewFilter.mjs";
 import { MergeStep } from "./review/merge/MergeStep.mjs";
 import { formatSweepWords } from "./review/merge/draft/Sweep.mjs";
 import { RenderStep } from "./review/render/RenderStep.mjs";
 import { formatLeftOutByThePaths } from "./review/render/sections/ScopeLine.mjs";
-import { resolveAbsolutePath } from "./files/paths.mjs";
+import { isSamePath, resolveAbsolutePath } from "./files/paths.mjs";
 import { readJsonFile, writeJsonFile } from "./files/jsonFile.mjs";
 import { writeWorkflowReturnFile } from "./files/workflowReturnFile.mjs";
 import { RunFileStop } from "./files/runFile.mjs";
 
 const SUBCOMMANDS = ["extract", "prepare", "merge", "render"];
 
-const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --diff <patch>] [--kind-base <revision>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
+const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --diff <patch>] [prepare --repo <path> --shape <shape model>] [--kind-base <revision>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
 
 const PREPARE_RETURN_FILE = "prepare-return.json";
 
@@ -41,6 +43,7 @@ function parseArguments(argv) {
     else if (name === "--range") parsed.revisions = argv[++index];
     else if (name === "--kind-base") parsed.kindBase = argv[++index];
     else if (name === "--diff") parsed.diff = argv[++index];
+    else if (name === "--shape") parsed.shape = argv[++index];
     else if (name === "--findings") parsed.findings.push(...splitList(argv[++index]));
     else if (name === "--verdicts") parsed.verdicts.push(...splitList(argv[++index]));
     else if (name === "--exclude") parsed.exclude = splitList(argv[++index]);
@@ -114,9 +117,9 @@ function extract(parsed) {
   printResult({ step: "extract", runFolder: resolveAbsolutePath(parsed.run), mode: written.mode, counts: written.counts });
 }
 
-function filterOrStop(parsed) {
+function filterOrStop(parsed, createFilter = given => new ReviewFilter(given)) {
   try {
-    return new ReviewFilter({ judges: parsed.judges, paths: parsed.paths, scales: parsed.scales });
+    return createFilter({ judges: parsed.judges, paths: parsed.paths, scales: parsed.scales });
   } catch (error) {
     if (!(error instanceof FilterStop)) throw error;
     console.error(`prepare: ${error.message}`);
@@ -156,10 +159,32 @@ const prepareReturnOf = (runFolder, written) => ({
   ...(written.leftOutByThePaths ? { leftOutByThePaths: written.leftOutByThePaths } : {}),
 });
 
-function prepare(parsed) {
+function readShapeModelOrStop(shapeModelPath) {
+  try {
+    return readShapeModel(readJsonFile(shapeModelPath));
+  } catch (error) {
+    if (!(error instanceof ShapeModelStop) && !(error instanceof SyntaxError)) throw error;
+    console.error(`prepare: ${error.message}`);
+    return process.exit(2);
+  }
+}
+
+function prepareTheShapeRun(parsed) {
+  if (!parsed.repo) { console.error(USAGE); process.exit(2); }
+  const shapeModel = readShapeModelOrStop(parsed.shape);
+  const filter = filterOrStop(parsed, given => ReviewFilter.createForAShapeRun(given, listWhatTheShapeShows(shapeModel)));
+  const reviewAbstractions = new ShapeAbstractions(shapeModel, resolveAbsolutePath(parsed.repo), resolveAbsolutePath(parsed.shape)).buildReviewAbstractions();
+  return { filter, reviewAbstractions };
+}
+
+function prepareTheWalkedRun(parsed) {
   const filter = filterOrStop(parsed);
   const walked = new CodeGraphWalks(readJsonFile(path.join(parsed.run, CODE_GRAPH_FILE))).walkEveryAbstraction();
-  const reviewAbstractions = walked.buildReviewAbstractions();
+  return { filter, reviewAbstractions: walked.buildReviewAbstractions() };
+}
+
+function prepare(parsed) {
+  const { filter, reviewAbstractions } = parsed.shape ? prepareTheShapeRun(parsed) : prepareTheWalkedRun(parsed);
   writeJsonFile(path.join(parsed.run, REVIEW_ABSTRACTIONS_FILE), reviewAbstractions);
   const step = new PrepareStep(reviewAbstractions, { filter }).run();
   const costPlanLine = step.writeTo(parsed.run);
@@ -202,11 +227,29 @@ function runOrStop(subcommand, parsed) {
   }
 }
 
+const SHAPE_RUN_FOLDER_PREFIX = "laminar-shape-run-";
+
+const liesInsideTheFolder = (given, folder) => {
+  const relative = path.relative(folder, given);
+  return isSamePath(given, folder) || (!relative.startsWith("..") && !path.isAbsolute(relative));
+};
+
+function chooseRunFolder(subcommand, parsed) {
+  const startsAShapeRun = subcommand === "prepare" && Boolean(parsed.shape);
+  if (!parsed.run && !startsAShapeRun) { console.error(USAGE); process.exit(2); }
+  const runFolder = parsed.run || fs.mkdtempSync(path.join(os.tmpdir(), SHAPE_RUN_FOLDER_PREFIX));
+  if (startsAShapeRun && parsed.repo && liesInsideTheFolder(path.resolve(runFolder), path.resolve(parsed.repo))) {
+    console.error("prepare: a shape run writes nothing into the repository, so --run must name a folder outside --repo");
+    process.exit(2);
+  }
+  return runFolder;
+}
+
 function runReview() {
   const [subcommand, ...rest] = process.argv.slice(2);
   if (!SUBCOMMANDS.includes(subcommand)) { console.error(USAGE); process.exit(2); }
   const parsed = parseArguments(rest);
-  if (!parsed.run) { console.error(USAGE); process.exit(2); }
+  parsed.run = chooseRunFolder(subcommand, parsed);
   fs.mkdirSync(parsed.run, { recursive: true });
   runOrStop(subcommand, parsed);
 }

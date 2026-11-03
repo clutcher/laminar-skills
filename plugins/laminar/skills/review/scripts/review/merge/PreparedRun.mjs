@@ -1,5 +1,5 @@
 import path from "node:path";
-import { chooseRepositoryToRead, PublicChangeKinds } from "../../code/index.mjs";
+import { CHANGE_MODES, chooseRepositoryToRead, PublicChangeKinds } from "../../code/index.mjs";
 import { buildFileAndLineKey } from "./abstractions/AbstractionsAtPlaces.mjs";
 import { ChangedLinesText } from "../prepare/formats/ChangedLinesText.mjs";
 import { REVIEW_ABSTRACTIONS_FILE } from "../prepare/PrepareStep.mjs";
@@ -29,6 +29,10 @@ export class PreparedRun {
     this.reviewedAbstractions = reviewed.abstractions || [];
     this.abstractionsOfTheChange = reviewed.abstractionsOfTheChange || [];
     this.publicChangeKinds = PublicChangeKinds.createFromJSON(reviewed.publicChangeKinds);
+  }
+
+  isAShapeRun() {
+    return this.prepared.mode === CHANGE_MODES.SHAPE;
   }
 
   findEntryMethodOfTheClassAt(file, line) {

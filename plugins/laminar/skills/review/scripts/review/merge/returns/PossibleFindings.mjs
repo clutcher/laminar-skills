@@ -89,7 +89,10 @@ const markTheFinding = (finding, abstraction, changedLines, publicChangeKinds) =
 
 const canMarkAnyFinding = (changedLines, publicChangeKinds) => changedLines.holdsAnyChange() || publicChangeKinds.holdsAnyKind() || publicChangeKinds.namesAKindBase();
 
-export const markTheFindingsInTheChange = (findings, changedLines, codeUnderReview = [], publicChangeKinds = NO_PUBLIC_CHANGE_KINDS) => {
+const markInTheChange = finding => ({ ...finding, inChange: true });
+
+export const markTheFindingsInTheChange = (findings, changedLines, codeUnderReview = [], publicChangeKinds = NO_PUBLIC_CHANGE_KINDS, { isAShapeRun = false } = {}) => {
+  if (isAShapeRun) return findings.map(markInTheChange);
   if (!canMarkAnyFinding(changedLines, publicChangeKinds)) return findings;
   const findTheAbstractionJudged = indexTheAbstractionsJudged(codeUnderReview);
   return findings.map(finding => markTheFinding(finding, findTheAbstractionJudged(finding), changedLines, publicChangeKinds));
