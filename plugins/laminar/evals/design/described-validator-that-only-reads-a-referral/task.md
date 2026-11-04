@@ -1,0 +1,1 @@
+Design the change of the plan in `<plan file>`, for the repository in the current folder. mode: autonomous. results: `<results folder>`. The ceiling is 3 shape runs. Stop after step 10 of the skill: start no writer, and change no file of the repository.

@@ -1,0 +1,147 @@
+diff --git a/src/main/java/com/example/clinic/appointment/AppointmentBook.java b/src/main/java/com/example/clinic/appointment/AppointmentBook.java
+--- a/src/main/java/com/example/clinic/appointment/AppointmentBook.java
++++ b/src/main/java/com/example/clinic/appointment/AppointmentBook.java
+@@ -1,13 +1,11 @@
+ package com.example.clinic.appointment;
+ 
++import com.example.clinic.util.ClinicUtils;
+ import java.time.LocalDateTime;
+-import java.time.LocalTime;
+ import java.util.List;
+ 
+ public class AppointmentBook {
+ 
+-    private static final int SLOT_MINUTES = 15;
+-
+     private final AppointmentRepository appointments;
+ 
+     public AppointmentBook(AppointmentRepository appointments) {
+@@ -15,24 +13,14 @@
+     }
+ 
+     public Appointment book(Appointment requested) {
+-        LocalDateTime start = getSlotStartAtOrAfter(requested.start());
++        LocalDateTime start = ClinicUtils.getSlotStartAtOrAfter(requested.start());
+         Appointment aligned = new Appointment(requested.appointmentId(), requested.patientId(), requested.clinicianId(), requested.visitType(), start, start.plus(java.time.Duration.between(requested.start(), requested.end())));
+         List<Appointment> sameDay = appointments.findByClinicianOn(aligned.clinicianId(), aligned.start().toLocalDate());
+         for (Appointment booked : sameDay) {
+-            if (overlaps(booked, aligned)) throw new SlotTakenException(aligned.clinicianId(), aligned.start());
++            if (ClinicUtils.overlaps(booked.start(), booked.end(), aligned.start(), aligned.end())) throw new SlotTakenException(aligned.clinicianId(), aligned.start());
+         }
+ 
+         appointments.save(aligned);
+         return aligned;
+     }
+-
+-    private LocalDateTime getSlotStartAtOrAfter(LocalDateTime requested) {
+-        int minutesPastSlot = requested.getMinute() % SLOT_MINUTES;
+-        LocalDateTime truncated = requested.withSecond(0).withNano(0);
+-        return minutesPastSlot == 0 ? truncated : truncated.plusMinutes(SLOT_MINUTES - minutesPastSlot);
+-    }
+-
+-    private boolean overlaps(Appointment one, Appointment other) {
+-        return one.start().isBefore(other.end()) && other.start().isBefore(one.end());
+-    }
+ }
+diff --git a/src/main/java/com/example/clinic/billing/InvoiceService.java b/src/main/java/com/example/clinic/billing/InvoiceService.java
+--- a/src/main/java/com/example/clinic/billing/InvoiceService.java
++++ b/src/main/java/com/example/clinic/billing/InvoiceService.java
+@@ -1,20 +1,12 @@
+ package com.example.clinic.billing;
+ 
++import com.example.clinic.util.ClinicUtils;
+ import java.math.BigDecimal;
+-import java.math.RoundingMode;
+ 
+ public class InvoiceService {
+ 
+     public Invoice createInvoice(String invoiceId, String patientId, BigDecimal fee, int insuredPercent) {
+-        BigDecimal patientShare = getPatientShare(fee, insuredPercent);
+-        return new Invoice(invoiceId, patientId, roundToCents(fee), roundToCents(patientShare));
+-    }
+-
+-    private BigDecimal getPatientShare(BigDecimal fee, int insuredPercent) {
+-        return fee.multiply(BigDecimal.valueOf(100 - insuredPercent)).divide(BigDecimal.valueOf(100));
+-    }
+-
+-    private BigDecimal roundToCents(BigDecimal amount) {
+-        return amount.setScale(2, RoundingMode.HALF_UP);
++        BigDecimal patientShare = ClinicUtils.getPatientShare(fee, insuredPercent);
++        return new Invoice(invoiceId, patientId, ClinicUtils.roundToCents(fee), ClinicUtils.roundToCents(patientShare));
+     }
+ }
+diff --git a/src/main/java/com/example/clinic/reminder/ReminderPlanner.java b/src/main/java/com/example/clinic/reminder/ReminderPlanner.java
+--- a/src/main/java/com/example/clinic/reminder/ReminderPlanner.java
++++ b/src/main/java/com/example/clinic/reminder/ReminderPlanner.java
+@@ -1,22 +1,11 @@
+ package com.example.clinic.reminder;
+ 
+ import com.example.clinic.appointment.Appointment;
+-import java.time.LocalDateTime;
+-import java.time.LocalTime;
++import com.example.clinic.util.ClinicUtils;
+ 
+ public class ReminderPlanner {
+ 
+-    private static final LocalTime SEND_TIME = LocalTime.of(18, 0);
+-
+     public Reminder planReminder(Appointment appointment, Patient patient) {
+-        return new Reminder(patient.patientId(), normalizePhone(patient.phone()), getEveningBefore(appointment.start()));
+-    }
+-
+-    private LocalDateTime getEveningBefore(LocalDateTime start) {
+-        return start.toLocalDate().minusDays(1).atTime(SEND_TIME);
+-    }
+-
+-    private String normalizePhone(String phone) {
+-        return phone.replaceAll("[^0-9+]", "");
++        return new Reminder(patient.patientId(), ClinicUtils.normalizePhone(patient.phone()), ClinicUtils.getEveningBefore(appointment.start()));
+     }
+ }
+diff --git a/src/main/java/com/example/clinic/util/ClinicUtils.java b/src/main/java/com/example/clinic/util/ClinicUtils.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/util/ClinicUtils.java
+@@ -0,0 +1,42 @@
++package com.example.clinic.util;
++
++import java.math.BigDecimal;
++import java.math.RoundingMode;
++import java.time.LocalDateTime;
++import java.time.LocalTime;
++
++public final class ClinicUtils {
++
++    private static final int SLOT_MINUTES = 15;
++
++    private static final LocalTime SEND_TIME = LocalTime.of(18, 0);
++
++    private ClinicUtils() {
++    }
++
++    public static LocalDateTime getSlotStartAtOrAfter(LocalDateTime requested) {
++        int minutesPastSlot = requested.getMinute() % SLOT_MINUTES;
++        LocalDateTime truncated = requested.withSecond(0).withNano(0);
++        return minutesPastSlot == 0 ? truncated : truncated.plusMinutes(SLOT_MINUTES - minutesPastSlot);
++    }
++
++    public static boolean overlaps(LocalDateTime start, LocalDateTime end, LocalDateTime otherStart, LocalDateTime otherEnd) {
++        return start.isBefore(otherEnd) && otherStart.isBefore(end);
++    }
++
++    public static BigDecimal getPatientShare(BigDecimal fee, int insuredPercent) {
++        return fee.multiply(BigDecimal.valueOf(100 - insuredPercent)).divide(BigDecimal.valueOf(100));
++    }
++
++    public static BigDecimal roundToCents(BigDecimal amount) {
++        return amount.setScale(2, RoundingMode.HALF_UP);
++    }
++
++    public static LocalDateTime getEveningBefore(LocalDateTime start) {
++        return start.toLocalDate().minusDays(1).atTime(SEND_TIME);
++    }
++
++    public static String normalizePhone(String phone) {
++        return phone.replaceAll("[^0-9+]", "");
++    }
++}

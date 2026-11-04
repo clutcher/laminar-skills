@@ -1,0 +1,410 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "laminar-review",
+          "version": "0.71.2",
+          "informationUri": "https://github.com/clutcher/laminar-skills",
+          "rules": [
+            {
+              "id": "S1",
+              "name": "Incomplete Mental Model",
+              "shortDescription": {
+                "text": "when the same decision lives in many places, the mental model at each location feels finished and the reasoning feels sound"
+              },
+              "help": {
+                "text": "Encapsulate: give the decision 1 owner that every place uses, or drop a copy that no place needs."
+              }
+            },
+            {
+              "id": "S2",
+              "name": "Prediction Failure",
+              "shortDescription": {
+                "text": "the name creates expectations that reality contradicts"
+              },
+              "help": {
+                "text": "Encapsulate: change the code to do what the name says, or rename it where the code is right."
+              }
+            },
+            {
+              "id": "S4",
+              "name": "Compression Failure",
+              "shortDescription": {
+                "text": "No stored schema matches the code, and neither repeated shapes nor a shared purpose emerges for the reader to group, so each operation fills its own working-memory slot."
+              },
+              "help": {
+                "text": "Restore single level of abstraction: split the test into exactly given, when and then, or into several tests."
+              }
+            },
+            {
+              "id": "S5",
+              "name": "Unnamed Part Failure",
+              "shortDescription": {
+                "text": "The name predicts the parts, but the details belong to a part it never names, so compression drops to the slow path instead of the fast one."
+              },
+              "help": {
+                "text": "Restore single level of abstraction: move the low-level steps into a named method, or move this call up to the caller."
+              }
+            },
+            {
+              "id": "S6",
+              "name": "Open Construct Overload",
+              "shortDescription": {
+                "text": "every open construct holds a slot only until it closes, so the cost is bounded by the nesting itself"
+              },
+              "help": {
+                "text": "Restore single level of abstraction: return early, or move the nested block into a named method."
+              }
+            },
+            {
+              "id": "D1",
+              "name": "Working Memory Overload (Over-Extraction)",
+              "shortDescription": {
+                "text": "Each extreme produces a different kind of turbulence: one overloads working memory with visible detail, the other leaves the purpose under too much depth to hold in mind."
+              },
+              "help": {
+                "text": "Restore single level of abstraction: inline the small methods into their caller, or regroup them into methods that mean something."
+              }
+            },
+            {
+              "id": "D2",
+              "name": "Prediction Failure / Incomplete Mental Model (Scoped Parameters)",
+              "shortDescription": {
+                "text": "Primitives that are too narrow overload working memory and spread decisions across call sites, while objects that are too broad hide method dependencies and create false ones during modification."
+              },
+              "help": {
+                "text": "Encapsulate: group parameters that travel together into one type, or pass only what the method needs."
+              }
+            },
+            {
+              "id": "D3",
+              "name": "Prediction Failure / Unnamed Part Failure (Leaked Details)",
+              "shortDescription": {
+                "text": "are details that leaked into the wrong abstraction, and they belong elsewhere: above as a coordinator, or below as a detail"
+              },
+              "help": {
+                "text": "Restore single level of abstraction: move this step up to the calling method, or down into a lower-level method."
+              }
+            },
+            {
+              "id": "D4",
+              "name": "Unnamed Part Failure / Working Memory Overload (Missing Boundary)",
+              "shortDescription": {
+                "text": "Each failure needs its own fix, because a missing boundary needs a new abstraction named after a part, while a bad name needs only renaming."
+              },
+              "help": {
+                "text": "Encapsulate: move these private methods and fields into their own class, or up to the caller."
+              }
+            },
+            {
+              "id": "CP1",
+              "name": "Exclude Illegal States",
+              "shortDescription": {
+                "text": "Types can catch more than that, because they can also prevent an invalid mix of fields."
+              },
+              "help": {
+                "text": "Encapsulate: change the types so an invalid value cannot be built, or reject it in the constructor."
+              }
+            },
+            {
+              "id": "CP3",
+              "name": "Protect the State",
+              "shortDescription": {
+                "text": "Prevention comes from an abstraction that protects its state and controls every transition into it."
+              },
+              "help": {
+                "text": "Encapsulate: let one class make every change to the field, or make the field immutable."
+              }
+            },
+            {
+              "id": "CP4",
+              "name": "Remove Edge Cases",
+              "shortDescription": {
+                "text": "When an operation treats these as normal results rather than errors, its callers never have to check for them or handle a failure."
+              },
+              "help": {
+                "text": "Encapsulate: return a normal result for the special case, such as an empty list, or reject it early."
+              }
+            },
+            {
+              "id": "CP5",
+              "name": "Remove Hidden Dependencies",
+              "shortDescription": {
+                "text": "When a function reads state that another part of the system can change, it depends on that part, but its signature cannot show that link."
+              },
+              "help": {
+                "text": "Encapsulate: take the shared value as a parameter and return the result, or give it one owning class."
+              }
+            },
+            {
+              "id": "CP6",
+              "name": "Validate at the Boundary",
+              "shortDescription": {
+                "text": "That check belongs at the entry boundary, which lets every abstraction inside trust the data that passes."
+              },
+              "help": {
+                "text": "Encapsulate: validate once where data enters the application, or use a type that cannot hold bad values."
+              }
+            },
+            {
+              "id": "CP7",
+              "name": "Fail Fast",
+              "shortDescription": {
+                "text": "a guard that rejects truly invalid input should signal that failure instead of returning in silence"
+              },
+              "help": {
+                "text": "Encapsulate: stop and signal the failure."
+              }
+            },
+            {
+              "id": "CD2",
+              "name": "Test Behavior",
+              "shortDescription": {
+                "text": "Tests verify correctness by verifying the behaviors that requirements describe."
+              },
+              "help": {
+                "text": "Assert on outputs and stored state, not on mocks or internal calls."
+              }
+            },
+            {
+              "id": "CD4",
+              "name": "Integration Test Needed",
+              "shortDescription": {
+                "text": "Only tests that span the full path verify the outcomes users care about, which makes such tests the natural default."
+              },
+              "help": {
+                "text": "Add a test that runs from the entry boundary to the outside system, or extend one."
+              }
+            },
+            {
+              "id": "CD5",
+              "name": "Unit Test Needed",
+              "shortDescription": {
+                "text": "Unit tests complement both by covering branches that integration tests do not exercise, not as a coverage device applied to every class."
+              },
+              "help": {
+                "text": "Add unit tests for every branch of the logic, or extend the unit tests of that logic."
+              }
+            },
+            {
+              "id": "CD6",
+              "name": "Unit Test to Remove",
+              "shortDescription": {
+                "text": "Pricing and dispatch each get a unit-test class with three tests, but the validator gets none, because integration already covers its branches."
+              },
+              "help": {
+                "text": "Remove the unit test, or keep it only for logic whose branches multiply the outcomes."
+              }
+            },
+            {
+              "id": "CD7",
+              "name": "Partial Path Test",
+              "shortDescription": {
+                "text": "A test that runs only part of the path checks only part of the code, whether people call it a unit or an integration test."
+              },
+              "help": {
+                "text": "Extend the test to run from the entry boundary to the outside system, or add one."
+              }
+            },
+            {
+              "id": "P1",
+              "name": "Looped I/O",
+              "shortDescription": {
+                "text": "a loop issues one I/O operation per item when a single batch operation would process all items at once"
+              },
+              "help": {
+                "text": "Encapsulate: replace the call in the loop with one batch call, or load all data before the loop."
+              }
+            },
+            {
+              "id": "P2",
+              "name": "Repeated Retrieval",
+              "shortDescription": {
+                "text": "code fetches the same data across an I/O boundary more than once inside a single operation when one fetch would be enough"
+              },
+              "help": {
+                "text": "Encapsulate: load the data once and pass it to each step, or keep it until this operation ends."
+              }
+            },
+            {
+              "id": "P3",
+              "name": "Excess Retrieval",
+              "shortDescription": {
+                "text": "the code retrieves more data than the operation needs across an I/O boundary"
+              },
+              "help": {
+                "text": "Encapsulate: select only the fields or rows the operation uses."
+              }
+            },
+            {
+              "id": "P4",
+              "name": "Resource Recreation",
+              "shortDescription": {
+                "text": "the code creates an expensive resource for each operation instead of creating it once and reusing it across operations"
+              },
+              "help": {
+                "text": "Encapsulate: create the client or connection once and reuse it, or take it from a pool."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "S1",
+          "level": "warning",
+          "baselineState": "new",
+          "rank": 0.9,
+          "message": {
+            "text": "Incomplete Mental Model: The method sendSameDay decides again which channel reaches a patient, by the same condition on the phone and the SMS consent that sendDayBefore holds."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/main/java/com/example/clinic/reminder/ReminderSender.java"
+                },
+                "region": {
+                  "startLine": 30
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "ReminderSender#sendSameDay"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "abstraction": "ReminderSender#sendSameDay",
+            "scale": "METHOD",
+            "changeKind": "created",
+            "test_code": false,
+            "check": "S1",
+            "direction": "Encapsulate: give the decision 1 owner that every place uses, or drop a copy that no place needs.",
+            "confidence": "high",
+            "what_would_confirm": "",
+            "failure": "a change to the consent rule made in sendSameDay leaves sendDayBefore on the old rule",
+            "also_abstraction": "ReminderSender#sendDayBefore",
+            "related_abstractions": [
+              {
+                "abstraction": "ReminderSender#sendDayBefore",
+                "role": "also",
+                "changeKind": "created"
+              }
+            ]
+          },
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/main/java/com/example/clinic/reminder/ReminderSender.java"
+                },
+                "region": {
+                  "startLine": 21
+                }
+              },
+              "properties": {
+                "changeKind": "created"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "S5",
+          "level": "warning",
+          "baselineState": "new",
+          "rank": 0.9,
+          "message": {
+            "text": "Unnamed Part Failure: The class ReminderSender holds the contact channel of a patient, its 2 gateways and the rule that picks one, as loose fields and conditions, so the channel is a part the class never names."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/main/java/com/example/clinic/reminder/ReminderSender.java"
+                },
+                "region": {
+                  "startLine": 10
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "ReminderSender"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "abstraction": "ReminderSender",
+            "scale": "CLASS",
+            "changeKind": "created",
+            "test_code": false,
+            "check": "S5",
+            "direction": "Restore single level of abstraction: move the methods and fields of another part into a new class.",
+            "confidence": "high",
+            "what_would_confirm": ""
+          }
+        },
+        {
+          "ruleId": "S5",
+          "level": "warning",
+          "baselineState": "new",
+          "rank": 0.9,
+          "message": {
+            "text": "Unnamed Part Failure: The method sendDayBefore picks the channel inline from the phone and the SMS consent of the patient, so the choice of a channel is a detail among the steps of sending a reminder."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/main/java/com/example/clinic/reminder/ReminderSender.java"
+                },
+                "region": {
+                  "startLine": 21
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "ReminderSender#sendDayBefore"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "abstraction": "ReminderSender#sendDayBefore",
+            "scale": "METHOD",
+            "changeKind": "created",
+            "test_code": false,
+            "check": "S5",
+            "direction": "Restore single level of abstraction: move the low-level steps into a named method, or move this call up to the caller.",
+            "confidence": "high",
+            "what_would_confirm": ""
+          }
+        }
+      ],
+      "properties": {
+        "scope": {
+          "askedAtTheCostCheck": false,
+          "judges": [
+            "judge-simplicity-class",
+            "judge-simplicity-method",
+            "judge-simplicity-decision"
+          ],
+          "scales": [
+            "APPLICATION",
+            "MODULE",
+            "CLASS",
+            "METHOD",
+            "VARIABLE"
+          ],
+          "judgeCallsPlanned": 20,
+          "judgeCallsInThisRun": 6
+        }
+      }
+    }
+  ]
+}

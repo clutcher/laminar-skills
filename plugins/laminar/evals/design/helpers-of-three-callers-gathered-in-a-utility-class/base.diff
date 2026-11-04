@@ -1,0 +1,188 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# Clinic schedule
++
++Java 21. Domain packages under `com.example.clinic`. Repositories are interfaces implemented by the persistence module, which is not in this repository slice.
+diff --git a/src/main/java/com/example/clinic/appointment/Appointment.java b/src/main/java/com/example/clinic/appointment/Appointment.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/Appointment.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.appointment;
++
++import java.time.LocalDateTime;
++
++public record Appointment(String appointmentId, String patientId, String clinicianId, VisitType visitType, LocalDateTime start, LocalDateTime end) {
++}
+diff --git a/src/main/java/com/example/clinic/appointment/AppointmentBook.java b/src/main/java/com/example/clinic/appointment/AppointmentBook.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/AppointmentBook.java
+@@ -0,0 +1,38 @@
++package com.example.clinic.appointment;
++
++import java.time.LocalDateTime;
++import java.time.LocalTime;
++import java.util.List;
++
++public class AppointmentBook {
++
++    private static final int SLOT_MINUTES = 15;
++
++    private final AppointmentRepository appointments;
++
++    public AppointmentBook(AppointmentRepository appointments) {
++        this.appointments = appointments;
++    }
++
++    public Appointment book(Appointment requested) {
++        LocalDateTime start = getSlotStartAtOrAfter(requested.start());
++        Appointment aligned = new Appointment(requested.appointmentId(), requested.patientId(), requested.clinicianId(), requested.visitType(), start, start.plus(java.time.Duration.between(requested.start(), requested.end())));
++        List<Appointment> sameDay = appointments.findByClinicianOn(aligned.clinicianId(), aligned.start().toLocalDate());
++        for (Appointment booked : sameDay) {
++            if (overlaps(booked, aligned)) throw new SlotTakenException(aligned.clinicianId(), aligned.start());
++        }
++
++        appointments.save(aligned);
++        return aligned;
++    }
++
++    private LocalDateTime getSlotStartAtOrAfter(LocalDateTime requested) {
++        int minutesPastSlot = requested.getMinute() % SLOT_MINUTES;
++        LocalDateTime truncated = requested.withSecond(0).withNano(0);
++        return minutesPastSlot == 0 ? truncated : truncated.plusMinutes(SLOT_MINUTES - minutesPastSlot);
++    }
++
++    private boolean overlaps(Appointment one, Appointment other) {
++        return one.start().isBefore(other.end()) && other.start().isBefore(one.end());
++    }
++}
+diff --git a/src/main/java/com/example/clinic/appointment/AppointmentRepository.java b/src/main/java/com/example/clinic/appointment/AppointmentRepository.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/AppointmentRepository.java
+@@ -0,0 +1,11 @@
++package com.example.clinic.appointment;
++
++import java.time.LocalDate;
++import java.util.List;
++
++public interface AppointmentRepository {
++
++    List<Appointment> findByClinicianOn(String clinicianId, LocalDate day);
++
++    void save(Appointment appointment);
++}
+diff --git a/src/main/java/com/example/clinic/appointment/SlotTakenException.java b/src/main/java/com/example/clinic/appointment/SlotTakenException.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/SlotTakenException.java
+@@ -0,0 +1,10 @@
++package com.example.clinic.appointment;
++
++import java.time.LocalDateTime;
++
++public class SlotTakenException extends RuntimeException {
++
++    public SlotTakenException(String clinicianId, LocalDateTime start) {
++        super("clinician " + clinicianId + " is booked at " + start);
++    }
++}
+diff --git a/src/main/java/com/example/clinic/appointment/VisitType.java b/src/main/java/com/example/clinic/appointment/VisitType.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/VisitType.java
+@@ -0,0 +1,7 @@
++package com.example.clinic.appointment;
++
++public enum VisitType {
++    CHECK_UP,
++    FOLLOW_UP,
++    SPECIALIST
++}
+diff --git a/src/main/java/com/example/clinic/billing/Invoice.java b/src/main/java/com/example/clinic/billing/Invoice.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/billing/Invoice.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.billing;
++
++import java.math.BigDecimal;
++
++public record Invoice(String invoiceId, String patientId, BigDecimal fee, BigDecimal patientShare) {
++}
+diff --git a/src/main/java/com/example/clinic/billing/InvoiceService.java b/src/main/java/com/example/clinic/billing/InvoiceService.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/billing/InvoiceService.java
+@@ -0,0 +1,20 @@
++package com.example.clinic.billing;
++
++import java.math.BigDecimal;
++import java.math.RoundingMode;
++
++public class InvoiceService {
++
++    public Invoice createInvoice(String invoiceId, String patientId, BigDecimal fee, int insuredPercent) {
++        BigDecimal patientShare = getPatientShare(fee, insuredPercent);
++        return new Invoice(invoiceId, patientId, roundToCents(fee), roundToCents(patientShare));
++    }
++
++    private BigDecimal getPatientShare(BigDecimal fee, int insuredPercent) {
++        return fee.multiply(BigDecimal.valueOf(100 - insuredPercent)).divide(BigDecimal.valueOf(100));
++    }
++
++    private BigDecimal roundToCents(BigDecimal amount) {
++        return amount.setScale(2, RoundingMode.HALF_UP);
++    }
++}
+diff --git a/src/main/java/com/example/clinic/reminder/Patient.java b/src/main/java/com/example/clinic/reminder/Patient.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/reminder/Patient.java
+@@ -0,0 +1,4 @@
++package com.example.clinic.reminder;
++
++public record Patient(String patientId, String name, String phone) {
++}
+diff --git a/src/main/java/com/example/clinic/reminder/Reminder.java b/src/main/java/com/example/clinic/reminder/Reminder.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/reminder/Reminder.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.reminder;
++
++import java.time.LocalDateTime;
++
++public record Reminder(String patientId, String phone, LocalDateTime sendAt) {
++}
+diff --git a/src/main/java/com/example/clinic/reminder/ReminderPlanner.java b/src/main/java/com/example/clinic/reminder/ReminderPlanner.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/reminder/ReminderPlanner.java
+@@ -0,0 +1,22 @@
++package com.example.clinic.reminder;
++
++import com.example.clinic.appointment.Appointment;
++import java.time.LocalDateTime;
++import java.time.LocalTime;
++
++public class ReminderPlanner {
++
++    private static final LocalTime SEND_TIME = LocalTime.of(18, 0);
++
++    public Reminder planReminder(Appointment appointment, Patient patient) {
++        return new Reminder(patient.patientId(), normalizePhone(patient.phone()), getEveningBefore(appointment.start()));
++    }
++
++    private LocalDateTime getEveningBefore(LocalDateTime start) {
++        return start.toLocalDate().minusDays(1).atTime(SEND_TIME);
++    }
++
++    private String normalizePhone(String phone) {
++        return phone.replaceAll("[^0-9+]", "");
++    }
++}

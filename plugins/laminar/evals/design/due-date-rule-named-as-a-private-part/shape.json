@@ -1,0 +1,280 @@
+{
+  "version": 1,
+  "folders": [
+    {
+      "path": "src/main/java/com/example/library/lending",
+      "kind": "created",
+      "children": [
+        {
+          "name": "LoanDesk.java",
+          "kind": "created"
+        },
+        {
+          "name": "Loan.java",
+          "kind": "created"
+        },
+        {
+          "name": "Member.java",
+          "kind": "created"
+        },
+        {
+          "name": "MemberTier.java",
+          "kind": "created"
+        },
+        {
+          "name": "Item.java",
+          "kind": "created"
+        }
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "file": "src/main/java/com/example/library/lending/LoanDesk.java",
+      "kindWord": "class",
+      "name": "LoanDesk",
+      "zone": "domain",
+      "does": "computes",
+      "exposed": true,
+      "extends": [],
+      "implements": [],
+      "fields": [],
+      "methods": [
+        {
+          "visibility": "public",
+          "name": "lend",
+          "parameters": [
+            {
+              "name": "member",
+              "type": "Member"
+            },
+            {
+              "name": "item",
+              "type": "Item"
+            },
+            {
+              "name": "lentOn",
+              "type": "LocalDate"
+            }
+          ],
+          "returns": "Loan",
+          "uses": [
+            "calculateDueDate"
+          ],
+          "calls": [
+            "Loan"
+          ],
+          "body": "return new Loan(item, member, lentOn, calculateDueDate(member, item, lentOn));"
+        },
+        {
+          "visibility": "public",
+          "name": "renew",
+          "parameters": [
+            {
+              "name": "loan",
+              "type": "Loan"
+            },
+            {
+              "name": "renewedOn",
+              "type": "LocalDate"
+            }
+          ],
+          "returns": "Loan",
+          "uses": [
+            "calculateDueDate"
+          ],
+          "calls": [
+            "Loan"
+          ],
+          "body": "return new Loan(loan.item(), loan.member(), loan.lentOn(), calculateDueDate(loan.member(), loan.item(), renewedOn));"
+        },
+        {
+          "visibility": "public",
+          "name": "transfer",
+          "parameters": [
+            {
+              "name": "loan",
+              "type": "Loan"
+            },
+            {
+              "name": "newMember",
+              "type": "Member"
+            },
+            {
+              "name": "transferredOn",
+              "type": "LocalDate"
+            }
+          ],
+          "returns": "Loan",
+          "uses": [
+            "calculateDueDate"
+          ],
+          "calls": [
+            "Loan"
+          ],
+          "body": "return new Loan(loan.item(), newMember, transferredOn, calculateDueDate(newMember, loan.item(), transferredOn));"
+        },
+        {
+          "visibility": "private",
+          "name": "calculateDueDate",
+          "parameters": [
+            {
+              "name": "member",
+              "type": "Member"
+            },
+            {
+              "name": "item",
+              "type": "Item"
+            },
+            {
+              "name": "startsOn",
+              "type": "LocalDate"
+            }
+          ],
+          "returns": "LocalDate",
+          "calls": [
+            "MemberTier"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "src/main/java/com/example/library/lending/Loan.java",
+      "kindWord": "record",
+      "name": "Loan",
+      "zone": "domain",
+      "exposed": true,
+      "extends": [],
+      "implements": [],
+      "fields": [
+        {
+          "name": "item",
+          "type": "Item"
+        },
+        {
+          "name": "member",
+          "type": "Member"
+        },
+        {
+          "name": "lentOn",
+          "type": "LocalDate"
+        },
+        {
+          "name": "dueOn",
+          "type": "LocalDate"
+        }
+      ],
+      "methods": []
+    },
+    {
+      "file": "src/main/java/com/example/library/lending/Member.java",
+      "kindWord": "record",
+      "name": "Member",
+      "zone": "domain",
+      "exposed": true,
+      "extends": [],
+      "implements": [],
+      "fields": [
+        {
+          "name": "memberId",
+          "type": "String"
+        },
+        {
+          "name": "tier",
+          "type": "MemberTier"
+        }
+      ],
+      "methods": []
+    },
+    {
+      "file": "src/main/java/com/example/library/lending/MemberTier.java",
+      "kindWord": "enum",
+      "name": "MemberTier",
+      "zone": "domain",
+      "exposed": true,
+      "extends": [],
+      "implements": [],
+      "fields": [
+        {
+          "name": "STANDARD"
+        },
+        {
+          "name": "PREMIUM"
+        }
+      ],
+      "methods": []
+    },
+    {
+      "file": "src/main/java/com/example/library/lending/Item.java",
+      "kindWord": "record",
+      "name": "Item",
+      "zone": "domain",
+      "exposed": true,
+      "extends": [],
+      "implements": [],
+      "fields": [
+        {
+          "name": "itemId",
+          "type": "String"
+        },
+        {
+          "name": "title",
+          "type": "String"
+        },
+        {
+          "name": "loanPeriod",
+          "type": "Period"
+        }
+      ],
+      "methods": []
+    }
+  ],
+  "decisions": {
+    "conventions": {
+      "folder": ".claude/rules/conventions",
+      "found": false,
+      "files": [],
+      "zoneOrder": "default"
+    },
+    "owners": [
+      {
+        "decision": "the due date of a loan from the tier of the member and the loan period of the item",
+        "owner": "LoanDesk#calculateDueDate",
+        "callers": [
+          "LoanDesk#lend",
+          "LoanDesk#renew",
+          "LoanDesk#transfer"
+        ],
+        "forecast": {
+          "sixMonths": "low",
+          "oneYear": "medium",
+          "threeYears": "medium",
+          "change": "new rule",
+          "evidence": "domain",
+          "reason": "Libraries add tiers and change loan periods per kind of item, and each change asks again how the due date is found."
+        }
+      }
+    ],
+    "entries": [],
+    "exits": [],
+    "tests": {
+      "integration": [],
+      "unit": [
+        {
+          "class": "LoanDesk",
+          "file": "src/test/java/com/example/library/lending/LoanDeskTest.java",
+          "tests": [
+            "shouldSetTheDueDateOneLoanPeriodAfterTheLendDateForAStandardMember",
+            "shouldSetTheDueDateTwoLoanPeriodsAfterTheLendDateForAPremiumMember",
+            "shouldMoveTheDueDateOneLoanPeriodAfterTheRenewDate",
+            "shouldSetTheDueDateFromTheTierOfTheNewMemberWhenALoanIsTransferred"
+          ]
+        }
+      ]
+    },
+    "questions": [],
+    "findings": [],
+    "stops": [],
+    "scriptCases": []
+  }
+}

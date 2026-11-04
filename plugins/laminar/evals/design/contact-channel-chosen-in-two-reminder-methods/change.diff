@@ -1,0 +1,41 @@
+diff --git a/src/main/java/com/example/clinic/reminder/ReminderSender.java b/src/main/java/com/example/clinic/reminder/ReminderSender.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/reminder/ReminderSender.java
+@@ -0,0 +1,36 @@
++package com.example.clinic.reminder;
++
++import com.example.clinic.appointment.Appointment;
++import java.time.format.DateTimeFormatter;
++
++public class ReminderSender {
++
++    private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern("HH:mm");
++
++    private final SmsGateway smsGateway;
++
++    private final Mailer mailer;
++
++    public ReminderSender(SmsGateway smsGateway, Mailer mailer) {
++        this.smsGateway = smsGateway;
++        this.mailer = mailer;
++    }
++
++    public void sendDayBefore(Appointment appointment, Patient patient) {
++        String text = "Reminder: your visit is tomorrow at " + appointment.start().format(TIME_OF_DAY) + ".";
++        if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {
++            smsGateway.sendText(patient.phone(), text);
++        } else {
++            mailer.sendMail(patient.email(), "Your visit tomorrow", text);
++        }
++    }
++
++    public void sendSameDay(Appointment appointment, Patient patient) {
++        String text = "Your visit is today at " + appointment.start().format(TIME_OF_DAY) + ". Please arrive 10 minutes early.";
++        if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {
++            smsGateway.sendText(patient.phone(), text);
++        } else {
++            mailer.sendMail(patient.email(), "Your visit today", text);
++        }
++    }
++}

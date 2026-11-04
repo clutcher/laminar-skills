@@ -1,0 +1,1 @@
+Design the fix of every finding of the review run in `<run folder>`, for the repository in the current folder, which holds the change `main...change`. mode: autonomous. results: `<results folder>`. The ceiling is 3 shape runs. Stop after step 10 of the skill: start no writer, and change no file of the repository.

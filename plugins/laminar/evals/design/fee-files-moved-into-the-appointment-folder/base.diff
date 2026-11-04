@@ -1,0 +1,163 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# Clinic schedule
++
++Java 21. Domain packages under `com.example.clinic`. Repositories are interfaces implemented by the persistence module, which is not in this repository slice.
+diff --git a/src/main/java/com/example/clinic/appointment/Appointment.java b/src/main/java/com/example/clinic/appointment/Appointment.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/Appointment.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.appointment;
++
++import java.time.LocalDateTime;
++
++public record Appointment(String appointmentId, String patientId, String clinicianId, VisitType visitType, LocalDateTime start, LocalDateTime end) {
++}
+diff --git a/src/main/java/com/example/clinic/appointment/AppointmentBook.java b/src/main/java/com/example/clinic/appointment/AppointmentBook.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/AppointmentBook.java
+@@ -0,0 +1,24 @@
++package com.example.clinic.appointment;
++
++import java.util.List;
++
++public class AppointmentBook {
++
++    private final AppointmentRepository appointments;
++
++    public AppointmentBook(AppointmentRepository appointments) {
++        this.appointments = appointments;
++    }
++
++    public Appointment book(Appointment requested) {
++        List<Appointment> sameDay = appointments.findByClinicianOn(requested.clinicianId(), requested.start().toLocalDate());
++        for (Appointment booked : sameDay) {
++            if (booked.start().isBefore(requested.end()) && requested.start().isBefore(booked.end())) {
++                throw new SlotTakenException(requested.clinicianId(), requested.start());
++            }
++        }
++
++        appointments.save(requested);
++        return requested;
++    }
++}
+diff --git a/src/main/java/com/example/clinic/appointment/AppointmentRepository.java b/src/main/java/com/example/clinic/appointment/AppointmentRepository.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/AppointmentRepository.java
+@@ -0,0 +1,11 @@
++package com.example.clinic.appointment;
++
++import java.time.LocalDate;
++import java.util.List;
++
++public interface AppointmentRepository {
++
++    List<Appointment> findByClinicianOn(String clinicianId, LocalDate day);
++
++    void save(Appointment appointment);
++}
+diff --git a/src/main/java/com/example/clinic/appointment/SlotTakenException.java b/src/main/java/com/example/clinic/appointment/SlotTakenException.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/SlotTakenException.java
+@@ -0,0 +1,10 @@
++package com.example.clinic.appointment;
++
++import java.time.LocalDateTime;
++
++public class SlotTakenException extends RuntimeException {
++
++    public SlotTakenException(String clinicianId, LocalDateTime start) {
++        super("clinician " + clinicianId + " is booked at " + start);
++    }
++}
+diff --git a/src/main/java/com/example/clinic/appointment/VisitType.java b/src/main/java/com/example/clinic/appointment/VisitType.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/VisitType.java
+@@ -0,0 +1,7 @@
++package com.example.clinic.appointment;
++
++public enum VisitType {
++    CHECK_UP,
++    FOLLOW_UP,
++    SPECIALIST
++}
+diff --git a/src/main/java/com/example/clinic/billing/FeeSchedule.java b/src/main/java/com/example/clinic/billing/FeeSchedule.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/billing/FeeSchedule.java
+@@ -0,0 +1,18 @@
++package com.example.clinic.billing;
++
++import com.example.clinic.appointment.VisitType;
++import java.math.BigDecimal;
++import java.util.Map;
++
++public class FeeSchedule {
++
++    private final Map<VisitType, BigDecimal> amountByVisitTypeMap;
++
++    public FeeSchedule(Map<VisitType, BigDecimal> amountByVisitTypeMap) {
++        this.amountByVisitTypeMap = Map.copyOf(amountByVisitTypeMap);
++    }
++
++    public VisitFee findFeeOf(VisitType visitType) {
++        return new VisitFee(visitType, amountByVisitTypeMap.get(visitType));
++    }
++}
+diff --git a/src/main/java/com/example/clinic/billing/Invoice.java b/src/main/java/com/example/clinic/billing/Invoice.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/billing/Invoice.java
+@@ -0,0 +1,7 @@
++package com.example.clinic.billing;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++public record Invoice(String invoiceId, String patientId, List<VisitFee> fees, BigDecimal total) {
++}
+diff --git a/src/main/java/com/example/clinic/billing/InvoiceService.java b/src/main/java/com/example/clinic/billing/InvoiceService.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/billing/InvoiceService.java
+@@ -0,0 +1,20 @@
++package com.example.clinic.billing;
++
++import com.example.clinic.appointment.Appointment;
++import java.math.BigDecimal;
++import java.util.List;
++
++public class InvoiceService {
++
++    private final FeeSchedule feeSchedule;
++
++    public InvoiceService(FeeSchedule feeSchedule) {
++        this.feeSchedule = feeSchedule;
++    }
++
++    public Invoice createInvoice(String invoiceId, String patientId, List<Appointment> visits) {
++        List<VisitFee> fees = visits.stream().map(visit -> feeSchedule.findFeeOf(visit.visitType())).toList();
++        BigDecimal total = fees.stream().map(VisitFee::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
++        return new Invoice(invoiceId, patientId, fees, total);
++    }
++}
+diff --git a/src/main/java/com/example/clinic/billing/VisitFee.java b/src/main/java/com/example/clinic/billing/VisitFee.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/billing/VisitFee.java
+@@ -0,0 +1,7 @@
++package com.example.clinic.billing;
++
++import com.example.clinic.appointment.VisitType;
++import java.math.BigDecimal;
++
++public record VisitFee(VisitType visitType, BigDecimal amount) {
++}

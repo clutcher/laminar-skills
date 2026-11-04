@@ -1,0 +1,62 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# Clinic schedule
++
++Java 21. Domain packages under `com.example.clinic`. Repositories are interfaces implemented by the persistence module, which is not in this repository slice.
+diff --git a/src/main/java/com/example/clinic/appointment/Appointment.java b/src/main/java/com/example/clinic/appointment/Appointment.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/Appointment.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.appointment;
++
++import java.time.LocalDateTime;
++
++public record Appointment(String appointmentId, String patientId, String clinicianId, VisitType visitType, LocalDateTime start, LocalDateTime end) {
++}
+diff --git a/src/main/java/com/example/clinic/appointment/VisitType.java b/src/main/java/com/example/clinic/appointment/VisitType.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/VisitType.java
+@@ -0,0 +1,7 @@
++package com.example.clinic.appointment;
++
++public enum VisitType {
++    CHECK_UP,
++    FOLLOW_UP,
++    SPECIALIST
++}
+diff --git a/src/main/java/com/example/clinic/reminder/Mailer.java b/src/main/java/com/example/clinic/reminder/Mailer.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/reminder/Mailer.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.reminder;
++
++public interface Mailer {
++
++    void sendMail(String email, String subject, String body);
++}
+diff --git a/src/main/java/com/example/clinic/reminder/Patient.java b/src/main/java/com/example/clinic/reminder/Patient.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/reminder/Patient.java
+@@ -0,0 +1,4 @@
++package com.example.clinic.reminder;
++
++public record Patient(String patientId, String name, String phone, String email, boolean smsConsent) {
++}
+diff --git a/src/main/java/com/example/clinic/reminder/SmsGateway.java b/src/main/java/com/example/clinic/reminder/SmsGateway.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/reminder/SmsGateway.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.reminder;
++
++public interface SmsGateway {
++
++    void sendText(String phone, String text);
++}

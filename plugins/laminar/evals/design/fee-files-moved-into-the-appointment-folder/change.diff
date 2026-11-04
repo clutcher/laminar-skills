@@ -1,0 +1,127 @@
+diff --git a/src/main/java/com/example/clinic/appointment/AppointmentBook.java b/src/main/java/com/example/clinic/appointment/AppointmentBook.java
+--- a/src/main/java/com/example/clinic/appointment/AppointmentBook.java
++++ b/src/main/java/com/example/clinic/appointment/AppointmentBook.java
+@@ -6,11 +6,14 @@
+ 
+     private final AppointmentRepository appointments;
+ 
+-    public AppointmentBook(AppointmentRepository appointments) {
++    private final FeeSchedule feeSchedule;
++
++    public AppointmentBook(AppointmentRepository appointments, FeeSchedule feeSchedule) {
+         this.appointments = appointments;
++        this.feeSchedule = feeSchedule;
+     }
+ 
+-    public Appointment book(Appointment requested) {
++    public BookingConfirmation book(Appointment requested) {
+         List<Appointment> sameDay = appointments.findByClinicianOn(requested.clinicianId(), requested.start().toLocalDate());
+         for (Appointment booked : sameDay) {
+             if (booked.start().isBefore(requested.end()) && requested.start().isBefore(booked.end())) {
+@@ -19,6 +22,6 @@
+         }
+ 
+         appointments.save(requested);
+-        return requested;
++        return new BookingConfirmation(requested, feeSchedule.findFeeOf(requested.visitType()));
+     }
+ }
+diff --git a/src/main/java/com/example/clinic/appointment/BookingConfirmation.java b/src/main/java/com/example/clinic/appointment/BookingConfirmation.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/BookingConfirmation.java
+@@ -0,0 +1,4 @@
++package com.example.clinic.appointment;
++
++public record BookingConfirmation(Appointment appointment, VisitFee fee) {
++}
+diff --git a/src/main/java/com/example/clinic/appointment/FeeSchedule.java b/src/main/java/com/example/clinic/appointment/FeeSchedule.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/FeeSchedule.java
+@@ -0,0 +1,17 @@
++package com.example.clinic.appointment;
++
++import java.math.BigDecimal;
++import java.util.Map;
++
++public class FeeSchedule {
++
++    private final Map<VisitType, BigDecimal> amountByVisitTypeMap;
++
++    public FeeSchedule(Map<VisitType, BigDecimal> amountByVisitTypeMap) {
++        this.amountByVisitTypeMap = Map.copyOf(amountByVisitTypeMap);
++    }
++
++    public VisitFee findFeeOf(VisitType visitType) {
++        return new VisitFee(visitType, amountByVisitTypeMap.get(visitType));
++    }
++}
+diff --git a/src/main/java/com/example/clinic/appointment/VisitFee.java b/src/main/java/com/example/clinic/appointment/VisitFee.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/VisitFee.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.appointment;
++
++import java.math.BigDecimal;
++
++public record VisitFee(VisitType visitType, BigDecimal amount) {
++}
+diff --git a/src/main/java/com/example/clinic/billing/FeeSchedule.java b/src/main/java/com/example/clinic/billing/FeeSchedule.java
+deleted file mode 100644
+--- a/src/main/java/com/example/clinic/billing/FeeSchedule.java
++++ /dev/null
+@@ -1,18 +0,0 @@
+-package com.example.clinic.billing;
+-
+-import com.example.clinic.appointment.VisitType;
+-import java.math.BigDecimal;
+-import java.util.Map;
+-
+-public class FeeSchedule {
+-
+-    private final Map<VisitType, BigDecimal> amountByVisitTypeMap;
+-
+-    public FeeSchedule(Map<VisitType, BigDecimal> amountByVisitTypeMap) {
+-        this.amountByVisitTypeMap = Map.copyOf(amountByVisitTypeMap);
+-    }
+-
+-    public VisitFee findFeeOf(VisitType visitType) {
+-        return new VisitFee(visitType, amountByVisitTypeMap.get(visitType));
+-    }
+-}
+diff --git a/src/main/java/com/example/clinic/billing/Invoice.java b/src/main/java/com/example/clinic/billing/Invoice.java
+--- a/src/main/java/com/example/clinic/billing/Invoice.java
++++ b/src/main/java/com/example/clinic/billing/Invoice.java
+@@ -1,5 +1,6 @@
+ package com.example.clinic.billing;
+ 
++import com.example.clinic.appointment.VisitFee;
+ import java.math.BigDecimal;
+ import java.util.List;
+ 
+diff --git a/src/main/java/com/example/clinic/billing/InvoiceService.java b/src/main/java/com/example/clinic/billing/InvoiceService.java
+--- a/src/main/java/com/example/clinic/billing/InvoiceService.java
++++ b/src/main/java/com/example/clinic/billing/InvoiceService.java
+@@ -1,6 +1,8 @@
+ package com.example.clinic.billing;
+ 
+ import com.example.clinic.appointment.Appointment;
++import com.example.clinic.appointment.FeeSchedule;
++import com.example.clinic.appointment.VisitFee;
+ import java.math.BigDecimal;
+ import java.util.List;
+ 
+diff --git a/src/main/java/com/example/clinic/billing/VisitFee.java b/src/main/java/com/example/clinic/billing/VisitFee.java
+deleted file mode 100644
+--- a/src/main/java/com/example/clinic/billing/VisitFee.java
++++ /dev/null
+@@ -1,7 +0,0 @@
+-package com.example.clinic.billing;
+-
+-import com.example.clinic.appointment.VisitType;
+-import java.math.BigDecimal;
+-
+-public record VisitFee(VisitType visitType, BigDecimal amount) {
+-}

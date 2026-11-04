@@ -1,6 +1,6 @@
 # Evaluation cases
 
-The cases of the review skill stand under `review/`, 1 folder each. A case is a diff to review and the reader's file the review is expected to produce. The cases of the coding style skill stand under `code-style/`, where its own README says how they run. `grade.mjs` builds and grades the cases of both, because both end in a review's reader file. The cases of the convention check stand under `check-conventions/`, where its own README says how they run: `grade.mjs` builds them, and they are graded by hand.
+The cases of the review skill stand under `review/`, 1 folder each. A case is a diff to review and the reader's file the review is expected to produce. The cases of the coding style skill stand under `code-style/`, where its own README says how they run. `grade.mjs` builds and grades the cases of both, because both end in a review's reader file. The cases of the convention check stand under `check-conventions/`, where its own README says how they run: `grade.mjs` builds them, and they are graded by hand. The cases of the design skill stand under `design/`, where its own README says how they run: `grade.mjs` builds them, `grade-design.mjs` grades the design model of a design case against the level 1 checks of the case, because `grade.mjs` grades only the reader file of a review, and `grade.mjs` grades the `review.md` of a shape case, which ends in the reader file of a shape run.
 
 The `claude plugin eval` runner cannot run this skill, because a review is 5 session steps, 2 of them Workflow calls, and the Workflow tool is not one the runner can grant.
 So a case is built, reviewed and graded from a session instead, and a case holds none of the runner's own files, a `prompt.md`, a `case.yaml`, a `fixture.sh` or a `graders/` folder, because they grade nothing.
@@ -635,6 +635,10 @@ They are tier B, because the script reads the files of each folder and the folde
 Writing them fresh is what makes them publishable.
 They measure that a move changes the enclosing abstraction and not the moved method: a method whose body is unchanged after the rename map gets no method checks, while the class that receives it and the folder the file left are judged, and a moved method with 1 edited line is judged as a method.
 They are tier B, because the old class and the folder it leaves are in the base state, and the review reads the move and the rename from the 2 commits.
+
+The design cases under `design/` are written fresh in a fictional clinic domain, in Java. Writing them fresh is what makes them publishable. Their review findings are written by hand, and the review scripts render them into the 3 report files.
+
+The shape cases `due-date-rule-inline-in-three-loan-methods` and `due-date-rule-named-as-a-private-part` under `design/` are written fresh in a fictional library domain, as 2 shape models with Java bodies, a bad form and a good form of 1 shape. Writing them fresh is what makes them publishable. They measure that a rule held inline in 3 public methods is an Unnamed Part Failure on each method, and that the same rule named as 1 private part that the 3 methods use is no finding.
 
 `lease-end-before-its-start-accepted-at-creation` is written fresh in a fictional allotment-garden domain, in Java.
 Writing it fresh is what makes it publishable.
