@@ -59,7 +59,7 @@ Where the user asks to review only some scales, some folders or some judges, add
 
 ## A shape check, in place of step 1
 
-Where the user, or the skill `plan-fixes` of the plugin laminar, asks to check a planned shape before code is written, such as a plan file, a tree of folders or sketches of classes, run a shape check. Convert the input into 1 shape model by `<skill>/shape-model.md`, write it as a JSON file in a folder outside the tree under review, and run 1 command in place of the 2 commands of step 1, where `<model>` is the path of that file:
+Where the user, or the skill `design` of the plugin laminar, asks to check a planned shape before code is written, such as a plan file, a tree of folders or sketches of classes, run a shape check. Convert the input into 1 shape model by `<skill>/shape-model.md`, write it as a JSON file in a folder outside the tree under review, and run 1 command in place of the 2 commands of step 1, where `<model>` is the path of that file:
 
 ```bash
 node "<skill>/scripts/runReview.mjs" prepare --run "<run>" --repo "<target>" --shape "<model>"
