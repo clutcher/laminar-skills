@@ -3,6 +3,8 @@ import { listNamedClasses } from "./GroupOrder.mjs";
 
 const FOLDER_END = "/";
 
+const FIRST_GROUP = 1;
+
 const isAFolder = file => file.endsWith(FOLDER_END);
 
 const listFilesOfTheSteps = steps => new Set(steps.flatMap(step => step.files));
@@ -20,6 +22,12 @@ const holdsAFileOf = (files, otherFiles) => [...files].some(file => otherFiles.h
 const isTouching = (group, otherGroup) => holdsAFileOf(group.files, otherGroup.files) || holdsAFileOf(otherGroup.files, group.files)
   || holdsAFileOf(group.namedFiles, otherGroup.files) || holdsAFileOf(otherGroup.namedFiles, group.files);
 
+// The first class of the model in the group, which names the group where its writer gives no stop of its own; a group with no class, such as a group of tests, takes none.
+const findFirstClassOfTheGroup = (model, number) => {
+  const theClass = model.classes.find(other => (Number.isFinite(other.group) ? other.group : FIRST_GROUP) === number);
+  return theClass ? model.getClassDisplayName(theClass) : null;
+};
+
 // A group waits for each earlier group it touches, because it builds on the code that group writes; groups that touch no earlier group can be written side by side.
 export const listMigrationGroups = (model, steps) => {
   const numbers = [...new Set(steps.map(step => step.group))].sort((first, second) => first - second);
@@ -30,6 +38,7 @@ export const listMigrationGroups = (model, steps) => {
   });
   return groups.map((group, at) => ({
     group: group.number,
+    firstClass: findFirstClassOfTheGroup(model, group.number),
     steps: group.steps,
     dependsOn: groups.slice(0, at).filter(earlierGroup => isTouching(group, earlierGroup)).map(earlierGroup => earlierGroup.number),
   }));

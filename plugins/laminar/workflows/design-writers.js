@@ -23,6 +23,11 @@ const STOP_REASONS = [
   'fix-changes-the-model',
 ]
 
+// The stop of a group whose writer stopped or gave no answer with no stop of its own, so the next plan always reads a stop for each unfinished group.
+const STOPPED_WITHOUT_A_REASON = 'stopped-without-a-reason'
+
+const SAYS_WITHOUT_A_REASON = 'the writer stopped without a reason'
+
 const BUILD_RESULTS = ['passed', 'failed', 'not run']
 
 const TEST_RESULTS = ['passed', 'failed']
@@ -176,6 +181,10 @@ function writerMessageOf(group) {
   ].join('\n')
 }
 
+function stopWithoutAReasonOf(group) {
+  return { reason: STOPPED_WITHOUT_A_REASON, at: group.firstClass || `migration group ${group.group}`, says: SAYS_WITHOUT_A_REASON }
+}
+
 function isAWriterAnswer(returned) {
   return Boolean(returned) && [OUTCOMES.FINISHED, OUTCOMES.STOPPED].includes(returned.outcome)
 }
@@ -189,7 +198,7 @@ async function writtenGroup(group) {
   const returned = await agent(writerMessageOf(group), options).catch(() => null)
   if (!isAWriterAnswer(returned)) {
     log(`the ${options.label} call returned nothing usable, so its group is not written and no later group it touches starts`)
-    return notWrittenOf(group, OUTCOMES.NO_ANSWER, {})
+    return notWrittenOf(group, OUTCOMES.NO_ANSWER, { stop: stopWithoutAReasonOf(group) })
   }
   return {
     group: group.group,
@@ -201,7 +210,7 @@ async function writtenGroup(group) {
     filled: returned.filled || [],
     build: returned.build,
     tests: returned.tests || [],
-    ...(returned.outcome === OUTCOMES.STOPPED ? { stop: returned.stop || null } : {}),
+    ...(returned.outcome === OUTCOMES.STOPPED ? { stop: returned.stop || stopWithoutAReasonOf(group) } : {}),
   }
 }
 
