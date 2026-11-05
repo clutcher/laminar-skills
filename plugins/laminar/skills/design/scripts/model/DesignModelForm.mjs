@@ -16,7 +16,7 @@ export const ANSWER_GIVERS = Object.freeze({ USER: "user", DEFAULT: "default", D
 
 export const FINDING_REASONS = Object.freeze(["outside the change", "question to the author", "project convention", "exempt by the book", "fix apart"]);
 
-const STOP_REASONS = Object.freeze(["input-nothing-provides", "signature-the-stack-cannot-carry", "test-that-cannot-reach-its-branch", "behavior-the-design-did-not-decide", "migration-order-cannot-build", "fix-changes-the-model"]);
+export const STOP_REASONS = Object.freeze(["input-nothing-provides", "signature-the-stack-cannot-carry", "test-that-cannot-reach-its-branch", "behavior-the-design-did-not-decide", "migration-order-cannot-build", "fix-changes-the-model"]);
 
 const SHOWN_VALUE_LENGTH = 40;
 
@@ -45,7 +45,7 @@ const METHOD_FORM = createObjectOf({
 
 const CLASS_FORM = createObjectOf({
   file: TEXT, kindWord: TEXT, name: TEXT, zone: TEXT, does: createTextOf(Object.values(DOES)), exposed: TRUE_OR_FALSE, oldName: TEXT, group: NUMBER,
-  extends: TEXTS, implements: TEXTS, removed: TEXTS,
+  extends: TEXTS, implements: TEXTS, removed: TEXTS, addedForFindings: createListOf(NUMBER),
   fields: createListOf(createObjectOf({ name: TEXT, type: TEXT })),
   methods: createListOf(METHOD_FORM),
 });
@@ -85,8 +85,8 @@ const DECISIONS_FORM = createObjectOf({
     options: createListOf(createObjectOf({ name: TEXT, shape: TEXT })),
     answer: createObjectOf({ option: TEXT, by: createTextOf(Object.values(ANSWER_GIVERS)), says: TEXT }),
   })),
-  stops: createListOf(createObjectOf({ reason: createTextOf(STOP_REASONS), at: TEXT, says: TEXT, round: NUMBER })),
-  findings: createListOf(createObjectOf({ run: NUMBER, number: NUMBER, closedBy: TEXT, reason: TEXT, says: TEXT, openAfterCeiling: TEXT })),
+  stops: createListOf(createObjectOf({ reason: createTextOf(STOP_REASONS), at: TEXT, says: TEXT, plan: NUMBER, round: NUMBER })),
+  findings: createListOf(createObjectOf({ run: NUMBER, number: NUMBER, check: TEXT, closedBy: TEXT, reason: TEXT, says: TEXT, decidedBy: TEXT, openAfterCeiling: TEXT })),
   existingDefects: createListOf(createObjectOf({ class: TEXT, member: TEXT, defect: TEXT, fix: TEXT, notFixed: TEXT, group: NUMBER })),
   scriptCases: createListOf(createObjectOf({ code: TEXT, name: TEXT, text: TEXT, reason: TEXT })),
 });

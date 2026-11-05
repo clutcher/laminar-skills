@@ -4,12 +4,12 @@ Contents: 1. What it is · 2. The 2 halves and the order of work · 3. The shape
 
 ## 1. What it is
 
-The design model is 1 JSON file, `design-model.json`, that holds a whole design before any code is written: every public name at every scale, every private method that is a named part of a public method, and the decisions that the code must carry at each boundary. The designer writes it outside the repository. 4 scripts read it, and none of them writes it:
+The design model is 1 JSON file, `design-model.json`, that holds a whole design before any code is written, and that a later plan starts from (`SKILL.md`, section 3): every public name at every scale, every private method that is a named part of a public method, and the decisions that the code must carry at each boundary. The designer writes it outside the repository. 4 scripts read it, and none of them writes it:
 
 - The prepare command of the skill `review`, `runReview.mjs prepare --shape <file>`, reads the shape half for the shape check and ignores every other key.
 - The design check, `scripts/checkDesign.mjs`, reads the whole file and prints each defect of the model and a count of the completed keys (`design-checks.md`).
 - The render, `scripts/renderDesign.mjs`, writes `design.md` from the whole file for the writer and the user, so the designer writes nothing twice. Under each created class it writes `used by <classes>`, computed from the field types, the parameter and return types and `calls` of the model, or `used by no class of the model`, and adds `, and through <Interface> by its users` where the class implements or extends a class of the model.
-- The migration script, `scripts/planMigration.mjs`, reads the shape half against the current tree of the repository and lists what each change creates, moves, renames, changes and removes, and reads `decisions.tests` for its test steps and `decisions.existingDefects` for the migration groups of the existing defects (`design-checks.md`, section 5).
+- The migration script, `scripts/planMigration.mjs`, reads the shape half against the current tree of the repository and lists what each change creates, moves, renames, changes and removes, and reads `decisions.tests` for its test steps, `decisions.existingDefects` for the migration groups of the existing defects, `decisions.stops` for the stopped groups of a cut plan, and `findings.json` for 1 finding step per finding at the method and variable scales (`design-checks.md`, section 5).
 
 The scope follows the book: "every part is named before any detail is written" (*How to Apply the Principles*, *How to Apply the Principles to New Code*). A private method that the model names is a part, and the writer keeps its name. A private method that the writer adds below a named part is a detail, and the model does not list it. No method holds a body, except the calls in order of a method that coordinates 2 or more parts, and the I/O line with the failure line of a method that does I/O, where the model creates or changes that method; such a body shows the same choice as its object under `exits` (`design-boundaries.md`), so the designer writes `exits` in pass 1, with the tree.
 
@@ -17,14 +17,14 @@ The scope follows the book: "every part is named before any detail is written" (
 
 The file has 2 halves:
 
-- The shape half is the shape model of `shape-model.md` of the skill `review`, unchanged, plus keys that the prepare command ignores: `zone`, `does`, `exposed`, `oldName`, `removed` and `group` on a class, `calls`, `oldName` and `unchanged` on a method, and `oldPath` on a `created` child and `removedClasses` on a `modified` child (section 4).
+- The shape half is the shape model of `shape-model.md` of the skill `review`, unchanged, plus keys that the prepare command ignores: `zone`, `does`, `exposed`, `oldName`, `removed`, `group` and `addedForFindings` on a class, `calls`, `oldName` and `unchanged` on a method, and `oldPath` on a `created` child and `removedClasses` on a `modified` child (section 4).
 - The decisions half is the 1 top-level key `decisions`, whose keys `design-decisions.md`, `design-boundaries.md` and `design-findings.md` hold. The prepare command ignores it, so no judge of the shape check reads a decision.
 
 The designer writes the 2 halves in this order:
 
 1. Pass 1, the tree, after the designer has read the project conventions: write the shape half and `decisions.owners`. The change forecaster then writes the `forecast` of each owner, and the designer decides depth from it and writes the tree in that depth. Then write `decisions.exits`, because the failure line of each I/O execution decides its return type and the I/O body that the shape check reads. Then run the design check on the pass-1 model and fix each defect it prints, other than the keys of pass 2, which it prints as missing. Then run the shape check on the shape half, change the shape half for each kept item, and run the shape check again until every kept item is closed by the tree or holds a reason class under `decisions.findings` (`design-findings.md`). Where the input is a run folder, write `decisions.findings` as the tree closes each item.
 2. Pass 2, the decisions on the tree that passed: record the project conventions under `decisions.conventions`, write the `placement` of each owner, then write `entries`, `tests` and `questions`. Run the design check again, fix each defect it prints, and write each recheck case that the model shows wrong under `scriptCases`.
-3. After the writer runs, record each stop the writer returns under `stops`.
+3. A later plan starts from the model of the plan before, which the start command carries onto the plan commit and into which it writes each stop of the writers under `stops` (`SKILL.md`, section 3).
 
 A depth change after the shape check passed, such as an interface with 2 implementations in place of 1 class, is the exception: it runs the shape check again on the changed part only, never on the whole tree. A change to the shape half after pass 2 also runs the shape check again on the changed part, and the design check then reports each decision that names a display name the shape half no longer holds.
 
@@ -48,6 +48,7 @@ The keys below stand beside them. The prepare command ignores each of them, so t
 | `removed` | class | list of texts: the names of fields and methods the class loses | no | migration script, design check, render | `"removed": ["findOpenJobs"]` |
 | `group` | class | number: the migration group of the class, from 1 | no; only on a class that the change creates, moves, renames, modifies or removes; a class with no `group` is in group 1; never on a class of an `unchanged` file | migration script; design check, which reports a `group` on a class of an `unchanged` file (`group-on-unchanged-class`) | `"group": 2` |
 | `unchanged` | method | true | no; only on a method of a class of a `modified` file that the change leaves as it is | design check, migration script | `"unchanged": true` |
+| `addedForFindings` | class | list of numbers: the item numbers of the findings of the input run folder for which the designer added the class | only on a class that the model holds because a finding at the method or variable scale names it, as `modified` with its whole listing | render, which prints `added to the model for the findings <numbers> of the run folder` | `"addedForFindings": [4]` |
 
 - `zone`: the name of 1 group of folders in the zone order, which states which zone may call or implement which (`design-checks.md`, section 2). A zone is given per class, so a repository whose folders have other names still gets the order of calls checked. Where `decisions.conventions` names no file with a zone order, the zones are the folders of the book's layout, where `app` holds `api`, `domain` and `spi`, so a class takes `api`, `domain` or `spi`, never `app`. This default zone order applies only under a folder that holds an `api`, `spi`, `in` or `out` folder; for a class outside such a folder the design check prints `zone order: not applied to <folder>`, and where no folder of the scope has the layout it prints `zone order: not applied, no conventions file, and no folder of the scope has the backend layout of an api, spi, in or out folder`. The book: "The `api/` folder declares what callers can ask for, and the `spi/` folder declares what the application needs." (*The Principles at Every Scale*, *Hexagonal Architecture*)
 - `does`: `computes` where the methods of the class decide from their parameters and fields alone and reach no exit; `coordinates` where the methods call parts in order, exits among them; `translates` where the class is concrete and every method of it is an exit, such as an implementation in `out` of an interface in `spi`. The test kind follows from it (`design-boundaries.md`, `tests`).
@@ -84,9 +85,10 @@ Every key of the model that names an abstraction holds a display name: `Class#me
 |---|---|---|---|---|
 | the keys of `shape-model.md` | yes | yes | yes | yes |
 | `zone`, `does`, `exposed`, `calls` | no | yes | `does`, `exposed` and `calls` | no |
+| `addedForFindings` | no | no | yes | no |
 | `oldName`, `removed`, `removedClasses`, `oldPath` on a `created` child | no | yes | yes | yes |
 | `group` | no | yes | no | yes |
 | `unchanged` on a method | no | yes | no | yes |
-| `decisions` (`design-decisions.md`, `design-boundaries.md`, `design-findings.md`) | no | yes | yes | `tests` and `existingDefects` only |
+| `decisions` (`design-decisions.md`, `design-boundaries.md`, `design-findings.md`) | no | yes | yes | `tests`, `existingDefects` and `stops` only |
 
 `design-checks.md` holds what the design check reports and how the migration script orders its steps.

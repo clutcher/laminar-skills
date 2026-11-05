@@ -324,7 +324,9 @@ const checkStops = check => {
     const path = `decisions.stops[${at}]`;
     check.requireKey("stop.reason", stop, "reason", path);
     if (check.requireKey("stop.at", stop, "at", path)) check.requireName(stop.at, `${path}.at`);
-    for (const key of ["says", "round"]) check.requireKey(`stop.${key}`, stop, key, path);
+    check.requireKey("stop.says", stop, "says", path);
+    // A stop of 0.72.0 names its round, which is the number of its plan since 0.73.0.
+    if (stop.round === undefined) check.requireKey("stop.plan", stop, "plan", path);
   });
 };
 

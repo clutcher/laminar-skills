@@ -2,8 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DesignModelStop, readDesignModel } from "../model/DesignModel.mjs";
 import { CurrentTreeStop } from "../migration/CurrentTree.mjs";
-
-const BASE_COMMIT_FILE = "base-commit.txt";
+import { BASE_COMMIT_FILE, PLAN_COMMIT_FILE } from "../plan/PlanFolder.mjs";
 
 const STOP_EXIT_CODE = 2;
 
@@ -46,14 +45,17 @@ export const readDesignModelOrExit = modelPath => {
   }
 };
 
-// The base commit of the change: --base where given, else base-commit.txt beside the model, else none, and the working folder is the current tree.
-export const readBaseCommit = options => {
-  if (options.base) return options.base;
-
-  const baseCommitPath = path.join(path.dirname(path.resolve(options.model)), BASE_COMMIT_FILE);
-  if (!fs.existsSync(baseCommitPath)) return null;
-  return fs.readFileSync(baseCommitPath, "utf8").trim() || null;
+const readCommitBesideTheModel = (options, fileName) => {
+  const commitPath = path.join(path.dirname(path.resolve(options.model)), fileName);
+  if (!fs.existsSync(commitPath)) return null;
+  return fs.readFileSync(commitPath, "utf8").trim() || null;
 };
+
+// The base commit: --base where given, else base-commit.txt beside the model, else none.
+export const readBaseCommit = options => options.base || readCommitBesideTheModel(options, BASE_COMMIT_FILE);
+
+// The commit of the current tree: --tree where given, else plan-commit.txt beside the model, else base-commit.txt, which a results folder of 0.72.0 holds as the current tree, else none, and the working folder is the current tree.
+export const readTreeCommit = options => options.tree || readCommitBesideTheModel(options, PLAN_COMMIT_FILE) || readCommitBesideTheModel(options, BASE_COMMIT_FILE);
 
 export const runOrExitOnTreeStop = readTheResult => {
   try {

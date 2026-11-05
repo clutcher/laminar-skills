@@ -83,7 +83,7 @@ const resolveTheDisposition = (disposition, finding, model) => {
   const resolved = { number: disposition.number, check: finding.check, displayName: finding.displayName, scale: finding.scale, testCode: finding.testCode, file: readFileOfTheFinding(finding) };
   if (disposition.to === SENT_TO.WRITER) return { ...resolved, to: SENT_TO.WRITER, group: readGroupOfTheFinding(model, finding) };
   if (disposition.to) return { ...resolved, to: disposition.to };
-  if (disposition.reason !== undefined) return { ...resolved, reason: disposition.reason, says: disposition.says };
+  if (disposition.reason !== undefined) return { ...resolved, reason: disposition.reason, says: disposition.says, ...(isAText(disposition.decidedBy) ? { decidedBy: disposition.decidedBy } : {}) };
   return { ...resolved, question: disposition.question };
 };
 
@@ -95,7 +95,8 @@ const findDefectsOfTheFinding = (resolved, finding, context) => {
   if (resolved.reason === undefined) return defects;
 
   if (!FINDING_REASONS.includes(resolved.reason)) addDefect(ROUND_DEFECT_CODES.DISPOSITION_REASON_OUTSIDE_LIST, `${JSON.stringify(resolved.reason)} is not 1 of ${FINDING_REASONS.join(", ")}`);
-  if (context.autonomous && FINDING_REASONS.includes(resolved.reason) && !AUTONOMOUS_REASONS.has(resolved.reason)) addDefect(ROUND_DEFECT_CODES.DISPOSITION_NOT_AUTONOMOUS, `item ${resolved.number} takes ${resolved.reason}, and autonomous mode takes only ${[...AUTONOMOUS_REASONS].join(" or ")}`);
+  // A reason that the calling session decided stands in autonomous mode too, because the session decided it, not the designer.
+  if (context.autonomous && FINDING_REASONS.includes(resolved.reason) && !AUTONOMOUS_REASONS.has(resolved.reason) && resolved.decidedBy === undefined) addDefect(ROUND_DEFECT_CODES.DISPOSITION_NOT_AUTONOMOUS, `item ${resolved.number} takes ${resolved.reason}, and autonomous mode takes only ${[...AUTONOMOUS_REASONS].join(" or ")}`);
   if (resolved.reason === PROJECT_CONVENTION && !CHECKS_NARROWER_THAN_THE_BOOK.has(finding.check)) addDefect(ROUND_DEFECT_CODES.PROJECT_CONVENTION_ON_A_BOOK_RULE, `item ${resolved.number} takes ${PROJECT_CONVENTION} on ${finding.check}, a check that rests on the book`);
   if (resolved.reason === OUTSIDE_THE_CHANGE && context.findChangedPlace) {
     const changedPlace = context.findChangedPlace(finding.places);

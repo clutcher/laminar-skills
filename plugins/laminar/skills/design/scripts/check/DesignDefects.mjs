@@ -63,9 +63,16 @@ const listUnmatchedScriptCases = (model, markedDefects) => {
   return readList(model.decisions.scriptCases).filter(scriptCase => !matchedKeys.has(joinScriptCaseKey(scriptCase.code, scriptCase.name, scriptCase.text)));
 };
 
-// With a base commit, the current tree is that commit, never the working folder, which may hold the files of a writer.
-export const checkDesignModel = (model, repositoryRoot = null, reviewText = null, shapeReviews = [], baseCommit = null) => {
-  const currentTree = repositoryRoot ? readCurrentTree(repositoryRoot, baseCommit) : null;
+// The base tree, where a line older than the change stands, is the base commit where it differs from the commit of the current tree.
+const readBaseTree = (repositoryRoot, commits, currentTree) => {
+  if (!repositoryRoot || !commits.baseCommit || commits.baseCommit === commits.treeCommit) return currentTree;
+  return readCurrentTree(repositoryRoot, commits.baseCommit);
+};
+
+// With a tree commit, the current tree is that commit, never the working folder, which may hold the files of a writer.
+export const checkDesignModel = (model, repositoryRoot = null, reviewText = null, shapeReviews = [], commits = { treeCommit: null, baseCommit: null }) => {
+  const currentTree = repositoryRoot ? readCurrentTree(repositoryRoot, commits.treeCommit) : null;
+  const baseTree = readBaseTree(repositoryRoot, commits, currentTree);
   const zoneOrder = readZoneOrder(model.decisions.conventions?.zoneOrder, currentTree, model.listScopeFolderPaths());
   const completeness = findCompletenessDefects(model, zoneOrder);
   const cycleCheck = findCycleCheckDefects(model, zoneOrder);
@@ -75,7 +82,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
   const exitFailure = findExitFailureResult(model);
   const defects = [
     ...completeness.defects,
-    ...findFindingsDefects(model, reviewText, shapeReviews, currentTree),
+    ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
     ...(currentTree ? findCurrentTreeDefects(model, currentTree) : []),
     ...(fieldList ? fieldList.defects : []),
     ...cycleCheck.defects,
@@ -86,7 +93,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...dataFlow.defects,
     ...exitList.defects,
   ];
-  const markedDefects = markTheScriptCases(model, defects, currentTree);
+  const markedDefects = markTheScriptCases(model, defects, baseTree);
   return {
     headLines: [...cycleCheck.headLines, dataFlow.headLine, describeCurrentTree(currentTree), ...(fieldList ? [fieldList.headLine] : []), exitList.headLine, exitFailure.headLine, describeResponseTypes(completeness.libraryTypeNames), describeReview(reviewText), describeShapeReviews(shapeReviews)],
     defects: markedDefects,

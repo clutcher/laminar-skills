@@ -146,7 +146,7 @@ class CommitSource {
   constructor(repositoryRoot, commit) {
     this.repositoryRoot = repositoryRoot;
     this.commit = runGit(repositoryRoot, ["rev-parse", "--verify", `${commit}^{commit}`]).toString("utf8").trim();
-    this.label = `${repositoryRoot} at the base commit ${this.commit}`;
+    this.label = `${repositoryRoot} at the commit ${this.commit}`;
     this.sizeOfFileMap = new Map(readTreeBlobs(repositoryRoot, this.commit).map(({ file, size }) => [file, size]));
   }
 

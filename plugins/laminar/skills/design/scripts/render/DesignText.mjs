@@ -73,8 +73,14 @@ const writeUsedByLine = (model, theClass, userNamesOfClassMap, indent) => {
   return [`${indent}  used by ${userNames.length ? userNames.join(", ") : "no class of the model"}${throughParents}`];
 };
 
+// A class that the model holds only because a finding of the run folder names it, so the reader sees why a class with no change of the design stands in the tree.
+const writeAddedForFindingsLine = (theClass, indent) => {
+  const numbers = readList(theClass.addedForFindings);
+  return numbers.length ? [`${indent}  added to the model for the findings ${numbers.join(", ")} of the run folder`] : [];
+};
+
 const writeClassLines = (model, theClass, userNamesOfClassMap, indent) => {
-  const lines = [`${indent}${writeClassMarks(theClass)}`, ...writeUsedByLine(model, theClass, userNamesOfClassMap, indent)];
+  const lines = [`${indent}${writeClassMarks(theClass)}`, ...writeUsedByLine(model, theClass, userNamesOfClassMap, indent), ...writeAddedForFindingsLine(theClass, indent)];
   for (const field of readList(theClass.fields)) lines.push(`${indent}  ${field.name}${field.type ? `: ${field.type}` : ""}`);
   for (const method of readList(theClass.methods)) lines.push(...writeMethodLines(method, `${indent}  `));
   if (readList(theClass.removed).length) lines.push(`${indent}  removes ${readList(theClass.removed).join(", ")}`);
@@ -204,16 +210,20 @@ const writeQuestionSection = questions => {
 const writeStopSection = stops => {
   const lines = ["## Stops", ""];
   if (!stops.length) return [...lines, "None."];
-  lines.push("| Round | Reason | At | Says |", "|---|---|---|---|");
-  for (const stop of stops) lines.push(`| ${stop.round} | ${escapeTableCell(stop.reason)} | ${writeCode(escapeTableCell(stop.at))} | ${escapeTableCell(stop.says)} |`);
+  lines.push("| Plan | Reason | At | Says |", "|---|---|---|---|");
+  for (const stop of stops) lines.push(`| ${stop.plan ?? stop.round} | ${escapeTableCell(stop.reason)} | ${writeCode(escapeTableCell(stop.at))} | ${escapeTableCell(stop.says)} |`);
   return lines;
 };
 
-const describeFindingItem = finding => (Number.isFinite(finding.run) ? `shape run ${finding.run}, item ${finding.number}` : `${finding.number}`);
+const describeFindingItem = finding => {
+  const check = isAText(finding.check) ? ` (${finding.check})` : "";
+  return Number.isFinite(finding.run) ? `shape run ${finding.run}, item ${finding.number}${check}` : `${finding.number}${check}`;
+};
 
 const writeFindingLine = finding => {
   const item = describeFindingItem(finding);
   if (isAText(finding.closedBy)) return `- ${item}: closed by ${writeCode(finding.closedBy)}`;
+  if (isAText(finding.decidedBy)) return `- ${item}: left, ${finding.reason}, decided by ${finding.decidedBy}: ${finding.says}`;
   return `- ${item}: left, ${finding.reason}: ${finding.says}`;
 };
 
