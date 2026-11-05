@@ -45,6 +45,7 @@ export const DEFECT_CODES = Object.freeze({
   FINDING_NEITHER_CLOSED_NOR_LEFT: "finding-neither-closed-nor-left",
   FINDING_REASON_OUTSIDE_LIST: "finding-reason-outside-list",
   OUTSIDE_THE_CHANGE_BUT_CHANGED: "outside-the-change-but-changed",
+  REASON_NOT_AUTONOMOUS: "reason-not-autonomous",
   METHOD_CHANGED_BUT_MARKED_UNCHANGED: "method-changed-but-marked-unchanged",
   GROUP_ORDER_BROKEN: "group-order-broken",
   EXISTING_DEFECT_GROUP_TAKEN: "existing-defect-group-taken",

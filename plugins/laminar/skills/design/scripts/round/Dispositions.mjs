@@ -23,6 +23,8 @@ const OUTSIDE_THE_CHANGE = "outside the change";
 
 const PROJECT_CONVENTION = "project convention";
 
+const QUESTION_TO_THE_AUTHOR = "question to the author";
+
 // The 2 reason classes that a script checks, so autonomous mode may take them without a user.
 const AUTONOMOUS_REASONS = new Set([OUTSIDE_THE_CHANGE, PROJECT_CONVENTION]);
 
@@ -95,8 +97,9 @@ const findDefectsOfTheFinding = (resolved, finding, context) => {
   if (resolved.reason === undefined) return defects;
 
   if (!FINDING_REASONS.includes(resolved.reason)) addDefect(ROUND_DEFECT_CODES.DISPOSITION_REASON_OUTSIDE_LIST, `${JSON.stringify(resolved.reason)} is not 1 of ${FINDING_REASONS.join(", ")}`);
-  // A reason that the calling session decided stands in autonomous mode too, because the session decided it, not the designer.
-  if (context.autonomous && FINDING_REASONS.includes(resolved.reason) && !AUTONOMOUS_REASONS.has(resolved.reason) && resolved.decidedBy === undefined) addDefect(ROUND_DEFECT_CODES.DISPOSITION_NOT_AUTONOMOUS, `item ${resolved.number} takes ${resolved.reason}, and autonomous mode takes only ${[...AUTONOMOUS_REASONS].join(" or ")}`);
+  // A reason that the calling session decided stands in autonomous mode too, because the session decided it, not the designer; so does a question to the author on an item to consider, which claims no defect.
+  const isAQuestionToConsider = finding.toConsider && resolved.reason === QUESTION_TO_THE_AUTHOR;
+  if (context.autonomous && FINDING_REASONS.includes(resolved.reason) && !AUTONOMOUS_REASONS.has(resolved.reason) && resolved.decidedBy === undefined && !isAQuestionToConsider) addDefect(ROUND_DEFECT_CODES.DISPOSITION_NOT_AUTONOMOUS, `item ${resolved.number} takes ${resolved.reason}, and autonomous mode takes only ${[...AUTONOMOUS_REASONS].join(" or ")}`);
   if (resolved.reason === PROJECT_CONVENTION && !CHECKS_NARROWER_THAN_THE_BOOK.has(finding.check)) addDefect(ROUND_DEFECT_CODES.PROJECT_CONVENTION_ON_A_BOOK_RULE, `item ${resolved.number} takes ${PROJECT_CONVENTION} on ${finding.check}, a check that rests on the book`);
   if (resolved.reason === OUTSIDE_THE_CHANGE && context.findChangedPlace) {
     const changedPlace = context.findChangedPlace(finding.places);

@@ -26,7 +26,7 @@ const readPlanOfTheStop = stop => stop.plan ?? stop.round;
 // Each stop of the list joins decisions.stops with the plan whose migration its writer wrote; a stop on an abstraction that a stop of an earlier plan already named is a second stop, which the writer never meets a third time.
 export const recordTheStops = (decisions, stopList, stoppedPlan) => {
   const earlierStops = readList(decisions.stops);
-  const recorded = stopList.map(stopped => ({ reason: stopped.stop.reason, at: stopped.stop.at, says: stopped.stop.says, plan: stoppedPlan }));
+  const recorded = stopList.map(stopped => ({ reason: stopped.stop.reason, at: stopped.stop.at, says: stopped.stop.says, plan: stoppedPlan, group: stopped.group }));
   const secondStops = recorded
     .map(stop => ({ stop, earlier: earlierStops.find(other => other.at === stop.at && readPlanOfTheStop(other) < stoppedPlan) }))
     .filter(pair => pair.earlier)

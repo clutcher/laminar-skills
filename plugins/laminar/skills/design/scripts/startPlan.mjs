@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { readDesignModelOrExit, readOptionsOrExit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
 import { readCurrentTree } from "./migration/CurrentTree.mjs";
 import { carryTheModel } from "./plan/CarriedModel.mjs";
+import { listUnfinishedGroups, readPlannedGroups } from "./plan/FixedFindings.mjs";
 import { BASE_COMMIT_FILE, MODEL_FILE, OUTCOME_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, findLastPlan, formatPlanLine, getPlanFolder, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { StopListStop, checkStopListForm, recordTheStops } from "./plan/StopList.mjs";
 
@@ -13,7 +14,7 @@ const STOP_EXIT_CODE = 2;
 
 const ENDED_EXIT_CODE = 1;
 
-// The reason of the outcome of a plan that ends before it starts, because a run folder came with no base of the change.
+// The reason of the outcome of a plan that ends before it starts, because a run folder came with no base commit.
 const BASE_MISSING = "base-missing";
 
 const exitWith = message => {
@@ -72,7 +73,7 @@ const resolveTheBaseOrEnd = (options, repositoryRoot, headCommit, resultsFolder,
 
   const baseCommit = options.base ? resolveCommit(repositoryRoot, options.base) : null;
   if (baseCommit) return baseCommit;
-  const says = options.base ? `git cannot resolve the base ${options.base} in ${repositoryRoot}` : "a run folder needs the base of the change, and the input gives no base";
+  const says = options.base ? `git cannot resolve the base ${options.base} in ${repositoryRoot}` : "a run folder needs the base commit, and the input gives no base";
   if (options.autonomous) endThePlan(resultsFolder, plan, { reason: BASE_MISSING, at: "base", says });
   return exitWith(`base: ${says}`);
 };
@@ -110,14 +111,16 @@ function startPlan() {
     return;
   }
 
-  readDesignModelOrExit(modelPath);
+  const model = readDesignModelOrExit(modelPath);
   let given = readModelTextOrExit(modelPath);
   let counts = null;
+  const stopList = options.stop ? readStopListOrExit(options.stop) : [];
   if (isNew) {
-    ({ model: given, counts } = runOrExitOnTreeStop(() => carryTheModel(given, readCurrentTree(repositoryRoot, headCommit))));
+    const unfinishedGroups = listUnfinishedGroups(model, stopList.map(stopped => ({ group: stopped.group })), readPlannedGroups(getPlanFolder(resultsFolder, plan - 1)));
+    ({ model: given, counts } = runOrExitOnTreeStop(() => carryTheModel(given, readCurrentTree(repositoryRoot, headCommit), unfinishedGroups)));
     console.log(`carried: ${Object.entries(counts).map(([key, count]) => `${key} ${count}`).join(" · ")}`);
   }
-  const { stops, secondStops } = options.stop ? recordTheStops(given.decisions || {}, readStopListOrExit(options.stop), plan - 1) : { stops: (given.decisions || {}).stops, secondStops: [] };
+  const { stops, secondStops } = options.stop ? recordTheStops(given.decisions || {}, stopList, plan - 1) : { stops: (given.decisions || {}).stops, secondStops: [] };
   if (stops) given = { ...given, decisions: { ...given.decisions, stops } };
   writeJson(modelPath, given);
   for (const stop of secondStops) console.log(["second stop", stop.at, `plans ${stop.earlierPlan} and ${stop.plan}`, stop.says].join("\t"));

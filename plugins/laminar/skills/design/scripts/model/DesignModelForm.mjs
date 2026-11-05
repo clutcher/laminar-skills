@@ -16,7 +16,7 @@ export const ANSWER_GIVERS = Object.freeze({ USER: "user", DEFAULT: "default", D
 
 export const FINDING_REASONS = Object.freeze(["outside the change", "question to the author", "project convention", "exempt by the book", "fix apart"]);
 
-export const STOP_REASONS = Object.freeze(["input-nothing-provides", "signature-the-stack-cannot-carry", "test-that-cannot-reach-its-branch", "behavior-the-design-did-not-decide", "migration-order-cannot-build", "fix-changes-the-model"]);
+export const STOP_REASONS = Object.freeze(["input-nothing-provides", "signature-the-stack-cannot-carry", "test-that-cannot-reach-its-branch", "behavior-the-design-did-not-decide", "migration-order-cannot-build", "fix-changes-the-model", "stopped-without-a-reason"]);
 
 const SHOWN_VALUE_LENGTH = 40;
 
@@ -85,7 +85,7 @@ const DECISIONS_FORM = createObjectOf({
     options: createListOf(createObjectOf({ name: TEXT, shape: TEXT })),
     answer: createObjectOf({ option: TEXT, by: createTextOf(Object.values(ANSWER_GIVERS)), says: TEXT }),
   })),
-  stops: createListOf(createObjectOf({ reason: createTextOf(STOP_REASONS), at: TEXT, says: TEXT, plan: NUMBER, round: NUMBER })),
+  stops: createListOf(createObjectOf({ reason: createTextOf(STOP_REASONS), at: TEXT, says: TEXT, plan: NUMBER, group: NUMBER, round: NUMBER })),
   findings: createListOf(createObjectOf({ run: NUMBER, number: NUMBER, check: TEXT, closedBy: TEXT, reason: TEXT, says: TEXT, decidedBy: TEXT, openAfterCeiling: TEXT })),
   existingDefects: createListOf(createObjectOf({ class: TEXT, member: TEXT, defect: TEXT, fix: TEXT, notFixed: TEXT, group: NUMBER })),
   scriptCases: createListOf(createObjectOf({ code: TEXT, name: TEXT, text: TEXT, reason: TEXT })),

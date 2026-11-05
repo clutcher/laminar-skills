@@ -3,6 +3,9 @@ import { PLAN_SCALES } from "./FindingList.mjs";
 
 const SENT_TO = Object.freeze({ DESIGNER: "designer", WRITER: "writer" });
 
+// An item to consider at the method or variable scale gets no step, so the round reads it as a question the plan leaves to the author.
+const LEFT_TO_THE_AUTHOR = Object.freeze({ reason: "question to the author", says: "an item to consider, which the plan leaves to the author" });
+
 const findObjectOfTheItem = (model, number, check) => readList(model.decisions.findings)
   .find(other => other.run === undefined && other.number === number && (other.check === undefined || other.check === check));
 
@@ -17,6 +20,9 @@ const decideTheEnding = (model, number, check, findings, context) => {
     if (!findingObject) return null;
     return isAText(findingObject.reason) ? writeTheReason(findingObject) : { to: SENT_TO.DESIGNER };
   }
+  const entries = context.entries.filter(entry => entry.number === number && entry.check === check);
+  if (entries.length && entries.every(entry => entry.toConsider)) return { ...LEFT_TO_THE_AUTHOR };
+  if (entries.some(entry => entry.fixedBy)) return { to: SENT_TO.WRITER };
   const isWithNoStep = context.noStepKeys.has(`${number}\t${check}`);
   return isWithNoStep ? { to: SENT_TO.DESIGNER } : { to: SENT_TO.WRITER };
 };

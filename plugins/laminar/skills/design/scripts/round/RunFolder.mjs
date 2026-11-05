@@ -62,6 +62,7 @@ const readFinding = (result, index) => {
     scale: String(properties.scale || "").toLowerCase(),
     places: readPlaces(result),
     testCode: properties.test_code === true,
+    toConsider: properties.to_consider === true,
     text: String((result.message || {}).text || ""),
   };
 };

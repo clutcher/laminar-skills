@@ -68,7 +68,7 @@ const carryTheClass = (theClass, currentTree, counts) => {
 };
 
 // The model of the plan before, read against the plan commit: what that commit already holds stands as written, so a file it brought becomes modified, a rename or a removal it made leaves the model, and each method it wrote is marked unchanged; what it does not hold, such as the files of a stopped writer, keeps its change. The objects of decisions.findings of the earlier run folder leave, because the run folder of this plan numbers its items anew.
-export const carryTheModel = (given, currentTree) => {
+export const carryTheModel = (given, currentTree, unfinishedGroups = new Set()) => {
   const counts = createCounts();
   const folders = readList(given.folders).map(folder => carryTheFolder(folder, currentTree, counts)).filter(Boolean);
   const droppedFiles = new Set(readList(given.folders).flatMap(folder => readList(folder.children)
@@ -79,7 +79,9 @@ export const carryTheModel = (given, currentTree) => {
     .filter(theClass => !droppedFiles.has(theClass.file))
     .map(theClass => {
       const child = keptChildOfFileMap.get(theClass.file);
-      const isWritten = currentTree.holdsTheFile(theClass.file) && (!child || child.kind === KINDS.MODIFIED);
+      // A class of a group no writer finished keeps its change, because the plan commit does not hold it, also where the class stood before the change.
+      const isOfAnUnfinishedGroup = unfinishedGroups.has(Number.isFinite(theClass.group) ? theClass.group : 1);
+      const isWritten = !isOfAnUnfinishedGroup && currentTree.holdsTheFile(theClass.file) && (!child || child.kind === KINDS.MODIFIED);
       return isWritten ? carryTheClass(theClass, currentTree, counts) : theClass;
     });
   const decisions = given.decisions || {};

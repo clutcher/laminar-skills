@@ -1,16 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 import { checkDesignModel } from "./check/DesignDefects.mjs";
+import { findAutonomousReasonResult } from "./check/AutonomousReasons.mjs";
 import { findDecidedDefects } from "./check/DecidedCheck.mjs";
+import { findNameOfThePath } from "./check/DefectNames.mjs";
 import { readBaseCommit, readDesignModelOrExit, readOptionsOrExit, readTreeCommit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
 import { DecidedListStop, checkDecidedListForm, resolveDecidedList } from "./plan/DecidedList.mjs";
 import { RoundStop, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
 
-const USAGE = "usage: node checkDesign.mjs --model <design-model.json> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md> [--decided <decided list>]] [--shape-review <results>/shape-runs/<n>/review.md]...";
+const USAGE = "usage: node checkDesign.mjs --model <design-model.json> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md> [--decided <decided list>]] [--shape-review <results>/shape-runs/<n>/review.md]... [--autonomous]";
 
 const STOP_EXIT_CODE = 2;
 
 const SHAPE_REVIEW_OPTION = "shape-review";
+
+const AUTONOMOUS_SWITCH = "autonomous";
 
 const RUN_FOLDER_NAME = /^[1-9]\d*$/;
 
@@ -63,7 +67,7 @@ const findDecidedDefectsOrExit = (model, options) => {
 };
 
 function checkDesign() {
-  const options = readOptionsOrExit(USAGE, ["model", "repo", "tree", "base", "review", "decided"], ["model"], [SHAPE_REVIEW_OPTION]);
+  const options = readOptionsOrExit(USAGE, ["model", "repo", "tree", "base", "review", "decided"], ["model"], [SHAPE_REVIEW_OPTION], [AUTONOMOUS_SWITCH]);
   const model = readDesignModelOrExit(options.model);
   const reviewText = options.review ? readTextOrExit("review", options.review) : null;
   const shapeReviews = options[SHAPE_REVIEW_OPTION].map(readShapeReviewOrExit);
@@ -72,7 +76,8 @@ function checkDesign() {
   const repositoryRoot = options.repo ? path.resolve(options.repo) : null;
   const commits = repositoryRoot ? { treeCommit: readTreeCommit(options), baseCommit: readBaseCommit(options) } : undefined;
   const result = runOrExitOnTreeStop(() => checkDesignModel(model, repositoryRoot, reviewText, shapeReviews, commits));
-  const defects = [...result.defects, ...decidedDefects];
+  const autonomousDefects = options[AUTONOMOUS_SWITCH] ? findAutonomousReasonResult(model, reviewText, shapeReviews).defects.map(defect => ({ ...defect, name: findNameOfThePath(model, defect.path) || defect.path, foundWrong: false })) : [];
+  const defects = [...result.defects, ...decidedDefects, ...autonomousDefects];
   for (const headLine of result.headLines) console.log(headLine);
   for (const defect of defects) console.log(formatDefect(defect));
   for (const scriptCase of result.unmatchedScriptCases) console.log(formatUnmatchedScriptCase(scriptCase));

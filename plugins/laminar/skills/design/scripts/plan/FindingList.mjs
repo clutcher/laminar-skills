@@ -71,6 +71,7 @@ export const listFindingEntries = (model, run, decisionOfFindingMap) => {
         file,
         testCode: finding.testCode,
         group: findGroupOfTheFinding(model, theClass, file),
+        ...(finding.toConsider ? { toConsider: true } : {}),
         ...(decision ? decision : {}),
       };
     });

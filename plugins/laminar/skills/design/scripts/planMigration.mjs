@@ -9,7 +9,7 @@ import { listMigrationSteps } from "./migration/MigrationSteps.mjs";
 import { writeMigrationText } from "./migration/MigrationText.mjs";
 import { writeMigrationWorkflowFile } from "./migration/MigrationWorkflowFile.mjs";
 
-const USAGE = "usage: node planMigration.mjs --model <design-model.json> --out <migration.md|migration.json> [--repo <repository root> [--tree <commit>]] [--findings <findings.json>] [--classes <display names>] [--plan <n>] [--before <design-model.json of the plan before>]";
+const USAGE = "usage: node planMigration.mjs --model <design-model.json> --out <migration.md|migration.json> [--repo <repository root> [--tree <commit>]] [--findings <findings.json>] [--classes <display names>] [--plan <n>] [--unfinished <group numbers>] [--before <design-model.json of the plan before>]";
 
 const STOP_EXIT_CODE = 2;
 
@@ -50,13 +50,15 @@ const splitNames = text => (text ? text.split(",").map(name => name.trim()).filt
 const cutThePlan = (model, allSteps, findingSteps, options) => {
   const classNames = splitNames(options.classes);
   const modelBefore = options.before ? readDesignModelOrExit(options.before) : null;
-  const stoppedGroups = listStoppedGroups(model, readPlanNumberOrExit(options.plan));
+  // The groups no writer finished: the groups of the stops, and those the finish command names because they waited for a stopped group.
+  const unfinishedGroups = splitNames(options.unfinished).map(Number).filter(Number.isInteger);
+  const stoppedGroups = [...new Set([...listStoppedGroups(model, readPlanNumberOrExit(options.plan)), ...unfinishedGroups])];
   const { steps, plannedGroups } = listCutSteps(model, allSteps, { classNames, findingSteps, stoppedGroups, modelBefore });
   return { steps, cutLine: `Planned groups: ${plannedGroups.join(", ") || "none"}; every other group is left out`, classDefects: findChangedClassDefects(model, classNames) };
 };
 
 function planMigration() {
-  const options = readOptionsOrExit(USAGE, ["model", "out", "repo", "tree", "findings", "classes", "plan", "before"], ["model", "out"]);
+  const options = readOptionsOrExit(USAGE, ["model", "out", "repo", "tree", "findings", "classes", "plan", "unfinished", "before"], ["model", "out"]);
   const model = readDesignModelOrExit(options.model);
   const repositoryRoot = options.repo ? path.resolve(options.repo) : null;
   const entries = readFindingEntriesOrExit(options.findings);

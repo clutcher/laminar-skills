@@ -6,6 +6,8 @@ export const FINDING_DEFECT_CODES = Object.freeze({ FINDING_WITHOUT_GROUP: "find
 
 const METHOD_MARK = "#";
 
+const TO_CONSIDER = "to consider";
+
 // The group of a test file is the group of the step of the whole plan that writes its tests, which waits for the production code it tests.
 export const findGroupOfTheTestFile = (steps, file) => {
   const testStep = steps.find(step => step.stage === MIGRATION_STAGES.TESTS && step.files.includes(file));
@@ -57,6 +59,15 @@ export const listFindingSteps = (model, steps, entries) => {
   for (const entry of entries) {
     if (isAText(entry.reason)) {
       noStepLines.push(createNoStepLine(entry, `decided by ${entry.decidedBy}: ${entry.reason}`));
+      continue;
+    }
+    if (entry.fixedBy) {
+      noStepLines.push(createNoStepLine(entry, `fixed by plan ${entry.fixedBy.plan} group ${entry.fixedBy.group}`));
+      continue;
+    }
+    // An item to consider asks the author a question and claims no defect, so no writer changes code for it.
+    if (entry.toConsider) {
+      noStepLines.push(createNoStepLine(entry, TO_CONSIDER));
       continue;
     }
     const pieces = readFindingNamePieces(entry.displayName, entry.scale);
