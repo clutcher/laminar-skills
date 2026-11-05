@@ -1,0 +1,221 @@
+diff --git a/marina-api/src/main/kotlin/com/example/marina/hire/HireQuoteController.kt b/marina-api/src/main/kotlin/com/example/marina/hire/HireQuoteController.kt
+index ce3053a..d561d11 100644
+--- a/marina-api/src/main/kotlin/com/example/marina/hire/HireQuoteController.kt
++++ b/marina-api/src/main/kotlin/com/example/marina/hire/HireQuoteController.kt
+@@ -12,4 +12,10 @@ class HireQuoteController(private val rateCard: RateCard) {
+         val hourlyRate = rateCard.kayakHourlyRate()
+         return KayakHireQuote(request.kayakId, request.startsAt, request.hours, hourlyRate.amount * request.hours, hourlyRate.currency)
+     }
++
++    @QueryMapping
++    fun paddleboardHireQuote(@Argument request: PaddleboardHireRequest): PaddleboardHireQuote {
++        val hourlyRate = rateCard.paddleboardHourlyRate()
++        return PaddleboardHireQuote(request.paddleboardId, request.startsAt, request.hours, hourlyRate.amount * request.hours, hourlyRate.currency)
++    }
+ }
+diff --git a/marina-api/src/main/kotlin/com/example/marina/hire/PaddleboardHireQuote.kt b/marina-api/src/main/kotlin/com/example/marina/hire/PaddleboardHireQuote.kt
+new file mode 100644
+index 0000000..80e72c4
+--- /dev/null
++++ b/marina-api/src/main/kotlin/com/example/marina/hire/PaddleboardHireQuote.kt
+@@ -0,0 +1,9 @@
++package com.example.marina.hire
++
++data class PaddleboardHireQuote(
++    val paddleboardId: String,
++    val startsAt: String,
++    val hours: Int,
++    val price: Double,
++    val currency: String,
++)
+diff --git a/marina-api/src/main/kotlin/com/example/marina/hire/PaddleboardHireRequest.kt b/marina-api/src/main/kotlin/com/example/marina/hire/PaddleboardHireRequest.kt
+new file mode 100644
+index 0000000..ed61fc6
+--- /dev/null
++++ b/marina-api/src/main/kotlin/com/example/marina/hire/PaddleboardHireRequest.kt
+@@ -0,0 +1,3 @@
++package com.example.marina.hire
++
++data class PaddleboardHireRequest(val paddleboardId: String, val startsAt: String, val hours: Int)
+diff --git a/marina-api/src/main/kotlin/com/example/marina/hire/RateCard.kt b/marina-api/src/main/kotlin/com/example/marina/hire/RateCard.kt
+index 3f36a3e..a75f4c0 100644
+--- a/marina-api/src/main/kotlin/com/example/marina/hire/RateCard.kt
++++ b/marina-api/src/main/kotlin/com/example/marina/hire/RateCard.kt
+@@ -3,4 +3,6 @@ package com.example.marina.hire
+ interface RateCard {
+ 
+     fun kayakHourlyRate(): HourlyRate
++
++    fun paddleboardHourlyRate(): HourlyRate
+ }
+diff --git a/marina-api/src/main/kotlin/com/example/marina/mooring/Mooring.kt b/marina-api/src/main/kotlin/com/example/marina/mooring/Mooring.kt
+new file mode 100644
+index 0000000..53f6cc5
+--- /dev/null
++++ b/marina-api/src/main/kotlin/com/example/marina/mooring/Mooring.kt
+@@ -0,0 +1,19 @@
++package com.example.marina.mooring
++
++sealed interface Mooring {
++    val slipId: String
++    val boatName: String
++}
++
++data class DayMooring(
++    override val slipId: String,
++    override val boatName: String,
++    val arrivesOn: String,
++    val leavesOn: String,
++) : Mooring
++
++data class SeasonMooring(
++    override val slipId: String,
++    override val boatName: String,
++    val season: Int,
++) : Mooring
+diff --git a/marina-api/src/main/kotlin/com/example/marina/mooring/MooringBook.kt b/marina-api/src/main/kotlin/com/example/marina/mooring/MooringBook.kt
+new file mode 100644
+index 0000000..6a14889
+--- /dev/null
++++ b/marina-api/src/main/kotlin/com/example/marina/mooring/MooringBook.kt
+@@ -0,0 +1,6 @@
++package com.example.marina.mooring
++
++interface MooringBook {
++
++    fun findMoorings(slipId: String): List<Mooring>
++}
+diff --git a/marina-api/src/main/kotlin/com/example/marina/mooring/MooringController.kt b/marina-api/src/main/kotlin/com/example/marina/mooring/MooringController.kt
+new file mode 100644
+index 0000000..09e39ce
+--- /dev/null
++++ b/marina-api/src/main/kotlin/com/example/marina/mooring/MooringController.kt
+@@ -0,0 +1,12 @@
++package com.example.marina.mooring
++
++import org.springframework.graphql.data.method.annotation.Argument
++import org.springframework.graphql.data.method.annotation.QueryMapping
++import org.springframework.stereotype.Controller
++
++@Controller
++class MooringController(private val mooringBook: MooringBook) {
++
++    @QueryMapping
++    fun moorings(@Argument slipId: String): List<Mooring> = mooringBook.findMoorings(slipId)
++}
+diff --git a/marina-api/src/main/kotlin/com/example/marina/repair/KayakRepairQuote.kt b/marina-api/src/main/kotlin/com/example/marina/repair/KayakRepairQuote.kt
+new file mode 100644
+index 0000000..8cab20c
+--- /dev/null
++++ b/marina-api/src/main/kotlin/com/example/marina/repair/KayakRepairQuote.kt
+@@ -0,0 +1,9 @@
++package com.example.marina.repair
++
++data class KayakRepairQuote(
++    val kayakId: String,
++    val damage: String,
++    val readyOn: String,
++    val price: Double,
++    val currency: String,
++)
+diff --git a/marina-api/src/main/kotlin/com/example/marina/repair/RepairDesk.kt b/marina-api/src/main/kotlin/com/example/marina/repair/RepairDesk.kt
+new file mode 100644
+index 0000000..604daa7
+--- /dev/null
++++ b/marina-api/src/main/kotlin/com/example/marina/repair/RepairDesk.kt
+@@ -0,0 +1,6 @@
++package com.example.marina.repair
++
++interface RepairDesk {
++
++    fun quoteKayakRepair(kayakId: String, damage: String): KayakRepairQuote
++}
+diff --git a/marina-api/src/main/kotlin/com/example/marina/repair/RepairQuoteController.kt b/marina-api/src/main/kotlin/com/example/marina/repair/RepairQuoteController.kt
+new file mode 100644
+index 0000000..5122c74
+--- /dev/null
++++ b/marina-api/src/main/kotlin/com/example/marina/repair/RepairQuoteController.kt
+@@ -0,0 +1,13 @@
++package com.example.marina.repair
++
++import org.springframework.graphql.data.method.annotation.Argument
++import org.springframework.graphql.data.method.annotation.QueryMapping
++import org.springframework.stereotype.Controller
++
++@Controller
++class RepairQuoteController(private val repairDesk: RepairDesk) {
++
++    @QueryMapping
++    fun kayakRepairQuote(@Argument kayakId: String, @Argument damage: String): KayakRepairQuote =
++        repairDesk.quoteKayakRepair(kayakId, damage)
++}
+diff --git a/marina-api/src/main/resources/graphql/hire.graphqls b/marina-api/src/main/resources/graphql/hire.graphqls
+index 044f43f..b6d1180 100644
+--- a/marina-api/src/main/resources/graphql/hire.graphqls
++++ b/marina-api/src/main/resources/graphql/hire.graphqls
+@@ -1,5 +1,6 @@
+ type Query {
+     kayakHireQuote(request: KayakHireRequest!): KayakHireQuote!
++    paddleboardHireQuote(request: PaddleboardHireRequest!): PaddleboardHireQuote!
+ }
+ 
+ input KayakHireRequest {
+@@ -15,3 +16,17 @@ type KayakHireQuote {
+     price: Float!
+     currency: String!
+ }
++
++input PaddleboardHireRequest {
++    paddleboardId: ID!
++    startsAt: String!
++    hours: Int!
++}
++
++type PaddleboardHireQuote {
++    paddleboardId: ID!
++    startsAt: String!
++    hours: Int!
++    price: Float!
++    currency: String!
++}
+diff --git a/marina-api/src/main/resources/graphql/mooring.graphqls b/marina-api/src/main/resources/graphql/mooring.graphqls
+new file mode 100644
+index 0000000..7488026
+--- /dev/null
++++ b/marina-api/src/main/resources/graphql/mooring.graphqls
+@@ -0,0 +1,18 @@
++extend type Query {
++    moorings(slipId: ID!): [Mooring!]!
++}
++
++union Mooring = DayMooring | SeasonMooring
++
++type DayMooring {
++    slipId: ID!
++    boatName: String!
++    arrivesOn: String!
++    leavesOn: String!
++}
++
++type SeasonMooring {
++    slipId: ID!
++    boatName: String!
++    season: Int!
++}
+diff --git a/marina-api/src/main/resources/graphql/repair.graphqls b/marina-api/src/main/resources/graphql/repair.graphqls
+new file mode 100644
+index 0000000..a7a5b0c
+--- /dev/null
++++ b/marina-api/src/main/resources/graphql/repair.graphqls
+@@ -0,0 +1,11 @@
++extend type Query {
++    kayakRepairQuote(kayakId: ID!, damage: String!): KayakRepairQuote!
++}
++
++type KayakRepairQuote {
++    kayakId: ID!
++    damage: String!
++    readyOn: String!
++    price: Float!
++    currency: String!
++}
