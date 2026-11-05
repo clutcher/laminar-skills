@@ -75,6 +75,7 @@ const createZoneDefect = (model, relation, zoneOrder) => {
     if (zoneOrder.allowsTheImplements(relation.from.zone, relation.to.zone)) return null;
   } else {
     if (zoneOrder.allowsTheCallByItsOrder(relation.from.zone, relation.to.zone)) return null;
+    if (zoneOrder.allowsTheCallAcrossModules(relation.from.zone, readFolderOfTheFile(relation.from.file), relation.to.zone, readFolderOfTheFile(relation.to.file))) return null;
     if (zoneOrder.allowsTheImplements(relation.from.zone, relation.to.zone)) return createRecheckDefect(DEFECT_CODES.CALL_INTO_THE_IMPLEMENTED_ZONE, relation.path, `a call from an implementer into the zone it implements: ${describeRelation(model, relation)}`);
   }
   return createRecheckDefect(DEFECT_CODES.ZONE_ORDER_BROKEN, relation.path, `${describeRelation(model, relation)}, which the zone order does not allow`);
@@ -108,7 +109,7 @@ const appliesToTheClass = (zoneOrder, theClass) => zoneOrder.appliesToTheFolder(
 
 const isCheckedAgainstTheOrder = (relation, zoneOrder) => [relation.from, relation.to].every(theClass => isAText(theClass.zone) && appliesToTheClass(zoneOrder, theClass) && zoneOrder.namesTheZone(theClass.zone));
 
-// The default zone order holds only under a module with the backend layout, so each folder of a class outside such a module is named once.
+// The default zone order holds only under a layout module, so each folder of a class outside a layout module is named once.
 const describeFoldersOutsideTheLayout = (model, zoneOrder) => {
   if (!zoneOrder.isFound()) return [];
   const folderPaths = new Set(model.classes.filter(theClass => isAText(theClass.file) && !appliesToTheClass(zoneOrder, theClass)).map(theClass => readFolderOfTheFile(theClass.file)));
@@ -253,6 +254,7 @@ export const findCycleCheckDefects = (model, zoneOrder) => {
     ...(zoneOrder.isMissingTheLayout() ? [NO_LAYOUT_LINE] : []),
     ...describeFoldersOutsideTheLayout(model, zoneOrder),
     describeCycleCheck(relations, signatureRelations, zoneOrder, relations.length - checkedRelations.length),
+    ...zoneOrder.describeUnreadLines(),
     ...describeIgnoredZones(model, zoneOrder),
   ];
   return { headLines, defects: [...zoneDefects, ...findCycleDefects(model, relations), ...findFolderCycleDefects(model, [...relations, ...signatureRelations])] };

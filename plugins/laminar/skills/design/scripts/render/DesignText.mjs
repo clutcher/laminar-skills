@@ -10,7 +10,7 @@ const escapeTableCell = text => String(text ?? "").replace(/\|/g, "\\|").replace
 
 const writeConventionsLine = conventions => {
   if (!conventions) return "Project conventions: not recorded in the model.";
-  if (conventions.found === false) return `Project conventions: none found in ${writeCode(conventions.folder || "")}; the design follows the book's layout and the rules of the skill.`;
+  if (conventions.found === false) return `Project conventions: none found in ${writeCode(conventions.folder || "")}; the design follows the default zone order of the design skill and the rules of the skill.`;
   return `Project conventions: ${readList(conventions.files).map(writeCode).join(", ") || "none listed"} from ${writeCode(conventions.folder || "")}; zone order: ${writeCode(conventions.zoneOrder || "default")}.`;
 };
 

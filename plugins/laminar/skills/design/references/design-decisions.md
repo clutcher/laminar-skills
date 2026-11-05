@@ -15,7 +15,7 @@ An object, required. The designer reads the project conventions at step 1 of the
 | `folder` | text: the folder searched | yes | design check, render |
 | `found` | true or false | yes; where it is false, `design.md` says so in its first line | design check, render |
 | `files` | list of paths | yes; empty where none is found | design check, which reports a file of the folder that the list does not hold; render |
-| `zoneOrder` | the path of the conventions file that holds the fenced block `zones` (`design-model.md`, section 3), or `default` for the book's layout | yes | design check, render |
+| `zoneOrder` | the path of the conventions file that holds the fenced block `zones` (`design-model.md`, section 3), or `default` for the default zone order of the design skill (`design-checks.md`, section 2) | yes | design check, render |
 | `testNameForms` | list of texts: each form of a test name that the conventions file of the language of the tests states, such as `should<Outcome>When<Condition>` or `test_should_<outcome>_when_<condition>`, where a word in angle brackets stands for 1 or more words | no | design check, which reports a test name that fits no form; where the key is missing, it reports only a name that states no behavior: 1 word, or `test` and the name of a method of the model |
 
 ```json
