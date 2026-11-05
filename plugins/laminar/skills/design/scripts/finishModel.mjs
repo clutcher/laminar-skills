@@ -3,8 +3,10 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { listConsiderations } from "./check/AutonomousReasons.mjs";
+import { readNamedReviewItems } from "./check/ReviewItems.mjs";
+import { isAText } from "./model/DesignModel.mjs";
 import { readDesignModelOrExit, readOptionsOrExit } from "./command/CommandLine.mjs";
-import { carryTheFixedFindings } from "./plan/FixedFindings.mjs";
+import { carryTheFixedFindings, listUnfinishedGroupsOfThePlanBefore } from "./plan/FixedFindings.mjs";
 import { DecidedListStop, checkDecidedListForm, resolveDecidedList } from "./plan/DecidedList.mjs";
 import { listFindingEntries } from "./plan/FindingList.mjs";
 import { BASE_COMMIT_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, formatPlanLine, getPlanFolder, listQuestionsThatStopThePlan, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
@@ -95,6 +97,15 @@ const findFindingOfTheItem = (runInput, number, check) => {
   return item.findings.find(finding => !check || finding.check === check) || null;
 };
 
+// An entry of findings.json on an item to consider at the method or variable scale gets no step and no object of decisions.findings, so the plan passes it on with the summary of its item in review.md.
+const listConsiderationsOfTheEntries = (entries, reviewText) => {
+  const summaryOfItemMap = new Map((reviewText === null ? [] : readNamedReviewItems(reviewText)).map(item => [item.number, item.summary || ""]));
+  const considerationOfKeyMap = new Map(entries
+    .filter(entry => entry.toConsider && !isAText(entry.reason))
+    .map(entry => [`${entry.number}\t${entry.check}`, { number: entry.number, displayName: entry.displayName, check: entry.check, says: summaryOfItemMap.get(entry.number) || "" }]));
+  return [...considerationOfKeyMap.values()];
+};
+
 const readTextIfGiven = textPath => (textPath ? fs.readFileSync(path.resolve(textPath), "utf8") : null);
 
 // The shape runs of --shape-review, each by the number of its folder, as the design check reads them.
@@ -126,9 +137,15 @@ function finishModel() {
   const model = readDesignModelOrExit(options.model);
   const plan = Math.max(findLastPlan(resultsFolder), 1);
   const runInput = readTheRunOrExit(options);
-  const { entries, unfinishedGroups } = runInput ? carryTheFixedFindings(model, resultsFolder, plan, listFindingEntries(model, runInput.run, runInput.decisionOfFindingMap)) : { entries: [], unfinishedGroups: [] };
+  // The groups that waited on a stopped group are planned again also with no run folder, because the writer workflow plans only the groups of the migration.
+  const unfinishedGroups = listUnfinishedGroupsOfThePlanBefore(model, resultsFolder, plan);
+  const entries = runInput ? carryTheFixedFindings(model, resultsFolder, plan, listFindingEntries(model, runInput.run, runInput.decisionOfFindingMap)) : [];
   // An item to consider left as a question to the author is passed on as a consideration, never as a question of the plan, because items to consider on existing code stand in most changes.
-  const considerations = listConsiderations(model, readTextIfGiven(options.review), readShapeReviews(options), (number, check) => findFindingOfTheItem(runInput, number, check));
+  const reviewText = readTextIfGiven(options.review);
+  const considerations = [
+    ...listConsiderations(model, reviewText, readShapeReviews(options), (number, check) => findFindingOfTheItem(runInput, number, check)),
+    ...listConsiderationsOfTheEntries(entries, reviewText),
+  ];
   const paths = { model: options.model, results: resultsFolder, design: path.join(resultsFolder, "design.md"), migration: path.join(resultsFolder, "migration.md"), findings: runInput ? path.join(resultsFolder, FINDINGS_FILE) : null, unfinishedGroups, considerations };
   if (runInput) writeJson(paths.findings, entries);
 

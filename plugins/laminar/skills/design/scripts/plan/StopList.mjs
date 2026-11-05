@@ -1,7 +1,20 @@
 import { STOP_REASONS } from "../model/DesignModelForm.mjs";
 import { isAText, readList } from "../model/DesignModel.mjs";
+import { getGroupOfTheClass } from "./FindingList.mjs";
 
 export class StopListStop extends Error {}
+
+const GROUP_STOP_AT = /^migration group (\d+)$/;
+
+// A stop on a group with no class, such as a group of existing defects, names its group in place of an abstraction.
+export const isAStopOnItsGroup = stop => Number.isInteger(stop.group) && isAText(stop.at) && Number(GROUP_STOP_AT.exec(stop.at)?.[1]) === stop.group;
+
+// A stop of 0.73.0 names its group; an older stop names only the abstraction, whose class gives the group.
+export const readGroupOfTheStop = (model, stop) => {
+  if (Number.isInteger(stop.group)) return stop.group;
+  const theClass = isAText(stop.at) ? model.findClass(stop.at) : null;
+  return theClass ? getGroupOfTheClass(theClass) : null;
+};
 
 const findFormProblem = (stopped, at) => {
   const where = `stops[${at}]`;

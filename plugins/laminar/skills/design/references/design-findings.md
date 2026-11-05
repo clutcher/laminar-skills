@@ -31,7 +31,23 @@ The design check reads `review.md` of the input run folder where `--review <path
 
 ## `stops`
 
-1 object per stop of the writer, which the start command records from the input `stop: <file>`. Empty before a writer stopped. The keys: `reason`, 1 stop reason of the closed list `input-nothing-provides`, `signature-the-stack-cannot-carry`, `test-that-cannot-reach-its-branch`, `behavior-the-design-did-not-decide`, `migration-order-cannot-build` and `fix-changes-the-model`, and `stopped-without-a-reason`, which the writer workflow gives a writer that stopped with no stop or gave no answer, where a reason outside the list stops the design check with exit 2; `at`, a display name, which the design check resolves; `says`, what the writer met; `plan`, the number of the plan whose migration the writer wrote, which a model of 0.72.0 holds as `round`; and `group`, the migration group of the stop, which the start command adds. The first 4 are required, and the render prints each. A stop sends the abstraction it names back to the designer, who changes the model and runs the checks again, and the cut migration plans its group whole; the second stop on the same abstraction becomes a question in the mode with a user, and ends the plan with the outcome `stop` in autonomous mode (`SKILL.md`, section 4, step 1).
+1 object per stop of the writer, which the start command records from the input `stop: <file>`. Empty before a writer stopped. The keys: `reason`, a stop reason of the lists below; `at`, a display name, which the design check resolves; `says`, what the writer met; `plan`, the number of the plan whose migration the writer wrote, which a model of 0.72.0 holds as `round`; and `group`, the migration group of the stop, which the start command adds. The first 4 are required, and the render prints each. A reason outside the lists below stops the design check with exit 2.
+
+The stop reasons that the writer gives:
+
+- `input-nothing-provides`
+- `signature-the-stack-cannot-carry`
+- `test-that-cannot-reach-its-branch`
+- `behavior-the-design-did-not-decide`
+- `migration-order-cannot-build`
+- `fix-changes-the-model`
+
+The stop reasons that the writer workflow or the calling session gives:
+
+- `stopped-without-a-reason`, which the writer workflow gives a writer that stopped with no stop or gave no answer.
+- `build-failed`, which the calling session gives a finished group whose build failed, with the failing command as `says`.
+
+A stop sends the abstraction it names back to the designer. The designer changes the model and runs the checks again, and the cut migration plans the group of the stop whole. A second stop on the same abstraction becomes a question in the mode with a user. In autonomous mode, it ends the plan with the outcome `stop` (`SKILL.md`, section 4, step 1).
 
 ```json
 { "reason": "behavior-the-design-did-not-decide", "at": "OrderErrorHandler#answerFailure", "says": "no status code", "plan": 1 }

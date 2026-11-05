@@ -2,7 +2,7 @@
 
 Contents: 1. Read the surrounding code first · 2. From the outside in, until every operation is a part · 3. Place each abstraction on its abstraction level · 4. 1 owner for each decision, with its readers traced · 5. A name read with its path · 6. A file of mixed members · 7. Depth from the forecast · 8. Folders that name their part · 9. Outside data checked once, at the entry · 10. A failure line for each I/O execution · 11. Tests where the book places them · 12. Back to the shape on the base · 13. Outputs stay
 
-These are the rules of procedure of the designer. The design directions themselves stand in the 5 reference files of the skill `code-style` that `SKILL.md`, section 7, names, and this file does not restate them. Each rule below says which cognitive failure, or which correctness reason, it prevents in the code that the writer later writes.
+These are the rules of procedure of the designer. The design directions themselves stand in the reference files of the skill `code-style` that `SKILL.md`, section 7, names, and this file does not restate them. Each rule below says which cognitive failure, or which correctness reason, it prevents in the code that the writer later writes.
 
 ## 1. Read the surrounding code first
 

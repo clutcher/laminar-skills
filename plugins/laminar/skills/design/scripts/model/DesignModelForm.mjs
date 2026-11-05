@@ -16,7 +16,7 @@ export const ANSWER_GIVERS = Object.freeze({ USER: "user", DEFAULT: "default", D
 
 export const FINDING_REASONS = Object.freeze(["outside the change", "question to the author", "project convention", "exempt by the book", "fix apart"]);
 
-export const STOP_REASONS = Object.freeze(["input-nothing-provides", "signature-the-stack-cannot-carry", "test-that-cannot-reach-its-branch", "behavior-the-design-did-not-decide", "migration-order-cannot-build", "fix-changes-the-model", "stopped-without-a-reason"]);
+export const STOP_REASONS = Object.freeze(["input-nothing-provides", "signature-the-stack-cannot-carry", "test-that-cannot-reach-its-branch", "behavior-the-design-did-not-decide", "migration-order-cannot-build", "fix-changes-the-model", "stopped-without-a-reason", "build-failed"]);
 
 const SHOWN_VALUE_LENGTH = 40;
 

@@ -1,6 +1,7 @@
 import { ANSWER_GIVERS, DOES, FRAMEWORK, KINDS, isAText, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readFolderOfTheFile, readList } from "../model/DesignModel.mjs";
 import { DEFECT_CODES, createDefect, createRecheckDefect } from "./DesignDefect.mjs";
 import { createTestNameForm } from "./TestNameForm.mjs";
+import { isAStopOnItsGroup } from "../plan/StopList.mjs";
 
 const HIGH = "high";
 
@@ -332,7 +333,8 @@ const checkStops = check => {
   readList(check.model.decisions.stops).forEach((stop, at) => {
     const path = `decisions.stops[${at}]`;
     check.requireKey("stop.reason", stop, "reason", path);
-    if (check.requireKey("stop.at", stop, "at", path)) check.requireName(stop.at, `${path}.at`);
+    // A stop on a group with no class names its group, which no name of the model resolves.
+    if (check.requireKey("stop.at", stop, "at", path) && !isAStopOnItsGroup(stop)) check.requireName(stop.at, `${path}.at`);
     check.requireKey("stop.says", stop, "says", path);
     // A stop of 0.72.0 names its round, which is the number of its plan since 0.73.0.
     if (stop.round === undefined) check.requireKey("stop.plan", stop, "plan", path);

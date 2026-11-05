@@ -13,6 +13,8 @@ const TO_CONSIDER_HEADING = "## To consider";
 
 const SECTION_HEADING = /^## /;
 
+const ITEM_BULLET = /^\s+- (.+)$/;
+
 const createHeadNames = (name, enclosing = "") => ({ name, enclosing });
 
 // A name in backticks may hold backticks itself, as a Kotlin test name does, so the head ends at the last backtick of the line, and the enclosing name follows the last separator.
@@ -35,14 +37,20 @@ const readNamedItemOfTheLine = (line, isToConsider) => {
   return { number: Number(match[1]), scale: match[2].toLowerCase(), toConsider: isToConsider, ...readNamesOfTheHead(match[3] || "") };
 };
 
-// Each item knows whether it stands under the heading of the items to consider, which ask the author a question and claim no defect.
+// Each item knows whether it stands under the heading of the items to consider, which ask the author a question and claim no defect, and holds its first bullet line as its summary.
 export const readNamedReviewItems = reportText => {
   let isToConsider = false;
   const items = [];
   for (const line of reportText.split("\n")) {
     if (SECTION_HEADING.test(line)) isToConsider = line.trim() === TO_CONSIDER_HEADING;
     const item = readNamedItemOfTheLine(line, isToConsider);
-    if (item) items.push(item);
+    if (item) {
+      items.push(item);
+      continue;
+    }
+    const bullet = ITEM_BULLET.exec(line);
+    const lastItem = items.at(-1);
+    if (bullet && lastItem && lastItem.summary === undefined) lastItem.summary = bullet[1];
   }
   return items;
 };
