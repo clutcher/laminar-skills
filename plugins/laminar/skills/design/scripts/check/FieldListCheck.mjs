@@ -8,7 +8,7 @@ const findUnlistedFieldDefects = (model, theClass, currentText) => {
   const declaredNames = readDeclaredFieldNames(currentText, theClass.file, theClass.name);
   if (!declaredNames) return [];
 
-  const listedNames = new Set([...readList(theClass.fields).map(field => field.name), ...readList(theClass.removed)]);
+  const listedNames = new Set([...readList(theClass.fields).flatMap(field => [field.name, field.oldName]), ...readList(theClass.removed)]);
   return [...declaredNames]
     .filter(fieldName => !listedNames.has(fieldName))
     .map(fieldName => createDefect(DEFECT_CODES.FIELD_UNLISTED, `${model.getClassPath(theClass)}.fields`, `the current file ${theClass.file} declares the field ${fieldName} of ${theClass.name}, a modified class, and the model neither lists it under fields nor under removed`));

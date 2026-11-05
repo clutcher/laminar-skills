@@ -41,6 +41,12 @@ export const isAnInterface = theClass => theClass.kindWord === INTERFACE_KIND_WO
 
 export const isMarkedUnchanged = method => method.unchanged === true;
 
+// An oldName of a nested class may name the inner type alone, so it takes the outer names of the class's own name.
+export const readOldTypeName = theClass => {
+  if (!isAText(theClass.oldName) || theClass.oldName.includes(".") || !theClass.name.includes(".")) return theClass.oldName;
+  return `${theClass.name.slice(0, theClass.name.lastIndexOf("."))}.${theClass.oldName}`;
+};
+
 // An existing defect left as it is carries the reason under notFixed, and has no fix and no migration group.
 export const isLeftUnfixed = existingDefect => isAText(existingDefect.notFixed);
 

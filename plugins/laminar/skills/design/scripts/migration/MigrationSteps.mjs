@@ -1,5 +1,5 @@
 import path from "node:path";
-import { KINDS, getFileOfTheChild, getFolderPath, isAText, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readList, readTypeNames } from "../model/DesignModel.mjs";
+import { KINDS, getFileOfTheChild, getFolderPath, isAText, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readList, readOldTypeName, readTypeNames } from "../model/DesignModel.mjs";
 import { isAReadExtension, isATestFile } from "../model/SourceLanguages.mjs";
 
 export const MIGRATION_STAGES = Object.freeze({
@@ -27,6 +27,18 @@ const joinNames = names => names.join(", ");
 const isAPublicMethod = method => method.visibility !== PRIVATE_VISIBILITY;
 
 const readLastNamePiece = className => className.split(".").pop();
+
+// A nested type stands in a file by every piece of its dotted name, and a file refers to it through its outermost type.
+const readTypeSearch = typeName => {
+  const pieces = typeName.split(".");
+  return { words: pieces, referredName: pieces[0] };
+};
+
+// The name a class has in the current tree, which a rename by oldName still holds.
+const readCurrentTypeName = theClass => readOldTypeName(theClass) || theClass.name;
+
+// The word of a member that a body of the model reads, as a field or a call on a value.
+const readsTheMember = (method, memberName) => isAText(method.body) && new RegExp(`\\.${memberName.replace(/[$]/g, "\\$")}([^\\w$]|$)`).test(method.body);
 
 const getGroupOfTheClass = theClass => (Number.isFinite(theClass.group) ? theClass.group : FIRST_GROUP);
 
@@ -97,6 +109,18 @@ class MigrationPlan {
     return [...treeFiles, ...this.listFilesOfTheModelThat(isTheCallerInTheModel)].filter(file => !this.createdFiles.has(file));
   }
 
+  // The reader files of a member of the class: in the tree, each file that names the class and the member; in the model, the file of each class whose body reads the member.
+  listReaderFiles(theClass, memberName) {
+    const { words, referredName } = readTypeSearch(readCurrentTypeName(theClass));
+    const isAReaderInTheModel = other => other !== theClass && readList(other.methods).some(method => readsTheMember(method, memberName));
+    return this.listCallerFiles([...words, memberName], isAReaderInTheModel, referredName, this.readCurrentFileOf(theClass.file))
+      .filter(file => file !== theClass.file && !this.removedFiles.has(file));
+  }
+
+  describeReaderUpdate(readerFiles) {
+    return readerFiles.length ? `; updates the files that read it: ${joinNames(readerFiles)}` : "";
+  }
+
   callsAny(theClass, isTheCalled) {
     return readList(theClass.methods).some(method => readList(method.calls).some(called => isTheCalled(this.model.findClass(called), called)));
   }
@@ -131,15 +155,23 @@ class MigrationPlan {
     const steps = [];
     for (const theClass of this.model.classes) {
       const group = getGroupOfTheClass(theClass);
+      const { words, referredName } = readTypeSearch(readCurrentTypeName(theClass));
       if (isAText(theClass.oldName)) {
-        const callerFiles = this.listCallerFiles([theClass.oldName], other => other !== theClass && this.namesTheClass(other, theClass), theClass.oldName, this.readCurrentFileOf(theClass.file));
-        const importingFiles = this.listImportingFiles(theClass.oldName, theClass.file, theClass.file);
-        steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames the class ${theClass.oldName} to ${theClass.name}, with no change of behavior${this.describeImportUpdate(importingFiles)}`, [theClass.file, ...callerFiles, ...importingFiles]));
+        const oldTypeName = readOldTypeName(theClass);
+        const callerFiles = this.listCallerFiles(words, other => other !== theClass && this.namesTheClass(other, theClass), referredName, this.readCurrentFileOf(theClass.file));
+        const importingFiles = oldTypeName.includes(".") ? [] : this.listImportingFiles(theClass.oldName, theClass.file, theClass.file);
+        steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames the class ${oldTypeName} to ${theClass.name}, with no change of behavior${this.describeImportUpdate(importingFiles)}`, [theClass.file, ...callerFiles, ...importingFiles]));
       }
       for (const method of readList(theClass.methods)) {
         if (!isAText(method.oldName)) continue;
-        const callerFiles = this.listCallerFiles([theClass.oldName || theClass.name, method.oldName], other => this.callsAny(other, (calledClass, called) => calledClass === theClass && called.endsWith(`#${method.name}`)), theClass.oldName || theClass.name, this.readCurrentFileOf(theClass.file));
+        const callerFiles = this.listCallerFiles([...words, method.oldName], other => this.callsAny(other, (calledClass, called) => calledClass === theClass && called.endsWith(`#${method.name}`)), referredName, this.readCurrentFileOf(theClass.file));
         steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames ${this.model.getClassDisplayName(theClass)}#${method.oldName} to ${method.name}, with no change of behavior`, [theClass.file, ...callerFiles]));
+      }
+      // A renamed field is a changed public member: the step updates each reader file in the group of the rename, so the group builds alone.
+      for (const field of readList(theClass.fields)) {
+        if (!isAText(field.oldName)) continue;
+        const readerFiles = this.listReaderFiles(theClass, field.oldName);
+        steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames ${this.model.getClassDisplayName(theClass)}#${field.oldName} to ${field.name}, with no change of behavior${this.describeReaderUpdate(readerFiles)}`, [theClass.file, ...readerFiles]));
       }
     }
     return steps;
@@ -177,7 +209,19 @@ class MigrationPlan {
       .filter(({ child }) => child.kind === KINDS.MODIFIED)
       .map(({ file }) => ({ file, classes: this.listClassesOfTheFile(file) }))
       .filter(({ classes }) => classes.length)
-      .map(({ file, classes }) => this.createStep(MIGRATION_STAGES.CHANGED_MEMBERS, this.getGroupOfClasses(classes), `changes the fields and method signatures of ${classes.map(theClass => theClass.name).join(", ")} to those of the model${this.describeMembersFixedApart(classes)}`, [file]));
+      .map(({ file, classes }) => {
+        const callerFiles = [...new Set(classes.flatMap(theClass => this.listCallersOfChangedSignatures(theClass)))];
+        const callers = callerFiles.length ? `; updates the callers of the changed signatures in ${joinNames(callerFiles)}` : "";
+        return this.createStep(MIGRATION_STAGES.CHANGED_MEMBERS, this.getGroupOfClasses(classes), `changes the fields and method signatures of ${classes.map(theClass => theClass.name).join(", ")} to those of the model${this.describeMembersFixedApart(classes)}${callers}`, [file, ...callerFiles]);
+      });
+  }
+
+  // A public method whose signature changes with no rename breaks its callers, so the step of the change updates them in its own group.
+  listCallersOfChangedSignatures(theClass) {
+    const currentFile = this.readCurrentFileOf(theClass.file);
+    return readList(theClass.methods)
+      .filter(method => !isAText(method.oldName) && this.changesTheMethodSignature(currentFile, method))
+      .flatMap(method => this.listReaderFiles(theClass, method.name));
   }
 
   describeMembersFixedApart(classes) {
@@ -260,7 +304,10 @@ class MigrationPlan {
   listRemovalSteps() {
     const steps = [];
     for (const theClass of this.model.classes) {
-      if (readList(theClass.removed).length) steps.push(this.createStep(MIGRATION_STAGES.REMOVALS, getGroupOfTheClass(theClass), `removes ${readList(theClass.removed).join(", ")} from ${theClass.name}, once no caller uses them`, [theClass.file]));
+      if (!readList(theClass.removed).length) continue;
+      // A removed public member breaks each reader file, so the step of the removal updates them in its own group.
+      const readerFiles = [...new Set(readList(theClass.removed).flatMap(removedName => this.listReaderFiles(theClass, removedName)))];
+      steps.push(this.createStep(MIGRATION_STAGES.REMOVALS, getGroupOfTheClass(theClass), `removes ${readList(theClass.removed).join(", ")} from ${theClass.name}, once no caller uses them${this.describeReaderUpdate(readerFiles)}`, [theClass.file, ...readerFiles]));
     }
     for (const { child, file } of this.children) {
       if (readList(child.removedClasses).length) steps.push(this.createStep(MIGRATION_STAGES.REMOVALS, this.getGroupOfTheFile(file), `removes the classes ${readList(child.removedClasses).join(", ")} from ${file}`, [file]));
@@ -311,10 +358,10 @@ class MigrationPlan {
 
   // A modified class whose public signature, its constructor included, changes breaks the tests that construct or call it; a field the current file does not hold is a new constructor parameter.
   changesThePublicSignature(theClass) {
-    if (isAText(theClass.oldName) || readList(theClass.removed).length) return true;
+    if (isAText(theClass.oldName) || readList(theClass.removed).length || readList(theClass.fields).some(field => isAText(field.oldName))) return true;
 
     const currentFile = this.readCurrentFileOf(theClass.file);
-    const isInTheCurrentFile = this.currentTree && this.currentTree.holdsTheWord(currentFile, readLastNamePiece(theClass.name));
+    const isInTheCurrentFile = this.currentTree && this.currentTree.holdsTheWord(currentFile, readLastNamePiece(readCurrentTypeName(theClass)));
     if (this.currentTree && !isInTheCurrentFile) return false;
     if (readList(theClass.methods).some(method => this.changesTheMethodSignature(currentFile, method))) return true;
     return Boolean(isInTheCurrentFile) && readList(theClass.fields).some(field => !this.currentTree.holdsTheWord(currentFile, field.name));
@@ -326,8 +373,8 @@ class MigrationPlan {
 
   listTestFilesThatName(theClass) {
     if (!this.isSearchedForTests(theClass)) return [];
-    const className = readLastNamePiece(theClass.oldName || theClass.name);
-    return this.currentTree.listFilesThatReferToTheClass([className], className, this.readCurrentFileOf(theClass.file))
+    const { words, referredName } = readTypeSearch(readCurrentTypeName(theClass));
+    return this.currentTree.listFilesThatReferToTheClass(words, referredName, this.readCurrentFileOf(theClass.file))
       .filter(file => isATestFile(file) && isAReadExtension(file) && !this.createdFiles.has(file) && !this.removedFiles.has(file));
   }
 
@@ -338,7 +385,7 @@ class MigrationPlan {
         const testFiles = this.listTestFilesThatName(theClass);
         if (this.isSearchedForTests(theClass) && !testFiles.length) return [];
         const found = testFiles.length ? joinNames(testFiles) : TESTS_NOT_FOUND;
-        return [this.createStep(MIGRATION_STAGES.TESTS, getGroupOfTheClass(theClass), `updates or removes the tests that construct or call ${this.model.getClassDisplayName(theClass)}: ${found}`, testFiles)];
+        return [{ ...this.createStep(MIGRATION_STAGES.TESTS, getGroupOfTheClass(theClass), `updates or removes the tests that construct or call ${this.model.getClassDisplayName(theClass)}: ${found}`, testFiles), testedFiles: [theClass.file] }];
       });
   }
 
@@ -407,7 +454,7 @@ class MigrationPlan {
         const testFiles = this.listTestFilesThatReach(useCase);
         const found = testFiles.length ? joinNames(testFiles) : this.describeTestsNotFoundThrough(useCase);
         const interfaceNames = joinNames(outsideInterfaces.map(outsideInterface => this.model.getClassDisplayName(outsideInterface)));
-        return [this.createStep(MIGRATION_STAGES.TESTS, getGroupOfTheClass(useCase), `updates the tests that reach ${interfaceNames} through ${this.model.getClassDisplayName(useCase)}: ${found}`, testFiles)];
+        return [{ ...this.createStep(MIGRATION_STAGES.TESTS, getGroupOfTheClass(useCase), `updates the tests that reach ${interfaceNames} through ${this.model.getClassDisplayName(useCase)}: ${found}`, testFiles), testedFiles: [useCase.file] }];
       });
   }
 

@@ -1,4 +1,4 @@
-import { readList } from "../model/DesignModel.mjs";
+import { readList, readOldTypeName } from "../model/DesignModel.mjs";
 
 // The scales whose findings the model closes; a finding at the method or the variable scale becomes an entry of findings.json and a finding step.
 export const PLAN_SCALES = new Set(["application", "module", "class"]);
@@ -23,7 +23,10 @@ export const readFindingNamePieces = (displayName, scale) => {
   return { variableName: enclosingAt >= 0 ? displayName.slice(0, enclosingAt) : "", className, methodName: isAField ? "" : memberName, fieldName: isAField ? memberName : "" };
 };
 
-const isTheClassOfTheName = (theClass, className) => theClass.name === className || theClass.name.endsWith(`.${className}`);
+const isTheTypeOfTheName = (typeName, className) => typeName === className || typeName.endsWith(`.${className}`);
+
+// The review names the class by its name in the current tree, so a class the model renames by oldName is found by its old name too.
+const isTheClassOfTheName = (theClass, className) => isTheTypeOfTheName(theClass.name, className) || Boolean(theClass.oldName) && isTheTypeOfTheName(readOldTypeName(theClass), className);
 
 // The review names a nested type by its own name, so the class of the model in the file of the finding wins over a class of the same name in another file.
 export const findClassOfTheFinding = (model, displayName, scale, file) => {

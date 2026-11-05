@@ -1,5 +1,5 @@
 import path from "node:path";
-import { KINDS, getFileOfTheChild, getFolderPath, isAText, isMarkedUnchanged, readList } from "../model/DesignModel.mjs";
+import { KINDS, getFileOfTheChild, getFolderPath, isAText, isMarkedUnchanged, readList, readOldTypeName } from "../model/DesignModel.mjs";
 import { isATestFile, readParsedLanguage } from "../model/SourceLanguages.mjs";
 import { readDeclaredTypes, isInsideTheBody } from "./DeclaredTypes.mjs";
 import { DEFECT_CODES, createDefect, createRecheckDefect } from "./DesignDefect.mjs";
@@ -61,12 +61,19 @@ const findOldNameDefects = (model, currentTree) => {
 
     const oldFile = readOldFileOfTheClass(model, theClass);
     const oldText = currentTree.readFileText(oldFile);
-    const holdsTheWord = word => oldText !== null && isAWordIn(stripComments(oldText, oldFile), word);
-    if (isAText(theClass.oldName) && !holdsTheWord(theClass.oldName)) defects.push(createDefect(DEFECT_CODES.OLD_NAME_NOT_IN_TREE, `${model.getClassPath(theClass)}.oldName`, `the current file ${oldFile} declares no ${theClass.oldName}`));
+    const codeText = oldText === null ? null : stripComments(oldText, oldFile);
+    const holdsTheWord = word => codeText !== null && isAWordIn(codeText, word);
+    // A nested type never stands in its file by its dotted name, so the file must declare it inside its outer type.
+    const declaresTheType = typeName => (typeName.includes(".") ? codeText !== null && readDeclaredTypes(codeText).some(declaredType => declaredType.name === typeName) : holdsTheWord(typeName));
+    if (isAText(theClass.oldName) && !declaresTheType(readOldTypeName(theClass))) defects.push(createDefect(DEFECT_CODES.OLD_NAME_NOT_IN_TREE, `${model.getClassPath(theClass)}.oldName`, `the current file ${oldFile} declares no ${theClass.oldName}`));
     for (const method of readList(theClass.methods)) {
       if (!isAText(method.oldName) || holdsTheWord(method.oldName)) continue;
       defects.push(createDefect(DEFECT_CODES.OLD_NAME_NOT_IN_TREE, `${model.getMethodPath(theClass, method)}.oldName`, `the current file ${oldFile} holds no ${method.oldName}`));
     }
+    readList(theClass.fields).forEach((field, at) => {
+      if (!isAText(field.oldName) || holdsTheWord(field.oldName)) return;
+      defects.push(createDefect(DEFECT_CODES.OLD_NAME_NOT_IN_TREE, `${model.getClassPath(theClass)}.fields[${at}].oldName`, `the current file ${oldFile} holds no ${field.oldName}`));
+    });
     readList(theClass.removed).forEach((removedName, at) => {
       if (holdsTheWord(removedName)) return;
       defects.push(createDefect(DEFECT_CODES.REMOVED_NAME_NOT_IN_TREE, `${model.getClassPath(theClass)}.removed[${at}]`, `the current file ${oldFile} holds no ${removedName} to remove`));
@@ -86,16 +93,10 @@ const readLastNamePiece = className => className.split(".").pop();
 const listAccountedMemberNames = classes => classes.flatMap(theClass => [
   theClass.name,
   readLastNamePiece(theClass.name),
-  ...readList(theClass.fields).map(field => field.name),
+  ...readList(theClass.fields).flatMap(field => [field.name, field.oldName]),
   ...readList(theClass.methods).flatMap(method => [method.name, method.oldName]),
   ...readList(theClass.removed),
 ]);
-
-// An oldName of a nested class may name the inner type alone, so it takes the outer names of the class's own name.
-const readOldTypeName = theClass => {
-  if (!isAText(theClass.oldName) || theClass.oldName.includes(".") || !theClass.name.includes(".")) return theClass.oldName;
-  return `${theClass.name.slice(0, theClass.name.lastIndexOf("."))}.${theClass.oldName}`;
-};
 
 const isATestFileOfTheModel = (model, file) => isATestFile(file) || [...readList(model.decisions.tests?.integration), ...readList(model.decisions.tests?.unit)].some(tests => tests.file === file);
 

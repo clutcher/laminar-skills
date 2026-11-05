@@ -28,11 +28,19 @@ const findRemovedName = (model, theClass, entry, pieces) => {
   return memberName && readList(theClass.removed).includes(memberName) ? `${model.getClassDisplayName(theClass)}${METHOD_MARK}${memberName}` : "";
 };
 
-// The display name of the finding with the names of the model, so a step on a renamed class or method names the name the writer writes.
+// The field of the model that the finding names, under its name in the model, so a field the model renames by oldName is found by its old name too.
+const findFieldOfTheFinding = (theClass, fieldName) => {
+  if (!theClass || !fieldName) return null;
+  const fields = readList(theClass.fields);
+  return fields.find(field => field.name === fieldName) || fields.find(field => field.oldName === fieldName) || null;
+};
+
+// The display name of the finding with the names of the model, so a step on a renamed class, method or field names the name the writer writes.
 const writeNameInTheModel = (model, theClass, method, entry, pieces) => {
   if (!theClass) return entry.displayName;
 
-  const memberName = method ? method.name : pieces.fieldName || pieces.methodName;
+  const field = findFieldOfTheFinding(theClass, pieces.fieldName);
+  const memberName = method ? method.name : (field ? field.name : pieces.fieldName) || pieces.methodName;
   const enclosing = memberName ? `${model.getClassDisplayName(theClass)}${METHOD_MARK}${memberName}` : model.getClassDisplayName(theClass);
   return pieces.variableName ? `${pieces.variableName} in ${enclosing}` : enclosing;
 };

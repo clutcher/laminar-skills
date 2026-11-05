@@ -48,7 +48,8 @@ const carryTheMethod = (method, file, currentTree, counts) => {
 
 const carryTheClass = (theClass, currentTree, counts) => {
   const carried = { ...theClass };
-  if (isAText(theClass.oldName) && !currentTree.holdsTheWord(theClass.file, theClass.oldName)) {
+  // A nested type never stands in its file by its dotted name, so the inner name decides whether the rename is written.
+  if (isAText(theClass.oldName) && !currentTree.holdsTheWord(theClass.file, theClass.oldName.split(".").pop())) {
     delete carried.oldName;
     counts.renamesApplied += 1;
   }
@@ -56,6 +57,12 @@ const carryTheClass = (theClass, currentTree, counts) => {
   counts.removalsApplied += readList(theClass.removed).length - removed.length;
   if (removed.length) carried.removed = removed;
   else delete carried.removed;
+  carried.fields = readList(theClass.fields).map(field => {
+    if (!isAText(field.oldName) || currentTree.holdsTheWord(theClass.file, field.oldName)) return field;
+    counts.renamesApplied += 1;
+    const { oldName, ...written } = field;
+    return written;
+  });
   carried.methods = readList(theClass.methods).map(method => carryTheMethod(method, theClass.file, currentTree, counts));
   return carried;
 };

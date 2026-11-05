@@ -46,7 +46,7 @@ const METHOD_FORM = createObjectOf({
 const CLASS_FORM = createObjectOf({
   file: TEXT, kindWord: TEXT, name: TEXT, zone: TEXT, does: createTextOf(Object.values(DOES)), exposed: TRUE_OR_FALSE, oldName: TEXT, group: NUMBER,
   extends: TEXTS, implements: TEXTS, removed: TEXTS, addedForFindings: createListOf(NUMBER),
-  fields: createListOf(createObjectOf({ name: TEXT, type: TEXT })),
+  fields: createListOf(createObjectOf({ name: TEXT, type: TEXT, oldName: TEXT })),
   methods: createListOf(METHOD_FORM),
 });
 

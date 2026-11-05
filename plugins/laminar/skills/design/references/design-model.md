@@ -17,7 +17,7 @@ The scope follows the book: "every part is named before any detail is written" (
 
 The file has 2 halves:
 
-- The shape half is the shape model of `shape-model.md` of the skill `review`, unchanged, plus keys that the prepare command ignores: `zone`, `does`, `exposed`, `oldName`, `removed`, `group` and `addedForFindings` on a class, `calls`, `oldName` and `unchanged` on a method, and `oldPath` on a `created` child and `removedClasses` on a `modified` child (section 4).
+- The shape half is the shape model of `shape-model.md` of the skill `review`, unchanged, plus keys that the prepare command ignores: `zone`, `does`, `exposed`, `oldName`, `removed`, `group` and `addedForFindings` on a class, `calls`, `oldName` and `unchanged` on a method, `oldName` on a field, and `oldPath` on a `created` child and `removedClasses` on a `modified` child (section 4).
 - The decisions half is the 1 top-level key `decisions`, whose keys `design-decisions.md`, `design-boundaries.md` and `design-findings.md` hold. The prepare command ignores it, so no judge of the shape check reads a decision.
 
 The designer writes the 2 halves in this order:
@@ -44,7 +44,7 @@ The keys below stand beside them. The prepare command ignores each of them, so t
 | `does` | class | `computes`, `coordinates` or `translates` | for each class with 1 or more methods in a created, moved or modified file; left out for a class of fields only and for an interface | design check, render | `"does": "computes"` |
 | `exposed` | class | true or false | yes, for each class of a created, moved or modified file | design check, render | `"exposed": false` |
 | `calls` | method | list of display names (section 5) | no; where a method has a `body`, every class its body calls stands in `calls` | design check, render | `"calls": ["InvoicePricing#priceLines"]` |
-| `oldName` | class or method | text: the name in the current tree | only for a class or a method that the change renames | migration script, design check, render | `"oldName": "findAllByPartNumber"` |
+| `oldName` | class, method or field | text: the name in the current tree; for a nested class, its whole dotted name, such as `InvoicePayment.GiftCard` | only for a class, a method or a field that the change renames | migration script, design check, render | `"oldName": "findAllByPartNumber"` |
 | `removed` | class | list of texts: the names of fields and methods the class loses | no | migration script, design check, render | `"removed": ["findOpenJobs"]` |
 | `group` | class | number: the migration group of the class, from 1 | no; only on a class that the change creates, moves, renames, modifies or removes; a class with no `group` is in group 1; never on a class of an `unchanged` file | migration script; design check, which reports a `group` on a class of an `unchanged` file (`group-on-unchanged-class`) | `"group": 2` |
 | `unchanged` | method | true | no; only on a method of a class of a `modified` file that the change leaves as it is | design check, migration script | `"unchanged": true` |
@@ -68,12 +68,12 @@ The model uses the kinds of `shape-model.md`, section 3, and no second set: `cre
 | moves code into a new file and changes its members, or splits 1 file into 2 or more | a `created` child for each new file, each with `oldPath`, the file the code comes from; the prepare command ignores `oldPath` on a `created` child, so the class judge reads each new file as a created class, and the old file is a `removed` child of its folder |
 | changes a file that stays | a `modified` child |
 | removes a file | a `removed` child |
-| renames a class or a method inside a file that stays | `oldName` on the class or the method |
+| renames a class, a method or a field inside a file that stays | `oldName` on the class, the method or the field, never a removed name and a new one, so the migration updates each reader |
 | removes a class from a file that stays | `removedClasses`, a list of class names, on the `modified` child of that file |
 | removes a field or a method from a class that stays | `removed` on the class |
 | lists a file that stays as it is, for a decision that names it | an `unchanged` child, with its class under `classes`; the prepare command judges no class of an `unchanged` file |
 
-The current tree is the tree of the base commit of the change where one is known, never the files of a writer (`design-checks.md`, section 1). The design check reports each class of the current tree in a folder of the model that disappears with no `removed`, `removedClasses`, `oldName` or `moved` child that accounts for it (`current-class-unaccounted`); it compares a nested type by its full dotted name, such as `Order.Line`, never by the bare name, and it counts a private helper class of a test file, such as a substitute that only that test uses, as a detail of its test, so such a class is never unaccounted. It also reports each public member of a current class that the model neither keeps, renames by `oldName` nor lists in `removed`, as a recheck case (`current-member-unaccounted`), each name of `removed` that the current file does not hold (`removed-name-not-in-tree`), each `oldPath` or `oldName` that the current tree does not hold (`old-path-not-in-tree`, `old-name-not-in-tree`), and each `oldPath` of a `created` child whose old file no folder of the model lists as a `removed` or `modified` child (`old-file-unlisted`).
+The current tree is the tree of the plan commit where one is known, never the files of a writer (`design-checks.md`, section 1). The design check reports each class of the current tree in a folder of the model that disappears with no `removed`, `removedClasses`, `oldName` or `moved` child that accounts for it (`current-class-unaccounted`); it compares a nested type by its full dotted name, such as `Order.Line`, never by the bare name, and it counts a private helper class of a test file, such as a substitute that only that test uses, as a detail of its test, so such a class is never unaccounted. It also reports each public member of a current class that the model neither keeps, renames by `oldName` nor lists in `removed`, as a recheck case (`current-member-unaccounted`), each name of `removed` that the current file does not hold (`removed-name-not-in-tree`), each `oldPath` or `oldName` that the current tree does not hold (`old-path-not-in-tree`, `old-name-not-in-tree`), and each `oldPath` of a `created` child whose old file no folder of the model lists as a `removed` or `modified` child (`old-file-unlisted`).
 
 ## 5. Display names
 

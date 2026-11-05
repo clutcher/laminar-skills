@@ -81,7 +81,7 @@ const writeAddedForFindingsLine = (theClass, indent) => {
 
 const writeClassLines = (model, theClass, userNamesOfClassMap, indent) => {
   const lines = [`${indent}${writeClassMarks(theClass)}`, ...writeUsedByLine(model, theClass, userNamesOfClassMap, indent), ...writeAddedForFindingsLine(theClass, indent)];
-  for (const field of readList(theClass.fields)) lines.push(`${indent}  ${field.name}${field.type ? `: ${field.type}` : ""}`);
+  for (const field of readList(theClass.fields)) lines.push(`${indent}  ${field.name}${field.type ? `: ${field.type}` : ""}${isAText(field.oldName) ? ` (renamed from ${field.oldName})` : ""}`);
   for (const method of readList(theClass.methods)) lines.push(...writeMethodLines(method, `${indent}  `));
   if (readList(theClass.removed).length) lines.push(`${indent}  removes ${readList(theClass.removed).join(", ")}`);
   return lines;

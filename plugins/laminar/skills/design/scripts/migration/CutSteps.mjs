@@ -75,10 +75,13 @@ export const sortAndNumberTheSteps = steps => {
   const readRank = step => STAGE_ORDER.indexOf(step.stage);
   return [...steps]
     .sort((first, second) => first.group - second.group || readRank(first) - readRank(second))
-    .map((step, at) => ({ ...step, number: at + 1, existingDefect: Boolean(step.existingDefect) }));
+    .map(({ testedFiles, ...step }, at) => ({ ...step, number: at + 1, existingDefect: Boolean(step.existingDefect) }));
 };
 
-// A cut plan holds only the migration groups with a class the designer changed, a changed test, a finding step or a stopped writer: the steps of the changed classes, every step of a stopped group, 1 step per changed test object and the finding steps. Each group keeps its number.
+// A step belongs to a changed class where it edits its file, or where it updates the tests of that class, whose files are test files.
+const isAStepOfTheFiles = (step, files) => step.files.some(file => files.has(file)) || (step.testedFiles || []).some(file => files.has(file));
+
+// A cut plan holds only the migration groups with a class the designer changed, a changed test, a finding step or a stopped writer: the steps of the changed classes with the test steps of their changed signatures, every step of a stopped group, 1 step per changed test object and the finding steps. Each group keeps its number.
 export const listCutSteps = (model, steps, { classNames, findingSteps, stoppedGroups, modelBefore = null }) => {
   const changedClasses = classNames.map(className => model.findClass(className)).filter(Boolean);
   const changedFiles = new Set(changedClasses.map(theClass => theClass.file));
@@ -86,7 +89,7 @@ export const listCutSteps = (model, steps, { classNames, findingSteps, stoppedGr
   const stoppedGroupSet = new Set(stoppedGroups);
   const plannedGroups = new Set([...changedClasses.map(getGroupOfTheClass), ...findingSteps.map(step => step.group), ...testChangeSteps.map(step => step.group), ...stoppedGroups]);
 
-  const keptSteps = steps.filter(step => plannedGroups.has(step.group) && (stoppedGroupSet.has(step.group) || step.files.some(file => changedFiles.has(file))));
+  const keptSteps = steps.filter(step => plannedGroups.has(step.group) && (stoppedGroupSet.has(step.group) || isAStepOfTheFiles(step, changedFiles)));
   return {
     steps: sortAndNumberTheSteps([...keptSteps, ...testChangeSteps, ...findingSteps]),
     plannedGroups: [...plannedGroups].sort((first, second) => first - second),

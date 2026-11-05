@@ -1,4 +1,4 @@
-import { KINDS, getFolderPath, isAText, isMarkedUnchanged } from "../model/DesignModel.mjs";
+import { KINDS, getFolderPath, isAText, isMarkedUnchanged, readList } from "../model/DesignModel.mjs";
 
 const KINDS_OUTSIDE_THE_CHANGE = new Set([KINDS.MODIFIED, KINDS.UNCHANGED]);
 
@@ -21,6 +21,8 @@ export const describeTheChangeOfTheMember = (model, theClass, methods, currentTr
   const kind = model.getKindOfClass(theClass);
   if (!KINDS_OUTSIDE_THE_CHANGE.has(kind)) return `its class ${theClass.name} stands in a ${kind} file`;
   if (isAText(theClass.oldName)) return `its class ${theClass.name} holds an oldName`;
+  const renamedField = readList(theClass.fields).find(field => isAText(field.oldName));
+  if (renamedField) return `${theClass.name}#${renamedField.name} holds an oldName`;
 
   const currentFile = readCurrentFileOf(model, theClass);
   for (const method of methods) {
