@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { checkDesignModel } from "./check/DesignDefects.mjs";
-import { findAutonomousReasonResult } from "./check/AutonomousReasons.mjs";
+import { findAutonomousReasonDefects } from "./check/AutonomousReasons.mjs";
 import { findDecidedDefects } from "./check/DecidedCheck.mjs";
 import { findNameOfThePath } from "./check/DefectNames.mjs";
 import { readBaseCommit, readDesignModelOrExit, readOptionsOrExit, readTreeCommit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
@@ -76,7 +76,7 @@ function checkDesign() {
   const repositoryRoot = options.repo ? path.resolve(options.repo) : null;
   const commits = repositoryRoot ? { treeCommit: readTreeCommit(options), baseCommit: readBaseCommit(options) } : undefined;
   const result = runOrExitOnTreeStop(() => checkDesignModel(model, repositoryRoot, reviewText, shapeReviews, commits));
-  const autonomousDefects = options[AUTONOMOUS_SWITCH] ? findAutonomousReasonResult(model, reviewText, shapeReviews).defects.map(defect => ({ ...defect, name: findNameOfThePath(model, defect.path) || defect.path, foundWrong: false })) : [];
+  const autonomousDefects = options[AUTONOMOUS_SWITCH] ? findAutonomousReasonDefects(model, reviewText, shapeReviews).map(defect => ({ ...defect, name: findNameOfThePath(model, defect.path) || defect.path, foundWrong: false })) : [];
   const defects = [...result.defects, ...decidedDefects, ...autonomousDefects];
   for (const headLine of result.headLines) console.log(headLine);
   for (const defect of defects) console.log(formatDefect(defect));

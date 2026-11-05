@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { findAutonomousReasonResult } from "./check/AutonomousReasons.mjs";
+import { listConsiderations } from "./check/AutonomousReasons.mjs";
 import { readDesignModelOrExit, readOptionsOrExit } from "./command/CommandLine.mjs";
 import { carryTheFixedFindings } from "./plan/FixedFindings.mjs";
 import { DecidedListStop, checkDecidedListForm, resolveDecidedList } from "./plan/DecidedList.mjs";
@@ -46,7 +46,7 @@ const listCutArguments = (options, plan, paths) => {
 // The 3 scripts of the finish command, in that order, each with the options it takes.
 const listFinishSteps = (options, paths, plan) => [
   { name: "check", script: "checkDesign.mjs", arguments: [...listOptionArguments(options, ["model", "repo", "tree", "base", "review", "decided"]), ...listShapeReviewArguments(options), ...(options[AUTONOMOUS_SWITCH] ? [`--${AUTONOMOUS_SWITCH}`] : [])] },
-  { name: "render", script: "renderDesign.mjs", arguments: [...listOptionArguments(options, ["model", "rounds"]), "--out", paths.design] },
+  { name: "render", script: "renderDesign.mjs", arguments: [...listOptionArguments(options, ["model", "rounds", "review"]), ...listShapeReviewArguments(options), "--out", paths.design] },
   { name: "migration", script: "planMigration.mjs", arguments: [...listOptionArguments(options, ["model", "repo", "tree"]), ...(paths.findings ? ["--findings", paths.findings] : []), ...listCutArguments(options, plan, paths), "--out", paths.migration] },
 ];
 
@@ -88,6 +88,13 @@ const readTheRunOrExit = options => {
   }
 };
 
+// The first finding of the run on 1 item, and on its check where the object names one.
+const findFindingOfTheItem = (runInput, number, check) => {
+  const item = runInput ? runInput.run.items.find(other => other.number === number) : null;
+  if (!item) return null;
+  return item.findings.find(finding => !check || finding.check === check) || null;
+};
+
 const readTextIfGiven = textPath => (textPath ? fs.readFileSync(path.resolve(textPath), "utf8") : null);
 
 // The shape runs of --shape-review, each by the number of its folder, as the design check reads them.
@@ -107,9 +114,9 @@ const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput) => {
   for (const commitFile of [BASE_COMMIT_FILE, PLAN_COMMIT_FILE]) copyFileIfPresent(path.join(path.dirname(path.resolve(paths.model)), commitFile), planFolder);
   copyFileIfPresent(path.join(paths.results, MIGRATION_WORKFLOW_FILE), planFolder);
   if (roundInput) writeJson(path.join(planFolder, DISPOSITIONS_FILE), listRoundDispositions(model, roundInput.run, roundInput));
-  const questions = [...listQuestionsThatStopThePlan(model), ...paths.questionsToConsider];
+  const questions = listQuestionsThatStopThePlan(model);
   const outcomeWord = questions.length ? PLAN_OUTCOMES.QUESTION : PLAN_OUTCOMES.READY;
-  writeOutcome(resultsFolder, plan, { word: outcomeWord, questions });
+  writeOutcome(resultsFolder, plan, { word: outcomeWord, questions, considerations: paths.considerations });
   return outcomeWord;
 };
 
@@ -120,8 +127,9 @@ function finishModel() {
   const plan = Math.max(findLastPlan(resultsFolder), 1);
   const runInput = readTheRunOrExit(options);
   const { entries, unfinishedGroups } = runInput ? carryTheFixedFindings(model, resultsFolder, plan, listFindingEntries(model, runInput.run, runInput.decisionOfFindingMap)) : { entries: [], unfinishedGroups: [] };
-  const questionsToConsider = options[AUTONOMOUS_SWITCH] ? findAutonomousReasonResult(model, readTextIfGiven(options.review), readShapeReviews(options)).questions : [];
-  const paths = { model: options.model, results: resultsFolder, design: path.join(resultsFolder, "design.md"), migration: path.join(resultsFolder, "migration.md"), findings: runInput ? path.join(resultsFolder, FINDINGS_FILE) : null, unfinishedGroups, questionsToConsider };
+  // An item to consider left as a question to the author is passed on as a consideration, never as a question of the plan, because items to consider on existing code stand in most changes.
+  const considerations = listConsiderations(model, readTextIfGiven(options.review), readShapeReviews(options), (number, check) => findFindingOfTheItem(runInput, number, check));
+  const paths = { model: options.model, results: resultsFolder, design: path.join(resultsFolder, "design.md"), migration: path.join(resultsFolder, "migration.md"), findings: runInput ? path.join(resultsFolder, FINDINGS_FILE) : null, unfinishedGroups, considerations };
   if (runInput) writeJson(paths.findings, entries);
 
   const steps = listFinishSteps(options, paths, plan);

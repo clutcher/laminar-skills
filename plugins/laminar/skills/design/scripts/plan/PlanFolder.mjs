@@ -47,7 +47,7 @@ export const listQuestionsThatStopThePlan = model => readList(model.decisions.qu
 export const writeOutcome = (resultsFolder, plan, outcome) => {
   const planFolder = getPlanFolder(resultsFolder, plan);
   fs.mkdirSync(planFolder, { recursive: true });
-  writeJson(path.join(planFolder, OUTCOME_FILE), { plan, outcome: outcome.word, questions: outcome.questions || [], stop: outcome.stop || null });
+  writeJson(path.join(planFolder, OUTCOME_FILE), { plan, outcome: outcome.word, questions: outcome.questions || [], considerations: outcome.considerations || [], stop: outcome.stop || null });
 };
 
 export const formatPlanLine = (plan, outcomeWord, resultsFolder) => `plan ${plan} ${outcomeWord} ${resultsFolder}`;

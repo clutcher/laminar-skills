@@ -227,11 +227,18 @@ const writeFindingLine = finding => {
   return `- ${item}: left, ${finding.reason}: ${finding.says}`;
 };
 
-const writeFindingSection = findings => {
+const writeFindingSection = (findings, findingsToConsider) => {
   const lines = ["## Findings", ""];
-  const judgedFindings = findings.filter(finding => !isAText(finding.openAfterCeiling));
+  const judgedFindings = findings.filter(finding => !isAText(finding.openAfterCeiling) && !findingsToConsider.has(finding));
   if (!judgedFindings.length) return [...lines, "None."];
   return [...lines, ...judgedFindings.map(writeFindingLine)];
+};
+
+// The items to consider stand apart from the findings, because they ask the author a question and claim no defect.
+const writeToConsiderSection = (findings, findingsToConsider) => {
+  const consideredFindings = findings.filter(finding => findingsToConsider.has(finding));
+  if (!consideredFindings.length) return [];
+  return ["", "## To consider", "", ...consideredFindings.map(writeFindingLine)];
 };
 
 // An item the shape runs left open at their ceiling, with the change the designer intends, which the writers do not build.
@@ -278,7 +285,7 @@ const writeRoundSection = roundCounts => {
   return [...lines, ...roundCounts.map(writeRoundTableLine), ""];
 };
 
-export const writeDesignText = (model, roundCounts = null) => {
+export const writeDesignText = (model, roundCounts = null, findingsToConsider = new Set()) => {
   const { decisions } = model;
   const tests = decisions.tests || {};
   return [
@@ -296,7 +303,8 @@ export const writeDesignText = (model, roundCounts = null) => {
     ...writeUnitTestSection(model, readList(tests.unit)),
     "",
     ...writeQuestionSection(readList(decisions.questions)),
-    ...writeFindingSection(readList(decisions.findings)),
+    ...writeFindingSection(readList(decisions.findings), findingsToConsider),
+    ...writeToConsiderSection(readList(decisions.findings), findingsToConsider),
     ...writeOpenAfterCeilingSection(readList(decisions.findings)),
     "",
     ...writeStopSection(readList(decisions.stops)),
