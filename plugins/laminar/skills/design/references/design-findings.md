@@ -6,7 +6,7 @@ This file holds 4 keys of `decisions`, the decisions half of the design model: `
 
 ## `findings`
 
-1 object per numbered item of `review.md` of the input run folder at the application, module and class scales, and 1 object per kept item of each shape run; an empty list where the input is no run folder and no shape run kept an item. Each object holds exactly 1 of `closedBy`, `reason` and `openAfterCeiling`. A finding at the method or variable scale takes no object: the finish command writes it into `findings.json`, and the migration gives it 1 finding step or 1 line under `## Findings with no step` (`design-checks.md`, section 5).
+1 object per numbered item of `review.md` of the input run folder at the application, module and class scales, and 1 object per kept item of each shape run; an empty list where the input is no run folder and no shape run kept an item. Each object holds exactly 1 of `closedBy`, `reason` and `openAfterCeiling`. A kept item to consider, which asks the author a question and claims no defect, also takes an object: `closedBy` where the tree answers its question, else the reason class `question to the author`, because autonomous mode never passes a question in silence. A finding at the method or variable scale takes no object: the finish command writes it into `findings.json`, and the migration gives it 1 finding step or 1 line under `## Findings with no step` (`design-checks.md`, section 5).
 
 | Key | Type | Required | Read by |
 |---|---|---|---|

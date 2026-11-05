@@ -43,6 +43,14 @@ class CompletenessCheck {
     return isKeyPresent;
   }
 
+  // A key that no rule asks for still counts where it stands, so the count shows every value the model holds.
+  countGivenKey(keyLabel) {
+    const count = this.keyCountMap.get(keyLabel) || { present: 0, needed: 0 };
+    count.needed += 1;
+    count.present += 1;
+    this.keyCountMap.set(keyLabel, count);
+  }
+
   requireName(displayName, path) {
     if (!isPresent(displayName)) return;
     if (this.model.isAnAmbiguousName(displayName)) {
@@ -137,6 +145,7 @@ const checkClasses = check => {
       const methodPath = model.getMethodPath(theClass, method);
       check.requireKey("method.name", method, "name", methodPath);
       if (isChanged && needsABody(model, theClass, method, exitNames)) check.requireKey("method.body", method, "body", methodPath);
+      else if (isAText(method.body)) check.countGivenKey("method.body");
       readList(method.calls).forEach((called, at) => check.requireName(called, `${methodPath}.calls[${at}]`));
       checkUses(check, theClass, method, methodPath);
       checkUnchangedMark(check, theClass, method, methodPath);
