@@ -1,5 +1,5 @@
 {
-  "description": "Reminds an agent to load the laminar:code-style skill before its first write of a session, and adds the Laminar conventions of a language the first time an agent writes a file of that language in a session.",
+  "description": "Reminds an agent to load the laminar:code-style skill before its first write of a session, reminds it once per session of the laminar:design skill before it creates its first production file, and adds the Laminar conventions of a language the first time an agent writes a file of that language in a session.",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,6 +8,16 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/conventionHints.mjs\" remind",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/conventionHints.mjs\" remind-design",
             "timeout": 10
           }
         ]
