@@ -1,44 +1,26 @@
-# The brief of the change forecaster
+# The inputs of the change forecaster
 
-Contents: 1. When it runs · 2. What it gets · 3. The brief · 4. What the designer does with the answer · 5. What to expect of the forecast
+Contents: 1. When it runs · 2. What it gets · 3. The agent · 4. What the designer does with the answer · 5. What to expect of the forecast
 
 ## 1. When it runs
 
-The designer starts the change forecaster once on the draft of pass 1, after `decisions.owners` lists every owner and before depth is decided (`SKILL.md`, section 4). Where a later shape run adds owners, start it again on the added owners only, and give it the earlier forecast lines as context; it never rewrites an earlier line. The designer decides the depth of an existing owner again only where its forecast line changed. Start it as 1 subagent on the model sonnet at medium effort (the Agent tool, in Claude Code). In a host with no subagent, answer the brief of section 3 yourself, and keep its order of evidence. The forecaster finds and the designer decides: it never proposes a shape, so the depth rule of `designing.md`, section 7, stays the only place where a boundary that hides a choice is added.
+The designer starts the change forecaster once on the draft of pass 1, after `decisions.owners` lists every owner and before depth is decided (`SKILL.md`, section 4). Where a later shape run adds owners, start it again on the added owners only, and give it the earlier forecast lines as context; it never rewrites an earlier line. The designer decides the depth of an existing owner again only where its forecast line changed. Start it by section 3. The forecaster finds and the designer decides: it never proposes a shape, so the depth rule of `designing.md`, section 7, stays the only place where a boundary that hides a choice is added.
 
 ## 2. What it gets
 
-- The owners and the parts of the draft model: for each owner, its display name, its folder and its `decision` in the words of the business.
-- The input text of the change, for the roadmap words it holds.
-- The documentation of the repository that names the domain, where the scope has some, such as the root `README.md`.
-- Only for existing code, and only as support: the churn of each folder and file of the scope, as the commits that touched it in the last 12 and 36 months, which the designer counts with git. A new part has no churn.
+The designer writes each input under its label, in this order, and nothing else, because the rules stand in the agent file:
+
+- `Owners:` the owners of the draft model, 1 per line: its display name, its folder and its `decision` in the words of the business.
+- `Input text:` the input text of the change, for the roadmap words it holds.
+- `Documentation:` the paths of the documentation of the repository that names the domain, where the scope has some, such as the root `README.md`, or `none`.
+- `Repository:` the path of the repository, where the forecaster counts the churn of each existing owner itself (section 3).
+- `Earlier forecast:` only on a later start, the forecast lines of the earlier owners.
 
 It reads no method body, so the call stays small.
 
-## 3. The brief
+## 3. The agent
 
-Copy this text into the prompt of the subagent, then the inputs of section 2:
-
-```text
-You forecast how likely each owner below is to change. You never propose a shape, a class, an interface or a folder.
-
-For each owner, return 1 JSON object with these keys, in the form of the key `forecast` of the design model:
-- owner: the display name, as given.
-- sixMonths, oneYear, threeYears: each low, medium or high, never a number, because a number from knowledge is a guess that looks exact.
-- change: 1 of new variant, new rule, new caller, replaced technology, removal.
-- evidence: 1 of domain, roadmap, churn, none.
-- reason: 1 sentence that names the fact of the domain or quotes the roadmap words.
-
-Weigh the evidence in this order, and name the strongest kind you used:
-1. domain: what this kind of thing is known to do in every business of its domain. Outside providers and their rules, regulation, prices, taxes, discounts, channels and outside formats change by their nature, so rate them high from the domain alone where the owner holds one.
-2. roadmap: a statement of the input text that names a coming change.
-3. churn: the commits of the existing code, as support only. Churn never raises a forecast above what the domain or the roadmap gives. Where the domain calls a part stable and its churn is high, write medium and say in the reason that the churn more likely shows a wrong boundary than a changing domain.
-4. none: no domain fact, no roadmap word and no churn.
-
-Look 1 to 3 years ahead; the 6-month band serves only the question whether the smallest fix is enough. Rate high only where you can name the fact; a forecast of high on every owner says nothing. A forecast whose evidence is churn or none is a guess, and the reason must say so.
-
-Return only the JSON list.
-```
+The fixed rules of the forecaster stand in its agent file, `agents/design/design-forecaster.md` of the plugin, which is `../../agents/design/design-forecaster.md` from the folder of this skill: the order of evidence, the 3 horizons and the form of each forecast line. It counts the churn of each existing owner itself, by the 1 git command and the window that its file states, and it returns 1 JSON list with 1 object per owner. In Claude Code, start it as the agent type `laminar:design-forecaster` (the Agent tool, with `subagent_type`), whose file pins the model sonnet at medium effort. In a host with no agent of the plugin, start 1 subagent with the body of that file, below its frontmatter, as the start of its prompt, then the inputs of section 2. In a host with no subagent, follow that body yourself, and keep its order of evidence.
 
 ## 4. What the designer does with the answer
 

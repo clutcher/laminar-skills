@@ -2,11 +2,13 @@ export const meta = {
   name: 'laminar-design-writers',
   description: 'Laminar design: start 1 writer agent per migration group of a planned migration, each group after the earlier groups it touches and the other groups side by side, and return per group the files written, the build, the tests run and the stop',
   phases: [
-    { title: 'Write', detail: 'one writer agent per migration group reads the writer brief, design.md and the steps of its group, writes the code and the tests, builds and runs the tests, and returns its files and its commit message, or a stop; a group starts as soon as every earlier group it touches has finished, and a group whose earlier group stopped or gave no answer does not start' },
+    { title: 'Write', detail: 'one writer agent of the type laminar:design-writer per migration group reads design.md and the steps of its group, writes the code and the tests, builds and runs the tests, and returns its files and its commit message, or a stop; a group starts as soon as every earlier group it touches has finished, and a group whose earlier group stopped or gave no answer does not start' },
   ],
 }
 
 const PHASES = { WRITE: 'Write' }
+
+const WRITER_AGENT_TYPE = 'laminar:design-writer'
 
 const MIGRATION_WORKFLOW_FILE = 'migration.workflow.js'
 
@@ -26,7 +28,6 @@ const BUILD_RESULTS = ['passed', 'failed', 'not run']
 const TEST_RESULTS = ['passed', 'failed']
 
 const LABELS = {
-  WRITER_BRIEF: 'Writer brief:',
   DESIGN: 'Design:',
   MIGRATION: 'Migration:',
   MIGRATION_GROUP: 'Migration group:',
@@ -108,6 +109,7 @@ class WorkflowArguments {
   writerOptionsFor(group) {
     return {
       phase: PHASES.WRITE,
+      agentType: WRITER_AGENT_TYPE,
       label: `writer group ${group.group}`,
       schema: WRITER_SCHEMA,
       ...(this.model ? { model: this.model } : {}),
@@ -163,7 +165,6 @@ return { groups: await Promise.all(groups.map(group => writtenOfGroupMap.get(gro
 function writerMessageOf(group) {
   const planned = theArguments.planned
   return [
-    `${LABELS.WRITER_BRIEF} ${forward(planned.writerBrief)}`,
     `${LABELS.DESIGN} ${forward(planned.design)}`,
     `${LABELS.MIGRATION} ${forward(planned.migration)}`,
     `${LABELS.MIGRATION_GROUP} ${group.group}`,

@@ -9,6 +9,8 @@
     "name": "Igor Zarvanskyi"
   },
   "agents": [
+    "./agents/design/design-forecaster.md",
+    "./agents/design/design-writer.md",
     "./agents/review/correctness/judge-prevention.md",
     "./agents/review/correctness/judge-simplicity-test-method.md",
     "./agents/review/correctness/judge-test-plan.md",
