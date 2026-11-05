@@ -14,7 +14,7 @@ const listNamedTypeTexts = theClass => [
   ...readList(theClass.methods).flatMap(method => [method.returns, ...readList(method.parameters).map(parameter => parameter.type)]),
 ];
 
-const listNamedClasses = (model, theClass) => {
+export const listNamedClasses = (model, theClass) => {
   const typeClasses = listNamedTypeTexts(theClass).flatMap(readTypeNames).map(typeName => model.findClassOfTheType(typeName, theClass));
   const calledClasses = readList(theClass.methods).flatMap(method => readList(method.calls)).map(called => model.findClass(called));
   return [...new Set([...typeClasses, ...calledClasses])].filter(namedClass => namedClass && namedClass !== theClass);

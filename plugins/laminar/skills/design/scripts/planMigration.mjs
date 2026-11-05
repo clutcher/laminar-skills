@@ -5,6 +5,7 @@ import { readCurrentTree } from "./migration/CurrentTree.mjs";
 import { findGroupOrderDefects } from "./migration/GroupOrder.mjs";
 import { listMigrationSteps } from "./migration/MigrationSteps.mjs";
 import { writeMigrationText } from "./migration/MigrationText.mjs";
+import { writeMigrationWorkflowFile } from "./migration/MigrationWorkflowFile.mjs";
 import { findChangedClassDefects, listRoundSteps } from "./migration/RoundSteps.mjs";
 
 const USAGE = "usage: node planMigration.mjs --model <design-model.json> --out <migration.md|migration.json> [--repo <repository root> [--base <commit>]] [--round <results>/rounds/<n>] [--classes <display names>]";
@@ -55,8 +56,9 @@ function planMigration() {
   const outPath = path.resolve(options.out);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, outPath.endsWith(JSON_SUFFIX) ? `${JSON.stringify(steps, null, 2)}\n` : writeMigrationText(steps, describeCurrentTree(currentTree), orderDefects, { line: roundLine, defects: classDefects }));
+  const workflowFilePath = writeMigrationWorkflowFile(model, steps, { migrationPath: outPath, repositoryRoot, defectCount: defects.length });
   for (const defect of defects) console.log(`defect\t${defect.code}\t${defect.sentence}`);
-  console.log(`RESULT ${JSON.stringify({ migration: outPath, steps: steps.length, groups: new Set(steps.map(step => step.group)).size, defects: defects.length })}`);
+  console.log(`RESULT ${JSON.stringify({ migration: outPath, steps: steps.length, groups: new Set(steps.map(step => step.group)).size, defects: defects.length, workflowFile: workflowFilePath })}`);
   process.exit(defects.length ? 1 : 0);
 }
 
