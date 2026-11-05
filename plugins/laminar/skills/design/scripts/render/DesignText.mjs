@@ -250,7 +250,24 @@ const writeScriptCaseSection = scriptCases => {
   return lines;
 };
 
-export const writeDesignText = model => {
+const formatDollars = dollars => (Number.isFinite(dollars) ? dollars.toFixed(2) : "not given");
+
+const writeRoundTableLine = countsOfTheRound => {
+  const { counts, loopLine, dollars } = countsOfTheRound;
+  const cells = [countsOfTheRound.round, counts.findings, counts.open, counts.withAReason, counts.closedByAnAnswer, counts.carried, counts.toTheDesigner, counts.toTheWriters, counts.stillOpen, `${loopLine.word} ${loopLine.code}`, formatDollars(dollars.round), formatDollars(dollars.soFar)];
+  return `| ${cells.map(escapeTableCell).join(" | ")} |`;
+};
+
+// 1 row per round that the round script recorded, with the dollars of the round and the sum so far.
+const writeRoundSection = roundCounts => {
+  if (roundCounts === null) return [];
+  const lines = ["## Rounds", ""];
+  if (!roundCounts.length) return [...lines, "None.", ""];
+  lines.push("| Round | Findings | Open | With a reason | Closed by an answer | Carried | To the designer | To the writers | Still open, not judged | Loop line | Dollars | Dollars so far |", "|---|---|---|---|---|---|---|---|---|---|---|---|");
+  return [...lines, ...roundCounts.map(writeRoundTableLine), ""];
+};
+
+export const writeDesignText = (model, roundCounts = null) => {
   const { decisions } = model;
   const tests = decisions.tests || {};
   return [
@@ -277,5 +294,6 @@ export const writeDesignText = model => {
     "",
     ...writeScriptCaseSection(readList(decisions.scriptCases)),
     "",
+    ...writeRoundSection(roundCounts),
   ].join("\n");
 };

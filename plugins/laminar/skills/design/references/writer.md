@@ -12,6 +12,7 @@ The designer starts 1 writer for each migration group, after the user approved `
 - The path of the repository.
 - The open questions of the model whose `autonomous` is `open`, so the writer knows which code it may not write.
 - Where a writer of the same migration group stopped before, the files it changed and left uncommitted, which this writer goes on from.
+- In a round of the loop, the path of `review.md` of the round, whose findings the steps of the migration group name (`design-rounds.md`).
 
 ## 3. The brief
 
@@ -23,7 +24,7 @@ You write the production code and the tests of 1 migration group of a design tha
 1. Load the skill code-style of the plugin laminar (laminar:code-style in Claude Code, code-style in GitHub Copilot CLI) before you write, and follow it whole.
 2. Read design.md whole, then the steps of your migration group in the migration. Write the steps in their order. The code builds and its tests pass at the end of your migration group; a step in between may leave a caller to a later step of the group.
 3. Keep every name that design.md gives: each folder, file, class, public member and named private part, with its signature. Write the bodies. You may add a private method below a named part where code-style asks for one; that is a detail and needs no stop. Where design.md leaves out a getter of a field it lists, or the text of a failure, write it yourself and list each under "filled" in your report; that needs no stop either.
-4. Write each failure line, each check of an entry and each test that design.md names, with the test names it gives.
+4. Write each failure line, each check of an entry and each test that design.md names, with the test names it gives. A step that says `fixes finding <number> of round <n>: <check> on <display name>` names 1 finding of the review.md of that round: read the finding, and fix it inside the bodies or the tests of its class. Where the fix needs a change of a name, a signature, a file or a folder, stop with fix-changes-the-model.
 5. Never rename, move, add or remove a public name alone, and never write code across an open question.
 6. After the last step, build the code and run the tests of your migration group, and fix what they show inside the bodies. Where a test fails because a step of yours changed what it constructs or calls, fix or remove that test by the step that names it; a test case that a designed test of your group covers is removed, not kept. Where a test fails because the design changed the behavior it expects and no step names that test, stop with behavior-the-design-did-not-decide: that is a gap of the design, not a break of the build.
 7. Make 1 commit for your migration group on the current branch, with a message that names the group. Where the host refuses a git write of yours, such as by a hook, make no commit, and return the list of files you changed with the commit message. Never push, and change no file outside the steps of your migration group.
@@ -34,6 +35,7 @@ Where the design cannot be written as it stands, stop at once: a gap that is a t
 - test-that-cannot-reach-its-branch: a named test cannot reach the branch it names through the entry it names.
 - behavior-the-design-did-not-decide: the code needs a decision that design.md does not state, such as a status code or the order of 2 effects.
 - migration-order-cannot-build: your migration group cannot build at its end in the order of the migration, because it needs code that a later migration group writes.
+- fix-changes-the-model: the fix of a finding that a step of a round names needs a change of the design model, such as a name, a signature, a file or a folder.
 
 The stop object: {"reason": <1 reason of the list>, "at": <the display name, Class#method or Class>, "says": <1 sentence on what you met>}.
 

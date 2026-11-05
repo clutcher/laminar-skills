@@ -7,20 +7,29 @@ const BASE_COMMIT_FILE = "base-commit.txt";
 
 const STOP_EXIT_CODE = 2;
 
-const readOptions = (argv, optionNames, repeatableNames) => {
-  const options = Object.fromEntries(repeatableNames.map(name => [name, []]));
-  for (let at = 0; at < argv.length; at += 2) {
+// A switch name stands alone and reads as true; every other option takes the word after it.
+const readOptions = (argv, optionNames, repeatableNames, switchNames) => {
+  const options = Object.fromEntries([...repeatableNames.map(name => [name, []]), ...switchNames.map(name => [name, false])]);
+  let at = 0;
+  while (at < argv.length) {
     const optionName = argv[at].replace(/^--/, "");
+    if (!argv[at].startsWith("--")) return null;
+    if (switchNames.includes(optionName)) {
+      options[optionName] = true;
+      at += 1;
+      continue;
+    }
     const isKnown = optionNames.includes(optionName) || repeatableNames.includes(optionName);
-    if (!argv[at].startsWith("--") || !isKnown || at + 1 >= argv.length) return null;
+    if (!isKnown || at + 1 >= argv.length) return null;
     if (repeatableNames.includes(optionName)) options[optionName].push(argv[at + 1]);
     else options[optionName] = argv[at + 1];
+    at += 2;
   }
   return options;
 };
 
-export const readOptionsOrExit = (usage, optionNames, requiredNames, repeatableNames = []) => {
-  const options = readOptions(process.argv.slice(2), optionNames, repeatableNames);
+export const readOptionsOrExit = (usage, optionNames, requiredNames, repeatableNames = [], switchNames = []) => {
+  const options = readOptions(process.argv.slice(2), optionNames, repeatableNames, switchNames);
   if (options && requiredNames.every(name => options[name])) return options;
 
   console.error(usage);

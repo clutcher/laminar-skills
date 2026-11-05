@@ -2,12 +2,12 @@ const EXISTING_DEFECT_LABEL = "existing defect of the modified class";
 
 const writeGroupHeading = step => `## Migration group ${step.group}${step.existingDefect ? `: ${EXISTING_DEFECT_LABEL}` : ""}`;
 
-const writeOrderDefectLines = orderDefects => (orderDefects.length
-  ? ["", "## Defects of the order", "", ...orderDefects.map(defect => `- ${defect.code}: ${defect.sentence}`)]
+const writeDefectLines = (heading, defects) => (defects.length
+  ? ["", heading, "", ...defects.map(defect => `- ${defect.code}: ${defect.sentence}`)]
   : []);
 
-export const writeMigrationText = (steps, currentTreeLine, orderDefects = []) => {
-  const lines = ["# Migration", "", currentTreeLine, ...writeOrderDefectLines(orderDefects)];
+export const writeMigrationText = (steps, currentTreeLine, orderDefects = [], round = { line: "", defects: [] }) => {
+  const lines = ["# Migration", "", ...(round.line ? [round.line, ""] : []), currentTreeLine, ...writeDefectLines("## Defects of the round", round.defects), ...writeDefectLines("## Defects of the order", orderDefects)];
   let group = null;
   for (const step of steps) {
     if (step.group !== group) {
