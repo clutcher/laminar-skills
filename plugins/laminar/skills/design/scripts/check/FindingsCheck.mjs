@@ -1,8 +1,8 @@
 import { FINDING_REASONS } from "../model/DesignModelForm.mjs";
-import { isAText, readList } from "../model/DesignModel.mjs";
+import { KINDS, getFolderPath, isAText, isMarkedUnchanged, readList } from "../model/DesignModel.mjs";
 import { isPlacedByThePlan, readNamedReviewItems, readReviewItems } from "./ReviewItems.mjs";
 import { DEFECT_CODES, createDefect } from "./DesignDefect.mjs";
-import { describeTheChangeOfTheMember } from "./MemberChange.mjs";
+import { describeTheChangeOfTheFolder, describeTheChangeOfTheMember } from "./MemberChange.mjs";
 
 const OUTSIDE_THE_CHANGE = "outside the change";
 
@@ -11,12 +11,24 @@ const isAShapeRunFinding = finding => finding.run !== undefined;
 // A finding is closed by the tree, left with a reason, or open after the ceiling of shape runs with its intended change, and exactly 1 of the 3.
 const FINDING_ENDING_KEYS = Object.freeze(["closedBy", "reason", "openAfterCeiling"]);
 
+// A part closes a finding only where the design creates, moves, renames or modifies it; a class of an unchanged file, a method marked unchanged and an unchanged folder stay as they are.
+const isAnUnchangedPart = (model, displayName) => {
+  const folder = model.folders.find(other => getFolderPath(other) === displayName.replace(/\/+$/, ""));
+  if (folder) return folder.kind === KINDS.UNCHANGED;
+  const theClass = model.findClass(displayName);
+  if (!theClass) return false;
+  if (!model.isChangedClass(theClass) && !isAText(theClass.oldName)) return true;
+  const methods = model.listMethodsOfTheName(displayName);
+  return methods.length > 0 && methods.every(isMarkedUnchanged);
+};
+
 const findObjectDefects = (model, finding, path) => {
   const endingKeys = FINDING_ENDING_KEYS.filter(key => isAText(finding[key]));
   if (endingKeys.length > 1) return [createDefect(DEFECT_CODES.FINDING_CLOSED_AND_LEFT, path, `the finding ${finding.number} holds ${endingKeys.join(" and ")}, and holds 1 of ${FINDING_ENDING_KEYS.join(", ")}`)];
   if (!endingKeys.length) return [createDefect(DEFECT_CODES.FINDING_NEITHER_CLOSED_NOR_LEFT, path, `the finding ${finding.number} holds none of ${FINDING_ENDING_KEYS.join(", ")}, and holds 1 of them`)];
   if (isAText(finding.openAfterCeiling)) return [];
   if (isAText(finding.closedBy)) {
+    if (isAnUnchangedPart(model, finding.closedBy)) return [createDefect(DEFECT_CODES.CLOSED_BY_UNCHANGED_PART, `${path}.closedBy`, `${finding.closedBy} closes the finding ${finding.number}, and the design neither creates, moves, renames nor modifies it`)];
     if (isAShapeRunFinding(finding) || model.holdsTheName(finding.closedBy)) return [];
     return [createDefect(DEFECT_CODES.NAME_UNRESOLVED, `${path}.closedBy`, `${finding.closedBy} names no class or method of the model`)];
   }
@@ -50,6 +62,11 @@ const findMemberOfTheItem = (model, item) => {
 };
 
 const findOutsideTheChangeDefect = (model, item, path, currentTree) => {
+  if (item.scale === "module") {
+    const folderChange = describeTheChangeOfTheFolder(model, item.name, currentTree);
+    return folderChange ? createDefect(DEFECT_CODES.OUTSIDE_THE_CHANGE_BUT_CHANGED, `${path}.reason`, `the item ${item.number} is left as ${OUTSIDE_THE_CHANGE}, and ${folderChange}`) : null;
+  }
+
   const member = findMemberOfTheItem(model, item);
   if (!member || !member.theClass || (item.scale !== "class" && !member.methods.length)) {
     return createDefect(DEFECT_CODES.OUTSIDE_THE_CHANGE_BUT_CHANGED, `${path}.reason`, `the item ${item.number} names no class or method of the model, so the script cannot show it ${OUTSIDE_THE_CHANGE}`);

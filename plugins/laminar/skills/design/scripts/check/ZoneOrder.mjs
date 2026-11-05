@@ -11,15 +11,19 @@ const RELATION_LINE = /^\s*([\w-]+)\s+(calls|implements)\s+([\w-]+)\s*$/;
 
 const ZONE_ORDER_SOURCES = Object.freeze({ BOOK_LAYOUT: "BOOK_LAYOUT", FILE: "FILE", NO_LAYOUT: "NO_LAYOUT", NONE: "NONE" });
 
-const BOOK_ZONE_NAMES = new Set(["in", "api", "domain", "spi", "out"]);
+// The folders of the backend layout of the book; domain is left out, because a folder of that name is common outside the layout.
+const LAYOUT_FOLDER_NAMES = new Set(["in", "api", "spi", "out"]);
 
-export const NO_LAYOUT_LINE = "no zone order: no conventions file, and the folders of the scope carry none of the book's zone names";
+export const NO_LAYOUT_LINE = "zone order: not applied, no conventions file, and no folder of the scope has the backend layout of an api, spi, in or out folder";
+
+const listAncestorFolders = folderPath => folderPath.split("/").map((_, at, folderNames) => folderNames.slice(0, at + 1).join("/"));
 
 const joinRelation = (from, relation, to) => `${from} ${relation} ${to}`;
 
 class ZoneOrder {
-  constructor(source, label, relations) {
+  constructor(source, label, relations, layoutModules = new Set()) {
     this.source = source;
+    this.layoutModules = layoutModules;
     this.label = label;
     this.relations = new Set(relations.map(({ from, relation, to }) => joinRelation(from, relation, to)));
     this.zones = new Set(relations.flatMap(({ from, to }) => [from, to]));
@@ -31,6 +35,12 @@ class ZoneOrder {
 
   isMissingTheLayout() {
     return this.source === ZONE_ORDER_SOURCES.NO_LAYOUT;
+  }
+
+  // The default order holds only for a class under a module with the backend layout; an order of a conventions file holds for every class.
+  appliesToTheFolder(folderPath) {
+    if (this.source !== ZONE_ORDER_SOURCES.BOOK_LAYOUT) return this.isFound();
+    return listAncestorFolders(folderPath).some(ancestor => this.layoutModules.has(ancestor));
   }
 
   namesTheZone(zone) {
@@ -71,12 +81,23 @@ const readZonesBlock = text => {
   return block ? readRelations(block[1]) : [];
 };
 
-const carriesABookZoneName = folderPath => folderPath.split("/").some(folderName => BOOK_ZONE_NAMES.has(folderName));
+// Each folder that holds a folder of the backend layout, so the default order applies to the classes under it.
+const listLayoutModules = scopeFolderPaths => {
+  const layoutModules = new Set();
+  for (const folderPath of scopeFolderPaths) {
+    const folderNames = folderPath.split("/");
+    folderNames.forEach((folderName, at) => {
+      if (at > 0 && LAYOUT_FOLDER_NAMES.has(folderName)) layoutModules.add(folderNames.slice(0, at).join("/"));
+    });
+  }
+  return layoutModules;
+};
 
 export const readZoneOrder = (zoneOrderName, currentTree, scopeFolderPaths) => {
   if (!zoneOrderName || zoneOrderName === DEFAULT_ZONE_ORDER_NAME) {
-    if (!scopeFolderPaths.some(carriesABookZoneName)) return new ZoneOrder(ZONE_ORDER_SOURCES.NO_LAYOUT, DEFAULT_ZONE_ORDER_NAME, []);
-    return new ZoneOrder(ZONE_ORDER_SOURCES.BOOK_LAYOUT, DEFAULT_ZONE_ORDER_NAME, readRelations(BOOK_LAYOUT_TEXT));
+    const layoutModules = listLayoutModules(scopeFolderPaths);
+    if (!layoutModules.size) return new ZoneOrder(ZONE_ORDER_SOURCES.NO_LAYOUT, DEFAULT_ZONE_ORDER_NAME, []);
+    return new ZoneOrder(ZONE_ORDER_SOURCES.BOOK_LAYOUT, DEFAULT_ZONE_ORDER_NAME, readRelations(BOOK_LAYOUT_TEXT), layoutModules);
   }
   if (!currentTree) return new ZoneOrder(ZONE_ORDER_SOURCES.NONE, `${zoneOrderName} not read, no --repo given`, []);
 

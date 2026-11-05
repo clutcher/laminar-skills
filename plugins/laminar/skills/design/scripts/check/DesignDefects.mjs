@@ -7,7 +7,7 @@ import { findDataFlowDefects } from "./DataFlowCheck.mjs";
 import { findNameOfThePath } from "./DefectNames.mjs";
 import { findExitListResult } from "./ExitList.mjs";
 import { findExitReachDefects } from "./ExitReach.mjs";
-import { findFailureHandlingDefects } from "./FailureHandling.mjs";
+import { findExitFailureResult, findFailureHandlingDefects } from "./FailureHandling.mjs";
 import { findFieldListResult } from "./FieldListCheck.mjs";
 import { listMigrationSteps } from "../migration/MigrationSteps.mjs";
 import { findGroupOrderDefects } from "../migration/GroupOrder.mjs";
@@ -54,6 +54,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
   const dataFlow = findDataFlowDefects(model);
   const exitList = findExitListResult(model);
   const fieldList = currentTree ? findFieldListResult(model, currentTree) : null;
+  const exitFailure = findExitFailureResult(model);
   const defects = [
     ...completeness.defects,
     ...findFindingsDefects(model, reviewText, shapeReviews, currentTree),
@@ -62,13 +63,14 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...cycleCheck.defects,
     ...findExitReachDefects(model, zoneOrder),
     ...findFailureHandlingDefects(model),
+    ...exitFailure.defects,
     ...findGroupOrderDefects(model, listMigrationSteps(model, currentTree)),
     ...dataFlow.defects,
     ...exitList.defects,
   ];
   const markedDefects = markTheScriptCases(model, defects);
   return {
-    headLines: [...cycleCheck.headLines, dataFlow.headLine, describeCurrentTree(currentTree), ...(fieldList ? [fieldList.headLine] : []), exitList.headLine, describeResponseTypes(completeness.libraryTypeNames), describeReview(reviewText), describeShapeReviews(shapeReviews)],
+    headLines: [...cycleCheck.headLines, dataFlow.headLine, describeCurrentTree(currentTree), ...(fieldList ? [fieldList.headLine] : []), exitList.headLine, exitFailure.headLine, describeResponseTypes(completeness.libraryTypeNames), describeReview(reviewText), describeShapeReviews(shapeReviews)],
     defects: markedDefects,
     unmatchedScriptCases: listUnmatchedScriptCases(model, markedDefects),
     keyCountMap: completeness.keyCountMap,

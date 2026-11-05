@@ -2,7 +2,7 @@
 
 Contents: `conventions` · `owners` · `questions` · Which script reads which key
 
-This file holds the decisions half of the design model, the 1 top-level key `decisions`. The designer writes `owners` and `exits` in pass 1 with the tree, and the other keys in pass 2 on the tree that passed the shape check (`design-model.md`, section 2). Every key that names an abstraction holds a display name (`design-model.md`, section 5).
+This file holds the decisions half of the design model, the 1 top-level key `decisions`. The designer writes `owners` and `exits` in pass 1 with the tree, and the `placement` of each owner and the other keys in pass 2 on the tree that passed the shape check (`design-model.md`, section 2). Every key that names an abstraction holds a display name (`design-model.md`, section 5).
 
 This file holds `conventions`, `owners` and `questions`. `design-boundaries.md` holds `entries`, `exits` and `tests`, the decisions of each boundary, and `design-findings.md` holds `findings`, `stops` and `scriptCases`, which the designer fills from what the review, the checks and the writer return. Each key is a list of objects, except `conventions` and `tests`. A text key holds 1 sentence or a short phrase in the words of the business.
 
@@ -30,16 +30,17 @@ An object, required. The designer reads the project conventions at step 1 of the
 |---|---|---|---|
 | `decision` | text, in the words of the business | yes | design check, render |
 | `owner` | display name of the class or method that owns it | yes | design check, which reports 2 owners of 1 decision and an owner the model does not hold; render |
+| `placement` | text: 1 sentence on why the owner stands where it stands, which names the input or the reader that decides its place, such as the callers that reach it or the folder whose part it is | yes, written in pass 2 for every owner | design check, which reports an owner with no `placement` (`owner-placement-missing`); render, which prints it beside the owner |
 | `callers` | list of display names, or the word `framework` for a method that the host framework calls, such as an exception handler or a scheduled method | yes; empty only for an entry | design check, which resolves each display name and accepts `framework`; render |
 | `forecast` | object, written by the change forecaster | yes, before depth is decided | design check, render |
 | `depth` | object: `shape`, `takenBy` and `reason` | only where the owner hides a choice, or where the forecast is high within 1 year, also where the minimum fix stands | render |
 
-`forecast` holds `sixMonths`, `oneYear` and `threeYears`, each `low`, `medium` or `high` and never a number; `change`, 1 of `new variant`, `new rule`, `new caller`, `replaced technology` and `removal`; `evidence`, 1 of `domain`, `roadmap`, `churn` and `none`; and `reason`, 1 sentence that names the fact of the domain or the roadmap words. The render prints each forecast as an expectation, not evidence, and a forecast whose evidence is `churn` or `none` as a guess, which counts toward nothing but the record; the guess mark does not mark the weaker lines. `depth` holds `shape`, the shape the designer chose, `takenBy`, 1 of `user`, `forecast` and `designer`, where `forecast` stands only for a boundary that a forecast with evidence `roadmap` added (`designing.md`, section 7), and `reason`. The book: "a factory is worth adding only when the choice it hides has more than one answer in this system" (*The Encapsulation Principle*, *Depth Is a Design Decision*). The 3 values, the 3 horizons and the closed lists are a format of this skill, not of the book.
+`forecast` holds `sixMonths`, `oneYear` and `threeYears`, each `low`, `medium` or `high` and never a number; `change`, 1 of `new variant`, `new rule`, `new caller`, `replaced technology` and `removal`; `evidence`, 1 of `domain`, `roadmap`, `churn` and `none`; and `reason`, 1 sentence that names the fact of the domain or the roadmap words. The render prints each forecast as an expectation, and a forecast whose evidence is `churn` or `none` as a guess; `forecaster.md`, section 5, says how far a forecast counts. `depth` holds `shape`, the shape the designer chose, `takenBy`, 1 of `user`, `forecast` and `designer`, where `forecast` stands only for a boundary that a forecast with evidence `roadmap` added (`designing.md`, section 7), and `reason`. The book: "a factory is worth adding only when the choice it hides has more than one answer in this system" (*The Encapsulation Principle*, *Depth Is a Design Decision*). The 3 values, the 3 horizons and the closed lists are a format of this skill, not of the book.
 
 ```json
-{ "decision": "labour price", "owner": "InvoicePricing#priceLines", "callers": ["JobInvoicing#priceWork"],
+{ "decision": "labour price", "owner": "InvoicePricing#priceLines", "placement": "only invoicing reads", "callers": ["JobInvoicing#priceWork"],
   "forecast": { "sixMonths": "medium", "oneYear": "high", "threeYears": "high", "change": "new rule", "evidence": "domain", "reason": "rates change yearly" },
-  "depth": { "shape": "1 concrete class", "takenBy": "designer", "reason": "1 rate today; a new rule changes a body" } }
+  "depth": { "shape": "1 concrete class", "takenBy": "designer", "reason": "1 rate today" } }
 ```
 
 ## `questions`

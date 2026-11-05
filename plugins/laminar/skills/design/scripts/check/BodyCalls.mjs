@@ -1,3 +1,5 @@
+import { splitAtTopLevelCommas } from "../model/TypeArguments.mjs";
+
 const CALL_START = /(\bnew\s+)?([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*)\s*\(/g;
 
 const DECLARATION = /^\s*(?:(?:final|const|let|var)\s+)?(?:([A-Za-z_$][\w$.]*(?:<[^=]*>)?(?:\[\])?)\s+)?([A-Za-z_$][\w$]*)\s*(?::\s*[^=]+)?=(?!=)/;
@@ -136,7 +138,7 @@ const readLoopVariables = statement => {
 const readLambdaParameters = statement => {
   const names = [];
   for (const match of statement.matchAll(LAMBDA_PARAMETER_LIST)) {
-    for (const parameter of match[1].split(",")) {
+    for (const parameter of splitAtTopLevelCommas(match[1])) {
       const name = LAST_NAME.exec(parameter);
       if (name) names.push(name[1]);
     }

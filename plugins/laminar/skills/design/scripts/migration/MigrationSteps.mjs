@@ -78,7 +78,7 @@ class MigrationPlan {
     const oldFolder = isAText(oldFile) ? path.posix.dirname(oldFile) : null;
     const leavesItsFolder = oldFolder !== null && oldFolder !== path.posix.dirname(newFile);
     const sameFolderFiles = leavesItsFolder ? this.currentTree.listFilesThatHoldEveryWord([className]).filter(file => path.posix.dirname(file) === oldFolder) : [];
-    const importingFiles = [...this.currentTree.listFilesThatImport(className), ...sameFolderFiles]
+    const importingFiles = [...this.currentTree.listFilesThatImportTheClass(className, oldFile), ...sameFolderFiles]
       .map(file => this.newFileOfOldPathMap.get(file) || file)
       .filter(file => file !== oldFile && file !== newFile && !this.createdFiles.has(file) && !this.removedFiles.has(file));
     return [...new Set(importingFiles)];
@@ -92,8 +92,8 @@ class MigrationPlan {
     return this.model.classes.filter(isTheCaller).map(theClass => theClass.file);
   }
 
-  listCallerFiles(words, isTheCallerInTheModel) {
-    const treeFiles = this.currentTree ? this.currentTree.listFilesThatHoldEveryWord(words).map(file => this.newFileOfOldPathMap.get(file) || file) : [];
+  listCallerFiles(words, isTheCallerInTheModel, className, classFile) {
+    const treeFiles = this.currentTree ? this.currentTree.listFilesThatReferToTheClass(words, className, classFile).map(file => this.newFileOfOldPathMap.get(file) || file) : [];
     return [...treeFiles, ...this.listFilesOfTheModelThat(isTheCallerInTheModel)].filter(file => !this.createdFiles.has(file));
   }
 
@@ -120,7 +120,7 @@ class MigrationPlan {
     return this.children.filter(({ child }) => child.kind === KINDS.MOVED && isAText(child.oldPath)).map(({ child, file }) => {
       const classes = this.listClassesOfTheFile(file);
       const verb = path.posix.basename(child.oldPath) === child.name ? "moves" : "renames and moves";
-      const callerFiles = classes.flatMap(movedClass => this.listCallerFiles([movedClass.name], theClass => theClass !== movedClass && this.namesTheClass(theClass, movedClass)));
+      const callerFiles = classes.flatMap(movedClass => this.listCallerFiles([movedClass.name], theClass => theClass !== movedClass && this.namesTheClass(theClass, movedClass), movedClass.oldName || movedClass.name, child.oldPath));
       const importingFiles = [...new Set(classes.flatMap(movedClass => this.listImportingFiles(movedClass.oldName || movedClass.name, child.oldPath, file)))];
       const says = `${verb} ${child.oldPath} to ${file}, with no change of behavior${this.describeImportUpdate(importingFiles)}`;
       return this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, this.getGroupOfClasses(classes), says, [child.oldPath, file, ...callerFiles.filter(callerFile => callerFile !== file), ...importingFiles]);
@@ -132,13 +132,13 @@ class MigrationPlan {
     for (const theClass of this.model.classes) {
       const group = getGroupOfTheClass(theClass);
       if (isAText(theClass.oldName)) {
-        const callerFiles = this.listCallerFiles([theClass.oldName], other => other !== theClass && this.namesTheClass(other, theClass));
+        const callerFiles = this.listCallerFiles([theClass.oldName], other => other !== theClass && this.namesTheClass(other, theClass), theClass.oldName, this.readCurrentFileOf(theClass.file));
         const importingFiles = this.listImportingFiles(theClass.oldName, theClass.file, theClass.file);
         steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames the class ${theClass.oldName} to ${theClass.name}, with no change of behavior${this.describeImportUpdate(importingFiles)}`, [theClass.file, ...callerFiles, ...importingFiles]));
       }
       for (const method of readList(theClass.methods)) {
         if (!isAText(method.oldName)) continue;
-        const callerFiles = this.listCallerFiles([theClass.oldName || theClass.name, method.oldName], other => this.callsAny(other, (calledClass, called) => calledClass === theClass && called.endsWith(`#${method.name}`)));
+        const callerFiles = this.listCallerFiles([theClass.oldName || theClass.name, method.oldName], other => this.callsAny(other, (calledClass, called) => calledClass === theClass && called.endsWith(`#${method.name}`)), theClass.oldName || theClass.name, this.readCurrentFileOf(theClass.file));
         steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames ${this.model.getClassDisplayName(theClass)}#${method.oldName} to ${method.name}, with no change of behavior`, [theClass.file, ...callerFiles]));
       }
     }
@@ -277,8 +277,8 @@ class MigrationPlan {
     return theClass ? getGroupOfTheClass(theClass) : FIRST_GROUP;
   }
 
-  listClassesOnThePath(entryName) {
-    const seenNames = new Set([this.model.normalizeName(entryName)]);
+  listNamesOnThePath(startName) {
+    const seenNames = new Set([this.model.normalizeName(startName)]);
     const namesToVisit = [...seenNames];
     while (namesToVisit.length) {
       const name = namesToVisit.pop();
@@ -290,7 +290,11 @@ class MigrationPlan {
         namesToVisit.push(reachedName);
       }
     }
-    return [...seenNames].map(name => this.model.findClass(name)).filter(Boolean);
+    return seenNames;
+  }
+
+  listClassesOnThePath(entryName) {
+    return [...this.listNamesOnThePath(entryName)].map(name => this.model.findClass(name)).filter(Boolean);
   }
 
   // An integration test runs the whole path of its entry, so it waits for the last group that writes a class on that path.
@@ -323,7 +327,7 @@ class MigrationPlan {
   listTestFilesThatName(theClass) {
     if (!this.isSearchedForTests(theClass)) return [];
     const className = readLastNamePiece(theClass.oldName || theClass.name);
-    return this.currentTree.listFilesThatHoldEveryWord([className])
+    return this.currentTree.listFilesThatReferToTheClass([className], className, this.readCurrentFileOf(theClass.file))
       .filter(file => isATestFile(file) && isAReadExtension(file) && !this.createdFiles.has(file) && !this.removedFiles.has(file));
   }
 
@@ -338,11 +342,91 @@ class MigrationPlan {
       });
   }
 
+  // An exit is a new outside call where its class is created by the change, or where the current file of its class does not hold its method.
+  isANewOutsideCall(exitName) {
+    const exitClass = this.model.findClass(exitName);
+    if (!exitClass) return false;
+    if (this.model.getKindOfClass(exitClass) === KINDS.CREATED) return true;
+    const methodName = exitName.slice(exitName.lastIndexOf("#") + 1);
+    return this.currentTree !== null && !this.currentTree.holdsTheWord(this.readCurrentFileOf(exitClass.file), methodName);
+  }
+
+  listNewOutsideCallNames() {
+    return [...new Set(readList(this.model.decisions.exits).map(exit => exit.exit).filter(isAText).map(exitName => this.model.normalizeName(exitName)))]
+      .filter(exitName => this.isANewOutsideCall(exitName));
+  }
+
+  listNamesReachedFromTheClass(theClass) {
+    return new Set(readList(theClass.methods).filter(isAPublicMethod).flatMap(method => [...this.listNamesOnThePath(this.model.getMethodDisplayName(theClass, method))]));
+  }
+
+  listNewOutsideInterfacesReachedFrom(useCase, newOutsideCallNames) {
+    const reachedNames = this.listNamesReachedFromTheClass(useCase);
+    const reachedClasses = newOutsideCallNames.filter(exitName => reachedNames.has(exitName)).map(exitName => this.model.findClass(exitName)).filter(exitClass => exitClass !== useCase);
+    return [...new Set(reachedClasses)];
+  }
+
+  listEntriesThatReach(useCase) {
+    const useCaseNames = readList(useCase.methods).filter(isAPublicMethod).map(method => this.model.getMethodDisplayName(useCase, method));
+    return readList(this.model.decisions.entries).map(entry => entry.entry).filter(isAText)
+      .filter(entryName => {
+        const reachedNames = this.listNamesOnThePath(entryName);
+        return useCaseNames.some(useCaseName => reachedNames.has(useCaseName));
+      });
+  }
+
+  // A test that runs an entry by its route or its message names no class, so the step names the entries whose tests the writer finds by hand.
+  describeTestsNotFoundThrough(useCase) {
+    if (!this.isSearchedForTests(useCase)) return TESTS_NOT_FOUND;
+    const entryNames = this.listEntriesThatReach(useCase);
+    const entryWords = entryNames.length ? `; find the tests of ${joinNames(entryNames)} by hand` : "";
+    return `no test file names it or a caller of it${entryWords}`;
+  }
+
+  // The tests that call the use case: those that name it, and those that name a class of the model whose path reaches it, such as the controller of its entry.
+  listTestFilesThatReach(useCase) {
+    const useCaseNames = readList(useCase.methods).filter(isAPublicMethod).map(method => this.model.getMethodDisplayName(useCase, method));
+    const callers = this.model.classes.filter(theClass => theClass !== useCase && !isATestFile(theClass.file || "") && this.model.getKindOfClass(theClass) !== KINDS.CREATED)
+      .filter(theClass => {
+        const reachedNames = this.listNamesReachedFromTheClass(theClass);
+        return useCaseNames.some(useCaseName => reachedNames.has(useCaseName));
+      });
+    return [...new Set([useCase, ...callers].flatMap(theClass => this.listTestFilesThatName(theClass)))];
+  }
+
+  // A modified class whose path now reaches a new outside call breaks the tests that run it with no substitute for that call, also where its signature stays.
+  listNewOutsideCallTestSteps() {
+    const newOutsideCallNames = this.listNewOutsideCallNames();
+    if (!newOutsideCallNames.length) return [];
+
+    return this.model.classes
+      .filter(theClass => this.model.getKindOfClass(theClass) === KINDS.MODIFIED && isAText(theClass.file) && !isATestFile(theClass.file))
+      .flatMap(useCase => {
+        const outsideInterfaces = this.listNewOutsideInterfacesReachedFrom(useCase, newOutsideCallNames);
+        if (!outsideInterfaces.length) return [];
+        const testFiles = this.listTestFilesThatReach(useCase);
+        const found = testFiles.length ? joinNames(testFiles) : this.describeTestsNotFoundThrough(useCase);
+        const interfaceNames = joinNames(outsideInterfaces.map(outsideInterface => this.model.getClassDisplayName(outsideInterface)));
+        return [this.createStep(MIGRATION_STAGES.TESTS, getGroupOfTheClass(useCase), `updates the tests that reach ${interfaceNames} through ${this.model.getClassDisplayName(useCase)}: ${found}`, testFiles)];
+      });
+  }
+
   listTestSteps() {
     const tests = this.model.decisions.tests || {};
     const unitTestSteps = readList(tests.unit).map(unitTest => this.createStep(MIGRATION_STAGES.TESTS, this.getGroupOfTheName(unitTest.class), `writes the unit tests of ${unitTest.class}: ${readList(unitTest.tests).join(", ")}`, [unitTest.file]));
     const integrationSteps = readList(tests.integration).map(integration => this.createStep(MIGRATION_STAGES.TESTS, this.getGroupOfTheEntryPath(integration.entry), `writes the integration tests of ${integration.entry}: ${readList(integration.tests).join(", ")}`, [integration.file]));
-    return [...this.listTestUpdateSteps(), ...unitTestSteps, ...integrationSteps];
+    return [...this.listTestUpdateSteps(), ...this.listNewOutsideCallTestSteps(), ...unitTestSteps, ...integrationSteps];
+  }
+
+  // A modified file in no language the scripts read and with no class of the model, such as the XML wiring of a framework, gets 1 step that the writer does by hand.
+  listNotModelledSteps() {
+    return this.children
+      .filter(({ child, file }) => child.kind === KINDS.MODIFIED && path.posix.extname(file) && !isAReadExtension(file) && !this.listClassesOfTheFile(file).length)
+      .map(({ folder, file }) => {
+        const folderPath = `${getFolderPath(folder)}/`;
+        const group = this.getGroupOfClasses(this.model.classes.filter(theClass => isAText(theClass.file) && theClass.file.startsWith(folderPath)));
+        return this.createStep(MIGRATION_STAGES.BODIES, group, `not modelled: edit ${file} by hand (framework wiring)`, [file]);
+      });
   }
 
   listSteps() {
@@ -354,6 +438,7 @@ class MigrationPlan {
       ...this.listChangedMemberSteps(),
       ...this.listExistingDefectSteps(),
       ...this.listBodySteps(),
+      ...this.listNotModelledSteps(),
       ...this.listRemovalSteps(),
       ...this.listTestSteps(),
     ];

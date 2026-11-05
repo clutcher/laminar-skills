@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { isAText } from "../model/DesignModel.mjs";
+import { splitAtTopLevelCommas } from "../model/TypeArguments.mjs";
 
 // Folders that hold installed packages or build output in the common stacks (npm, Maven, Gradle, most bundlers), never the source a rename changes.
 const FOLDERS_OF_NO_SOURCE = new Set(["node_modules", "target", "build", "dist"]);
@@ -21,6 +23,43 @@ const BLOB = "blob";
 export class CurrentTreeStop extends Error {}
 
 const isAWordIn = (text, word) => new RegExp(`(^|[^\\w$])${word.replace(/[$]/g, "\\$")}([^\\w$]|$)`).test(text);
+
+// The parameter list of a method by its name: a call or a declaration, name(a, b), in every language the scripts read; and a JavaScript or TypeScript function assigned to the name, as a const or a class property, name = (a: A): R =>, name = async (a) =>, name = function (a), or name = a =>.
+const createParameterListsPattern = escapedName => {
+  const nameStart = `(?:^|[^\\w$])${escapedName}`;
+  const direct = `${nameStart}\\s*\\(([^()]*)\\)`;
+  const assigned = `${nameStart}\\s*(?::[^=;(){}]*)?=\\s*(?:async\\s+)?(?:(?:function\\s*\\*?\\s*(?:[\\w$]+\\s*)?(?:<[^<>()]*>\\s*)?\\(([^()]*)\\))|(?:(?:<[^<>()]*>\\s*)?\\(([^()]*)\\)\\s*(?::[^;{}]*?)?=>))`;
+  const single = `${nameStart}\\s*(?::[^=;(){}]*)?=\\s*(?:async\\s+)?([\\w$]+)\\s*=>`;
+  return new RegExp(`${direct}|${assigned}|${single}`, "g");
+};
+
+const readNameOfTheFile = file => path.posix.basename(file).replace(/\.[^.]*$/, "");
+
+const readFileWithoutExtension = file => file.replace(/\.[^./]*$/, "");
+
+// The source sets of the Maven and Gradle layout, which every JVM language shares: a class of src/test/java and 1 of src/main/java in the same folders share a package.
+const SOURCE_SET = /(^|\/)src\/[\w-]+\/(java|kotlin|scala|groovy)\//;
+
+const readPackageFolder = file => path.posix.dirname(file).replace(SOURCE_SET, "$1src/*/$2/");
+
+// The path an import names before the class name, as com.example.billing in Java or ../billing in a script.
+const QUALIFIED_IMPORT = /([\w$./@-]+?)[./]([A-Za-z_$][\w$]*)\b/g;
+
+// An import line names the class of classFile where its relative path resolves to that file, or its qualifier ends in the folders of that file.
+const importsTheClassOfTheFile = (line, importingFile, className, classFile) => {
+  const classFolderNames = path.posix.dirname(classFile).split("/");
+  for (const match of line.matchAll(QUALIFIED_IMPORT)) {
+    if (match[2] !== className) continue;
+    const qualifier = match[1].replace(/^["'`]/, "");
+    if (qualifier.startsWith(".")) {
+      if (path.posix.join(path.posix.dirname(importingFile), qualifier, className) === readFileWithoutExtension(classFile)) return true;
+      continue;
+    }
+    const qualifierNames = qualifier.split(/[./]/).filter(Boolean);
+    if (qualifierNames.length && qualifierNames.every((name, at) => classFolderNames[classFolderNames.length - qualifierNames.length + at] === name)) return true;
+  }
+  return false;
+};
 
 const isASourcePath = file => !file.split("/").some(isNoSourceName);
 
@@ -190,15 +229,36 @@ class CurrentTree {
   listParameterTextsOf(file, methodName) {
     const text = this.readFileText(file);
     if (text === null) return [];
-    const parameterLists = new RegExp(`(?:^|[^\\w$])${methodName.replace(/[$]/g, "\\$")}\\s*\\(([^()]*)\\)`, "g");
-    return [...text.matchAll(parameterLists)].map(match => match[1]);
+    const parameterLists = createParameterListsPattern(methodName.replace(/[$]/g, "\\$"));
+    return [...text.matchAll(parameterLists)].map(match => match.slice(1).find(parameterText => parameterText !== undefined));
   }
 
   holdsTheSignature(file, method) {
     const parameters = Array.isArray(method.parameters) ? method.parameters : [];
     return this.listParameterTextsOf(file, method.name).some(parameterText => {
-      const parameterTexts = parameterText.split(",").map(text => text.trim()).filter(Boolean);
+      const parameterTexts = splitAtTopLevelCommas(parameterText).map(text => text.trim()).filter(Boolean);
       return parameterTexts.length === parameters.length && parameters.every(parameter => isAWordIn(parameterText, parameter.name));
+    });
+  }
+
+  // The files that hold every word and refer to the class of classFile; where another file of the tree declares a class of the same name, only a file of the same folder or one whose import names the qualified class counts.
+  listFilesThatReferToTheClass(words, className, classFile) {
+    return this.keepTheFilesThatReferToTheClass(this.listFilesThatHoldEveryWord(words), className, classFile);
+  }
+
+  listFilesThatImportTheClass(className, classFile) {
+    return this.keepTheFilesThatReferToTheClass(this.listFilesThatImport(className), className, classFile);
+  }
+
+  keepTheFilesThatReferToTheClass(files, className, classFile) {
+    const sameNameFiles = this.files.filter(file => readNameOfTheFile(file) === className);
+    if (!isAText(classFile) || sameNameFiles.filter(file => file !== classFile).length === 0) return files;
+
+    const classPackage = readPackageFolder(classFile);
+    return files.filter(file => {
+      if (readPackageFolder(file) === classPackage) return true;
+      const text = this.readFileText(file);
+      return text !== null && text.split("\n").some(line => IMPORT_LINE.test(line) && importsTheClassOfTheFile(line, file, className, classFile));
     });
   }
 

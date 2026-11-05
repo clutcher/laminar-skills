@@ -1,4 +1,4 @@
-import { ANSWER_GIVERS, DOES, FRAMEWORK, KINDS, isAText, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readList } from "../model/DesignModel.mjs";
+import { ANSWER_GIVERS, DOES, FRAMEWORK, KINDS, isAText, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readFolderOfTheFile, readList } from "../model/DesignModel.mjs";
 import { DEFECT_CODES, createDefect, createRecheckDefect } from "./DesignDefect.mjs";
 import { createTestNameForm } from "./TestNameForm.mjs";
 
@@ -33,13 +33,13 @@ class CompletenessCheck {
     this.testNameForm = createTestNameForm(model.decisions.conventions?.testNameForms, model.listMethodsWithClass().map(({ method }) => method.name));
   }
 
-  requireKey(keyLabel, keyParent, key, path) {
+  requireKey(keyLabel, keyParent, key, path, missingCode = DEFECT_CODES.KEY_MISSING) {
     const count = this.keyCountMap.get(keyLabel) || { present: 0, needed: 0 };
     count.needed += 1;
     const isKeyPresent = isPresent(keyParent[key]);
     if (isKeyPresent) count.present += 1;
     this.keyCountMap.set(keyLabel, count);
-    if (!isKeyPresent) this.defects.push(createDefect(DEFECT_CODES.KEY_MISSING, `${path}.${key}`, `the key ${key} is required here and is missing`));
+    if (!isKeyPresent) this.defects.push(createDefect(missingCode, `${path}.${key}`, `the key ${key} is required here and is missing`));
     return isKeyPresent;
   }
 
@@ -121,7 +121,7 @@ const checkClasses = check => {
     check.requireKey("class.file", theClass, "file", path);
     check.requireKey("class.name", theClass, "name", path);
     if (isChanged) {
-      if (check.zoneOrder.isFound()) check.requireKey("class.zone", theClass, "zone", path);
+      if (check.zoneOrder.appliesToTheFolder(readFolderOfTheFile(theClass.file))) check.requireKey("class.zone", theClass, "zone", path);
       check.requireKey("class.exposed", theClass, "exposed", path);
       if (needsADoesValue(theClass)) check.requireKey("class.does", theClass, "does", path);
     }
@@ -171,6 +171,7 @@ const isHighWithinOneYear = forecast => forecast.sixMonths === HIGH || forecast.
 const checkOwner = (check, owner, path, entryNames) => {
   check.requireKey("owner.decision", owner, "decision", path);
   if (check.requireKey("owner.owner", owner, "owner", path)) check.requireName(owner.owner, `${path}.owner`);
+  check.requireKey("owner.placement", owner, "placement", path, DEFECT_CODES.OWNER_PLACEMENT_MISSING);
   if (check.requireKey("owner.callers", owner, "callers", path)) {
     readList(owner.callers).forEach((caller, at) => {
       if (caller !== FRAMEWORK) check.requireName(caller, `${path}.callers[${at}]`);

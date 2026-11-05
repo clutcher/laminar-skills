@@ -97,14 +97,23 @@ const findZonesOutsideTheOrder = (model, zoneOrder) => {
   const defects = [];
   const reportedZones = new Set();
   for (const theClass of model.classes) {
-    if (!isAText(theClass.zone) || zoneOrder.namesTheZone(theClass.zone) || reportedZones.has(theClass.zone)) continue;
+    if (!isAText(theClass.zone) || !appliesToTheClass(zoneOrder, theClass) || zoneOrder.namesTheZone(theClass.zone) || reportedZones.has(theClass.zone)) continue;
     reportedZones.add(theClass.zone);
     defects.push(createRecheckDefect(DEFECT_CODES.ZONE_OUTSIDE_THE_ORDER, `${model.getClassPath(theClass)}.zone`, `the zone ${theClass.zone} is not 1 of the zone order: ${[...zoneOrder.zones].join(", ")}, so the edges of its classes are not checked against the order`));
   }
   return defects;
 };
 
-const isCheckedAgainstTheOrder = (relation, zoneOrder) => [relation.from.zone, relation.to.zone].every(zone => isAText(zone) && zoneOrder.namesTheZone(zone));
+const appliesToTheClass = (zoneOrder, theClass) => zoneOrder.appliesToTheFolder(readFolderOfTheFile(theClass.file));
+
+const isCheckedAgainstTheOrder = (relation, zoneOrder) => [relation.from, relation.to].every(theClass => isAText(theClass.zone) && appliesToTheClass(zoneOrder, theClass) && zoneOrder.namesTheZone(theClass.zone));
+
+// The default zone order holds only under a module with the backend layout, so each folder of a class outside such a module is named once.
+const describeFoldersOutsideTheLayout = (model, zoneOrder) => {
+  if (!zoneOrder.isFound()) return [];
+  const folderPaths = new Set(model.classes.filter(theClass => isAText(theClass.file) && !appliesToTheClass(zoneOrder, theClass)).map(theClass => readFolderOfTheFile(theClass.file)));
+  return [...folderPaths].map(folderPath => `zone order: not applied to ${folderPath}`);
+};
 
 const buildTargetsOfAbstractionMap = (relations, readAbstractionName) => {
   const targetsOfAbstractionMap = new Map();
@@ -220,6 +229,7 @@ export const findCycleCheckDefects = (model, zoneOrder) => {
   const zoneDefects = zoneOrder.isFound() ? [...findZonesOutsideTheOrder(model, zoneOrder), ...findZoneDefects(model, checkedRelations, zoneOrder)] : [];
   const headLines = [
     ...(zoneOrder.isMissingTheLayout() ? [NO_LAYOUT_LINE] : []),
+    ...describeFoldersOutsideTheLayout(model, zoneOrder),
     describeCycleCheck(relations, signatureRelations, zoneOrder, relations.length - checkedRelations.length),
     ...describeIgnoredZones(model, zoneOrder),
   ];

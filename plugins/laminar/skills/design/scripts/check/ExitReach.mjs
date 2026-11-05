@@ -1,4 +1,4 @@
-import { DOES, isAMethodName, isAText, readList } from "../model/DesignModel.mjs";
+import { DOES, isAMethodName, isAText, readFolderOfTheFile, readList } from "../model/DesignModel.mjs";
 import { DEFECT_CODES, createRecheckDefect } from "./DesignDefect.mjs";
 
 export const findExitChain = (model, startName, exitNames) => {
@@ -52,7 +52,7 @@ const findTwoZoneDefects = (model, exitNames, zoneOrder) => {
   const defects = [];
   for (const [exitName, callerClasses] of buildCallerClassesOfExitMap(model, exitNames)) {
     const exitZone = model.findClass(exitName)?.zone;
-    const zonedCallers = [...callerClasses].filter(theClass => isAText(theClass.zone));
+    const zonedCallers = [...callerClasses].filter(theClass => isAText(theClass.zone) && zoneOrder.appliesToTheFolder(readFolderOfTheFile(theClass.file)));
     const zones = new Set(zonedCallers.map(theClass => theClass.zone));
     const isEveryZoneAllowed = isAText(exitZone) && [...zones].every(zone => zoneOrder.allowsTheCall(zone, exitZone));
     if (zones.size < 2 || isEveryZoneAllowed) continue;

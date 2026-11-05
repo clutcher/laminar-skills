@@ -121,6 +121,7 @@ const writeOwnerSection = owners => {
   if (!owners.length) return [...lines, "None."];
   for (const owner of owners) {
     lines.push(`- ${owner.decision}: owned by ${writeCode(owner.owner)}; callers ${readList(owner.callers).map(writeCode).join(", ") || "none"}.`);
+    if (owner.placement) lines.push(`  - Placement: ${owner.placement}`);
     lines.push(`  - Forecast (expectation, not evidence): ${writeForecast(owner.forecast)}`);
     if (owner.depth) lines.push(`  - Depth: ${owner.depth.shape}, taken by ${owner.depth.takenBy}: ${owner.depth.reason}`);
   }

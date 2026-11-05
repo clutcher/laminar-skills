@@ -63,7 +63,7 @@ const FORECAST_FORM = createObjectOf({
 const DECISIONS_FORM = createObjectOf({
   conventions: createObjectOf({ folder: TEXT, found: TRUE_OR_FALSE, files: TEXTS, zoneOrder: TEXT, testNameForms: TEXTS }),
   owners: createListOf(createObjectOf({
-    decision: TEXT, owner: TEXT, callers: TEXTS, forecast: FORECAST_FORM,
+    decision: TEXT, owner: TEXT, placement: TEXT, callers: TEXTS, forecast: FORECAST_FORM,
     depth: createObjectOf({ shape: TEXT, takenBy: createTextOf(DEPTH_TAKERS), reason: TEXT }),
   })),
   entries: createListOf(createObjectOf({

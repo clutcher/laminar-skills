@@ -1,4 +1,5 @@
 import path from "node:path";
+import { splitAtTopLevelCommas } from "../model/TypeArguments.mjs";
 
 const JAVA = "Java";
 
@@ -91,13 +92,13 @@ const readJavaFieldName = piece => {
 
 const readEnumConstantNames = bodyText => {
   const constantsText = bodyText.split(";")[0];
-  return constantsText.split(",").map(constant => NAME.exec(constant.trim())).filter(Boolean).map(match => match[1]);
+  return splitAtTopLevelCommas(constantsText).map(constant => NAME.exec(constant.trim())).filter(Boolean).map(match => match[1]);
 };
 
 const readHeaderFieldNames = headText => {
   const open = headText.indexOf("(");
   if (open < 0) return [];
-  return headText.slice(open + 1, headText.lastIndexOf(")")).split(",").map(headerField => LAST_NAME.exec(headerField)).filter(Boolean).map(match => match[1]);
+  return splitAtTopLevelCommas(headText.slice(open + 1, headText.lastIndexOf(")"))).map(headerField => LAST_NAME.exec(headerField)).filter(Boolean).map(match => match[1]);
 };
 
 const readJavaFieldNames = declaration => {
