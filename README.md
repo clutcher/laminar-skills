@@ -135,6 +135,8 @@ The 3 report files are rendered in code from the fields the agents filled, so no
 
 There is no severity, no ranking and no cap. Every finding is a must, or it is not a finding. A finding carries a confidence instead, and it says what would confirm the cost where the confidence is not high. What the code cannot settle, such as a copy of a decision in another application, which only the author knows to be kept on purpose or not, is never a finding: the report lists it under `To consider`, as a question to the author.
 
+The next version is to add a judge of types that are written once for each kind where 1 generic type would serve, GraphQL schema types included.
+
 ## 2 modes
 
 Against a repository the review reads callers, folders, tests and the build configuration. Against a bare patch it cannot, and the report says so: the mode is stated in the first line, the test checks read only the tests the patch carries, a finding that a test is needed has low confidence, and a check the patch cannot complete says in its own confidence what would confirm it.
@@ -155,7 +157,26 @@ A project writes its conventions as `.md` files under `.claude/rules/conventions
 
 ## Design
 
-`laminar:design` (`design` in GitHub Copilot CLI) designs a change before any code is written. Its aim is a review of the written code that finds nothing on the change. Give it a described change, such as a feature, a plan file or a folder structure in free text, or the run folder of a review, whose findings it must close or leave on purpose with a reason. It writes 1 design model, a JSON file that holds every public name at every scale and the decisions each boundary carries: 1 owner for each business decision, the depth of each choice from a forecast of change, the check of outside data at each entry, the failure line of each I/O execution and the tests of each entry. Scripts check the model, render it as `design.md` and write the migration steps, all into a folder you name or a temporary folder outside the repository. It asks you each question that the code does not answer, and you approve `design.md` and the migration before writer agents write the code, 1 migration group at a time; the review of the written code then shows the result.
+`laminar:design` (`design` in GitHub Copilot CLI) designs a change before any code is written. Its aim is a review of the written code that finds nothing on the change. Give it a described change, such as a feature, a ticket, a plan file or a folder structure in free text, or the run folder of a review. It must close each finding of that run at the application, module and class scales, or leave it on purpose with 1 reason of a closed list. It writes 1 design model, a JSON file that holds every public name at every scale and every named private part, with the decisions each boundary carries: 1 owner for each business decision, the depth of each choice, the check of outside data at each entry, the failure line of each I/O execution and the tests of each entry. A choice gets a boundary that hides it only where it has 2 or more answers in the system today, or where your input names a second answer.
+
+Scripts check the model, render it as `design.md` and write the migration steps. They write all of it into the results folder: the folder you name as `results: <path>`, or a new temporary folder outside the repository. The skill asks you each question that the code does not answer, and you approve `design.md` and the migration before writer agents write the code. Add `mode: autonomous` to run it with no question: each question then takes the answer that the design model states for it, `design.md` prints each answer that no user gave, and the run stops before any writer where the design would change an existing output that a program outside the application reads.
+
+The writers write the code 1 migration group at a time, in order, and each migration group becomes 1 commit on your current branch. Where the host does not let an agent write to git, the skill makes that commit itself. The skill then reviews the written code in rounds. Round 1 runs the review on the range from the commit before the first writer to the head, at the application, module and class scales. Each finding of a round goes to the designer where its fix changes the tree, a signature or a placement, goes to the writer of its migration group where its fix stays inside a body, or stays with 1 reason of the closed list. A script records each round under `rounds/<n>/` of the results folder and decides the next step. The loop ends where no finding is open. It stops where a finding that a fix closed comes back, where the designer got a finding back and it is open again, where more than 50 percent of the new findings stand on files that the fixes created, where the open count does not fall, or at a ceiling of rounds that your input states. The skill then reports the findings and the measured cost of the shape runs and of each round.
+
+This version does not yet do the following: give a test class a file in the fix plan of a round so that its fix reaches a writer, count for the stop a finding that comes back after a round closed it by an answer, number the test methods whose names stand in backticks in a round, give 2 findings on 1 class 2 different numbers, add a test step to the fix plan of a round, follow a rename of code that never stood in the base, give a GraphQL schema file a form in the design model, plan the framework wiring files such as XML bean definitions, give a test a substitute for an outside interface that the repository does not hold, run the decision judge in the shape check, run the rounds and the shape runs as workflows of the plugin, take the code of a folder or a module as its input, or judge the depth of each choice with a judge of its own.
+
+The skill was measured on 6 past changes of real code from the private evaluation set: R2 to R4 come from recent pull requests, and H1 to H2b from the history of older work. For each case the designer ran in autonomous mode with a ceiling of 3 shape runs, and no writer ran. Each grade compares the tree of the designer with the end state of the change, abstraction by abstraction. The grades are proposals, and no ruling has confirmed them yet. The 6 cases cost about $70 in all.
+
+| Case | Grade, proposed | Findings kept by the last shape run |
+|---|---|---|
+| R2 | partial | 3, and 1 to consider |
+| R3 | partial | 3 |
+| R4 | pass | 5 |
+| H1 | partial | 38, and 4 to consider |
+| H2a | partial | 5, and 1 to consider |
+| H2b | pass | 2 |
+
+Measured once, on a fictional feature of about 10 classes in a repository that builds: the design passed its shape checks after 3 runs, the writers' code built and its tests passed after every group, and the review after the writers kept 7 items by the pass rule. A round of fixes left 8, so the loop stopped, as it does when a round does not lower the count. 1 shot to 0 findings is the goal of this skill and not yet its result; the next version names the 6 gaps this run found, 3 of them in how a fix reaches a writer. About $21 for such a run.
 
 It is not a review, and the designer writes no production code itself. In Claude Code, it checks the planned tree with the shape check, a mode of the review in which the review's own judges read the planned folders, classes and signatures before the code exists. In a host where the shape check cannot run, such as GitHub Copilot CLI, it asks the detection questions of the book about each folder, class and signature itself and marks each answer as not checked by the review. In both hosts, the review of the written code stays the check of the result.
 
@@ -190,15 +211,15 @@ A Simplicity or Design finding leads with one of the 6 cognitive failures of the
 
 ## The eval suite
 
-The evaluation cases are published under [`plugins/laminar/evals/`](plugins/laminar/evals/README.md): the cases of the review under `review/`, each as the diff a review is given, the findings the review is expected to raise and the ones it may not, written in the shape of the review's own reader file, and the cost the run is allowed, with `grade.mjs` beside them to build a case and grade a run on both, and the cases of the coding style skill under `code-style/`. The private evaluation set, the other fixture repositories and the checkers that audit the skill's own text are kept privately.
+The evaluation cases are published under [`plugins/laminar/evals/`](plugins/laminar/evals/README.md): the cases of the review under `review/`, each as the diff a review is given, the findings the review is expected to raise and the ones it may not, written in the shape of the review's own reader file, and the cost the run is allowed, with `grade.mjs` beside them to build a case and grade a run on both, the cases of the coding style skill under `code-style/`, the cases of the convention check under `check-conventions/`, and the cases of the skill `design` under `design/`, with `grade-design.mjs` beside them to grade the design model of a run. The private evaluation set, the other fixture repositories and the checkers that audit the skill's own text are kept privately.
 
 ## Licence
 
 Copyright (c) 2026 Igor Zarvanskyi.
 
-The code is licensed under the MIT License, in [`LICENSE`](LICENSE). The code is the scripts under `plugins/laminar/skills/review/scripts/`, the workflows under `plugins/laminar/workflows/`, the hook under `plugins/laminar/hooks/`, the eval harness `plugins/laminar/evals/grade.mjs`, and the code in the diffs of the eval cases.
+The code is licensed under the MIT License, in [`LICENSE`](LICENSE). The code is the scripts under `plugins/laminar/skills/review/scripts/` and `plugins/laminar/skills/design/scripts/`, the workflows under `plugins/laminar/workflows/`, the hook under `plugins/laminar/hooks/`, the eval harnesses `plugins/laminar/evals/grade.mjs` and `plugins/laminar/evals/grade-design.mjs`, and the code in the diffs of the eval cases.
 
-The text is licensed under the Creative Commons Attribution 4.0 International License, in [`LICENSE-CC-BY-4.0`](LICENSE-CC-BY-4.0), with the summary at <https://creativecommons.org/licenses/by/4.0/>. The text is the agent bodies under `plugins/laminar/agents/`, the skill text under `plugins/laminar/skills/` other than the review's scripts, the README files, and the `expected.md` files of the eval cases. You may share and adapt it, including commercially, if you give appropriate credit, link to the licence, and say whether you changed anything.
+The text is licensed under the Creative Commons Attribution 4.0 International License, in [`LICENSE-CC-BY-4.0`](LICENSE-CC-BY-4.0), with the summary at <https://creativecommons.org/licenses/by/4.0/>. The text is the agent bodies under `plugins/laminar/agents/`, the skill text under `plugins/laminar/skills/` other than the scripts of the review and of the skill `design`, the README files, and the `expected.md` files of the eval cases. You may share and adapt it, including commercially, if you give appropriate credit, link to the licence, and say whether you changed anything.
 
 **Attribution.** Please credit the text as:
 
