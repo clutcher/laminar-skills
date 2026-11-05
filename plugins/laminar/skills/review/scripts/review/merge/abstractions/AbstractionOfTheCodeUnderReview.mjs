@@ -4,7 +4,7 @@ import { buildFileAndLineKey } from "./AbstractionsAtPlaces.mjs";
 
 const CHAIN_GOES_DOWN = "down";
 
-const CHECKS_LANDING_ON_THE_RELATION = Object.freeze([CHECKS_BY_ID_MAP.D2.id, CHECKS_BY_ID_MAP.D3.id]);
+const CHECKS_LANDING_ON_THE_RELATION = Object.freeze([CHECKS_BY_ID_MAP.D2.id, CHECKS_BY_ID_MAP.D3.id, CHECKS_BY_ID_MAP.D5.id]);
 
 const NO_PLACE = null;
 

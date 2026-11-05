@@ -18,6 +18,7 @@ export { joinStatementLines, joinStatementTexts, readStatementAt } from "./input
 export { IMPORT_OR_NAMESPACE_LINE_PATTERN } from "./inputs/source/lines/ImportLines.mjs";
 export { STRING_LITERAL_PATTERN } from "./inputs/source/text/TextLiterals.mjs";
 export { findSharedStems, collectStems } from "./inputs/source/names/NameStems.mjs";
+export { splitNameWords } from "./inputs/source/names/NameWords.mjs";
 export { isUpperSnakeName, namesAType, collectTypeNames, isTheSameNameAcrossConventions } from "./inputs/source/names/NamingConventions.mjs";
 export { LANGUAGE_WORDS, WORDS_FOR_THE_ENCLOSING_TYPE } from "./inputs/source/names/LanguageWords.mjs";
 export { isALanguageWordOrAnEverydayName } from "./inputs/source/names/UnspecificNames.mjs";

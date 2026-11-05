@@ -39,6 +39,7 @@ const MEASURED_BY_JUDGE_TYPE_MAP = Object.freeze({
   "judge-design-leaked-details": { newTokens: 5_190, outputTokens: 380, cacheReadTokens: 14_100, wallSeconds: 9 },
   "judge-design-entry-boundary": { newTokens: 6_540, outputTokens: 750, cacheReadTokens: 14_670, wallSeconds: 9 },
   "judge-design-missing-boundary": { newTokens: 6_480, outputTokens: 740, cacheReadTokens: 15_410, wallSeconds: 9 },
+  "judge-design-type-per-variant": { newTokens: 6_480, outputTokens: 740, cacheReadTokens: 15_410, wallSeconds: 9 },
 });
 
 export const FALLBACK_JUDGE_TYPE = "judge-correctness-prevention";

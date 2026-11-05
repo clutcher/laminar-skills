@@ -1,6 +1,6 @@
 import { Scale } from "../../../code/index.mjs";
 import { TRACKS } from "../../../checks/CheckCatalog.mjs";
-import { CHAIN_GROUP_CHECKS, CORE_OPERATION_CHECKS, MEMBER_GROUP_CHECKS, PARAMETER_RELATION_CHECKS } from "../selection/TrackSelection.mjs";
+import { CHAIN_GROUP_CHECKS, CORE_OPERATION_CHECKS, MEMBER_GROUP_CHECKS, PARAMETER_RELATION_CHECKS, VARIANT_TYPE_CHECKS } from "../selection/TrackSelection.mjs";
 import { readJudgeType } from "../../../checks/JudgeType.mjs";
 import { DESIGN_RELATION_KINDS } from "../../../checks/DesignRelationKinds.mjs";
 import { formatPlacedSliceLine, listPlacesShownInSections, readSliceSections } from "../formats/SliceFormat.mjs";
@@ -15,6 +15,8 @@ const PARAMETER_TYPE_JUDGE_TYPE = readJudgeType({ track: TRACKS.DESIGN, checks: 
 const CORE_OPERATION_JUDGE_TYPE = readJudgeType({ track: TRACKS.DESIGN, checks: CORE_OPERATION_CHECKS });
 
 const MEMBER_GROUPS_JUDGE_TYPE = readJudgeType({ track: TRACKS.DESIGN, checks: MEMBER_GROUP_CHECKS });
+
+const VARIANT_TYPES_JUDGE_TYPE = readJudgeType({ track: TRACKS.DESIGN, checks: VARIANT_TYPE_CHECKS });
 
 
 const findFirstStart = group => group.methods.find(method => method.start) || group.methods[0];
@@ -149,6 +151,23 @@ export const createMemberGroupsCodeUnderReview = (relation, abstractions) => {
 
 export const buildMemberGroupsCodeUnderReview = (extracted, firstNumber = 1) => numberCodeUnderReviewFrom((extracted.memberGroups || []).map(relation => createMemberGroupsCodeUnderReview(relation, extracted.abstractions)), firstNumber);
 
+export const isAVariantTypesRelation = designRelation => designRelation.relation === DESIGN_RELATION_KINDS.VARIANT_TYPES;
+
+const createVariantTypesCodeUnderReview = relation => ({
+  ...relation,
+  abstractionId: `variant-types:${relation.path}:${relation.from}`,
+  scale: Scale.CLASS.name,
+  track: TRACKS.DESIGN,
+  judgeType: VARIANT_TYPES_JUDGE_TYPE,
+  checks: createChecks(VARIANT_TYPE_CHECKS),
+  isTest: false,
+  lines: { from: relation.from, to: relation.to },
+  slice: null,
+  relation: DESIGN_RELATION_KINDS.VARIANT_TYPES,
+});
+
+export const buildVariantTypesCodeUnderReview = (extracted, firstNumber = 1) => numberCodeUnderReviewFrom((extracted.variantTypes || []).map(createVariantTypesCodeUnderReview), firstNumber);
+
 const isKeptBy = (keeps, keepsJudgeType, keepsScale) => designRelation => keeps(designRelation.path) && keepsJudgeType(designRelation.judgeType) && keepsScale(designRelation.scale);
 
 const KEEPS_EVERY_JUDGE_TYPE = () => true;
@@ -163,6 +182,7 @@ export function buildDesignCodeUnderReview(extracted, { keeps, keepsJudgeType = 
     ...(extracted.inOutOperations || []).map(createInOutOperationCodeUnderReview),
     ...(extracted.rebuiltValues || []).map(createRebuiltValueCodeUnderReview),
     ...(extracted.memberGroups || []).map(relation => createMemberGroupsCodeUnderReview(relation, extracted.abstractions)),
+    ...(extracted.variantTypes || []).map(createVariantTypesCodeUnderReview),
   ].filter(isKeptBy(keeps, keepsJudgeType, keepsScale));
   return numberCodeUnderReviewFrom(designCodeUnderReview, firstNumber);
 }
@@ -185,6 +205,7 @@ export const readRelationPlaces = designRelation => {
       ...listPlacesShownInSections(designRelation.path, readSliceSections(designRelation)).map(place => ({ path: place.file, line: place.line, text: place.text })),
     ];
   }
+  if (isAVariantTypesRelation(designRelation)) return [...designRelation.types.flatMap(type => readPlacesOfLines(type.path, type.lines)), ...(designRelation.namedTogether || [])];
   if (isARebuiltValue(designRelation)) {
     return [
       ...readPlacesOfLines(designRelation.path, designRelation.methodLines),

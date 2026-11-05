@@ -1,6 +1,6 @@
 import { formatChangedLinesLine, formatRootLine, formatSliceBlock, formatTestFriction } from "../formats/CodeUnderReviewText.mjs";
 import { NO_CHANGED_LINES_TEXT } from "../formats/ChangedLinesText.mjs";
-import { isACoreOperation, isAMemberGroupsRelation, isAnInOutOperation, isARebuiltValue, readRelationPlaces } from "./DesignRelationCodeUnderReview.mjs";
+import { isACoreOperation, isAMemberGroupsRelation, isAnInOutOperation, isARebuiltValue, isAVariantTypesRelation, readRelationPlaces } from "./DesignRelationCodeUnderReview.mjs";
 import { DESIGN_RELATION_KINDS } from "../../../checks/DesignRelationKinds.mjs";
 
 const formatSpan = span => (span.from === span.to ? `${span.from}` : `${span.from}-${span.to}`);
@@ -192,9 +192,27 @@ const formatMemberGroupsBlocks = memberGroups => [
   ...(memberGroups.slice ? [formatSliceBlock(memberGroups)] : []),
 ];
 
+const formatTypeMembers = type => `Members: ${type.members.length ? type.members.map(member => `${quoteName(member.name)} at ${member.line}`).join(", ") : "none"}`;
+
+const formatVariantTypeBlock = type => [
+  `Type: ${quoteName(type.name)} · ${type.path}:${formatSpan(type)} · ${readChangeWord(type.changeKind)} · variant word ${quoteName(type.variantWord)}`,
+  formatTypeMembers(type),
+  fenceLines(type.lines),
+].join("\n");
+
+const formatNamedTogether = namedTogether => (namedTogether.length
+  ? ["Named together:", ...namedTogether.map(place => `- ${place.path}:${place.line} · ${place.text.trim()}`)].join("\n")
+  : "Named together: none");
+
+const formatVariantTypesBlocks = variantTypes => [
+  `Name pattern: ${quoteName(variantTypes.namePattern)}`,
+  ...variantTypes.types.map(formatVariantTypeBlock),
+  formatNamedTogether(variantTypes.namedTogether || []),
+];
+
 const formatHead = designRelation => `### ${designRelation.id} · ${designRelation.relation} ${quoteName(designRelation.displayName)}`;
 
-const formatHeadLines = (designRelation, repositoryRoot) => [formatHead(designRelation), formatRootLine(repositoryRoot), ...(isACoreOperation(designRelation) || isAnInOutOperation(designRelation) || isARebuiltValue(designRelation) || isAMemberGroupsRelation(designRelation) ? [`Path: ${designRelation.path}`] : [])];
+const formatHeadLines = (designRelation, repositoryRoot) => [formatHead(designRelation), formatRootLine(repositoryRoot), ...(isACoreOperation(designRelation) || isAnInOutOperation(designRelation) || isARebuiltValue(designRelation) || isAMemberGroupsRelation(designRelation) || isAVariantTypesRelation(designRelation) ? [`Path: ${designRelation.path}`] : [])];
 
 const formatRelationBlocks = designRelation => {
   if (designRelation.relation === DESIGN_RELATION_KINDS.CHAIN_GROUP) return formatChainGroupBlocks(designRelation);
@@ -202,6 +220,7 @@ const formatRelationBlocks = designRelation => {
   if (isAnInOutOperation(designRelation)) return formatInOutOperationBlocks(designRelation);
   if (isARebuiltValue(designRelation)) return formatRebuiltValueBlocks(designRelation);
   if (isAMemberGroupsRelation(designRelation)) return formatMemberGroupsBlocks(designRelation);
+  if (isAVariantTypesRelation(designRelation)) return formatVariantTypesBlocks(designRelation);
   return formatParameterTypeBlocks(designRelation);
 };
 

@@ -18,6 +18,7 @@
     "./agents/review/design/judge-missing-boundary.md",
     "./agents/review/design/judge-over-extraction.md",
     "./agents/review/design/judge-scoped-parameters.md",
+    "./agents/review/design/judge-type-per-variant.md",
     "./agents/review/performance/judge-abstraction.md",
     "./agents/review/performance/judge-io-paths.md",
     "./agents/review/screen-io.md",

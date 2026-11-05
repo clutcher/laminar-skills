@@ -17,6 +17,7 @@ import { InOutOperationsWalk } from "./walks/InOutOperationsWalk.mjs";
 import { CoreOperationsWalk } from "./walks/core/CoreOperationsWalk.mjs";
 import { RebuiltValuesWalk } from "./walks/RebuiltValuesWalk.mjs";
 import { MemberGroupsWalk } from "./walks/memberGroups/MemberGroupsWalk.mjs";
+import { VariantTypesWalk } from "./walks/variantTypes/VariantTypesWalk.mjs";
 import { EntryBoundariesWalk } from "./walks/entryBoundaries/EntryBoundariesWalk.mjs";
 import { CodeForms } from "./walks/entryBoundaries/CodeForms.mjs";
 import { BoundaryPathsWalk } from "./walks/BoundaryPathsWalk.mjs";
@@ -39,7 +40,7 @@ const USES_OUTSIDE_THE_CHANGE = 4;
 const USES_IN_ANOTHER_FILE = 2;
 const USES_IN_TEST_CODE = 1;
 
-const NO_RELATIONS = Object.freeze({ chainGroups: [], parameterRelations: [], coreOperations: [], inOutOperations: [], rebuiltValues: [], memberGroups: [], entryBoundaries: [] });
+const NO_RELATIONS = Object.freeze({ chainGroups: [], parameterRelations: [], coreOperations: [], inOutOperations: [], rebuiltValues: [], memberGroups: [], variantTypes: [], entryBoundaries: [] });
 
 const createOccurrence = (name, places) => ({ key: name, kind: OCCURRENCE_KINDS.IDENTIFIER, places });
 
@@ -149,6 +150,7 @@ export class CodeGraphWalks {
       ...createPropertyWhenNotEmpty("inOutOperations", this.relations.inOutOperations),
       ...createPropertyWhenNotEmpty("rebuiltValues", this.relations.rebuiltValues),
       ...createPropertyWhenNotEmpty("memberGroups", this.relations.memberGroups),
+      ...createPropertyWhenNotEmpty("variantTypes", this.relations.variantTypes),
       entryBoundaries: this.relations.entryBoundaries,
       boundaryPaths: this.boundaryPaths,
       ...createPropertyWhenNotEmpty("codeForms", this.codeForms),
@@ -248,6 +250,7 @@ export class CodeGraphWalks {
     this.relations.inOutOperations = new InOutOperationsWalk(this.codeGraph, filePath => this.repositoryText.readFileLines(filePath)).findRelations(abstractions);
     this.relations.rebuiltValues = new RebuiltValuesWalk(this.repositoryText, this.testCode, findCallGraph, this.references, this.codeGraph).findRelations(abstractions);
     this.relations.memberGroups = new MemberGroupsWalk(this.repositoryText, this.change, findCallGraph, this.codeGraph).findRelations(abstractions);
+    this.relations.variantTypes = new VariantTypesWalk(this.repositoryText, this.codeGraph).findRelations(abstractions);
     this.entryBoundaryReading = new EntryBoundariesWalk(this.repositoryText, this.testCode, this.change, this.roots, findCallGraph, this.references, this.codeGraph);
     if (new Set(this.roots.map(readFolderPath)).size >= MIN_APPLICATIONS_FOR_AN_ENTRY_BOUNDARY) this.relations.entryBoundaries = this.entryBoundaryReading.walkAbstractions(abstractions);
   }
