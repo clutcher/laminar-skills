@@ -12,6 +12,9 @@ const USAGE = "usage: node planMigration.mjs --model <design-model.json> --out <
 
 const DISPOSITIONS_FILE = "dispositions.json";
 
+// The model the code of the round was written from, so each test the designer changed since then gets its step.
+const MODEL_FILE = "design-model.json";
+
 const STOP_EXIT_CODE = 2;
 
 const JSON_SUFFIX = ".json";
@@ -37,7 +40,9 @@ const planTheRound = (model, steps, options) => {
   const roundFolder = options.round ? path.resolve(options.round) : null;
   const classNames = splitNames(options.classes);
   const round = roundFolder ? path.basename(roundFolder) : "";
-  const { steps: roundSteps, plannedGroups } = listRoundSteps(model, steps, { round, classNames, dispositions: roundFolder ? readRoundDispositionsOrExit(roundFolder) : [] });
+  const modelBeforePath = roundFolder ? path.join(roundFolder, MODEL_FILE) : "";
+  const modelBefore = modelBeforePath && fs.existsSync(modelBeforePath) ? readDesignModelOrExit(modelBeforePath) : null;
+  const { steps: roundSteps, plannedGroups } = listRoundSteps(model, steps, { round, classNames, dispositions: roundFolder ? readRoundDispositionsOrExit(roundFolder) : [], modelBefore });
   const roundWords = round ? `round ${round}` : "the changed classes";
   return { steps: roundSteps, roundLine: `Round: ${roundWords} plans the migration groups ${plannedGroups.join(", ") || "none"}; every other group is left out`, classDefects: findChangedClassDefects(model, classNames) };
 };

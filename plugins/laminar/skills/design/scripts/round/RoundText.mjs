@@ -49,5 +49,6 @@ export const writeRoundLines = result => [
   ...result.notJudgedLines.map(line => writeTabLine(["not judged", line.mark, line.displayName, line.check, line.text])),
   ...result.defects.map(defect => writeTabLine(["defect", defect.code, defect.displayName, defect.text])),
   ...result.sendLines.map(sendLine => writeTabLine(["send", sendLine.to, sendLine.displayName, sendLine.text])),
+  ...(result.filesToExclude.length ? [writeTabLine(["exclude", result.filesToExclude.join(",")])] : []),
   writeTabLine(["loop", result.loopLine.word, result.loopLine.code, result.loopLine.text]),
 ];

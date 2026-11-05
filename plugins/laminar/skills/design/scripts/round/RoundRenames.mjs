@@ -1,4 +1,6 @@
 import { readList } from "../model/DesignModel.mjs";
+import { isInTheModel } from "./AbstractionStanding.mjs";
+import { ROUND_DEFECT_CODES, createRoundDefect } from "./Dispositions.mjs";
 
 const METHOD_MARK = "#";
 
@@ -36,7 +38,7 @@ const listMethodPairs = (classBefore, classNow) => {
 };
 
 // The renames the designer made between 2 rounds, which no oldName records because the base never held the old name: a class gone from the model of the round before with 1 added class of the same file or the same methods, and a method gone from a class with 1 added method of the same parameter types and return. Each maps the old display name to the new one.
-export const listRenamesBetweenRounds = (modelBefore, model) => {
+const listRenamesOfTheModels = (modelBefore, model) => {
   const newNameOfOldNameMap = new Map();
   if (!modelBefore || !model) return newNameOfOldNameMap;
 
@@ -56,4 +58,22 @@ export const listRenamesBetweenRounds = (modelBefore, model) => {
     }
   }
   return newNameOfOldNameMap;
+};
+
+// The renames between rounds: those the models show, and those the dispositions of the round give for code the base never held and the model of the round before no longer shows, such as a field or a method moved before round 1 was recorded.
+export const listRenamesBetweenRounds = (modelBefore, model, givenRenames = []) => {
+  const newNameOfOldNameMap = listRenamesOfTheModels(modelBefore, model);
+  for (const rename of givenRenames) newNameOfOldNameMap.set(rename.renamedFrom, rename.displayName);
+  return newNameOfOldNameMap;
+};
+
+// A given rename holds where an earlier round raised a key under its old name and the model holds its new name.
+export const findGivenRenameDefects = (givenRenames, model, earlierKeyStates) => {
+  const earlierNames = new Set(earlierKeyStates.map(keyState => keyState.displayName));
+  const defects = [];
+  for (const rename of givenRenames) {
+    if (!earlierNames.has(rename.renamedFrom)) defects.push(createRoundDefect(ROUND_DEFECT_CODES.RENAMED_KEY_UNKNOWN, rename.renamedFrom, `the rename to ${rename.displayName} names ${rename.renamedFrom}, which no finding key of an earlier round holds`));
+    if (model && !isInTheModel(model, rename.displayName)) defects.push(createRoundDefect(ROUND_DEFECT_CODES.RENAMED_NAME_ABSENT_FROM_MODEL, rename.displayName, `the rename from ${rename.renamedFrom} names ${rename.displayName}, which the model does not hold`));
+  }
+  return defects;
 };

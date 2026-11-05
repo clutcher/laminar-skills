@@ -36,8 +36,16 @@ const describeTheShare = (onFixCreated, appeared) => `${onFixCreated} of ${appea
 
 const describeTheReturn = keyState => `${keyState.check} on ${keyState.displayName}${keyState.returnedFrom ? ` (was ${keyState.returnedFrom})` : ""}`;
 
+const RETURN_CLOSERS = Object.freeze(["a fix", "an answer"]);
+
+const describeTheReturns = returnedKeys => RETURN_CLOSERS
+  .map(closer => [closer, returnedKeys.filter(keyState => keyState.closedBy === closer)])
+  .filter(([, keyStates]) => keyStates.length)
+  .map(([closer, keyStates]) => `${closer} closed ${joinNames(keyStates.map(describeTheReturn))}`)
+  .join("; ");
+
 const findStopLine = ({ round, ceiling, returnedKeys, openAfterDesignerNames, comparison }) => {
-  if (returnedKeys.length) return createLoopLine(LOOP_WORDS.STOP, LOOP_CODES.CLOSED_FINDING_RETURNED, `a fix closed ${joinNames(returnedKeys.map(describeTheReturn))} in an earlier round, and it appears again`);
+  if (returnedKeys.length) return createLoopLine(LOOP_WORDS.STOP, LOOP_CODES.CLOSED_FINDING_RETURNED, `${describeTheReturns(returnedKeys)} in an earlier round, and it appears again`);
   if (ceiling !== null && round >= ceiling) return createLoopLine(LOOP_WORDS.STOP, LOOP_CODES.CEILING_REACHED, `round ${round} reached the ceiling of ${ceiling} rounds`);
   if (openAfterDesignerNames.length) return createLoopLine(LOOP_WORDS.STOP, LOOP_CODES.OPEN_AFTER_DESIGNER, `${joinNames(openAfterDesignerNames)} went back to the designer in round ${round - 1} and is open again`);
   if (!comparison) return null;

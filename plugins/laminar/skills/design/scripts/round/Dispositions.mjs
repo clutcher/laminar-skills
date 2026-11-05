@@ -15,6 +15,8 @@ export const ROUND_DEFECT_CODES = Object.freeze({
   PLACEMENT_FINDING_TO_WRITER: "placement-finding-to-writer",
   OPEN_FINDING_ON_UNCHANGED_ABSTRACTION: "open-finding-on-unchanged-abstraction",
   OPEN_KEY_ABSENT_FROM_MODEL: "open-key-absent-from-model",
+  RENAMED_KEY_UNKNOWN: "renamed-key-unknown",
+  RENAMED_NAME_ABSENT_FROM_MODEL: "renamed-name-absent-from-model",
 });
 
 const OUTSIDE_THE_CHANGE = "outside the change";
@@ -35,8 +37,17 @@ export const createRoundDefect = (code, displayName, text) => ({ code, displayNa
 
 const describeTheDisposition = (disposition, at) => `dispositions[${at}] (item ${disposition.number})`;
 
+// A rename names the display name of an earlier round and the new display name, because the base never held the old name and no oldName can record it.
+const isARename = disposition => disposition !== null && typeof disposition === "object" && disposition.renamedFrom !== undefined;
+
+const findRenameFormProblem = (rename, at) => {
+  if (!isAText(rename.renamedFrom) || !isAText(rename.displayName)) return `dispositions[${at}]: a rename needs the text of renamedFrom and displayName`;
+  return null;
+};
+
 const findFormProblem = (disposition, at) => {
   if (disposition === null || typeof disposition !== "object") return `dispositions[${at}] is no object`;
+  if (isARename(disposition)) return findRenameFormProblem(disposition, at);
   if (!Number.isInteger(disposition.number)) return `dispositions[${at}] holds no whole number under number`;
   if (disposition.check !== undefined && !isAText(disposition.check)) return `${describeTheDisposition(disposition, at)}: check is no text`;
   const endingKeys = ENDING_KEYS.filter(key => disposition[key] !== undefined);
@@ -51,7 +62,7 @@ export const checkDispositionsForm = given => {
   if (!Array.isArray(given)) throw new RoundStop("dispositions: the file holds no JSON list");
   const problems = given.map(findFormProblem).filter(Boolean);
   if (problems.length) throw new RoundStop(`dispositions: the file is malformed:\n${problems.map(problem => `  ${problem}`).join("\n")}`);
-  return given;
+  return { dispositions: given.filter(disposition => !isARename(disposition)), renames: given.filter(isARename) };
 };
 
 const isAnsweredInTheModel = (model, questionId) => Boolean(model)
@@ -62,8 +73,14 @@ const readGroupOfTheFinding = (model, finding) => {
   return theClass && Number.isFinite(theClass.group) ? theClass.group : FIRST_GROUP;
 };
 
+// The file of a finding, from its first place with a line, so a finding on a class that the model does not hold, such as a test class, still names its file.
+const readFileOfTheFinding = finding => {
+  const place = finding.places.find(other => other.file && other.line !== null);
+  return place ? place.file : "";
+};
+
 const resolveTheDisposition = (disposition, finding, model) => {
-  const resolved = { number: disposition.number, check: finding.check, displayName: finding.displayName, scale: finding.scale, testCode: finding.testCode };
+  const resolved = { number: disposition.number, check: finding.check, displayName: finding.displayName, scale: finding.scale, testCode: finding.testCode, file: readFileOfTheFinding(finding) };
   if (disposition.to === SENT_TO.WRITER) return { ...resolved, to: SENT_TO.WRITER, group: readGroupOfTheFinding(model, finding) };
   if (disposition.to) return { ...resolved, to: disposition.to };
   if (disposition.reason !== undefined) return { ...resolved, reason: disposition.reason, says: disposition.says };

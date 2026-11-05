@@ -6,6 +6,7 @@ import { LOOP_WORDS, decideLoopLine, listSendLines } from "./round/LoopLine.mjs"
 import { compareTheRound } from "./round/RoundComparison.mjs";
 import { createChangedPlaceFinder, listFixCreatedFiles, readHeadCommit } from "./round/RoundGit.mjs";
 import { RoundStop, createFindingKey, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
+import { findGivenRenameDefects } from "./round/RoundRenames.mjs";
 import { writeRoundLines } from "./round/RoundText.mjs";
 
 const USAGE = "usage: node recordRound.mjs --results <results> --run <run folder> [--dispositions <file>] [--model <results>/design-model.json] [--repo <repository>] [--autonomous] [--dollars <measured>] [--round <n>] [--ceiling <rounds>] [--no-findings]";
@@ -80,7 +81,7 @@ const readFixCreated = (repositoryRoot, round, headBefore) => {
 const readChangedPlaceFinder = (repositoryRoot, resultsFolder) => {
   if (!repositoryRoot) return null;
   const baseCommit = readTextIfPresent(path.join(resultsFolder, BASE_COMMIT_FILE));
-  if (!baseCommit) throw new RoundStop(`--repo needs the base commit of the change in ${path.join(resultsFolder, BASE_COMMIT_FILE)}`);
+  if (!baseCommit) throw new RoundStop(`--repo needs the base commit in ${path.join(resultsFolder, BASE_COMMIT_FILE)}`);
   return createChangedPlaceFinder(repositoryRoot, baseCommit);
 };
 
@@ -127,12 +128,13 @@ function recordRound() {
 
   const { previous, judgedBefore, headBefore, modelBefore } = readTheRoundBefore(roundsFolder, round);
   const run = readRunFolder(path.resolve(options.run), options[NO_FINDINGS_SWITCH]);
-  const givenDispositions = options.dispositions ? checkDispositionsForm(readJsonOrStop(path.resolve(options.dispositions), "dispositions")) : [];
+  const { dispositions: givenDispositions, renames: givenRenames } = options.dispositions ? checkDispositionsForm(readJsonOrStop(path.resolve(options.dispositions), "dispositions")) : { dispositions: [], renames: [] };
   const headCommit = repositoryRoot ? readHeadCommit(repositoryRoot) : "";
   const fixCreated = readFixCreated(repositoryRoot, round, headBefore);
   const { dispositionOfFindingMap, defects: dispositionDefects } = resolveDispositions(givenDispositions, run.items, { model, autonomous: options.autonomous, findChangedPlace: readChangedPlaceFinder(repositoryRoot, resultsFolder) });
 
-  const compared = compareTheRound({ run, dispositionOfFindingMap, previous, judgedBefore, model, modelBefore, round, fixCreatedFiles: fixCreated.checked ? new Set(fixCreated.files) : null });
+  const renameDefects = findGivenRenameDefects(givenRenames, model, (previous && previous.findingKeys) || []);
+  const compared = compareTheRound({ run, dispositionOfFindingMap, previous, judgedBefore, model, modelBefore, round, fixCreatedFiles: fixCreated.checked ? new Set(fixCreated.files) : null, givenRenames });
   const sentBackRoundOfNameMap = new Map(Object.entries((previous && previous.sentBack) || {}));
   const sendLines = listSendLines(round, compared.openChecksBefore, compared.openChecksNow, sentBackRoundOfNameMap);
   const openAfterDesignerNames = [...compared.openChecksNow.keys()].filter(displayName => sentBackRoundOfNameMap.get(displayName) === round - 1);
@@ -150,13 +152,14 @@ function recordRound() {
     fixCreated,
     dollars: addTheDollars(previous, roundDollars),
     notJudgedLines: compared.notJudgedLines,
-    defects: [...dispositionDefects, ...compared.defects, ...missingDefects],
+    defects: [...dispositionDefects, ...renameDefects, ...compared.defects, ...missingDefects],
     sendLines,
     loopLine,
     sentBack: Object.fromEntries(sentBackRoundOfNameMap),
+    filesToExclude: compared.filesToExclude,
     findingKeys: compared.findingKeys,
   };
-  writeTheRoundFolder(path.join(roundsFolder, String(round)), run, [...dispositionOfFindingMap.values()], result, headCommit, options.model ? path.resolve(options.model) : null);
+  writeTheRoundFolder(path.join(roundsFolder, String(round)), run, [...dispositionOfFindingMap.values(), ...givenRenames], result, headCommit, options.model ? path.resolve(options.model) : null);
   for (const line of writeRoundLines(result)) console.log(line);
   process.exit(result.defects.length ? 1 : 0);
 }

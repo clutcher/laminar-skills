@@ -20,12 +20,14 @@ export const KEY_STATES = Object.freeze({
 
 const OPEN_STATES = new Set([KEY_STATES.OPEN, KEY_STATES.SENT]);
 
-const LEFT_STATES = new Set([KEY_STATES.REASON, KEY_STATES.ANSWER]);
 
 const SENT_STATES = new Set([KEY_STATES.SENT, KEY_STATES.STILL_OPEN]);
 
-// A key in 1 of these states had a fix sent or made, so the same check under a former name of it is a return.
-const STATES_OF_A_FIXED_FORMER_KEY = new Set([KEY_STATES.SENT, KEY_STATES.STILL_OPEN, KEY_STATES.CLOSED_BY_A_FIX, KEY_STATES.CLOSED_BY_THE_MODEL]);
+// A key in 1 of these states had a fix sent or made, or an answer closed it, so the same check under a former name of it is a return.
+const STATES_OF_A_FIXED_FORMER_KEY = new Set([KEY_STATES.SENT, KEY_STATES.STILL_OPEN, KEY_STATES.CLOSED_BY_A_FIX, KEY_STATES.CLOSED_BY_THE_MODEL, KEY_STATES.ANSWER]);
+
+// A key that a fix or an answer closed and that a later round raises again is a return; a key left with a reason class is carried instead.
+const RETURN_CLOSERS_OF_STATE_MAP = new Map([[KEY_STATES.CLOSED_BY_A_FIX, "a fix"], [KEY_STATES.ANSWER, "an answer"]]);
 
 const CLASS_SCALE = "class";
 
@@ -55,6 +57,9 @@ const readKeyOfTheState = keyState => createFindingKey(keyState.displayName, key
 
 const buildKeyStateMap = previous => new Map(readList(previous && previous.findingKeys).map(keyState => [readKeyOfTheState(keyState), keyState]));
 
+// The files of the findings of 1 key, from each place with a line, because a place with no line names a folder.
+const listFilesOfTheFindings = findings => [...new Set(findings.flatMap(finding => finding.places.filter(place => place.file && place.line !== null).map(place => place.file)))];
+
 const groupFindingsByKey = findings => {
   const findingsOfKeyMap = new Map();
   for (const finding of findings) findingsOfKeyMap.set(finding.findingKey, [...(findingsOfKeyMap.get(finding.findingKey) || []), finding]);
@@ -75,7 +80,7 @@ const readLeftState = (disposition, earlierState) => {
 };
 
 const readTheFinding = (finding, disposition, earlierState, isCountedAsOpen) => {
-  const carried = !disposition && LEFT_STATES.has(earlierState);
+  const carried = !disposition && earlierState === KEY_STATES.REASON;
   const leftAs = readLeftState(disposition, carried ? earlierState : null);
   return { finding, disposition, carried, leftAs, open: !leftAs, counted: isCountedAsOpen(finding.displayName, finding.scale) };
 };
@@ -92,12 +97,12 @@ const countTheFindings = readings => ({
 const describeTheStanding = standing => (standing.standing === STANDINGS.RENAMED ? `renamed to ${standing.newDisplayName} in the model` : "removed from the model");
 
 class RoundComparison {
-  constructor(run, dispositionOfFindingMap, previous, model, modelBefore, round) {
+  constructor(run, dispositionOfFindingMap, previous, model, modelBefore, round, givenRenames) {
     this.run = run;
     this.previous = previous;
     this.model = model;
     this.modelBefore = modelBefore;
-    this.newNameOfOldNameMap = listRenamesBetweenRounds(modelBefore, model);
+    this.newNameOfOldNameMap = listRenamesBetweenRounds(modelBefore, model, givenRenames);
     this.round = round;
     this.earlierKeyStateMap = buildKeyStateMap(previous);
     this.isCountedAsOpen = createOpenCountRule(model);
@@ -121,6 +126,7 @@ class RoundComparison {
         counted: readings.some(reading => reading.counted),
         carried: readings.some(reading => reading.carried),
         formerNames: listFormerNames(this.model, this.modelBefore, displayName, this.newNameOfOldNameMap),
+        files: listFilesOfTheFindings(findings),
       }));
     }
   }
@@ -236,12 +242,13 @@ class RoundComparison {
     const returnedKeys = [];
     for (const [findingKey, keyState] of this.keyStateMap) {
       if (keyState.lastRaised !== this.round || keyState.carried) continue;
-      if (this.readEarlierState(findingKey) === KEY_STATES.CLOSED_BY_A_FIX) {
-        returnedKeys.push(keyState);
+      const earlierState = this.readEarlierState(findingKey);
+      if (RETURN_CLOSERS_OF_STATE_MAP.has(earlierState)) {
+        returnedKeys.push({ ...keyState, closedBy: RETURN_CLOSERS_OF_STATE_MAP.get(earlierState) });
         continue;
       }
       const formerKey = this.findFormerKeyOfTheReturn(findingKey, keyState, raisedNowKeys);
-      if (formerKey) returnedKeys.push({ ...keyState, returnedFrom: formerKey.displayName });
+      if (formerKey) returnedKeys.push({ ...keyState, returnedFrom: formerKey.displayName, closedBy: RETURN_CLOSERS_OF_STATE_MAP.get(formerKey.state) || RETURN_CLOSERS_OF_STATE_MAP.get(KEY_STATES.CLOSED_BY_A_FIX) });
     }
     return returnedKeys;
   }
@@ -261,8 +268,18 @@ class RoundComparison {
       openChecksNow: this.listOpenChecksOfNameMap(this.keyStateMap.values(), this.round),
       openChecksBefore: this.listOpenChecksOfNameMap(this.earlierKeyStateMap.values(), this.round - 1),
       readings: this.readings,
+      filesToExclude: this.listFilesToExclude(),
     };
+  }
+
+  // A file whose every finding key holds a reason class goes out of the next review, so no review judges a key with a reason class again; a key of another state on the file keeps it in, because pass and the return need that key judged.
+  listFilesToExclude() {
+    const statesOfFileMap = new Map();
+    for (const keyState of this.keyStateMap.values()) {
+      for (const file of readList(keyState.files)) statesOfFileMap.set(file, [...(statesOfFileMap.get(file) || []), keyState.state]);
+    }
+    return [...statesOfFileMap].filter(([, states]) => states.every(state => state === KEY_STATES.REASON)).map(([file]) => file).sort();
   }
 }
 
-export const compareTheRound = ({ run, dispositionOfFindingMap, previous, judgedBefore, model, modelBefore, round, fixCreatedFiles }) => new RoundComparison(run, dispositionOfFindingMap, previous, model, modelBefore, round).compare(judgedBefore || new Set(), fixCreatedFiles);
+export const compareTheRound = ({ run, dispositionOfFindingMap, previous, judgedBefore, model, modelBefore, round, fixCreatedFiles, givenRenames = [] }) => new RoundComparison(run, dispositionOfFindingMap, previous, model, modelBefore, round, givenRenames).compare(judgedBefore || new Set(), fixCreatedFiles);

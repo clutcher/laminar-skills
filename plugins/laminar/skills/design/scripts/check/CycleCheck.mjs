@@ -200,13 +200,35 @@ const findFolderPathOfTheDefect = (model, folderPath) => {
   return model.getClassPath(model.classes.find(theClass => readFolderOfTheFile(theClass.file) === folderPath));
 };
 
+const isARelationBetween = (relation, fromFolder, toFolder) => readFolderOfTheFile(relation.from.file) === fromFolder && readFolderOfTheFile(relation.to.file) === toFolder;
+
+// Each edge of a folder cycle with the class relations that make it, so a cycle left outside the change can be read against the base commit.
+const listFolderPairsOfTheCycle = (cyclePath, relations) => cyclePath.slice(1).map((toFolder, at) => ({
+  fromFolder: cyclePath[at],
+  toFolder,
+  relations: relations.filter(relation => isARelationBetween(relation, cyclePath[at], toFolder)),
+}));
+
 const findFolderCycleDefects = (model, relations) => {
-  const targetsOfFolderMap = buildTargetsOfAbstractionMap(relations.filter(relation => isAText(relation.from.file) && isAText(relation.to.file)), theClass => readFolderOfTheFile(theClass.file));
+  const folderRelations = relations.filter(relation => isAText(relation.from.file) && isAText(relation.to.file));
+  const targetsOfFolderMap = buildTargetsOfAbstractionMap(folderRelations, theClass => readFolderOfTheFile(theClass.file));
   return findStronglyConnectedGroups(targetsOfFolderMap).map(group => {
     const cyclePath = findCyclePath(group, targetsOfFolderMap);
-    return createRecheckDefect(DEFECT_CODES.FOLDER_CYCLE, findFolderPathOfTheDefect(model, cyclePath[0]), `the folders reach each other in a cycle through their classes: ${cyclePath.join(" -> ")}`);
+    const defect = createRecheckDefect(DEFECT_CODES.FOLDER_CYCLE, findFolderPathOfTheDefect(model, cyclePath[0]), `the folders reach each other in a cycle through their classes: ${cyclePath.join(" -> ")}`);
+    return { ...defect, folderPairs: listFolderPairsOfTheCycle(cyclePath, folderRelations) };
   });
 };
+
+const readLastNamePiece = className => className.split(".").pop();
+
+// A relation stands in the base commit where the file of the class that refers names the class it refers to there, and that class stands in its own file there.
+const standsInTheBase = (relation, currentTree) => {
+  const targetName = readLastNamePiece(relation.to.name);
+  return currentTree.holdsTheWord(relation.from.file, targetName) && currentTree.holdsTheWord(relation.to.file, targetName);
+};
+
+// The first edge of a folder cycle that no relation of the base commit makes, or null where the whole cycle predates the change.
+export const findFolderPairOutsideTheBase = (folderPairs, currentTree) => folderPairs.find(folderPair => !folderPair.relations.some(relation => standsInTheBase(relation, currentTree))) || null;
 
 const describeCycleCheck = (relations, signatureRelations, zoneOrder, uncheckedCount) => {
   const countOf = source => relations.filter(relation => relation.source === source).length;

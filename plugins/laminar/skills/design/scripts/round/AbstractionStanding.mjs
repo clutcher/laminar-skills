@@ -84,14 +84,30 @@ const findStandingAgainstTheBase = (model, displayName) => {
   return findStandingOfTheClass(model, displayName);
 };
 
-// An abstraction absent from the model is renamed where the designer renamed it between rounds, by the model of the round before.
-export const findStandingInTheModel = (model, displayName, newNameOfOldNameMap = new Map()) => {
+const findStandingOfTheAbstraction = (model, displayName, newNameOfOldNameMap) => {
   const enclosing = readEnclosingOfTheVariable(displayName);
-  if (enclosing) {
-    const standing = findStandingInTheModel(model, enclosing, newNameOfOldNameMap);
-    return standing.standing === STANDINGS.RENAMED ? createStanding(STANDINGS.RENAMED, displayName.replace(enclosing, standing.newDisplayName)) : standing;
-  }
-  const standing = findStandingAgainstTheBase(model, displayName);
+  if (!enclosing) return findStandingAgainstTheBase(model, displayName);
+
+  const standing = findStandingInTheModel(model, enclosing, newNameOfOldNameMap);
+  return standing.standing === STANDINGS.RENAMED ? createStanding(STANDINGS.RENAMED, displayName.replace(enclosing, standing.newDisplayName)) : standing;
+};
+
+// An abstraction absent from the model is renamed where the designer renamed it between rounds, by the model of the round before or by a rename the dispositions of the round give.
+export const findStandingInTheModel = (model, displayName, newNameOfOldNameMap = new Map()) => {
+  const standing = findStandingOfTheAbstraction(model, displayName, newNameOfOldNameMap);
   if (standing.standing !== STANDINGS.ABSENT || !newNameOfOldNameMap.has(displayName)) return standing;
   return createStanding(STANDINGS.RENAMED, newNameOfOldNameMap.get(displayName));
+};
+
+// The review names a field as its class and its name, joined by the method mark.
+const isAFieldOfTheModel = (model, displayName) => {
+  const fieldAt = displayName.lastIndexOf(METHOD_MARK);
+  const theClass = fieldAt > 0 ? model.findClass(displayName.slice(0, fieldAt)) : null;
+  return Boolean(theClass) && readList(theClass.fields).some(field => field.name === displayName.slice(fieldAt + 1));
+};
+
+// The model holds a display name where its abstraction stands, as it stands or unchanged, or where it names a field of a class of the model.
+export const isInTheModel = (model, displayName) => {
+  const { standing } = findStandingOfTheAbstraction(model, displayName, new Map());
+  return standing === STANDINGS.STANDS || standing === STANDINGS.UNCHANGED || isAFieldOfTheModel(model, displayName);
 };

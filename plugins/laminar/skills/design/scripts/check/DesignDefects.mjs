@@ -2,7 +2,8 @@ import { readList } from "../model/DesignModel.mjs";
 import { readCurrentTree } from "../migration/CurrentTree.mjs";
 import { findCompletenessDefects } from "./CompletenessCheck.mjs";
 import { findCurrentTreeDefects } from "./CurrentTreeCheck.mjs";
-import { findCycleCheckDefects } from "./CycleCheck.mjs";
+import { findCycleCheckDefects, findFolderPairOutsideTheBase } from "./CycleCheck.mjs";
+import { DEFECT_CODES, createDefect } from "./DesignDefect.mjs";
 import { findDataFlowDefects } from "./DataFlowCheck.mjs";
 import { findNameOfThePath } from "./DefectNames.mjs";
 import { findExitListResult } from "./ExitList.mjs";
@@ -32,17 +33,34 @@ const describeShapeReviews = shapeReviews => (shapeReviews.length
 
 const joinScriptCaseKey = (code, name, text) => JSON.stringify([code, name, text]);
 
-const markTheScriptCases = (model, defects) => {
-  const scriptCaseKeys = new Set(readList(model.decisions.scriptCases).map(scriptCase => joinScriptCaseKey(scriptCase.code, scriptCase.name, scriptCase.text)));
-  return defects.map(defect => {
+const OUTSIDE_THE_CHANGE = "outside the change";
+
+// A folder cycle whose object of scriptCases holds the reason outside the change is cleared only where the current tree, the base commit, makes every edge of the cycle, so the cycle predates the change.
+const findWhyTheCycleIsNotOutside = (defect, currentTree) => {
+  if (!currentTree) return "no --repo given, so its edges are not read in the base commit";
+  const folderPair = findFolderPairOutsideTheBase(defect.folderPairs, currentTree);
+  return folderPair ? `no relation of the base commit makes its edge ${folderPair.fromFolder} -> ${folderPair.toFolder}` : "";
+};
+
+const markTheScriptCases = (model, defects, currentTree) => {
+  const scriptCaseOfKeyMap = new Map(readList(model.decisions.scriptCases).map(scriptCase => [joinScriptCaseKey(scriptCase.code, scriptCase.name, scriptCase.text), scriptCase]));
+  const outsideDefects = [];
+  const markedDefects = defects.map(({ folderPairs, ...defect }) => {
     const name = findNameOfThePath(model, defect.path) || defect.path;
-    return { ...defect, name, foundWrong: defect.recheck && scriptCaseKeys.has(joinScriptCaseKey(defect.code, name, defect.sentence)) };
+    const scriptCase = defect.recheck ? scriptCaseOfKeyMap.get(joinScriptCaseKey(defect.code, name, defect.sentence)) : undefined;
+    if (!scriptCase) return { ...defect, name, foundWrong: false, matched: false };
+    if (defect.code !== DEFECT_CODES.FOLDER_CYCLE || scriptCase.reason !== OUTSIDE_THE_CHANGE) return { ...defect, name, foundWrong: true, matched: true };
+
+    const why = findWhyTheCycleIsNotOutside({ ...defect, folderPairs }, currentTree);
+    if (why) outsideDefects.push({ ...createDefect(DEFECT_CODES.OUTSIDE_THE_CHANGE_BUT_CHANGED, defect.path, `the folder cycle is left as ${OUTSIDE_THE_CHANGE}, and ${why}`), name, foundWrong: false, matched: false });
+    return { ...defect, name, foundWrong: !why, matched: true };
   });
+  return [...markedDefects, ...outsideDefects];
 };
 
 const listUnmatchedScriptCases = (model, markedDefects) => {
-  const foundWrongKeys = new Set(markedDefects.filter(defect => defect.foundWrong).map(defect => joinScriptCaseKey(defect.code, defect.name, defect.sentence)));
-  return readList(model.decisions.scriptCases).filter(scriptCase => !foundWrongKeys.has(joinScriptCaseKey(scriptCase.code, scriptCase.name, scriptCase.text)));
+  const matchedKeys = new Set(markedDefects.filter(defect => defect.matched).map(defect => joinScriptCaseKey(defect.code, defect.name, defect.sentence)));
+  return readList(model.decisions.scriptCases).filter(scriptCase => !matchedKeys.has(joinScriptCaseKey(scriptCase.code, scriptCase.name, scriptCase.text)));
 };
 
 // With a base commit, the current tree is that commit, never the working folder, which may hold the files of a writer.
@@ -68,7 +86,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...dataFlow.defects,
     ...exitList.defects,
   ];
-  const markedDefects = markTheScriptCases(model, defects);
+  const markedDefects = markTheScriptCases(model, defects, currentTree);
   return {
     headLines: [...cycleCheck.headLines, dataFlow.headLine, describeCurrentTree(currentTree), ...(fieldList ? [fieldList.headLine] : []), exitList.headLine, exitFailure.headLine, describeResponseTypes(completeness.libraryTypeNames), describeReview(reviewText), describeShapeReviews(shapeReviews)],
     defects: markedDefects,

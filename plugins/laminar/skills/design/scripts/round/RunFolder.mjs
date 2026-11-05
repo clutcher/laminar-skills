@@ -86,11 +86,20 @@ const isTheItemOfTheFinding = (item, finding) => {
   return item.scale === finding.scale && item.name === head.name && item.enclosing === shownEnclosing;
 };
 
-// Each finding of review.sarif joins the first item of review.md whose head names it, because review.sarif carries no item number.
-const joinFindingsToItems = (items, findings) => items.map(item => ({
-  number: item.number,
-  findings: findings.filter(finding => isTheItemOfTheFinding(item, finding) && items.find(other => isTheItemOfTheFinding(other, finding)) === item),
-}));
+// review.sarif carries no item number and lists its results in the order of the items of review.md, so each finding joins the first item whose head names it at or after the item of the finding before; 2 checks on 1 class in 2 sections of review.md so keep their 2 numbers.
+const joinFindingsToItems = (items, findings) => {
+  const findingsOfItemMap = new Map(items.map(item => [item, []]));
+  let itemAt = 0;
+  for (const finding of findings) {
+    const laterAt = items.findIndex((item, at) => at >= itemAt && isTheItemOfTheFinding(item, finding));
+    const joinedAt = laterAt >= 0 ? laterAt : items.findIndex(item => isTheItemOfTheFinding(item, finding));
+    if (joinedAt < 0) continue;
+
+    findingsOfItemMap.get(items[joinedAt]).push(finding);
+    itemAt = joinedAt;
+  }
+  return items.map(item => ({ number: item.number, findings: findingsOfItemMap.get(item) }));
+};
 
 export const readRunFolder = (runFolder, hasNoFindings) => {
   const prepare = readJsonOrStop(path.join(runFolder, PREPARE_FILE), "run folder");
