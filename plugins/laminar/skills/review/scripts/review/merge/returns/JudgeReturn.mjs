@@ -33,6 +33,10 @@ export const joinReturns = returns => ({
     rules: keepOnceEach(returns.flatMap(returned => (returned.ioScreen || {}).rules || [])),
     unknown: returns.flatMap(returned => (returned.ioScreen || {}).unknown || []),
   },
+  judgeCache: {
+    hits: returns.flatMap(returned => (returned.judgeCache || {}).hits || []),
+    fresh: returns.flatMap(returned => (returned.judgeCache || {}).fresh || []),
+  },
 });
 
 const listFindingsFiles = given => (Array.isArray(given) ? given : [given]).filter(Boolean);
