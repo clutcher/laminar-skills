@@ -21,6 +21,7 @@ const STOP_REASONS = [
   'behavior-the-design-did-not-decide',
   'migration-order-cannot-build',
   'fix-changes-the-model',
+  'model-breaks-code-style',
 ]
 
 // The stop of a group whose writer stopped or gave no answer with no stop of its own, so the next plan always reads a stop for each unfinished group.

@@ -41,6 +41,7 @@ The stop reasons that the writer gives:
 - `behavior-the-design-did-not-decide`
 - `migration-order-cannot-build`
 - `fix-changes-the-model`
+- `model-breaks-code-style`
 
 The stop reasons that the writer workflow or the calling session gives:
 
