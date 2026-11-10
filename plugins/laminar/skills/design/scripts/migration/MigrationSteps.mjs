@@ -109,16 +109,78 @@ class MigrationPlan {
     return [...treeFiles, ...this.listFilesOfTheModelThat(isTheCallerInTheModel)].filter(file => !this.createdFiles.has(file));
   }
 
-  // The reader files of a member of the class: in the tree, each file that names the class and the member; in the model, the file of each class whose body reads the member.
-  listReaderFiles(theClass, memberName) {
+  // A class of the model reads a member of theClass where its body reads the member, its calls name it, or it implements or extends theClass.
+  isAReaderOfTheMember(other, theClass, memberName) {
+    if (other === theClass) return false;
+
+    return this.model.implementsOrExtends(other, theClass)
+      || this.readsTheMemberInABody(other, theClass, memberName)
+      || this.callsAny(other, (calledClass, called) => calledClass === theClass && called.endsWith(`#${memberName}`));
+  }
+
+  // A body names a member by its word alone, so where a parent of theClass declares the member too, the body reads it on theClass only where its class also refers to theClass; otherwise it reads the member of the parent.
+  readsTheMemberInABody(other, theClass, memberName) {
+    if (!readList(other.methods).some(method => readsTheMember(method, memberName))) return false;
+
+    return !this.inheritsTheMember(theClass, memberName) || this.refersToTheClass(other, theClass);
+  }
+
+  inheritsTheMember(theClass, memberName) {
+    return this.model.classes
+      .filter(parent => parent !== theClass && this.model.implementsOrExtends(theClass, parent))
+      .some(parent => [...readList(parent.methods), ...readList(parent.fields)].some(member => member.name === memberName || member.oldName === memberName));
+  }
+
+  // A class refers to theClass where its calls or field types name it, as a construction or a member the parent lacks, or where a parameter type or a body of its methods names it.
+  refersToTheClass(other, theClass) {
+    const namesTheType = typeText => readTypeNames(typeText).some(typeName => this.model.findClassOfTheType(typeName, other) === theClass);
+    const classWord = new RegExp(`(^|[^\\w$])${theClass.name.replace(/[$]/g, "\\$")}([^\\w$]|$)`);
+    return this.namesTheClass(other, theClass)
+      || readList(other.methods).some(method => readList(method.parameters).some(parameter => namesTheType(parameter.type)) || (isAText(method.body) && classWord.test(method.body)));
+  }
+
+  // The group of the step that removes a file of the model: the group of the class created from it, or else the group of its own classes.
+  getGroupOfTheRemoval(removedFile) {
+    const createdFile = this.createdFileOfRemovedFileMap.get(removedFile);
+    return createdFile ? this.getGroupOfTheFile(createdFile) : this.getGroupOfTheFile(removedFile, this.lastGroup);
+  }
+
+  // The reader files of a member of the class: in the tree, each file that names the class and the member by its current name; in the model, the file of each class that reads it. A file that a later group removes still exists at the end of the group of the change, so it stays a reader file.
+  listReaderFiles(theClass, memberName, groupOfTheChange, currentMemberName = memberName) {
     const { words, referredName } = readTypeSearch(readCurrentTypeName(theClass));
-    const isAReaderInTheModel = other => other !== theClass && readList(other.methods).some(method => readsTheMember(method, memberName));
-    return this.listCallerFiles([...words, memberName], isAReaderInTheModel, referredName, this.readCurrentFileOf(theClass.file))
-      .filter(file => file !== theClass.file && !this.removedFiles.has(file));
+    return this.listCallerFiles([...words, currentMemberName], other => this.isAReaderOfTheMember(other, theClass, memberName), referredName, this.readCurrentFileOf(theClass.file))
+      .filter(file => file !== theClass.file && (!this.removedFiles.has(file) || this.getGroupOfTheRemoval(file) > groupOfTheChange));
+  }
+
+  describeReaderFile(readerFile) {
+    return this.removedFiles.has(readerFile) ? `${readerFile}, which group ${this.getGroupOfTheRemoval(readerFile)} removes` : readerFile;
   }
 
   describeReaderUpdate(readerFiles) {
-    return readerFiles.length ? `; updates the files that read it: ${joinNames(readerFiles)}` : "";
+    return readerFiles.length ? `; updates the files that read it: ${joinNames(readerFiles.map(readerFile => this.describeReaderFile(readerFile)))}` : "";
+  }
+
+  // The group of a changed class of the model in the file that stands later than the group of the change; null where none does.
+  findLaterGroupOfTheFile(file, groupOfTheChange) {
+    const laterGroups = this.listClassesOfTheFile(file)
+      .filter(theClass => this.model.isChangedClass(theClass))
+      .map(getGroupOfTheClass)
+      .filter(group => group > groupOfTheChange);
+    return laterGroups.length ? Math.min(...laterGroups) : null;
+  }
+
+  // A file whose class a later group changes gets only the lines that the new signature breaks in the group of the change, so the group builds and the rest waits for its own group.
+  describeLaterGroupFile(file, groupOfTheChange) {
+    const laterGroup = this.findLaterGroupOfTheFile(file, groupOfTheChange);
+    return laterGroup === null ? "" : ` (change only the lines that the new signature breaks; the rest of this class is group ${laterGroup})`;
+  }
+
+  describeSignatureReaderFiles(readerFiles, groupOfTheChange) {
+    return joinNames(readerFiles.map(readerFile => `${this.describeReaderFile(readerFile)}${this.describeLaterGroupFile(readerFile, groupOfTheChange)}`));
+  }
+
+  describeSignatureReaderUpdate(readerFiles, groupOfTheChange) {
+    return readerFiles.length ? `; updates the files that read it: ${this.describeSignatureReaderFiles(readerFiles, groupOfTheChange)}` : "";
   }
 
   callsAny(theClass, isTheCalled) {
@@ -163,18 +225,54 @@ class MigrationPlan {
         steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames the class ${oldTypeName} to ${theClass.name}, with no change of behavior${this.describeImportUpdate(importingFiles)}`, [theClass.file, ...callerFiles, ...importingFiles]));
       }
       for (const method of readList(theClass.methods)) {
-        if (!isAText(method.oldName)) continue;
-        const callerFiles = this.listCallerFiles([...words, method.oldName], other => this.callsAny(other, (calledClass, called) => calledClass === theClass && called.endsWith(`#${method.name}`)), referredName, this.readCurrentFileOf(theClass.file));
-        steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames ${this.model.getClassDisplayName(theClass)}#${method.oldName} to ${method.name}, with no change of behavior`, [theClass.file, ...callerFiles]));
+        if (isAText(method.oldName)) steps.push(this.createMethodRenameStep(theClass, method, group));
       }
       // A renamed field is a changed public member: the step updates each reader file in the group of the rename, so the group builds alone.
       for (const field of readList(theClass.fields)) {
         if (!isAText(field.oldName)) continue;
-        const readerFiles = this.listReaderFiles(theClass, field.oldName);
+        const readerFiles = this.listReaderFiles(theClass, field.oldName, group);
         steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames ${this.model.getClassDisplayName(theClass)}#${field.oldName} to ${field.name}, with no change of behavior${this.describeReaderUpdate(readerFiles)}`, [theClass.file, ...readerFiles]));
       }
     }
     return steps;
+  }
+
+  // A renamed method changes its signature too where the current file declares it under the old name with other parameter types or another return type; a new parameter name alone changes no signature, and a file that holds no declaration the script reads keeps the plain rename.
+  changesTheSignatureOfTheRename(theClass, method) {
+    if (!this.currentTree) return false;
+
+    const currentFile = this.readCurrentFileOf(theClass.file);
+    return this.currentTree.listParameterTextsOf(currentFile, method.oldName).length > 0
+      && !this.currentTree.holdsTheTypesOfTheSignature(currentFile, { ...method, name: method.oldName });
+  }
+
+  // The earliest group whose rename with a signature change of the same method, in a class that theClass implements or extends, already changed the lines of theClass that the new signature breaks; null where no earlier group did.
+  findGroupThatCarriedTheRename(theClass, method) {
+    const groupOfTheClass = getGroupOfTheClass(theClass);
+    const carryingGroups = this.model.classes
+      .filter(parent => getGroupOfTheClass(parent) < groupOfTheClass && this.model.implementsOrExtends(theClass, parent))
+      .filter(parent => readList(parent.methods).some(parentMethod => parentMethod.oldName === method.oldName && parentMethod.name === method.name && this.changesTheSignatureOfTheRename(parent, parentMethod)))
+      .map(getGroupOfTheClass);
+    return carryingGroups.length ? Math.min(...carryingGroups) : null;
+  }
+
+  describeCarriedRename(theClass, method) {
+    const carryingGroup = this.findGroupThatCarriedTheRename(theClass, method);
+    return carryingGroup === null ? "" : `; group ${carryingGroup} already changed the lines that the new signature breaks`;
+  }
+
+  // A rename whose signature changes too breaks each reader file, its callers, implementers and test substitutes, so the step carries the new signature to them in its own group.
+  createMethodRenameStep(theClass, method, group) {
+    const renames = `renames ${this.model.getClassDisplayName(theClass)}#${method.oldName} to ${method.name}`;
+    const carried = this.describeCarriedRename(theClass, method);
+    if (this.changesTheSignatureOfTheRename(theClass, method)) {
+      const readerFiles = [...new Set(this.listReaderFiles(theClass, method.name, group, method.oldName))];
+      return this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `${renames} and changes its signature to that of the model${carried}${this.describeSignatureReaderUpdate(readerFiles, group)}`, [theClass.file, ...readerFiles]);
+    }
+
+    const { words, referredName } = readTypeSearch(readCurrentTypeName(theClass));
+    const callerFiles = this.listCallerFiles([...words, method.oldName], other => this.isAReaderOfTheMember(other, theClass, method.name), referredName, this.readCurrentFileOf(theClass.file));
+    return this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `${renames}, with no change of behavior${carried}`, [theClass.file, ...callerFiles]);
   }
 
   describeCreatedFile(file) {
@@ -210,18 +308,19 @@ class MigrationPlan {
       .map(({ file }) => ({ file, classes: this.listClassesOfTheFile(file) }))
       .filter(({ classes }) => classes.length)
       .map(({ file, classes }) => {
-        const callerFiles = [...new Set(classes.flatMap(theClass => this.listCallersOfChangedSignatures(theClass)))];
-        const callers = callerFiles.length ? `; updates the callers of the changed signatures in ${joinNames(callerFiles)}` : "";
-        return this.createStep(MIGRATION_STAGES.CHANGED_MEMBERS, this.getGroupOfClasses(classes), `changes the fields and method signatures of ${classes.map(theClass => theClass.name).join(", ")} to those of the model${this.describeMembersFixedApart(classes)}${callers}`, [file, ...callerFiles]);
+        const group = this.getGroupOfClasses(classes);
+        const callerFiles = [...new Set(classes.flatMap(theClass => this.listCallersOfChangedSignatures(theClass, group)))];
+        const callers = callerFiles.length ? `; updates the callers of the changed signatures in ${this.describeSignatureReaderFiles(callerFiles, group)}` : "";
+        return this.createStep(MIGRATION_STAGES.CHANGED_MEMBERS, group, `changes the fields and method signatures of ${classes.map(theClass => theClass.name).join(", ")} to those of the model${this.describeMembersFixedApart(classes)}${callers}`, [file, ...callerFiles]);
       });
   }
 
-  // A public method whose signature changes with no rename breaks its callers, so the step of the change updates them in its own group.
-  listCallersOfChangedSignatures(theClass) {
+  // A public method whose signature or return type changes with no rename breaks its callers and implementers, so the step of the change updates them in its own group.
+  listCallersOfChangedSignatures(theClass, groupOfTheChange) {
     const currentFile = this.readCurrentFileOf(theClass.file);
     return readList(theClass.methods)
       .filter(method => !isAText(method.oldName) && this.changesTheMethodSignature(currentFile, method))
-      .flatMap(method => this.listReaderFiles(theClass, method.name));
+      .flatMap(method => this.listReaderFiles(theClass, method.name, groupOfTheChange));
   }
 
   describeMembersFixedApart(classes) {
@@ -306,7 +405,7 @@ class MigrationPlan {
     for (const theClass of this.model.classes) {
       if (!readList(theClass.removed).length) continue;
       // A removed public member breaks each reader file, so the step of the removal updates them in its own group.
-      const readerFiles = [...new Set(readList(theClass.removed).flatMap(removedName => this.listReaderFiles(theClass, removedName)))];
+      const readerFiles = [...new Set(readList(theClass.removed).flatMap(removedName => this.listReaderFiles(theClass, removedName, getGroupOfTheClass(theClass))))];
       steps.push(this.createStep(MIGRATION_STAGES.REMOVALS, getGroupOfTheClass(theClass), `removes ${readList(theClass.removed).join(", ")} from ${theClass.name}, once no caller uses them${this.describeReaderUpdate(readerFiles)}`, [theClass.file, ...readerFiles]));
     }
     for (const { child, file } of this.children) {
@@ -384,7 +483,7 @@ class MigrationPlan {
       .flatMap(theClass => {
         const testFiles = this.listTestFilesThatName(theClass);
         if (this.isSearchedForTests(theClass) && !testFiles.length) return [];
-        const found = testFiles.length ? joinNames(testFiles) : TESTS_NOT_FOUND;
+        const found = testFiles.length ? joinNames(testFiles.map(testFile => `${testFile}${this.describeLaterGroupFile(testFile, getGroupOfTheClass(theClass))}`)) : TESTS_NOT_FOUND;
         return [{ ...this.createStep(MIGRATION_STAGES.TESTS, getGroupOfTheClass(theClass), `updates or removes the tests that construct or call ${this.model.getClassDisplayName(theClass)}: ${found}`, testFiles), testedFiles: [theClass.file] }];
       });
   }

@@ -28,7 +28,7 @@ export const describeTheChangeOfTheMember = (model, theClass, methods, currentTr
   for (const method of methods) {
     if (isMarkedUnchanged(method)) continue;
     if (isAText(method.oldName)) return `${theClass.name}#${method.name} holds an oldName`;
-    if (!currentTree.holdsTheSignature(currentFile, method)) return `the current tree holds no ${theClass.name}#${method.name} with the parameters of the model`;
+    if (!currentTree.holdsTheSignature(currentFile, method)) return `the current tree holds no ${theClass.name}#${method.name} with the parameters and the return type of the model`;
     if (!isAText(method.body)) continue;
     const writtenLine = findBodyLineTheChangeWrites(currentTree.readFileText(currentFile), method.body);
     if (writtenLine) return `the body of ${theClass.name}#${method.name} holds the line "${writtenLine}", which the current tree does not hold, so the design writes it`;

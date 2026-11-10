@@ -186,13 +186,17 @@ export class DesignModel {
     return methodsWithClass;
   }
 
+  implementsOrExtends(implementingClass, theClass) {
+    const parentNames = [...readList(implementingClass.implements), ...readList(implementingClass.extends)];
+    return parentNames.some(parentName => this.findClassOfTheType(readHeadTypeName(parentName), implementingClass) === theClass);
+  }
+
   listImplementationNames(theClass, method) {
     if (!isAnInterface(theClass)) return [];
 
     const implementationNames = [];
     for (const implementingClass of this.classes) {
-      const parentNames = [...readList(implementingClass.implements), ...readList(implementingClass.extends)];
-      if (!parentNames.some(parentName => this.findClassOfTheType(readHeadTypeName(parentName), implementingClass) === theClass)) continue;
+      if (!this.implementsOrExtends(implementingClass, theClass)) continue;
       for (const implementingMethod of readList(implementingClass.methods)) {
         if (implementingMethod.name === method.name) implementationNames.push(this.getMethodDisplayName(implementingClass, implementingMethod));
       }

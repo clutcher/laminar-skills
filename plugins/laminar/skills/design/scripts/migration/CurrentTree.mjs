@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { isAText } from "../model/DesignModel.mjs";
+import { isAText, readTypeNames } from "../model/DesignModel.mjs";
 import { splitAtTopLevelCommas } from "../model/TypeArguments.mjs";
 
 // Folders that hold installed packages or build output in the common stacks (npm, Maven, Gradle, most bundlers), never the source a rename changes.
@@ -30,7 +30,56 @@ const createParameterListsPattern = escapedName => {
   const direct = `${nameStart}\\s*\\(([^()]*)\\)`;
   const assigned = `${nameStart}\\s*(?::[^=;(){}]*)?=\\s*(?:async\\s+)?(?:(?:function\\s*\\*?\\s*(?:[\\w$]+\\s*)?(?:<[^<>()]*>\\s*)?\\(([^()]*)\\))|(?:(?:<[^<>()]*>\\s*)?\\(([^()]*)\\)\\s*(?::[^;{}]*?)?=>))`;
   const single = `${nameStart}\\s*(?::[^=;(){}]*)?=\\s*(?:async\\s+)?([\\w$]+)\\s*=>`;
-  return new RegExp(`${direct}|${assigned}|${single}`, "g");
+  return new RegExp(`${direct}|${assigned}|${single}`, "gd");
+};
+
+// The words before a method name that declare it and name no type it returns: the modifiers and the declaring words of the common stacks.
+const DECLARING_WORDS = new Set(["public", "private", "protected", "internal", "static", "final", "abstract", "override", "open", "suspend", "default", "synchronized", "native", "export", "declare", "readonly", "async", "fun", "function", "def", "const", "let", "var", "val", "get", "set", "operator", "inline", "infix", "tailrec", "external", "sealed", "virtual", "extern"]);
+
+// The words before a method name that make its line a statement that calls it, not its declaration.
+const CALLING_WORDS = new Set(["return", "new", "await", "throw", "yield", "else", "case", "do", "typeof", "instanceof", "in", "of", "not", "and", "or", "is", "as"]);
+
+// The last name before the method name on its line, such as Money, List<Money> or Money[] in Java.
+const LAST_NAME_BEFORE = /(?:^|\s)([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*(?:<[^()]*>)?(?:\[\])*\??)$/;
+
+// The return type after the parameter list: ": Money" in TypeScript and Kotlin, "-> Money" in Python.
+const RETURN_TYPE_AFTER = /^\s*(?::|->)\s*([\s\S]+?)\s*:?\s*$/;
+
+const END_OF_THE_DECLARATION = /[{;=\n]/;
+
+const readTextAfterTheParameters = (text, parameterListEnd) => {
+  const afterStart = text[parameterListEnd] === ")" ? parameterListEnd + 1 : parameterListEnd;
+  const afterText = text.slice(afterStart);
+  const end = afterText.search(END_OF_THE_DECLARATION);
+  return end < 0 ? afterText : afterText.slice(0, end);
+};
+
+// The return type that the declaration of a method states, read from the start of its line to its opening brace; null where the line is a call, or a declaration that states no return type, such as an expression body in Kotlin.
+const readDeclaredReturnType = (text, nameStart, parameterListEnd) => {
+  const lineStart = text.lastIndexOf("\n", nameStart - 1) + 1;
+  const textBefore = text.slice(lineStart, nameStart).trimEnd();
+  const lastNameBefore = textBefore === "" ? "" : LAST_NAME_BEFORE.exec(textBefore)?.[1];
+  if (lastNameBefore === undefined || CALLING_WORDS.has(lastNameBefore)) return null;
+  if (lastNameBefore !== "" && !DECLARING_WORDS.has(lastNameBefore)) return lastNameBefore;
+
+  return RETURN_TYPE_AFTER.exec(readTextAfterTheParameters(text, parameterListEnd))?.[1] ?? null;
+};
+
+const splitTheParameterTexts = parameterText => splitAtTopLevelCommas(parameterText).map(text => text.trim()).filter(Boolean);
+
+const holdsTheParameters = (parameterText, parameters) => splitTheParameterTexts(parameterText).length === parameters.length && parameters.every(parameter => isAWordIn(parameterText, parameter.name));
+
+// A package before a type, such as com.example in com.example.Money, names where the type lives and not the type, and a file names the type through its import.
+const PACKAGE_PREFIX = /(^|[^\w$.])(?:[a-z_][\w$]*\.)+(?=[A-Z])/g;
+
+const readComparedTypeNames = typeText => readTypeNames(isAText(typeText) ? typeText.replace(PACKAGE_PREFIX, "$1") : typeText);
+
+const holdsTheTypeNames = (text, typeText) => readComparedTypeNames(typeText).every(typeName => isAWordIn(text, typeName));
+
+// A parameter of the model with no type is compared by nothing, so only the count and the stated types decide.
+const holdsTheParameterTypes = (parameterText, parameters) => {
+  const parameterTexts = splitTheParameterTexts(parameterText);
+  return parameterTexts.length === parameters.length && parameters.every((parameter, at) => holdsTheTypeNames(parameterTexts[at], parameter.type));
 };
 
 const readNameOfTheFile = file => path.posix.basename(file).replace(/\.[^.]*$/, "");
@@ -226,19 +275,40 @@ class CurrentTree {
     return this.files.filter(file => words.every(word => this.holdsTheWord(file, word)));
   }
 
-  listParameterTextsOf(file, methodName) {
+  // Each call or declaration of the method in the file, with its parameter text and the return type its declaration states.
+  listSignatureTextsOf(file, methodName) {
     const text = this.readFileText(file);
     if (text === null) return [];
     const parameterLists = createParameterListsPattern(methodName.replace(/[$]/g, "\\$"));
-    return [...text.matchAll(parameterLists)].map(match => match.slice(1).find(parameterText => parameterText !== undefined));
+    return [...text.matchAll(parameterLists)].map(match => {
+      const group = match.slice(1).findIndex(parameterText => parameterText !== undefined) + 1;
+      const nameStart = text.startsWith(methodName, match.index) ? match.index : match.index + 1;
+      return { parameterText: match[group], returnTypeText: readDeclaredReturnType(text, nameStart, match.indices[group][1]) };
+    });
   }
 
+  listParameterTextsOf(file, methodName) {
+    return this.listSignatureTextsOf(file, methodName).map(signatureText => signatureText.parameterText);
+  }
+
+  // A method with no result, or one whose declarations in the file state no return type the script reads, is compared by its parameters alone.
   holdsTheSignature(file, method) {
+    return this.holdsTheSignatureBy(file, method, holdsTheParameters);
+  }
+
+  // The signature by the types alone, for a rename, whose parameters may take new names with no change of the signature.
+  holdsTheTypesOfTheSignature(file, method) {
+    return this.holdsTheSignatureBy(file, method, holdsTheParameterTypes);
+  }
+
+  holdsTheSignatureBy(file, method, holdsTheParametersOfTheText) {
     const parameters = Array.isArray(method.parameters) ? method.parameters : [];
-    return this.listParameterTextsOf(file, method.name).some(parameterText => {
-      const parameterTexts = splitAtTopLevelCommas(parameterText).map(text => text.trim()).filter(Boolean);
-      return parameterTexts.length === parameters.length && parameters.every(parameter => isAWordIn(parameterText, parameter.name));
-    });
+    const signatureTexts = this.listSignatureTextsOf(file, method.name).filter(signatureText => holdsTheParametersOfTheText(signatureText.parameterText, parameters));
+    if (!signatureTexts.length) return false;
+
+    const declaredReturnTypes = signatureTexts.map(signatureText => signatureText.returnTypeText).filter(isAText);
+    if (!readComparedTypeNames(method.returns).length || !declaredReturnTypes.length) return true;
+    return declaredReturnTypes.some(declaredReturnType => holdsTheTypeNames(declaredReturnType, method.returns));
   }
 
   // The files that hold every word and refer to the class of classFile; where another file of the tree declares a class of the same name, only a file of the same folder or one whose import names the qualified class counts.

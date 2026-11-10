@@ -199,7 +199,7 @@ const findUnchangedMethodDefects = (model, currentTree) => {
 
     const currentFile = readOldFileOfTheClass(model, theClass);
     if (currentTree.holdsTheSignature(currentFile, method)) continue;
-    defects.push(createDefect(DEFECT_CODES.METHOD_CHANGED_BUT_MARKED_UNCHANGED, `${model.getMethodPath(theClass, method)}.unchanged`, `${displayName} is marked unchanged, and the current file ${currentFile} holds no ${method.name} with the parameters of the model`));
+    defects.push(createDefect(DEFECT_CODES.METHOD_CHANGED_BUT_MARKED_UNCHANGED, `${model.getMethodPath(theClass, method)}.unchanged`, `${displayName} is marked unchanged, and the current file ${currentFile} holds no ${method.name} with the parameters and the return type of the model`));
   }
   return defects;
 };
