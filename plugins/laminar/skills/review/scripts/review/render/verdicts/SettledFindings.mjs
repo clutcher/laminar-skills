@@ -209,6 +209,42 @@ const foldTheCombines = ruled => {
   return folded;
 };
 
+const SAME_LINE_FOLD_CHECKS = Object.freeze(["S2", "S5"]);
+
+const isFoldedAtTheSameLine = ruledFinding => !ruledFinding.finding.combined && SAME_LINE_FOLD_CHECKS.includes(readCheckKey(ruledFinding.finding.check));
+
+const buildSameLineKey = finding => [finding.codeUnderReviewId || "", finding.displayName || "", stripLeadingDotSlash(finding.file || ""), Number(finding.line) || 0, isAConsideration(finding)].join("|");
+
+const findTheSameLinePartner = (ruledFinding, standing, taken) => standing.find(other => other !== ruledFinding
+  && !taken.has(other)
+  && isFoldedAtTheSameLine(other)
+  && readCheckKey(other.finding.check) !== readCheckKey(ruledFinding.finding.check)
+  && buildSameLineKey(other.finding) === buildSameLineKey(ruledFinding.finding));
+
+const buildFindingFoldedAtTheSameLine = settledFindings => {
+  const ordered = [...settledFindings].sort((left, right) => readCheckRank(left.check) - readCheckRank(right.check));
+  const fold = { checks: ordered.map(finding => readCheckKey(finding.check)), verdict: { summary: ordered[0].summary || ordered[0].sentence } };
+  const combined = buildCombinedFinding(fold, ordered);
+  return {
+    ...combined,
+    notVerified: ordered.map(finding => finding.notVerified).find(Boolean) || "",
+    combined: { ...combined.combined, foldedAtTheSameLine: true },
+  };
+};
+
+const foldTheSameLineChecks = standing => {
+  const taken = new Set();
+  const folded = [];
+  for (const ruledFinding of standing) {
+    if (taken.has(ruledFinding)) continue;
+    const partner = isFoldedAtTheSameLine(ruledFinding) ? findTheSameLinePartner(ruledFinding, standing, taken) : null;
+    if (!partner) { folded.push(ruledFinding); continue; }
+    taken.add(partner);
+    folded.push({ decision: DECISIONS.COMBINE, finding: buildFindingFoldedAtTheSameLine([ruledFinding.finding, partner.finding]) });
+  }
+  return folded;
+};
+
 const isRejected = ruledFinding => ruledFinding.decision === DECISIONS.REJECT;
 
 const findTheRejectedLeadOfItsCheck = (ruledFinding, ruled) => {
@@ -311,7 +347,7 @@ export class SettledFindings {
   settle(group, returns) {
     const combines = group.verdict ? [] : combinesOf(group, listVerdictsOfTheGroup(group, returns));
     const ruled = keepThePlacesOfSurvivors(group.possibleFindings.map(finding => ruleFinding(finding, group, returns, combines)), this.matchingKeyPlacesOf);
-    const standing = foldTheCombines(ruled.filter(ruledFinding => !isRejected(ruledFinding)));
+    const standing = foldTheSameLineChecks(foldTheCombines(ruled.filter(ruledFinding => !isRejected(ruledFinding))));
     this.rejected.push(...ruled.filter(isRejected).map(ruledFinding => ruledFinding.finding));
     const standingFindings = standing.map(ruledFinding => ruledFinding.finding);
     this.leftOut.push(...standingFindings.filter(finding => !this.isAtAScaleAskedFor(finding)));

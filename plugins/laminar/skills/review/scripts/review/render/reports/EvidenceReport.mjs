@@ -134,7 +134,7 @@ const formatSingleFinding = finding => {
 
 const formatCombinedFinding = finding => [
   [`**\`${formatPlace(finding)}\`** — ${String(finding.scale || "").toLowerCase()} ${formatQuotedDisplayName(finding)} · ${convertToText(finding.summary)}`,
-    `Combined by the verifier: ${formatCombinedChecksLine(finding)}`,
+    `${finding.combined.foldedAtTheSameLine ? "Combined at the same line" : "Combined by the verifier"}: ${formatCombinedChecksLine(finding)}`,
     causeLineOf(finding),
     ...formatConfidenceLines(finding),
     `Direction: ${formatDirectionOfTheFinding(finding) || "none for this check"}`].join("\n"),
