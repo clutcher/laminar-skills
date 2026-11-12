@@ -13,6 +13,7 @@ import { findFieldListResult } from "./FieldListCheck.mjs";
 import { listMigrationSteps } from "../migration/MigrationSteps.mjs";
 import { findGroupOrderDefects } from "../migration/GroupOrder.mjs";
 import { findFindingsDefects } from "./FindingsCheck.mjs";
+import { findSimplestFormDefects } from "./SimplestForm.mjs";
 import { findTriedNameDefects } from "./TriedNames.mjs";
 import { readZoneOrder } from "./ZoneOrder.mjs";
 
@@ -85,6 +86,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...completeness.defects,
     ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
     ...findTriedNameDefects(model, shapeReviews, roundModels),
+    ...findSimplestFormDefects(model),
     ...(currentTree ? findCurrentTreeDefects(model, currentTree) : []),
     ...(fieldList ? fieldList.defects : []),
     ...cycleCheck.defects,

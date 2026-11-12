@@ -60,6 +60,8 @@ export const DEFECT_CODES = Object.freeze({
   EXISTING_DEFECT_FIXED_AND_NOT_FIXED: "existing-defect-fixed-and-not-fixed",
   EXISTING_DEFECT_NEITHER_FIXED_NOR_NOT_FIXED: "existing-defect-neither-fixed-nor-not-fixed",
   RENAMED_CLASS_RAISED_AGAIN: "renamed-class-raised-again",
+  TYPE_HOLDS_ONLY_A_COLLECTION: "type-holds-only-a-collection",
+  INTERFACE_WITH_ONE_IMPLEMENTATION: "interface-with-one-implementation",
 });
 
 export const createDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false });
