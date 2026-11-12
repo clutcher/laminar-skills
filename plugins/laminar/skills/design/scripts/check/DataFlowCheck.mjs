@@ -26,11 +26,66 @@ const FUNCTION_ARROW = /->|=>/;
 
 const SPREAD = /^(?:\.\.\.|\*)/;
 
+// The members the root type of each parsed language gives every object, which no class of the model declares.
+const JAVA_ROOT_MEMBERS = new Set([
+  "getClass", // java.lang.Object: the runtime class of the object
+  "equals", // java.lang.Object: equality, which every class inherits
+  "hashCode", // java.lang.Object: the hash that agrees with equals
+  "toString", // java.lang.Object: the text form of the object
+]);
+
+const SCRIPT_ROOT_MEMBERS = new Set([
+  "toString", // Object.prototype: the text form of the object
+  "valueOf", // Object.prototype: the primitive value of the object
+  "hasOwnProperty", // Object.prototype: whether the object holds a property of its own
+]);
+
+const ROOT_MEMBERS_OF_LANGUAGE_MAP = new Map([["Java", JAVA_ROOT_MEMBERS], ["JavaScript", SCRIPT_ROOT_MEMBERS], ["TypeScript", SCRIPT_ROOT_MEMBERS]]);
+
+// The members the Java compiler gives every enum, through java.lang.Enum and the static methods it adds.
+const JAVA_ENUM_MEMBERS = new Set([
+  "values", // the static method that returns every constant in order
+  "valueOf", // the static method that returns the constant of a name
+  "name", // java.lang.Enum: the name of the constant
+  "ordinal", // java.lang.Enum: the position of the constant
+  "compareTo", // java.lang.Enum: the order of 2 constants
+]);
+
+const ENUM_KIND_WORD = "enum";
+
 const lowerFirst = name => name.charAt(0).toLowerCase() + name.slice(1);
 
 const isATypeName = name => /^[A-Z]/.test(name);
 
 export const readLanguageOfTheClass = theClass => (isAText(theClass.file) ? readParsedLanguage(theClass.file) : null);
+
+const holdsTheRootMember = (theClass, memberName) => {
+  const language = readLanguageOfTheClass(theClass);
+  if (language === "Java" && theClass.kindWord === ENUM_KIND_WORD && JAVA_ENUM_MEMBERS.has(memberName)) return true;
+  return ROOT_MEMBERS_OF_LANGUAGE_MAP.get(language)?.has(memberName) === true;
+};
+
+// The supertypes of a class through implements and extends: the classes the model holds, and whether 1 of them names a type the model does not hold, such as a library type, which may hold any member.
+const readSupertypes = (model, theClass) => {
+  const modelSupertypes = [];
+  let reachesAnOutsideType = false;
+  const classesToVisit = [theClass];
+  while (classesToVisit.length) {
+    const visitedClass = classesToVisit.pop();
+    for (const parentName of [...readList(visitedClass.implements), ...readList(visitedClass.extends)]) {
+      const parentClass = model.findClassOfTheType(readHeadTypeName(parentName), visitedClass);
+      if (!parentClass) {
+        reachesAnOutsideType = true;
+        continue;
+      }
+      if (parentClass === theClass || modelSupertypes.includes(parentClass)) continue;
+
+      modelSupertypes.push(parentClass);
+      classesToVisit.push(parentClass);
+    }
+  }
+  return { modelSupertypes, reachesAnOutsideType };
+};
 
 class BodyFlow {
   constructor(model, theClass, method) {
@@ -93,6 +148,13 @@ class BodyFlow {
     return readList(theClass.methods).filter(other => other.name === memberName);
   }
 
+  inheritsTheMember(theClass, memberName) {
+    if (holdsTheRootMember(theClass, memberName)) return true;
+
+    const { modelSupertypes, reachesAnOutsideType } = readSupertypes(this.model, theClass);
+    return reachesAnOutsideType || modelSupertypes.some(supertype => this.listMethodsOf(supertype, memberName).length > 0 || this.isFieldReadOf(supertype, memberName));
+  }
+
   checkMemberCall(call) {
     const callText = `${call.receiver}.${call.memberName}`;
     if (!this.holdsTheSource(call.receiver)) {
@@ -110,7 +172,7 @@ class BodyFlow {
       this.checkArgumentCount(call, `${this.model.getClassDisplayName(calledClass)}#${call.memberName}`, calledMethods);
       return;
     }
-    if (this.isFieldReadOf(calledClass, call.memberName)) return;
+    if (this.isFieldReadOf(calledClass, call.memberName) || this.inheritsTheMember(calledClass, call.memberName)) return;
     this.defects.push(createRecheckDefect(DEFECT_CODES.BODY_CALL_UNRESOLVED, this.path, `${this.displayName} calls ${callText}, and ${calledClass.name} holds no method and no field ${call.memberName}`));
   }
 
@@ -143,7 +205,7 @@ class BodyFlow {
 
   checkBody() {
     for (const statement of readBodyStatements(this.method.body)) {
-      for (const variable of [...statement.loopVariables, ...statement.lambdaParameters]) this.typeOfSourceMap.set(variable.name, "");
+      for (const variable of [...statement.loopVariables, ...statement.patternVariables, ...statement.lambdaParameters]) this.typeOfSourceMap.set(variable.name, variable.typeText);
       for (const call of statement.calls) this.checkCall(call);
       for (const declaration of statement.declarations) this.typeOfSourceMap.set(declaration.name, declaration.typeText || this.readTypeOfTheDeclaration(statement));
     }

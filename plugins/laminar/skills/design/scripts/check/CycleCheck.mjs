@@ -1,4 +1,4 @@
-import { getFolderPath, isAText, readFolderOfTheFile, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
+import { getFolderPath, isAText, isATestFileOfTheModel, readFolderOfTheFile, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
 import { DEFECT_CODES, createRecheckDefect } from "./DesignDefect.mjs";
 import { NO_LAYOUT_LINE } from "./ZoneOrder.mjs";
 
@@ -98,21 +98,22 @@ const findZonesOutsideTheOrder = (model, zoneOrder) => {
   const defects = [];
   const reportedZones = new Set();
   for (const theClass of model.classes) {
-    if (!isAText(theClass.zone) || !appliesToTheClass(zoneOrder, theClass) || zoneOrder.namesTheZone(theClass.zone) || reportedZones.has(theClass.zone)) continue;
+    if (!isAText(theClass.zone) || !appliesToTheClass(model, zoneOrder, theClass) || zoneOrder.namesTheZone(theClass.zone) || reportedZones.has(theClass.zone)) continue;
     reportedZones.add(theClass.zone);
     defects.push(createRecheckDefect(DEFECT_CODES.ZONE_OUTSIDE_THE_ORDER, `${model.getClassPath(theClass)}.zone`, `the zone ${theClass.zone} is not 1 of the zone order: ${[...zoneOrder.zones].join(", ")}, so the edges of its classes are not checked against the order`));
   }
   return defects;
 };
 
-const appliesToTheClass = (zoneOrder, theClass) => zoneOrder.appliesToTheFolder(readFolderOfTheFile(theClass.file));
+// A class of a test file, such as a substitute that implements an spi, stands outside the zone order of production.
+const appliesToTheClass = (model, zoneOrder, theClass) => zoneOrder.appliesToTheFolder(readFolderOfTheFile(theClass.file)) && !isATestFileOfTheModel(model, theClass.file || "");
 
-const isCheckedAgainstTheOrder = (relation, zoneOrder) => [relation.from, relation.to].every(theClass => isAText(theClass.zone) && appliesToTheClass(zoneOrder, theClass) && zoneOrder.namesTheZone(theClass.zone));
+const isCheckedAgainstTheOrder = (model, relation, zoneOrder) => [relation.from, relation.to].every(theClass => isAText(theClass.zone) && appliesToTheClass(model, zoneOrder, theClass) && zoneOrder.namesTheZone(theClass.zone));
 
 // The default zone order holds only under a layout module, so each folder of a class outside a layout module is named once.
 const describeFoldersOutsideTheLayout = (model, zoneOrder) => {
   if (!zoneOrder.isFound()) return [];
-  const folderPaths = new Set(model.classes.filter(theClass => isAText(theClass.file) && !appliesToTheClass(zoneOrder, theClass)).map(theClass => readFolderOfTheFile(theClass.file)));
+  const folderPaths = new Set(model.classes.filter(theClass => isAText(theClass.file) && !zoneOrder.appliesToTheFolder(readFolderOfTheFile(theClass.file))).map(theClass => readFolderOfTheFile(theClass.file)));
   return [...folderPaths].map(folderPath => `zone order: not applied to ${folderPath}`);
 };
 
@@ -187,8 +188,9 @@ const findCyclePath = (group, targetsOfAbstractionMap) => {
   return [...group, start];
 };
 
+// A nested class is read as its outermost class of the same file, so the relations inside 1 file of 1 type fall away as self edges.
 const findCycleDefects = (model, relations) => {
-  const targetsOfClassMap = buildTargetsOfAbstractionMap(relations, theClass => model.getClassDisplayName(theClass));
+  const targetsOfClassMap = buildTargetsOfAbstractionMap(relations, theClass => model.getClassDisplayName(model.findOutermostClass(theClass)));
   return findStronglyConnectedGroups(targetsOfClassMap).map(group => {
     const cyclePath = findCyclePath(group, targetsOfClassMap);
     return createRecheckDefect(DEFECT_CODES.CYCLE, model.getClassPath(model.findClass(cyclePath[0])), `the classes reach each other in a cycle: ${cyclePath.join(" -> ")}`);
@@ -248,7 +250,7 @@ const describeIgnoredZones = (model, zoneOrder) => {
 export const findCycleCheckDefects = (model, zoneOrder) => {
   const relations = readClassRelations(model);
   const signatureRelations = readPublicSignatureRelations(model);
-  const checkedRelations = relations.filter(relation => isCheckedAgainstTheOrder(relation, zoneOrder));
+  const checkedRelations = relations.filter(relation => isCheckedAgainstTheOrder(model, relation, zoneOrder));
   const zoneDefects = zoneOrder.isFound() ? [...findZonesOutsideTheOrder(model, zoneOrder), ...findZoneDefects(model, checkedRelations, zoneOrder)] : [];
   const headLines = [
     ...(zoneOrder.isMissingTheLayout() ? [NO_LAYOUT_LINE] : []),

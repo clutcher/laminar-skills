@@ -25,6 +25,8 @@ const WORDS_THAT_OPEN_NO_CALL = new Set([
   "typeof", // JavaScript and TypeScript: a type query
   "await", // JavaScript and TypeScript: an awaited expression in parentheses
   "throw", // all 3: a thrown expression in parentheses
+  "try", // Java: the resources of a try-with-resources
+  "synchronized", // Java: the lock of a synchronized block
 ]);
 
 // The receiver of the object itself in Java, JavaScript and TypeScript, which a call chain skips to reach the field it names.
@@ -35,6 +37,12 @@ const OPENING = "([{";
 const CLOSING = ")]}";
 
 const QUOTES = "\"'`";
+
+// The text block of Java and the raw string of Kotlin, which span lines.
+const TEXT_BLOCK_QUOTE = '"""';
+
+// The quotes of a string that ends at its line end, so an apostrophe in a comment leaves the code below it as code.
+const LINE_QUOTES = "\"'";
 
 const readCharacterBefore = (text, at) => {
   let before = at - 1;
@@ -97,7 +105,15 @@ const readCallsOfTheText = text => {
   return calls;
 };
 
-const FOR_EACH = /\bfor\s*\(\s*(?:final\s+)?(?:(?:const|let|var|val)\s+)?(?:[\w$.<>[\]?, ]+?\s+)?([A-Za-z_$][\w$]*)\s*(?::(?!:)|\s+of\s|\s+in\s)/;
+const FOR_EACH = /\bfor\s*\(\s*(?:final\s+)?(?:(?:const|let|var|val)\s+)?(?:[{[]([^}\]]*)[}\]]|(?:[\w$.<>[\]?, ]+?\s+)?([A-Za-z_$][\w$]*))\s*(?::(?!:)|\s+of\s|\s+in\s)/;
+
+// The head of a try-with-resources and of an indexed loop, after which a resource or a loop variable is declared as a local is.
+const LOOP_OR_RESOURCE_HEAD = /^\s*(?:try|for)\s*\(/;
+
+const CATCH = /\bcatch\s*\(\s*(?:final\s+)?(?:([\w$.<>|\s]+?)\s+)?([A-Za-z_$][\w$]*)\s*(?::[^)]*)?\)/g;
+
+// A Java pattern variable, declared by a type pattern of instanceof or of a case.
+const PATTERN_VARIABLES = [/\binstanceof\s+([\w$.<>]+)\s+([a-z_$][\w$]*)/g, /\bcase\s+([A-Z][\w$.<>]*)\s+([a-z_$][\w$]*)\s*(?:->|:|\bwhen\b)/g];
 
 const DESTRUCTURING = /^\s*(?:(?:const|let|var|final|val)\s+)?[{[]([^}\]]*)[}\]]\s*(?::[^=]+)?=(?!=)/;
 
@@ -122,18 +138,24 @@ const readDestructuredNames = listText => listText.split(",").flatMap(piece => {
   return /^[A-Za-z_$][\w$]*$/.test(target) ? [createDeclaration(target)] : [];
 });
 
+const readCatchVariables = statement => [...statement.matchAll(CATCH)].map(match => createDeclaration(match[2], match[1] ? match[1].trim() : ""));
+
 const readDeclarations = statement => {
   const destructuring = DESTRUCTURING.exec(statement);
   if (destructuring) return readDestructuredNames(destructuring[1]);
   if (FOR_EACH.test(statement)) return [];
-  return readSimpleDeclaration(statement);
+  return [...readSimpleDeclaration(statement.replace(LOOP_OR_RESOURCE_HEAD, "")), ...readCatchVariables(statement)];
 };
 
 // The variable of a for-each, which its loop body reads in the same statement where the loop has no braces, so it is known before the calls of the statement.
 const readLoopVariables = statement => {
   const forEach = FOR_EACH.exec(statement);
-  return forEach ? [createDeclaration(forEach[1])] : [];
+  if (!forEach) return [];
+  return forEach[1] === undefined ? [createDeclaration(forEach[2])] : readDestructuredNames(forEach[1]);
 };
+
+// A pattern variable, which its condition can read in the same statement, so it is known before the calls of the statement.
+const readPatternVariables = statement => PATTERN_VARIABLES.flatMap(pattern => [...statement.matchAll(pattern)].map(match => createDeclaration(match[2], match[1])));
 
 const readLambdaParameters = statement => {
   const names = [];
@@ -162,6 +184,38 @@ const readParenthesisDepthChange = line => {
   return change;
 };
 
+const readQuoteAt = (body, at) => {
+  if (body.startsWith(TEXT_BLOCK_QUOTE, at)) return TEXT_BLOCK_QUOTE;
+  return QUOTES.includes(body[at]) ? body[at] : "";
+};
+
+const findEndOfTheString = (body, openAt, quote) => {
+  for (let at = openAt + quote.length; at < body.length; at += 1) {
+    if (body[at] === "\\") at += 1;
+    else if (body.startsWith(quote, at)) return at + quote.length;
+    else if (body[at] === "\n" && LINE_QUOTES.includes(quote)) return at;
+  }
+  return body.length;
+};
+
+// The text inside every string, dropped with its quotes kept as an empty string, so a call or a ; inside a string or a text block is no code and the string still reads as a literal.
+const blankTheStringTexts = body => {
+  let blanked = "";
+  let at = 0;
+  while (at < body.length) {
+    const quote = readQuoteAt(body, at);
+    if (!quote) {
+      blanked += body[at];
+      at += 1;
+      continue;
+    }
+
+    blanked += `${quote[0]}${quote[0]}`;
+    at = findEndOfTheString(body, at, quote);
+  }
+  return blanked;
+};
+
 const splitStatements = body => {
   const statements = [];
   let open = "";
@@ -179,10 +233,11 @@ const splitStatements = body => {
   return statements.map(statement => statement.trim()).filter(statement => statement.length > 0);
 };
 
-export const readBodyStatements = body => splitStatements(body).map(text => ({
+export const readBodyStatements = body => splitStatements(blankTheStringTexts(body)).map(text => ({
   text,
   calls: readCallsOfTheText(text),
   declarations: readDeclarations(text),
   loopVariables: readLoopVariables(text),
+  patternVariables: readPatternVariables(text),
   lambdaParameters: readLambdaParameters(text),
 }));

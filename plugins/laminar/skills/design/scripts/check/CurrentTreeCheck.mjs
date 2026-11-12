@@ -1,6 +1,6 @@
 import path from "node:path";
-import { KINDS, getFileOfTheChild, getFolderPath, isAText, isMarkedUnchanged, readList, readOldTypeName } from "../model/DesignModel.mjs";
-import { isATestFile, readParsedLanguage } from "../model/SourceLanguages.mjs";
+import { KINDS, getFileOfTheChild, getFolderPath, isAText, isATestFileOfTheModel, isMarkedUnchanged, readList, readOldTypeName } from "../model/DesignModel.mjs";
+import { readParsedLanguage } from "../model/SourceLanguages.mjs";
 import { readDeclaredTypes, isInsideTheBody } from "./DeclaredTypes.mjs";
 import { DEFECT_CODES, createDefect, createRecheckDefect } from "./DesignDefect.mjs";
 import { describeTheChangeOfTheMember } from "./MemberChange.mjs";
@@ -93,12 +93,11 @@ const readLastNamePiece = className => className.split(".").pop();
 const listAccountedMemberNames = classes => classes.flatMap(theClass => [
   theClass.name,
   readLastNamePiece(theClass.name),
+  ...(isAText(theClass.oldName) ? [readOldTypeName(theClass), readLastNamePiece(readOldTypeName(theClass))] : []),
   ...readList(theClass.fields).flatMap(field => [field.name, field.oldName]),
   ...readList(theClass.methods).flatMap(method => [method.name, method.oldName]),
   ...readList(theClass.removed),
 ]);
-
-const isATestFileOfTheModel = (model, file) => isATestFile(file) || [...readList(model.decisions.tests?.integration), ...readList(model.decisions.tests?.unit)].some(tests => tests.file === file);
 
 // A helper type of a test file, private, nested in another type, or a script class the file does not export, is the test's own detail, which its test accounts for.
 const isAHelperOfTheTest = (declaredType, file) => declaredType.isPrivate || declaredType.outerType !== null || (LANGUAGES_THAT_EXPORT.has(readParsedLanguage(file)) && !declaredType.isExported);

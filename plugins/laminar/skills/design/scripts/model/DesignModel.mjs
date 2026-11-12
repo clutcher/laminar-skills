@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { KINDS, findDesignModelFormProblems } from "./DesignModelForm.mjs";
-import { isAReadExtension } from "./SourceLanguages.mjs";
+import { isAReadExtension, isATestFile } from "./SourceLanguages.mjs";
 
 export { ANSWER_GIVERS, DOES, KINDS } from "./DesignModelForm.mjs";
 
@@ -10,6 +10,8 @@ const CHANGED_KINDS = new Set([KINDS.CREATED, KINDS.MOVED, KINDS.MODIFIED]);
 const METHOD_MARK = "#";
 
 const FOLDER_MARK = "/";
+
+const NESTED_TYPE_MARK = ".";
 
 const INTERFACE_KIND_WORD = "interface";
 
@@ -33,7 +35,13 @@ const readNamePieces = displayName => {
 
 export const isAMethodName = displayName => isAText(displayName) && readNamePieces(displayName).methodName !== "";
 
-export const readTypeNames = typeText => (isAText(typeText) ? typeText.match(/[A-Za-z_$][\w$]*/g) || [] : []);
+// A package before a type, such as com.example in com.example.Money, names where the type lives and not the type, and a file names the type through its import.
+const PACKAGE_PREFIX = /(^|[^\w$.])(?:[a-z_][\w$]*\.)+(?=[A-Z])/g;
+
+// A nested type is written Outer.Inner in Java, Kotlin, C# and a TypeScript namespace, so a dotted name stays 1 type name.
+const TYPE_NAME = /[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*/g;
+
+export const readTypeNames = typeText => (isAText(typeText) ? typeText.replace(PACKAGE_PREFIX, "$1").match(TYPE_NAME) || [] : []);
 
 export const readHeadTypeName = typeText => readTypeNames(typeText)[0] || "";
 
@@ -45,6 +53,17 @@ export const isMarkedUnchanged = method => method.unchanged === true;
 export const readOldTypeName = theClass => {
   if (!isAText(theClass.oldName) || theClass.oldName.includes(".") || !theClass.name.includes(".")) return theClass.oldName;
   return `${theClass.name.slice(0, theClass.name.lastIndexOf("."))}.${theClass.oldName}`;
+};
+
+// A class of a test file of the stacks the skill reads, or of a file that decisions.tests names.
+export const isATestFileOfTheModel = (model, file) => isATestFile(file) || [...readList(model.decisions.tests?.integration), ...readList(model.decisions.tests?.unit)].some(tests => tests.file === file);
+
+// The names a bare type name can stand for inside a nested class, innermost first: Unit inside Rental.Period is Rental.Period.Unit, then Rental.Unit.
+const listNestedNamesOfTheBareName = (typeName, referringClassName) => {
+  const outerPieces = referringClassName.split(NESTED_TYPE_MARK);
+  const nestedNames = [];
+  for (let length = outerPieces.length; length > 0; length -= 1) nestedNames.push([...outerPieces.slice(0, length), typeName].join(NESTED_TYPE_MARK));
+  return nestedNames;
 };
 
 // An existing defect left as it is carries the reason under notFixed, and has no fix and no migration group.
@@ -113,7 +132,19 @@ export class DesignModel {
     return sameNameClasses.length === 1 ? sameNameClasses[0] : null;
   }
 
+  // A dotted type name names its class exactly; a bare one names first a nested class of the referring class or of a class around it.
   findClassOfTheType(typeName, referringClass) {
+    if (!isAText(typeName)) return null;
+    if (typeName.includes(NESTED_TYPE_MARK) || !isAText(referringClass?.name)) return this.findClassOfTheExactType(typeName, referringClass);
+
+    for (const nestedName of listNestedNamesOfTheBareName(typeName, referringClass.name)) {
+      const nestedClass = this.findClassOfTheExactType(nestedName, referringClass);
+      if (nestedClass) return nestedClass;
+    }
+    return this.findClassOfTheExactType(typeName, referringClass);
+  }
+
+  findClassOfTheExactType(typeName, referringClass) {
     const sameNameClasses = this.classesOfNameMap.get(typeName) || [];
     if (sameNameClasses.length < 2) return sameNameClasses[0] || null;
 
@@ -121,6 +152,14 @@ export class DesignModel {
     if (inTheFile) return inTheFile;
     const inTheFolder = sameNameClasses.filter(theClass => readFolderOfTheFile(theClass.file) === readFolderOfTheFile(referringClass.file));
     return inTheFolder.length === 1 ? inTheFolder[0] : null;
+  }
+
+  // The class that holds a nested class in the same file, named by the first piece of its dotted name, or the class itself where the model holds no such class.
+  findOutermostClass(theClass) {
+    if (!isAText(theClass.name) || !theClass.name.includes(NESTED_TYPE_MARK)) return theClass;
+
+    const outermostName = theClass.name.split(NESTED_TYPE_MARK)[0];
+    return (this.classesOfNameMap.get(outermostName) || []).find(other => other.file === theClass.file) || theClass;
   }
 
   listMethodsOfTheName(displayName) {

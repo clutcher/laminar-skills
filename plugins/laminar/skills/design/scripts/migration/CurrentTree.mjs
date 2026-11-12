@@ -69,10 +69,8 @@ const splitTheParameterTexts = parameterText => splitAtTopLevelCommas(parameterT
 
 const holdsTheParameters = (parameterText, parameters) => splitTheParameterTexts(parameterText).length === parameters.length && parameters.every(parameter => isAWordIn(parameterText, parameter.name));
 
-// A package before a type, such as com.example in com.example.Money, names where the type lives and not the type, and a file names the type through its import.
-const PACKAGE_PREFIX = /(^|[^\w$.])(?:[a-z_][\w$]*\.)+(?=[A-Z])/g;
-
-const readComparedTypeNames = typeText => readTypeNames(isAText(typeText) ? typeText.replace(PACKAGE_PREFIX, "$1") : typeText);
+// A file writes a nested type Rental.Period as Period after its import, so a dotted name is compared by its last piece, which both forms hold.
+const readComparedTypeNames = typeText => readTypeNames(typeText).map(typeName => typeName.split(".").pop());
 
 const holdsTheTypeNames = (text, typeText) => readComparedTypeNames(typeText).every(typeName => isAWordIn(text, typeName));
 
