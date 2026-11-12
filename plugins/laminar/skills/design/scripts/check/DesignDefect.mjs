@@ -63,6 +63,7 @@ export const DEFECT_CODES = Object.freeze({
   TYPE_HOLDS_ONLY_A_COLLECTION: "type-holds-only-a-collection",
   INTERFACE_WITH_ONE_IMPLEMENTATION: "interface-with-one-implementation",
   RENAMED_WITHOUT_FINDING: "renamed-without-finding",
+  OPTION_WITHOUT_CODE: "option-without-code",
 });
 
 export const createDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false });

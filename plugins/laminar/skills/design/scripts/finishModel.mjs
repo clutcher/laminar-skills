@@ -48,7 +48,7 @@ const listCutArguments = (options, plan, paths) => {
 // The 3 scripts of the finish command, in that order, each with the options it takes.
 const listFinishSteps = (options, paths, plan) => [
   { name: "check", script: "checkDesign.mjs", arguments: [...listOptionArguments(options, ["model", "repo", "tree", "base", "review", "decided"]), ...listShapeReviewArguments(options), ...(options[AUTONOMOUS_SWITCH] ? [`--${AUTONOMOUS_SWITCH}`] : [])] },
-  { name: "render", script: "renderDesign.mjs", arguments: [...listOptionArguments(options, ["model", "rounds", "review"]), ...listShapeReviewArguments(options), "--out", paths.design] },
+  { name: "render", script: "renderDesign.mjs", arguments: [...listOptionArguments(options, ["model", "rounds", "review", "repo", "tree"]), ...listShapeReviewArguments(options), "--out", paths.design] },
   { name: "migration", script: "planMigration.mjs", arguments: [...listOptionArguments(options, ["model", "repo", "tree"]), ...(paths.findings ? ["--findings", paths.findings] : []), ...listCutArguments(options, plan, paths), "--out", paths.migration] },
 ];
 

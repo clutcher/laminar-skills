@@ -311,11 +311,31 @@ const checkAnswer = (check, question, path) => {
   if (question.answer.by === ANSWER_GIVERS.DELEGATE) check.requireKey("answer.says", question.answer, "says", `${path}.answer`);
 };
 
+// An option that adds, removes, merges or splits a class shows its code, so the user decides on the code and not on a name: its shape says so by its words, or it removes or merges a class that the model holds.
+const CLASS_CHANGE_WORDS = /\b(?:new|add(?:s|ed)?|creat(?:e|es|ed)|remov(?:e|es|ed)|merg(?:e|es|ed)|split(?:s)?|drop(?:s|ped)?)\b[^.;]*\b(?:class|classes|type|types|interface|interfaces|record|records|enum)\b/i;
+
+const REMOVING_WORDS = /\b(?:remov(?:e|es|ed)|merg(?:e|es|ed)|drop(?:s|ped)?|delet(?:e|es|ed))\b/i;
+
+const CAMEL_CASE_NAME = /\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+\b/g;
+
+const removesAClassOfTheModel = (model, shape) => REMOVING_WORDS.test(shape) && (shape.match(CAMEL_CASE_NAME) || []).some(name => Boolean(model.findClass(name)));
+
+const changesAClass = (model, option) => {
+  const shape = String(option.shape || "");
+  return CLASS_CHANGE_WORDS.test(shape) || removesAClassOfTheModel(model, shape);
+};
+
+const checkOptionCode = (check, question, option, path) => {
+  if (isAText(option.code) || !changesAClass(check.model, option)) return;
+  check.addDefect(DEFECT_CODES.OPTION_WITHOUT_CODE, `${path}.code`, `the option ${option.name} of the question ${question.id} adds, removes, merges or splits a class, and holds no code`);
+};
+
 const checkOptions = (check, question, path) => {
   if (!check.requireKey("question.options", question, "options", path)) return;
 
   readList(question.options).forEach((option, at) => {
     for (const key of ["name", "shape"]) check.requireKey(`option.${key}`, option, key, `${path}.options[${at}]`);
+    checkOptionCode(check, question, option, `${path}.options[${at}]`);
   });
   if (readList(question.options).length < QUESTION_OPTIONS_AT_LEAST) check.addDefect(DEFECT_CODES.QUESTION_OPTIONS_TOO_FEW, `${path}.options`, `the question ${question.id} gives fewer than ${QUESTION_OPTIONS_AT_LEAST} options`);
 };

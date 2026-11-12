@@ -1,4 +1,4 @@
-import { ANSWER_GIVERS, DOES, KINDS, getFileOfTheChild, getFolderPath, isAText, isLeftUnfixed, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
+import { ANSWER_GIVERS, DOES, KINDS, getFileOfTheChild, getFolderPath, isAText, isAnInterface, isLeftUnfixed, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
 
 const GUESS_EVIDENCE = new Set(["churn", "none"]);
 
@@ -79,8 +79,15 @@ const writeAddedForFindingsLine = (theClass, indent) => {
   return numbers.length ? [`${indent}  added to the model for the findings ${numbers.join(", ")} of the run folder`] : [];
 };
 
-const writeClassLines = (model, theClass, userNamesOfClassMap, indent) => {
-  const lines = [`${indent}${writeClassMarks(theClass)}`, ...writeUsedByLine(model, theClass, userNamesOfClassMap, indent), ...writeAddedForFindingsLine(theClass, indent)];
+// With the current tree, the tree is the whole end tree, so an interface names the classes of the model that implement it.
+const writeImplementedByLine = (model, theClass, indent, currentTree) => {
+  if (!currentTree || !isAnInterface(theClass)) return [];
+  const implementationNames = model.classes.filter(other => readList(other.implements).some(parentName => readHeadTypeName(parentName) === theClass.name)).map(other => other.name);
+  return [`${indent}  implemented by ${implementationNames.length ? implementationNames.join(", ") : "no class of the model"}`];
+};
+
+const writeClassLines = (model, theClass, userNamesOfClassMap, indent, currentTree = null) => {
+  const lines = [`${indent}${writeClassMarks(theClass)}`, ...writeUsedByLine(model, theClass, userNamesOfClassMap, indent), ...writeImplementedByLine(model, theClass, indent, currentTree), ...writeAddedForFindingsLine(theClass, indent)];
   for (const field of readList(theClass.fields)) lines.push(`${indent}  ${field.name}${field.type ? `: ${field.type}` : ""}${isAText(field.oldName) ? ` (renamed from ${field.oldName})` : ""}`);
   for (const method of readList(theClass.methods)) lines.push(...writeMethodLines(method, `${indent}  `));
   if (readList(theClass.removed).length) lines.push(`${indent}  removes ${readList(theClass.removed).join(", ")}`);
@@ -98,19 +105,33 @@ const listFilesOfNoFolder = model => {
   return [...new Set(model.classes.map(theClass => theClass.file).filter(file => isAText(file) && !listedFiles.has(file)))];
 };
 
-const writeTreeBlock = model => {
+const UNLISTED_MARK = "[unchanged, not in the model]";
+
+// The files of the current tree right inside a modified folder that the model does not list, so the tree shows the whole folder after the change.
+const writeUnlistedFileLines = (folder, currentTree) => {
+  if (!currentTree || folder.kind !== KINDS.MODIFIED) return [];
+  const folderPath = getFolderPath(folder);
+  const listedNames = new Set(readList(folder.children).map(child => child.name));
+  return currentTree.listFilesUnder(folderPath)
+    .filter(file => file.slice(0, file.lastIndexOf("/")) === folderPath && !listedNames.has(file.slice(file.lastIndexOf("/") + 1)))
+    .sort()
+    .map(file => `  ${file.slice(file.lastIndexOf("/") + 1)} ${UNLISTED_MARK}`);
+};
+
+const writeTreeBlock = (model, currentTree) => {
   const userNamesOfClassMap = buildUserNamesOfClassMap(model);
   const lines = [];
   for (const folder of model.folders) {
     lines.push(`${getFolderPath(folder)}/ [${folder.kind}]`);
     for (const child of readList(folder.children)) {
       lines.push(writeChildLine(child));
-      for (const theClass of model.classes.filter(other => other.file === getFileOfTheChild(folder, child))) lines.push(...writeClassLines(model, theClass, userNamesOfClassMap, "    "));
+      for (const theClass of model.classes.filter(other => other.file === getFileOfTheChild(folder, child))) lines.push(...writeClassLines(model, theClass, userNamesOfClassMap, "    ", currentTree));
     }
+    lines.push(...writeUnlistedFileLines(folder, currentTree));
   }
   for (const file of listFilesOfNoFolder(model)) {
     lines.push(`${file} [listed in no folder]`);
-    for (const theClass of model.classes.filter(other => other.file === file)) lines.push(...writeClassLines(model, theClass, userNamesOfClassMap, "    "));
+    for (const theClass of model.classes.filter(other => other.file === file)) lines.push(...writeClassLines(model, theClass, userNamesOfClassMap, "    ", currentTree));
   }
   return ["## Tree", "", CODE_FENCE + "text", ...lines, CODE_FENCE];
 };
@@ -196,12 +217,15 @@ const writeAnswer = question => {
   return `Answered by the user: ${question.answer.option}.`;
 };
 
+// The code of an option, indented under its list item, so the user reads the code before the decision.
+const writeOptionCode = option => (isAText(option.code) ? ["", `  ${CODE_FENCE}`, ...option.code.split("\n").map(line => `  ${line}`), `  ${CODE_FENCE}`, ""] : []);
+
 const writeQuestionSection = questions => {
   const lines = ["## Questions", ""];
   if (!questions.length) return [...lines, "None.", ""];
   for (const question of questions) {
     lines.push(`### ${question.id}`, "", question.fact, "");
-    for (const option of readList(question.options)) lines.push(`- ${option.name}: ${option.shape}`);
+    for (const option of readList(question.options)) lines.push(`- ${option.name}: ${option.shape}`, ...writeOptionCode(option));
     lines.push("", `Recommendation: ${question.recommendation}`, "", writeAnswer(question), "");
   }
   return lines;
@@ -306,7 +330,8 @@ const writeRoundSection = (roundCounts, selfChecksOfThePlans = []) => {
   return [...lines, ...roundCounts.map(writeRoundTableLine), "", ...writeSelfCheckLines(selfChecksOfThePlans)];
 };
 
-export const writeDesignText = (model, roundCounts = null, findingsToConsider = new Set(), selfChecksOfThePlans = []) => {
+// With the current tree, the tree also shows each unlisted file of a modified folder and the implementations of each interface.
+export const writeDesignText = (model, roundCounts = null, findingsToConsider = new Set(), selfChecksOfThePlans = [], currentTree = null) => {
   const { decisions } = model;
   const tests = decisions.tests || {};
   return [
@@ -314,7 +339,7 @@ export const writeDesignText = (model, roundCounts = null, findingsToConsider = 
     "",
     "# Design",
     "",
-    ...writeTreeBlock(model),
+    ...writeTreeBlock(model, currentTree),
     "",
     ...writeOwnerSection(readList(decisions.owners)),
     "",

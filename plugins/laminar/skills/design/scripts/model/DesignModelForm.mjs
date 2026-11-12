@@ -82,7 +82,7 @@ const DECISIONS_FORM = createObjectOf({
   }),
   questions: createListOf(createObjectOf({
     id: TEXT_WITH_NO_SPACE, fact: TEXT, recommendation: TEXT, autonomous: createTextOf(Object.values(AUTONOMOUS_ANSWERS)),
-    options: createListOf(createObjectOf({ name: TEXT, shape: TEXT })),
+    options: createListOf(createObjectOf({ name: TEXT, shape: TEXT, code: TEXT })),
     answer: createObjectOf({ option: TEXT, by: createTextOf(Object.values(ANSWER_GIVERS)), says: TEXT }),
   })),
   stops: createListOf(createObjectOf({ reason: createTextOf(STOP_REASONS), at: TEXT, says: TEXT, plan: NUMBER, group: NUMBER, round: NUMBER })),

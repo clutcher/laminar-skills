@@ -51,7 +51,8 @@ An object, required. The designer reads the project conventions at step 1 of the
 |---|---|---|---|
 | `id` | text with no space | yes | design check, which resolves each `failure.question` that names it; render |
 | `fact` | text | yes | render |
-| `options` | list of objects: `name` and `shape`, the tree or the signatures of that option | yes, 2 or more | render |
+| `options` | list of objects: `name` and `shape`, the tree or the signatures of that option, and `code` | yes, 2 or more | render |
+| `code` of an option | text: the code of that option in the language of the scope, the signatures and the body of each method and the fields of each type that differ between the options, written by the skill `code-style` | where the option adds, removes, merges or splits a class, by the words of its `shape`, or removes or merges a class that its `shape` names | design check, which reports `option-without-code` where it is missing; render, which prints it under its option |
 | `recommendation` | text: the option name, then the reason | yes | render |
 | `autonomous` | `default`, `stop` or `open` | yes | design check, render |
 | `answer` | object: `option` and `by`, 1 of `user`, `default` and `delegate`; with `delegate`, also `says`, who answered on the user's delegation | only once the question is answered | design check, render, which prints an answer by `delegate` as `answered on the author's delegation by <says>` |

@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { listFindingsToConsider } from "./check/AutonomousReasons.mjs";
-import { readDesignModelOrExit, readOptionsOrExit } from "./command/CommandLine.mjs";
+import { readDesignModelOrExit, readOptionsOrExit, readTreeCommit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
+import { readCurrentTree } from "./migration/CurrentTree.mjs";
 import { writeDesignText } from "./render/DesignText.mjs";
 import { readSelfChecksOfThePlans } from "./plan/PlanFolder.mjs";
 
-const USAGE = "usage: node renderDesign.mjs --model <design-model.json> --out <design.md> [--rounds <results>/rounds] [--review <run folder>/review.md] [--shape-review <results>/shape-runs/<n>/review.md]...";
+const USAGE = "usage: node renderDesign.mjs --model <design-model.json> --out <design.md> [--rounds <results>/rounds] [--review <run folder>/review.md] [--shape-review <results>/shape-runs/<n>/review.md]... [--repo <repository root> [--tree <commit>]]";
 
 const STOP_EXIT_CODE = 2;
 
@@ -57,14 +58,16 @@ const readFindingsToConsiderOrExit = (model, options) => {
 };
 
 function renderDesign() {
-  const options = readOptionsOrExit(USAGE, ["model", "out", "rounds", "review"], ["model", "out"], [SHAPE_REVIEW_OPTION]);
+  const options = readOptionsOrExit(USAGE, ["model", "out", "rounds", "review", "repo", "tree"], ["model", "out"], [SHAPE_REVIEW_OPTION]);
   const model = readDesignModelOrExit(options.model);
   const roundCounts = options.rounds ? readRoundCountsOrExit(path.resolve(options.rounds)) : null;
   const selfChecksOfThePlans = options.rounds ? readSelfChecksOfThePlansOrExit(path.dirname(path.resolve(options.rounds))) : [];
 
   const outPath = path.resolve(options.out);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, writeDesignText(model, roundCounts, readFindingsToConsiderOrExit(model, options), selfChecksOfThePlans));
+  const currentTree = options.repo ? readCurrentTree(path.resolve(options.repo), readTreeCommit(options)) : null;
+  const text = runOrExitOnTreeStop(() => writeDesignText(model, roundCounts, readFindingsToConsiderOrExit(model, options), selfChecksOfThePlans, currentTree));
+  fs.writeFileSync(outPath, text);
   console.log(`RESULT ${JSON.stringify({ design: outPath, classes: model.classes.length, questions: (model.decisions.questions || []).length, ...(roundCounts ? { rounds: roundCounts.length } : {}) })}`);
 }
 
