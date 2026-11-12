@@ -1,0 +1,62 @@
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHive.kt b/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHive.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHive.kt
+@@ -0,0 +1,8 @@
++package com.example.apiary.hives.topbar
++
++import com.example.apiary.hives.Hive
++
++data class TopBarHive(
++    val hive: Hive,
++    val layout: TopBarHiveLayout,
++)
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHiveFactory.kt b/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHiveFactory.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHiveFactory.kt
+@@ -0,0 +1,12 @@
++package com.example.apiary.hives.topbar
++
++import com.example.apiary.hives.Hive
++
++class TopBarHiveFactory {
++
++    fun createTopBarHive(hiveId: String, apiaryYard: String, layout: TopBarHiveLayout): TopBarHive {
++        val hive = Hive(hiveId, apiaryYard, colonyCount = 1)
++
++        return TopBarHive(hive, layout)
++    }
++}
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHiveLayout.kt b/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHiveLayout.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHiveLayout.kt
+@@ -0,0 +1,6 @@
++package com.example.apiary.hives.topbar
++
++data class TopBarHiveLayout(
++    val barCount: Int,
++    val barWidthMillimetres: Int,
++)
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHiveRegistration.kt b/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHiveRegistration.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/topbar/TopBarHiveRegistration.kt
+@@ -0,0 +1,16 @@
++package com.example.apiary.hives.topbar
++
++import com.example.apiary.hives.HiveRepository
++
++class TopBarHiveRegistration(
++    private val hiveRepository: HiveRepository,
++    private val topBarHiveFactory: TopBarHiveFactory,
++) {
++
++    fun registerTopBarHive(hiveId: String, apiaryYard: String, layout: TopBarHiveLayout): TopBarHive {
++        val topBarHive = topBarHiveFactory.createTopBarHive(hiveId, apiaryYard, layout)
++        hiveRepository.saveHive(topBarHive.hive)
++
++        return topBarHive
++    }
++}

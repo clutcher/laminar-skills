@@ -1,0 +1,26 @@
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/inspectionnotes/InspectionNote.kt b/apiary/src/main/kotlin/com/example/apiary/hives/inspectionnotes/InspectionNote.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/inspectionnotes/InspectionNote.kt
+@@ -0,0 +1,9 @@
++package com.example.apiary.hives.inspectionnotes
++
++import java.time.LocalDate
++
++data class InspectionNote(
++    val hiveId: String,
++    val inspectedOn: LocalDate,
++    val noteText: String,
++)
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/inspectionnotes/InspectionNoteFormatter.kt b/apiary/src/main/kotlin/com/example/apiary/hives/inspectionnotes/InspectionNoteFormatter.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/inspectionnotes/InspectionNoteFormatter.kt
+@@ -0,0 +1,7 @@
++package com.example.apiary.hives.inspectionnotes
++
++class InspectionNoteFormatter {
++
++    fun formatNoteLine(note: InspectionNote): String =
++        "${note.inspectedOn} hive ${note.hiveId}: ${note.noteText}"
++}

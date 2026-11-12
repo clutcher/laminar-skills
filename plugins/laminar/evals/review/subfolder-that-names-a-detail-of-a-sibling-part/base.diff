@@ -1,0 +1,82 @@
+diff --git a/apiary/src/main/kotlin/com/example/apiary/ApiaryApplication.kt b/apiary/src/main/kotlin/com/example/apiary/ApiaryApplication.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/ApiaryApplication.kt
+@@ -0,0 +1,11 @@
++package com.example.apiary
++
++import org.springframework.boot.autoconfigure.SpringBootApplication
++import org.springframework.boot.runApplication
++
++@SpringBootApplication
++class ApiaryApplication
++
++fun main(args: Array<String>) {
++    runApplication<ApiaryApplication>(*args)
++}
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/Hive.kt b/apiary/src/main/kotlin/com/example/apiary/hives/Hive.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/Hive.kt
+@@ -0,0 +1,7 @@
++package com.example.apiary.hives
++
++data class Hive(
++    val hiveId: String,
++    val apiaryYard: String,
++    val colonyCount: Int,
++)
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/HiveRepository.kt b/apiary/src/main/kotlin/com/example/apiary/hives/HiveRepository.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/HiveRepository.kt
+@@ -0,0 +1,6 @@
++package com.example.apiary.hives
++
++interface HiveRepository {
++    fun findHive(hiveId: String): Hive?
++    fun saveHive(hive: Hive)
++}
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/HiveService.kt b/apiary/src/main/kotlin/com/example/apiary/hives/HiveService.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/HiveService.kt
+@@ -0,0 +1,10 @@
++package com.example.apiary.hives
++
++class HiveService(private val hiveRepository: HiveRepository) {
++
++    fun registerHive(hiveId: String, apiaryYard: String) {
++        hiveRepository.saveHive(Hive(hiveId, apiaryYard, colonyCount = 1))
++    }
++
++    fun findHive(hiveId: String): Hive? = hiveRepository.findHive(hiveId)
++}
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/inspections/InspectionReport.kt b/apiary/src/main/kotlin/com/example/apiary/hives/inspections/InspectionReport.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/inspections/InspectionReport.kt
+@@ -0,0 +1,9 @@
++package com.example.apiary.hives.inspections
++
++import java.time.LocalDate
++
++data class InspectionReport(
++    val hiveId: String,
++    val inspectedOn: LocalDate,
++    val queenSeen: Boolean,
++)
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/inspections/InspectionSchedule.kt b/apiary/src/main/kotlin/com/example/apiary/hives/inspections/InspectionSchedule.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/inspections/InspectionSchedule.kt
+@@ -0,0 +1,9 @@
++package com.example.apiary.hives.inspections
++
++import java.time.LocalDate
++
++class InspectionSchedule(private val daysBetweenInspections: Long) {
++
++    fun getNextInspectionDate(lastReport: InspectionReport): LocalDate =
++        lastReport.inspectedOn.plusDays(daysBetweenInspections)
++}

@@ -1,0 +1,63 @@
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyInvoice.kt b/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyInvoice.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyInvoice.kt
+@@ -0,0 +1,8 @@
++package com.example.apiary.hives.honeysales
++
++data class HoneyInvoice(
++    val customerName: String,
++    val jarCount: Int,
++    val pricePerJarCents: Long,
++    val totalCents: Long,
++)
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyInvoiceRepository.kt b/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyInvoiceRepository.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyInvoiceRepository.kt
+@@ -0,0 +1,5 @@
++package com.example.apiary.hives.honeysales
++
++interface HoneyInvoiceRepository {
++    fun saveInvoice(invoice: HoneyInvoice)
++}
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyInvoiceService.kt b/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyInvoiceService.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyInvoiceService.kt
+@@ -0,0 +1,23 @@
++package com.example.apiary.hives.honeysales
++
++class HoneyInvoiceService(
++    private val honeyPriceList: HoneyPriceList,
++    private val honeyInvoiceRepository: HoneyInvoiceRepository,
++) {
++
++    fun createInvoice(customerName: String, jarCount: Int): HoneyInvoice {
++        val pricePerJarCents = getPricePerJarCents(jarCount)
++        val invoice = HoneyInvoice(customerName, jarCount, pricePerJarCents, pricePerJarCents * jarCount)
++        honeyInvoiceRepository.saveInvoice(invoice)
++
++        return invoice
++    }
++
++    private fun getPricePerJarCents(jarCount: Int): Long {
++        if (jarCount >= honeyPriceList.bulkJarCount) {
++            return honeyPriceList.bulkPricePerJarCents
++        }
++
++        return honeyPriceList.pricePerJarCents
++    }
++}
+diff --git a/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyPriceList.kt b/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyPriceList.kt
+new file mode 100644
+--- /dev/null
++++ b/apiary/src/main/kotlin/com/example/apiary/hives/honeysales/HoneyPriceList.kt
+@@ -0,0 +1,7 @@
++package com.example.apiary.hives.honeysales
++
++data class HoneyPriceList(
++    val pricePerJarCents: Long,
++    val bulkPricePerJarCents: Long,
++    val bulkJarCount: Int,
++)
