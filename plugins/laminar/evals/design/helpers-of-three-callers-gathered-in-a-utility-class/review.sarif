@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "laminar-review",
-          "version": "0.71.2",
+          "version": "0.74.0",
           "informationUri": "https://github.com/clutcher/laminar-skills",
           "rules": [
             {
@@ -97,6 +97,16 @@
               },
               "help": {
                 "text": "Encapsulate: move these private methods and fields into their own class, or up to the caller."
+              }
+            },
+            {
+              "id": "D5",
+              "name": "Incomplete Mental Model (Type per Variant)",
+              "shortDescription": {
+                "text": "the developer at one location has no signal that the same decision exists elsewhere"
+              },
+              "help": {
+                "text": "Encapsulate: write 1 type with the variant as a field or a parameter, or keep the types apart."
               }
             },
             {
@@ -265,7 +275,7 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/main/java/com/example/clinic/util/ClinicUtils.java"
+                  "uri": "src/main/java/com/example/clinic/util"
                 }
               },
               "logicalLocations": [

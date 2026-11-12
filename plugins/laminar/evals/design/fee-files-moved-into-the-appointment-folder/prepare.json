@@ -1,0 +1,203 @@
+{
+ "mode": "REPOSITORY",
+ "target": "/tmp/laminar-review/fixture/.claude/worktrees/laminar-review-change-12ea12",
+ "filter": {
+  "judges": [
+   "judge-simplicity-module"
+  ],
+  "paths": [],
+  "scales": []
+ },
+ "counts": {
+  "codeUnderReview": 1,
+  "checks": 2,
+  "byTrack": {
+   "SIMPLICITY": 1,
+   "DESIGN": 0,
+   "PREVENTION": 0,
+   "TEST_METHOD": 0,
+   "TEST_PLAN": 0,
+   "PERFORMANCE": 0,
+   "DECISION": 0,
+   "COMMENT": 0,
+   "IO_PATHS": 0,
+   "ENTRY_BOUNDARY": 0,
+   "BOUNDARY": 0
+  },
+  "byJudgeType": {
+   "judge-simplicity-module": 1
+  },
+  "screenBatches": 0,
+  "endCalls": 0,
+  "ioRuleScreenCalls": 0,
+  "ioEndMethods": 0,
+  "waves": 1
+ },
+ "notAnswered": [],
+ "codeUnderReview": [
+  {
+   "id": "U1",
+   "abstractionId": "A1",
+   "displayName": "src/main/java/com/example/clinic/appointment",
+   "name": "src/main/java/com/example/clinic/appointment",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "MODULE",
+   "changeKind": "BOUNDARY_CHANGED",
+   "path": "src/main/java/com/example/clinic/appointment",
+   "lines": null,
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-module",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {},
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_FILE_LISTS",
+    "sections": [
+     {
+      "section": "moduleRoot",
+      "lines": [
+       "root: none · no module form for this language"
+      ]
+     },
+     {
+      "section": "childCount",
+      "lines": [
+       "children: 8 · files: 8 · folders: 0"
+      ]
+     },
+     {
+      "section": "fileList",
+      "lines": [
+       "src/main/java/com/example/clinic/appointment/Appointment.java",
+       "src/main/java/com/example/clinic/appointment/AppointmentBook.java",
+       "src/main/java/com/example/clinic/appointment/AppointmentRepository.java",
+       "src/main/java/com/example/clinic/appointment/BookingConfirmation.java",
+       "src/main/java/com/example/clinic/appointment/FeeSchedule.java",
+       "src/main/java/com/example/clinic/appointment/SlotTakenException.java",
+       "src/main/java/com/example/clinic/appointment/VisitFee.java",
+       "src/main/java/com/example/clinic/appointment/VisitType.java"
+      ]
+     },
+     {
+      "section": "siblings",
+      "lines": [
+       "src/main/java/com/example/clinic/billing"
+      ]
+     }
+    ],
+    "bytes": 639,
+    "sourceRoot": "src/main/java"
+   }
+  }
+ ],
+ "screenBatches": [],
+ "gate": {
+  "D3": [
+   "namesMechanism"
+  ],
+  "CP1": [
+   "encodesCaseAsPrimitiveOrFallback"
+  ],
+  "CP3": [
+   "changesStateBeyondTheCall"
+  ],
+  "CP4": [
+   "signalsFailureAsValueOrError"
+  ],
+  "CP7": [
+   "recoversFromFailureInPlace"
+  ],
+  "P2": [
+   "repeatsWork",
+   "callsOutsideProcess"
+  ],
+  "P3": [
+   "callsOutsideProcess"
+  ],
+  "P4": [
+   "createsReusableResource"
+  ]
+ },
+ "checkNames": {
+  "S1": "Incomplete Mental Model",
+  "S2": "Prediction Failure",
+  "S4": "Compression Failure",
+  "S5": "Unnamed Part Failure",
+  "S6": "Open Construct Overload",
+  "D1": "Over-Extraction",
+  "D2": "Scoped Parameters",
+  "D3": "Leaked Details",
+  "D4": "Missing Boundary",
+  "D5": "Type per Variant",
+  "CP1": "Exclude Illegal States",
+  "CP3": "Protect the State",
+  "CP4": "Remove Edge Cases",
+  "CP5": "Remove Hidden Dependencies",
+  "CP6": "Validate at the Boundary",
+  "CP7": "Fail Fast",
+  "CD2": "Test Behavior",
+  "CD4": "Integration Test Needed",
+  "CD5": "Unit Test Needed",
+  "CD6": "Unit Test to Remove",
+  "CD7": "Partial Path Test",
+  "P1": "Looped I/O",
+  "P2": "Repeated Retrieval",
+  "P3": "Excess Retrieval",
+  "P4": "Resource Recreation"
+ },
+ "ioRuleScreenCall": null,
+ "ioCachedRules": null,
+ "ioGroups": [],
+ "ioPaths": [],
+ "ioRuleKey": "cf7204c8fbf81d0181757c9a0488d7d4701bef121f0c3723728c8e9759e09499",
+ "ioEnds": [],
+ "entryBoundaries": {
+  "boundaries": 0,
+  "applications": 0,
+  "judged": 0,
+  "noCaller": 0,
+  "notJudged": 0
+ },
+ "boundaryPaths": {
+  "paths": 0,
+  "inner": 0,
+  "entry": 0,
+  "judged": 0,
+  "notJudged": 0
+ },
+ "waves": [
+  {
+   "number": 1,
+   "agentCalls": 1,
+   "screenBatches": [],
+   "ioRules": false,
+   "codeUnderReview": [
+    [
+     1,
+     1
+    ]
+   ]
+  }
+ ]
+}

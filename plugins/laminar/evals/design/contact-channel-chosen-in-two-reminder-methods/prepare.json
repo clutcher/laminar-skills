@@ -1,0 +1,924 @@
+{
+ "mode": "REPOSITORY",
+ "target": "/tmp/laminar-review/fixture/.claude/worktrees/laminar-review-change-12ea12",
+ "filter": {
+  "judges": [
+   "judge-simplicity-class",
+   "judge-simplicity-method",
+   "judge-simplicity-decision"
+  ],
+  "paths": [],
+  "scales": []
+ },
+ "counts": {
+  "codeUnderReview": 6,
+  "checks": 9,
+  "byTrack": {
+   "SIMPLICITY": 3,
+   "DESIGN": 0,
+   "PREVENTION": 0,
+   "TEST_METHOD": 0,
+   "TEST_PLAN": 0,
+   "PERFORMANCE": 0,
+   "DECISION": 3,
+   "COMMENT": 0,
+   "IO_PATHS": 0,
+   "ENTRY_BOUNDARY": 0,
+   "BOUNDARY": 0
+  },
+  "byJudgeType": {
+   "judge-simplicity-class": 1,
+   "judge-simplicity-decision": 3,
+   "judge-simplicity-method": 2
+  },
+  "screenBatches": 0,
+  "endCalls": 0,
+  "ioRuleScreenCalls": 0,
+  "ioEndMethods": 0,
+  "waves": 1
+ },
+ "notAnswered": [],
+ "codeUnderReview": [
+  {
+   "id": "U1",
+   "abstractionId": "A2",
+   "displayName": "ReminderSender",
+   "name": "ReminderSender",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "CREATED",
+   "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+   "lines": {
+    "from": 6,
+    "to": 36
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_FILE_WHOLE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "6: public class ReminderSender {",
+       "7: ",
+       "8:     private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern(\"HH:mm\");",
+       "9: ",
+       "10:     private final SmsGateway smsGateway;",
+       "11: ",
+       "12:     private final Mailer mailer;",
+       "13: ",
+       "14:     public ReminderSender(SmsGateway smsGateway, Mailer mailer) {",
+       "15:         this.smsGateway = smsGateway;",
+       "16:         this.mailer = mailer;",
+       "17:     }",
+       "18: ",
+       "19:     public void sendPreviousDay(Appointment appointment, Patient patient) {",
+       "20:         String text = \"Reminder: your visit is tomorrow at \" + appointment.start().format(TIME_OF_DAY) + \".\";",
+       "21:         if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "22:             smsGateway.sendText(patient.phone(), text);",
+       "23:         } else {",
+       "24:             mailer.sendMail(patient.email(), \"Your visit tomorrow\", text);",
+       "25:         }",
+       "26:     }",
+       "27: ",
+       "28:     public void sendSameDay(Appointment appointment, Patient patient) {",
+       "29:         String text = \"Your visit is today at \" + appointment.start().format(TIME_OF_DAY) + \". Please arrive 10 minutes early.\";",
+       "30:         if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "31:             smsGateway.sendText(patient.phone(), text);",
+       "32:         } else {",
+       "33:             mailer.sendMail(patient.email(), \"Your visit today\", text);",
+       "34:         }",
+       "35:     }",
+       "36: }"
+      ]
+     },
+     {
+      "section": "fieldTypeHeads",
+      "lines": [
+       "src/main/java/com/example/clinic/reminder/SmsGateway.java:3: public interface SmsGateway {",
+       "src/main/java/com/example/clinic/reminder/Mailer.java:3: public interface Mailer {"
+      ]
+     }
+    ],
+    "bytes": 1537
+   }
+  },
+  {
+   "id": "U2",
+   "abstractionId": "A4",
+   "displayName": "ReminderSender#ReminderSender",
+   "name": "ReminderSender",
+   "enclosing": "ReminderSender",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+   "lines": {
+    "from": 14,
+    "to": 17
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "DECISION",
+   "judgeType": "judge-simplicity-decision",
+   "checks": [
+    {
+     "id": "S1",
+     "name": "Incomplete Mental Model",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [
+    {
+     "key": "ReminderSender",
+     "kind": "NAME_STEMS",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/Mailer.java",
+       "line": 5,
+       "text": "void sendMail(String email, String subject, String body);",
+       "moduleRoot": ""
+      }
+     ]
+    }
+   ],
+   "homeModule": {
+    "root": "",
+    "rootForm": "",
+    "reason": "no module form for this language"
+   },
+   "searchScope": {
+    "family": "jvm",
+    "minifiedSkipped": 0
+   },
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "14:     public ReminderSender(SmsGateway smsGateway, Mailer mailer) {",
+       "15:         this.smsGateway = smsGateway;",
+       "16:         this.mailer = mailer;",
+       "17:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "6: public class ReminderSender {",
+       "8: private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern(\"HH:mm\");",
+       "10: private final SmsGateway smsGateway;",
+       "12: private final Mailer mailer;",
+       "19: public void sendPreviousDay(Appointment appointment, Patient patient) {",
+       "28: public void sendSameDay(Appointment appointment, Patient patient) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:12: private final Mailer mailer;",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:24: mailer.sendMail(patient.email(), \"Your visit tomorrow\", text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:33: mailer.sendMail(patient.email(), \"Your visit today\", text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:10: private final SmsGateway smsGateway;",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:22: smsGateway.sendText(patient.phone(), text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:31: smsGateway.sendText(patient.phone(), text);",
+       "src/main/java/com/example/clinic/reminder/Mailer.java:3: public interface Mailer {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:6: public class ReminderSender {",
+       "src/main/java/com/example/clinic/reminder/SmsGateway.java:3: public interface SmsGateway {",
+       "src/main/java/com/example/clinic/reminder/Mailer.java:5: void sendMail(String email, String subject, String body);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:19: public void sendPreviousDay(Appointment appointment, Patient patient) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:28: public void sendSameDay(Appointment appointment, Patient patient) {"
+      ]
+     }
+    ],
+    "bytes": 1831
+   }
+  },
+  {
+   "id": "U3",
+   "abstractionId": "A5",
+   "displayName": "ReminderSender#sendPreviousDay",
+   "name": "sendPreviousDay",
+   "enclosing": "ReminderSender",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+   "lines": {
+    "from": 19,
+    "to": 26
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": {
+     "line": 22,
+     "text": "smsGateway.sendText(patient.phone(), text);"
+    },
+    "constructs": [
+     {
+      "line": 21,
+      "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {"
+     }
+    ]
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "19:     public void sendPreviousDay(Appointment appointment, Patient patient) {",
+       "20:         String text = \"Reminder: your visit is tomorrow at \" + appointment.start().format(TIME_OF_DAY) + \".\";",
+       "21:         if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "22:             smsGateway.sendText(patient.phone(), text);",
+       "23:         } else {",
+       "24:             mailer.sendMail(patient.email(), \"Your visit tomorrow\", text);",
+       "25:         }",
+       "26:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "6: public class ReminderSender {",
+       "8: private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern(\"HH:mm\");",
+       "10: private final SmsGateway smsGateway;",
+       "12: private final Mailer mailer;",
+       "14: public ReminderSender(SmsGateway smsGateway, Mailer mailer) {",
+       "28: public void sendSameDay(Appointment appointment, Patient patient) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/com/example/clinic/appointment/Appointment.java:5: public record Appointment(String appointmentId, String patientId, String clinicianId, VisitType visitType, LocalDateTime …",
+       "src/main/java/com/example/clinic/reminder/Patient.java:3: public record Patient(String patientId, String name, String phone, String email, boolean smsConsent) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:28: public void sendSameDay(Appointment appointment, Patient patient) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:30: if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:31: smsGateway.sendText(patient.phone(), text);",
+       "src/main/java/com/example/clinic/reminder/SmsGateway.java:5: void sendText(String phone, String text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:29: String text = \"Your visit is today at \" + appointment.start().format(TIME_OF_DAY) + \". Please arrive 10 minutes early.\";",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:33: mailer.sendMail(patient.email(), \"Your visit today\", text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:8: private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern(\"HH:mm\");",
+       "src/main/java/com/example/clinic/reminder/Mailer.java:5: void sendMail(String email, String subject, String body);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:6: public class ReminderSender {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:14: public ReminderSender(SmsGateway smsGateway, Mailer mailer) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:10: private final SmsGateway smsGateway;",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:12: private final Mailer mailer;"
+      ]
+     }
+    ],
+    "bytes": 2663
+   }
+  },
+  {
+   "id": "U4",
+   "abstractionId": "A5",
+   "displayName": "ReminderSender#sendPreviousDay",
+   "name": "sendPreviousDay",
+   "enclosing": "ReminderSender",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+   "lines": {
+    "from": 19,
+    "to": 26
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "DECISION",
+   "judgeType": "judge-simplicity-decision",
+   "checks": [
+    {
+     "id": "S1",
+     "name": "Incomplete Mental Model",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": {
+     "line": 22,
+     "text": "smsGateway.sendText(patient.phone(), text);"
+    },
+    "constructs": [
+     {
+      "line": 21,
+      "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {"
+     }
+    ]
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [
+    {
+     "key": "sendPreviousDay",
+     "kind": "NAME_STEMS",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 28,
+       "text": "public void sendSameDay(Appointment appointment, Patient patient) {",
+       "moduleRoot": ""
+      },
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 6,
+       "text": "public class ReminderSender {",
+       "moduleRoot": ""
+      },
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 14,
+       "text": "public ReminderSender(SmsGateway smsGateway, Mailer mailer) {",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+     "kind": "WINDOW",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 30,
+       "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "smsGateway.sendText(patient.phone(), text);",
+     "kind": "WINDOW",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 31,
+       "text": "smsGateway.sendText(patient.phone(), text);",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "phone",
+     "kind": "READ_IDENTIFIER",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 30,
+       "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "isBlank",
+     "kind": "READ_IDENTIFIER",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 30,
+       "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "smsConsent",
+     "kind": "READ_IDENTIFIER",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 30,
+       "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "phone, isBlank, smsConsent",
+     "kind": "SHARED_READS",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 30,
+       "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "moduleRoot": ""
+      }
+     ]
+    }
+   ],
+   "homeModule": {
+    "root": "",
+    "rootForm": "",
+    "reason": "no module form for this language"
+   },
+   "searchScope": {
+    "family": "jvm",
+    "minifiedSkipped": 0
+   },
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "19:     public void sendPreviousDay(Appointment appointment, Patient patient) {",
+       "20:         String text = \"Reminder: your visit is tomorrow at \" + appointment.start().format(TIME_OF_DAY) + \".\";",
+       "21:         if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "22:             smsGateway.sendText(patient.phone(), text);",
+       "23:         } else {",
+       "24:             mailer.sendMail(patient.email(), \"Your visit tomorrow\", text);",
+       "25:         }",
+       "26:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "6: public class ReminderSender {",
+       "8: private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern(\"HH:mm\");",
+       "10: private final SmsGateway smsGateway;",
+       "12: private final Mailer mailer;",
+       "14: public ReminderSender(SmsGateway smsGateway, Mailer mailer) {",
+       "28: public void sendSameDay(Appointment appointment, Patient patient) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/com/example/clinic/appointment/Appointment.java:5: public record Appointment(String appointmentId, String patientId, String clinicianId, VisitType visitType, LocalDateTime …",
+       "src/main/java/com/example/clinic/reminder/Patient.java:3: public record Patient(String patientId, String name, String phone, String email, boolean smsConsent) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:28: public void sendSameDay(Appointment appointment, Patient patient) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:30: if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:31: smsGateway.sendText(patient.phone(), text);",
+       "src/main/java/com/example/clinic/reminder/SmsGateway.java:5: void sendText(String phone, String text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:29: String text = \"Your visit is today at \" + appointment.start().format(TIME_OF_DAY) + \". Please arrive 10 minutes early.\";",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:33: mailer.sendMail(patient.email(), \"Your visit today\", text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:8: private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern(\"HH:mm\");",
+       "src/main/java/com/example/clinic/reminder/Mailer.java:5: void sendMail(String email, String subject, String body);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:6: public class ReminderSender {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:14: public ReminderSender(SmsGateway smsGateway, Mailer mailer) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:10: private final SmsGateway smsGateway;",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:12: private final Mailer mailer;"
+      ]
+     }
+    ],
+    "bytes": 2663
+   }
+  },
+  {
+   "id": "U5",
+   "abstractionId": "A7",
+   "displayName": "ReminderSender#sendSameDay",
+   "name": "sendSameDay",
+   "enclosing": "ReminderSender",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+   "lines": {
+    "from": 28,
+    "to": 35
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": {
+     "line": 31,
+     "text": "smsGateway.sendText(patient.phone(), text);"
+    },
+    "constructs": [
+     {
+      "line": 30,
+      "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {"
+     }
+    ]
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "28:     public void sendSameDay(Appointment appointment, Patient patient) {",
+       "29:         String text = \"Your visit is today at \" + appointment.start().format(TIME_OF_DAY) + \". Please arrive 10 minutes early.\";",
+       "30:         if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "31:             smsGateway.sendText(patient.phone(), text);",
+       "32:         } else {",
+       "33:             mailer.sendMail(patient.email(), \"Your visit today\", text);",
+       "34:         }",
+       "35:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "6: public class ReminderSender {",
+       "8: private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern(\"HH:mm\");",
+       "10: private final SmsGateway smsGateway;",
+       "12: private final Mailer mailer;",
+       "14: public ReminderSender(SmsGateway smsGateway, Mailer mailer) {",
+       "19: public void sendPreviousDay(Appointment appointment, Patient patient) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/com/example/clinic/appointment/Appointment.java:5: public record Appointment(String appointmentId, String patientId, String clinicianId, VisitType visitType, LocalDateTime …",
+       "src/main/java/com/example/clinic/reminder/Patient.java:3: public record Patient(String patientId, String name, String phone, String email, boolean smsConsent) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:19: public void sendPreviousDay(Appointment appointment, Patient patient) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:21: if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:22: smsGateway.sendText(patient.phone(), text);",
+       "src/main/java/com/example/clinic/reminder/SmsGateway.java:5: void sendText(String phone, String text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:20: String text = \"Reminder: your visit is tomorrow at \" + appointment.start().format(TIME_OF_DAY) + \".\";",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:24: mailer.sendMail(patient.email(), \"Your visit tomorrow\", text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:8: private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern(\"HH:mm\");",
+       "src/main/java/com/example/clinic/reminder/Mailer.java:5: void sendMail(String email, String subject, String body);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:6: public class ReminderSender {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:10: private final SmsGateway smsGateway;",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:12: private final Mailer mailer;"
+      ]
+     }
+    ],
+    "bytes": 2539
+   }
+  },
+  {
+   "id": "U6",
+   "abstractionId": "A7",
+   "displayName": "ReminderSender#sendSameDay",
+   "name": "sendSameDay",
+   "enclosing": "ReminderSender",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+   "lines": {
+    "from": 28,
+    "to": 35
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "DECISION",
+   "judgeType": "judge-simplicity-decision",
+   "checks": [
+    {
+     "id": "S1",
+     "name": "Incomplete Mental Model",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": {
+     "line": 31,
+     "text": "smsGateway.sendText(patient.phone(), text);"
+    },
+    "constructs": [
+     {
+      "line": 30,
+      "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {"
+     }
+    ]
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [
+    {
+     "key": "sendSameDay",
+     "kind": "NAME_STEMS",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 19,
+       "text": "public void sendPreviousDay(Appointment appointment, Patient patient) {",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+     "kind": "WINDOW",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 21,
+       "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "smsGateway.sendText(patient.phone(), text);",
+     "kind": "WINDOW",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 22,
+       "text": "smsGateway.sendText(patient.phone(), text);",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "phone",
+     "kind": "READ_IDENTIFIER",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 21,
+       "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "isBlank",
+     "kind": "READ_IDENTIFIER",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 21,
+       "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "smsConsent",
+     "kind": "READ_IDENTIFIER",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 21,
+       "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "moduleRoot": ""
+      }
+     ]
+    },
+    {
+     "key": "phone, isBlank, smsConsent",
+     "kind": "SHARED_READS",
+     "places": [
+      {
+       "path": "src/main/java/com/example/clinic/reminder/ReminderSender.java",
+       "line": 21,
+       "text": "if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "moduleRoot": ""
+      }
+     ]
+    }
+   ],
+   "homeModule": {
+    "root": "",
+    "rootForm": "",
+    "reason": "no module form for this language"
+   },
+   "searchScope": {
+    "family": "jvm",
+    "minifiedSkipped": 0
+   },
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "28:     public void sendSameDay(Appointment appointment, Patient patient) {",
+       "29:         String text = \"Your visit is today at \" + appointment.start().format(TIME_OF_DAY) + \". Please arrive 10 minutes early.\";",
+       "30:         if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "31:             smsGateway.sendText(patient.phone(), text);",
+       "32:         } else {",
+       "33:             mailer.sendMail(patient.email(), \"Your visit today\", text);",
+       "34:         }",
+       "35:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "6: public class ReminderSender {",
+       "8: private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern(\"HH:mm\");",
+       "10: private final SmsGateway smsGateway;",
+       "12: private final Mailer mailer;",
+       "14: public ReminderSender(SmsGateway smsGateway, Mailer mailer) {",
+       "19: public void sendPreviousDay(Appointment appointment, Patient patient) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/com/example/clinic/appointment/Appointment.java:5: public record Appointment(String appointmentId, String patientId, String clinicianId, VisitType visitType, LocalDateTime …",
+       "src/main/java/com/example/clinic/reminder/Patient.java:3: public record Patient(String patientId, String name, String phone, String email, boolean smsConsent) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:19: public void sendPreviousDay(Appointment appointment, Patient patient) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:21: if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:22: smsGateway.sendText(patient.phone(), text);",
+       "src/main/java/com/example/clinic/reminder/SmsGateway.java:5: void sendText(String phone, String text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:20: String text = \"Reminder: your visit is tomorrow at \" + appointment.start().format(TIME_OF_DAY) + \".\";",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:24: mailer.sendMail(patient.email(), \"Your visit tomorrow\", text);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:8: private static final DateTimeFormatter TIME_OF_DAY = DateTimeFormatter.ofPattern(\"HH:mm\");",
+       "src/main/java/com/example/clinic/reminder/Mailer.java:5: void sendMail(String email, String subject, String body);",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:6: public class ReminderSender {",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:10: private final SmsGateway smsGateway;",
+       "src/main/java/com/example/clinic/reminder/ReminderSender.java:12: private final Mailer mailer;"
+      ]
+     }
+    ],
+    "bytes": 2539
+   }
+  }
+ ],
+ "screenBatches": [],
+ "gate": {
+  "D3": [
+   "namesMechanism"
+  ],
+  "CP1": [
+   "encodesCaseAsPrimitiveOrFallback"
+  ],
+  "CP3": [
+   "changesStateBeyondTheCall"
+  ],
+  "CP4": [
+   "signalsFailureAsValueOrError"
+  ],
+  "CP7": [
+   "recoversFromFailureInPlace"
+  ],
+  "P2": [
+   "repeatsWork",
+   "callsOutsideProcess"
+  ],
+  "P3": [
+   "callsOutsideProcess"
+  ],
+  "P4": [
+   "createsReusableResource"
+  ]
+ },
+ "checkNames": {
+  "S1": "Incomplete Mental Model",
+  "S2": "Prediction Failure",
+  "S4": "Compression Failure",
+  "S5": "Unnamed Part Failure",
+  "S6": "Open Construct Overload",
+  "D1": "Over-Extraction",
+  "D2": "Scoped Parameters",
+  "D3": "Leaked Details",
+  "D4": "Missing Boundary",
+  "D5": "Type per Variant",
+  "CP1": "Exclude Illegal States",
+  "CP3": "Protect the State",
+  "CP4": "Remove Edge Cases",
+  "CP5": "Remove Hidden Dependencies",
+  "CP6": "Validate at the Boundary",
+  "CP7": "Fail Fast",
+  "CD2": "Test Behavior",
+  "CD4": "Integration Test Needed",
+  "CD5": "Unit Test Needed",
+  "CD6": "Unit Test to Remove",
+  "CD7": "Partial Path Test",
+  "P1": "Looped I/O",
+  "P2": "Repeated Retrieval",
+  "P3": "Excess Retrieval",
+  "P4": "Resource Recreation"
+ },
+ "ioRuleScreenCall": null,
+ "ioCachedRules": null,
+ "ioGroups": [],
+ "ioPaths": [],
+ "ioRuleKey": "be93ba7042e9ce82a78e91752e9b8f5347faf5f14133b038dd987afd7ff3ac8d",
+ "ioEnds": [],
+ "entryBoundaries": {
+  "boundaries": 0,
+  "applications": 0,
+  "judged": 0,
+  "noCaller": 0,
+  "notJudged": 0
+ },
+ "boundaryPaths": {
+  "paths": 0,
+  "inner": 0,
+  "entry": 0,
+  "judged": 0,
+  "notJudged": 0
+ },
+ "waves": [
+  {
+   "number": 1,
+   "agentCalls": 6,
+   "screenBatches": [],
+   "ioRules": false,
+   "codeUnderReview": [
+    [
+     1,
+     6
+    ]
+   ]
+  }
+ ]
+}

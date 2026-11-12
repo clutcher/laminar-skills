@@ -1,0 +1,559 @@
+{
+ "mode": "REPOSITORY",
+ "target": "/tmp/laminar-review/fixture/.claude/worktrees/laminar-review-change-12ea12",
+ "filter": {
+  "judges": [
+   "judge-simplicity-module",
+   "judge-simplicity-class"
+  ],
+  "paths": [],
+  "scales": []
+ },
+ "counts": {
+  "codeUnderReview": 6,
+  "checks": 12,
+  "byTrack": {
+   "SIMPLICITY": 6,
+   "DESIGN": 0,
+   "PREVENTION": 0,
+   "TEST_METHOD": 0,
+   "TEST_PLAN": 0,
+   "PERFORMANCE": 0,
+   "DECISION": 0,
+   "COMMENT": 0,
+   "IO_PATHS": 0,
+   "ENTRY_BOUNDARY": 0,
+   "BOUNDARY": 0
+  },
+  "byJudgeType": {
+   "judge-simplicity-class": 4,
+   "judge-simplicity-module": 2
+  },
+  "screenBatches": 0,
+  "endCalls": 0,
+  "ioRuleScreenCalls": 0,
+  "ioEndMethods": 0,
+  "waves": 1
+ },
+ "notAnswered": [],
+ "codeUnderReview": [
+  {
+   "id": "U1",
+   "abstractionId": "A6",
+   "displayName": "AppointmentBook",
+   "name": "AppointmentBook",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "BOUNDARY_CHANGED",
+   "path": "src/main/java/com/example/clinic/appointment/AppointmentBook.java",
+   "lines": {
+    "from": 7,
+    "to": 26
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_ITS_TYPE_HEADS",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "7: public class AppointmentBook {",
+       "8: ",
+       "9:     private final AppointmentRepository appointments;",
+       "10: ",
+       "11:     public AppointmentBook(AppointmentRepository appointments) {",
+       "12:         this.appointments = appointments;",
+       "13:     }",
+       "14: ",
+       "15:     public Appointment book(Appointment requested) {",
+       "16:         LocalDateTime start = ClinicUtils.roundUpToSlotStart(requested.start());",
+       "17:         Appointment aligned = new Appointment(requested.appointmentId(), requested.patientId(), requested.clinicianId(), requested.visitType(), start, start.plus(java.time.Duration.between(requested.start(), requested.end())));",
+       "18:         List<Appointment> sameDay = appointments.findClinicianDayAppointments(aligned.clinicianId(), aligned.start().toLocalDate());",
+       "19:         for (Appointment booked : sameDay) {",
+       "20:             if (ClinicUtils.overlaps(booked.start(), booked.end(), aligned.start(), aligned.end())) throw new SlotTakenException(aligned.clinicianId(), aligned.start());",
+       "21:         }",
+       "22: ",
+       "23:         appointments.save(aligned);",
+       "24:         return aligned;",
+       "25:     }",
+       "26: }"
+      ]
+     },
+     {
+      "section": "fieldTypeHeads",
+      "lines": [
+       "src/main/java/com/example/clinic/appointment/AppointmentRepository.java:6: public interface AppointmentRepository {"
+      ]
+     }
+    ],
+    "bytes": 1181
+   }
+  },
+  {
+   "id": "U2",
+   "abstractionId": "A9",
+   "displayName": "InvoiceService",
+   "name": "InvoiceService",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "BOUNDARY_CHANGED",
+   "path": "src/main/java/com/example/clinic/billing/InvoiceService.java",
+   "lines": {
+    "from": 6,
+    "to": 12
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_ITS_TYPE_HEADS",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "6: public class InvoiceService {",
+       "7: ",
+       "8:     public Invoice createInvoice(String invoiceId, String patientId, BigDecimal fee, int insuredPercent) {",
+       "9:         BigDecimal patientShare = ClinicUtils.getPatientShare(fee, insuredPercent);",
+       "10:         return new Invoice(invoiceId, patientId, ClinicUtils.roundToCents(fee), ClinicUtils.roundToCents(patientShare));",
+       "11:     }",
+       "12: }"
+      ]
+     }
+    ],
+    "bytes": 374
+   }
+  },
+  {
+   "id": "U3",
+   "abstractionId": "A12",
+   "displayName": "ReminderPlanner",
+   "name": "ReminderPlanner",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "BOUNDARY_CHANGED",
+   "path": "src/main/java/com/example/clinic/reminder/ReminderPlanner.java",
+   "lines": {
+    "from": 6,
+    "to": 11
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_ITS_TYPE_HEADS",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "6: public class ReminderPlanner {",
+       "7: ",
+       "8:     public Reminder planReminder(Appointment appointment, Patient patient) {",
+       "9:         return new Reminder(patient.patientId(), ClinicUtils.normalizePhone(patient.phone()), ClinicUtils.getPreviousEvening(appointment.start()));",
+       "10:     }",
+       "11: }"
+      ]
+     }
+    ],
+    "bytes": 284
+   }
+  },
+  {
+   "id": "U4",
+   "abstractionId": "A4",
+   "displayName": "src/main/java/com/example/clinic/util",
+   "name": "src/main/java/com/example/clinic/util",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "MODULE",
+   "changeKind": "CREATED",
+   "path": "src/main/java/com/example/clinic/util",
+   "lines": null,
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-module",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {},
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_FILE_LISTS",
+    "sections": [
+     {
+      "section": "moduleRoot",
+      "lines": [
+       "root: none · no module form for this language"
+      ]
+     },
+     {
+      "section": "childCount",
+      "lines": [
+       "children: 1 · files: 1 · folders: 0"
+      ]
+     },
+     {
+      "section": "fileList",
+      "lines": [
+       "src/main/java/com/example/clinic/util/ClinicUtils.java"
+      ]
+     }
+    ],
+    "bytes": 134,
+    "sourceRoot": "src/main/java"
+   }
+  },
+  {
+   "id": "U5",
+   "abstractionId": "A14",
+   "displayName": "ClinicUtils",
+   "name": "ClinicUtils",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "CREATED",
+   "path": "src/main/java/com/example/clinic/util/ClinicUtils.java",
+   "lines": {
+    "from": 8,
+    "to": 42
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_FILE_WHOLE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "8: public final class ClinicUtils {",
+       "9: ",
+       "10:     private static final int SLOT_MINUTES = 15;",
+       "11: ",
+       "12:     private static final LocalTime SEND_TIME = LocalTime.of(18, 0);",
+       "13: ",
+       "14:     private ClinicUtils() {",
+       "15:     }",
+       "16: ",
+       "17:     public static LocalDateTime roundUpToSlotStart(LocalDateTime requested) {",
+       "18:         int minutesPastSlot = requested.getMinute() % SLOT_MINUTES;",
+       "19:         LocalDateTime truncated = requested.withSecond(0).withNano(0);",
+       "20:         return minutesPastSlot == 0 ? truncated : truncated.plusMinutes(SLOT_MINUTES - minutesPastSlot);",
+       "21:     }",
+       "22: ",
+       "23:     public static boolean overlaps(LocalDateTime start, LocalDateTime end, LocalDateTime otherStart, LocalDateTime otherEnd) {",
+       "24:         return start.isBefore(otherEnd) && otherStart.isBefore(end);",
+       "25:     }",
+       "26: ",
+       "27:     public static BigDecimal getPatientShare(BigDecimal fee, int insuredPercent) {",
+       "28:         return fee.multiply(BigDecimal.valueOf(100 - insuredPercent)).divide(BigDecimal.valueOf(100));",
+       "29:     }",
+       "30: ",
+       "31:     public static BigDecimal roundToCents(BigDecimal amount) {",
+       "32:         return amount.setScale(2, RoundingMode.HALF_UP);",
+       "33:     }",
+       "34: ",
+       "35:     public static LocalDateTime getPreviousEvening(LocalDateTime start) {",
+       "36:         return start.toLocalDate().minusDays(1).atTime(SEND_TIME);",
+       "37:     }",
+       "38: ",
+       "39:     public static String normalizePhone(String phone) {",
+       "40:         return phone.replaceAll(\"[^0-9+]\", \"\");",
+       "41:     }",
+       "42: }"
+      ]
+     }
+    ],
+    "bytes": 1436
+   }
+  },
+  {
+   "id": "U6",
+   "abstractionId": "A5",
+   "displayName": "src/main/java/com/example/clinic",
+   "name": "src/main/java/com/example/clinic",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "MODULE",
+   "changeKind": "BOUNDARY_CHANGED",
+   "path": "src/main/java/com/example/clinic",
+   "lines": null,
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-module",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {},
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_FILE_LISTS",
+    "sections": [
+     {
+      "section": "moduleRoot",
+      "lines": [
+       "root: none · no module form for this language"
+      ]
+     },
+     {
+      "section": "createdSubfolders",
+      "lines": [
+       "subfolder: src/main/java/com/example/clinic/util/",
+       "src/main/java/com/example/clinic/util/ClinicUtils.java"
+      ]
+     },
+     {
+      "section": "fileList",
+      "lines": [
+       "src/main/java/com/example/clinic/appointment",
+       "src/main/java/com/example/clinic/billing",
+       "src/main/java/com/example/clinic/reminder",
+       "src/main/java/com/example/clinic/util",
+       "src/main/java/com/example/clinic/appointment/Appointment.java",
+       "src/main/java/com/example/clinic/appointment/AppointmentBook.java",
+       "src/main/java/com/example/clinic/appointment/AppointmentRepository.java",
+       "src/main/java/com/example/clinic/appointment/SlotTakenException.java",
+       "src/main/java/com/example/clinic/appointment/VisitType.java",
+       "src/main/java/com/example/clinic/billing/Invoice.java",
+       "src/main/java/com/example/clinic/billing/InvoiceService.java",
+       "src/main/java/com/example/clinic/reminder/Patient.java",
+       "src/main/java/com/example/clinic/reminder/Reminder.java",
+       "src/main/java/com/example/clinic/reminder/ReminderPlanner.java",
+       "src/main/java/com/example/clinic/util/ClinicUtils.java"
+      ]
+     }
+    ],
+    "bytes": 987,
+    "sourceRoot": "src/main/java"
+   }
+  }
+ ],
+ "screenBatches": [],
+ "gate": {
+  "D3": [
+   "namesMechanism"
+  ],
+  "CP1": [
+   "encodesCaseAsPrimitiveOrFallback"
+  ],
+  "CP3": [
+   "changesStateBeyondTheCall"
+  ],
+  "CP4": [
+   "signalsFailureAsValueOrError"
+  ],
+  "CP7": [
+   "recoversFromFailureInPlace"
+  ],
+  "P2": [
+   "repeatsWork",
+   "callsOutsideProcess"
+  ],
+  "P3": [
+   "callsOutsideProcess"
+  ],
+  "P4": [
+   "createsReusableResource"
+  ]
+ },
+ "checkNames": {
+  "S1": "Incomplete Mental Model",
+  "S2": "Prediction Failure",
+  "S4": "Compression Failure",
+  "S5": "Unnamed Part Failure",
+  "S6": "Open Construct Overload",
+  "D1": "Over-Extraction",
+  "D2": "Scoped Parameters",
+  "D3": "Leaked Details",
+  "D4": "Missing Boundary",
+  "D5": "Type per Variant",
+  "CP1": "Exclude Illegal States",
+  "CP3": "Protect the State",
+  "CP4": "Remove Edge Cases",
+  "CP5": "Remove Hidden Dependencies",
+  "CP6": "Validate at the Boundary",
+  "CP7": "Fail Fast",
+  "CD2": "Test Behavior",
+  "CD4": "Integration Test Needed",
+  "CD5": "Unit Test Needed",
+  "CD6": "Unit Test to Remove",
+  "CD7": "Partial Path Test",
+  "P1": "Looped I/O",
+  "P2": "Repeated Retrieval",
+  "P3": "Excess Retrieval",
+  "P4": "Resource Recreation"
+ },
+ "ioRuleScreenCall": null,
+ "ioCachedRules": null,
+ "ioGroups": [],
+ "ioPaths": [],
+ "ioRuleKey": "0083ea14aba73ba87f6dc6ddf82d5f18c4f98896ab09295600b14a677d614b55",
+ "ioEnds": [],
+ "entryBoundaries": {
+  "boundaries": 0,
+  "applications": 0,
+  "judged": 0,
+  "noCaller": 0,
+  "notJudged": 0
+ },
+ "boundaryPaths": {
+  "paths": 0,
+  "inner": 0,
+  "entry": 0,
+  "judged": 0,
+  "notJudged": 0
+ },
+ "waves": [
+  {
+   "number": 1,
+   "agentCalls": 6,
+   "screenBatches": [],
+   "ioRules": false,
+   "codeUnderReview": [
+    [
+     1,
+     6
+    ]
+   ]
+  }
+ ]
+}

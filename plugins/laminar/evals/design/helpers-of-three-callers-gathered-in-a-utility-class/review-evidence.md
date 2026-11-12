@@ -1,4 +1,4 @@
-**Run** · repository mode, the worktree .claude/worktrees/laminar-review-change-12ea12 at f4b1d86a2d7a · 4 file(s), 24 abstraction(s) · 6 abstraction(s) under review, 12 check(s), 2 finished with a finding, 10 finished with no finding (10 by a judge, 0 by the screen), 0 failed · findings: 2 kept (2 high, 0 moderate, 0 low), 0 to consider (0 in existing code), 0 rejected, 0 not verified, 0 dropped by the line check, 1 repaired from the numbering of the code under review · run folder: /tmp/laminar-review/helpers-of-three-callers-gathered-in-a-utility-class
+**Run** · repository mode, the worktree .claude/worktrees/laminar-review-change-12ea12 at a5a3e7303e4a · 4 file(s), 24 abstraction(s) · 6 abstraction(s) under review, 12 check(s), 2 finished with a finding, 10 finished with no finding (10 by a judge, 0 by the screen), 0 failed · findings: 2 kept (2 high, 0 moderate, 0 low), 0 to consider (0 in existing code), 0 rejected, 0 not verified, 0 dropped by the line check, 1 repaired from the numbering of the code under review · run folder: /tmp/laminar-review/helpers-of-three-callers-gathered-in-a-utility-class
 
 **Scope** · filtered when the review was started · judges: simplicity-module, simplicity-class · 53 judge calls planned, 6 in this run
 
@@ -12,7 +12,7 @@ Every kept finding with its check, the cognitive failure or the prevention decis
 
 ## Simplicity
 
-**`src/main/java/com/example/clinic/util/ClinicUtils.java`** — module `src/main/java/com/example/clinic/util` · The folder name util predicts no part of the clinic, so a reader cannot tell from it that it holds booking slot rules, billing amounts and reminder times.
+**`src/main/java/com/example/clinic/util`** — module `src/main/java/com/example/clinic/util` · The folder name util predicts no part of the clinic, so a reader cannot tell from it that it holds booking slot rules, billing amounts and reminder times.
 S2 Prediction Failure
 Reads as: general helpers of the whole clinic
 Holds: a slot rule of booking, a patient share and a rounding of billing, and a send time and a phone form of reminders
