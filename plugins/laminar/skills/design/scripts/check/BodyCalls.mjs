@@ -1,4 +1,5 @@
 import { splitAtTopLevelCommas } from "../model/TypeArguments.mjs";
+import { QUOTES, findEndOfTheString, readQuoteAt } from "./CodeText.mjs";
 
 const CALL_START = /(\bnew\s+)?([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*)\s*\(/g;
 
@@ -35,14 +36,6 @@ const SELF_WORDS = new Set(["this"]);
 const OPENING = "([{";
 
 const CLOSING = ")]}";
-
-const QUOTES = "\"'`";
-
-// The text block of Java and the raw string of Kotlin, which span lines.
-const TEXT_BLOCK_QUOTE = '"""';
-
-// The quotes of a string that ends at its line end, so an apostrophe in a comment leaves the code below it as code.
-const LINE_QUOTES = "\"'";
 
 const readCharacterBefore = (text, at) => {
   let before = at - 1;
@@ -182,20 +175,6 @@ const readParenthesisDepthChange = line => {
     else if (character === ")" || character === "]") change -= 1;
   }
   return change;
-};
-
-const readQuoteAt = (body, at) => {
-  if (body.startsWith(TEXT_BLOCK_QUOTE, at)) return TEXT_BLOCK_QUOTE;
-  return QUOTES.includes(body[at]) ? body[at] : "";
-};
-
-const findEndOfTheString = (body, openAt, quote) => {
-  for (let at = openAt + quote.length; at < body.length; at += 1) {
-    if (body[at] === "\\") at += 1;
-    else if (body.startsWith(quote, at)) return at + quote.length;
-    else if (body[at] === "\n" && LINE_QUOTES.includes(quote)) return at;
-  }
-  return body.length;
 };
 
 // The text inside every string, dropped with its quotes kept as an empty string, so a call or a ; inside a string or a text block is no code and the string still reads as a literal.
