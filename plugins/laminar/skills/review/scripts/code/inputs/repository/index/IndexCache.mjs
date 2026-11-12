@@ -56,9 +56,9 @@ const parseChangedPaths = porcelain => {
   return [...new Set(paths)].sort();
 };
 
-export function findTreeKeyWithLocalChanges(repository) {
+export function findTreeKeyWithLocalChanges(repository, withUntrackedFiles = false) {
   const tree = readGitOutput(["rev-parse", "--verify", "--quiet", "HEAD^{tree}"], repository);
-  const differing = readGitOutput(["--no-optional-locks", "status", "--porcelain=v1", "-z", "--untracked-files=no"], repository);
+  const differing = readGitOutput(["--no-optional-locks", "status", "--porcelain=v1", "-z", `--untracked-files=${withUntrackedFiles ? "all" : "no"}`], repository);
   if (!tree || differing === null) return null;
   const localChanges = parseChangedPaths(differing).map(given => `${given}\u0001${computeContentHash(repository, given)}`);
   return computeSha256([tree.trim(), ...localChanges]);
@@ -70,9 +70,9 @@ const isInside = (folder, outer) => {
 };
 
 export class IndexCache {
-  constructor(repository, folder = readDefaultCacheFolder()) {
+  constructor(repository, folder = readDefaultCacheFolder(), { withUntrackedFiles = false } = {}) {
     this.folder = folder;
-    this.treeKey = folder && !isInside(folder, repository) ? findTreeKeyWithLocalChanges(repository) : null;
+    this.treeKey = folder && !isInside(folder, repository) ? findTreeKeyWithLocalChanges(repository, withUntrackedFiles) : null;
     this.use = { folder, read: [], built: [] };
     this.useBySectionMap = new Map();
   }

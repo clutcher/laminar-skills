@@ -4,18 +4,19 @@ import { readTextOf } from "../RepositoryFiles.mjs";
 import { SourceIndex } from "./SourceIndex.mjs";
 
 export class CachedSourceIndex {
-  constructor(repository, { cacheFolder } = {}) {
+  constructor(repository, { cacheFolder, listsUntrackedFiles = false } = {}) {
     this.repository = repository;
     this.cacheFolder = cacheFolder;
+    this.listsUntrackedFiles = listsUntrackedFiles;
   }
 
   readIndexCache() {
-    if (!this.cachedIndexCache) this.cachedIndexCache = new IndexCache(this.repository, this.cacheFolder);
+    if (!this.cachedIndexCache) this.cachedIndexCache = new IndexCache(this.repository, this.cacheFolder, { withUntrackedFiles: this.listsUntrackedFiles });
     return this.cachedIndexCache;
   }
 
   readSourceIndex() {
-    if (!this.cachedIndex) this.cachedIndex = new SourceIndex(this.repository, (family, paths) => this.readOrBuildFamilyFiles(family, paths));
+    if (!this.cachedIndex) this.cachedIndex = new SourceIndex(this.repository, (family, paths) => this.readOrBuildFamilyFiles(family, paths), { listsUntrackedFiles: this.listsUntrackedFiles });
     return this.cachedIndex;
   }
 

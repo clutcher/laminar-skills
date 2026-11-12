@@ -70,7 +70,7 @@ export class CodeGraphWalks {
     this.literalConstants = addTheirTreeAbstractions(this.extractedReview.literalConstants, this.tree);
     this.callGraphs = buildCallGraphs(codeGraph, { nameMatchedTargets: NAME_MATCHED_TARGETS });
     this.callWalks = new CallWalks(codeGraph, NAME_MATCHED_TARGETS);
-    this.repositoryText = new RepositoryText(this.change.repository, this.change.mode, this.change.files, { cachedSourceIndex: new CachedSourceIndex(this.change.repository, { cacheFolder: indexCacheFolder }) });
+    this.repositoryText = new RepositoryText(this.change.repository, this.change.mode, this.change.files, { cachedSourceIndex: new CachedSourceIndex(this.change.repository, { cacheFolder: indexCacheFolder, listsUntrackedFiles: this.change.listsUntrackedFiles }) });
     this.testCode = new TestCode(filePath => this.repositoryText.readFileLines(filePath) || []);
     this.references = new ReferencePlaces(codeGraph, filePath => this.repositoryText.readFileLines(filePath), NAME_MATCHED_TARGETS);
     this.sameDecisions = new SameDecisionWalk(codeGraph, this.references, this.repositoryText);

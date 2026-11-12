@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { ChangeReader, CODE_GRAPH_FILE, ReviewWorktree, sweepUnusedReviewWorktreesBeside, WorktreeStop, findHeadOfRevisions, ExtractOutput, ExtractStep, listWhatTheShapeShows, readShapeModel, ShapeModelStop } from "./code/index.mjs";
+import { ChangeReader, readTopFolderOf, CODE_GRAPH_FILE, ReviewWorktree, sweepUnusedReviewWorktreesBeside, WorktreeStop, findHeadOfRevisions, ExtractOutput, ExtractStep, listWhatTheShapeShows, readShapeModel, ShapeModelStop } from "./code/index.mjs";
 import { PrepareStep, REVIEW_ABSTRACTIONS_FILE } from "./review/prepare/PrepareStep.mjs";
 import { CodeGraphWalks } from "./review/prepare/abstractions/CodeGraphWalks.mjs";
 import { ShapeAbstractions } from "./review/prepare/abstractions/shape/ShapeAbstractions.mjs";
@@ -12,14 +12,14 @@ import { ReturnsOfAnotherPrepareStop } from "./review/merge/returns/ReturnsOfAno
 import { formatSweepWords } from "./review/merge/draft/Sweep.mjs";
 import { RenderStep } from "./review/render/RenderStep.mjs";
 import { formatLeftOutByThePaths, formatTestBodiesLeftOut } from "./review/render/sections/ScopeLine.mjs";
-import { isSamePath, resolveAbsolutePath } from "./files/paths.mjs";
+import { convertToRepositoryPath, isSamePath, resolveAbsolutePath } from "./files/paths.mjs";
 import { readJsonFile, writeJsonFile } from "./files/jsonFile.mjs";
 import { writeWorkflowReturnFile } from "./files/workflowReturnFile.mjs";
 import { RunFileStop } from "./files/runFile.mjs";
 
 const SUBCOMMANDS = ["extract", "prepare", "merge", "render"];
 
-const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --diff <patch>] [prepare --repo <path> --shape <shape model>] [--kind-base <revision>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
+const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --repo <path> --uncommitted <file,...> | --diff <patch>] [prepare --repo <path> --shape <shape model>] [--kind-base <revision>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
 
 const PREPARE_RETURN_FILE = "prepare-return.json";
 
@@ -36,7 +36,7 @@ const MERGE_RETURN_META = { name: "merge-return", description: "The merge return
 const splitList = given => String(given || "").split(",").map(piece => piece.trim()).filter(Boolean);
 
 function parseArguments(argv) {
-  const parsed = { files: [], exclude: [], judges: [], paths: [], scales: [], findings: [], verdicts: [] };
+  const parsed = { files: [], uncommitted: [], exclude: [], judges: [], paths: [], scales: [], findings: [], verdicts: [] };
   for (let index = 0; index < argv.length; index++) {
     const name = argv[index];
     if (name === "--run") parsed.run = argv[++index];
@@ -44,6 +44,7 @@ function parseArguments(argv) {
     else if (name === "--range") parsed.revisions = argv[++index];
     else if (name === "--kind-base") parsed.kindBase = argv[++index];
     else if (name === "--diff") parsed.diff = argv[++index];
+    else if (name === "--uncommitted") parsed.uncommitted = splitList(argv[++index]);
     else if (name === "--shape") parsed.shape = argv[++index];
     else if (name === "--findings") parsed.findings.push(...splitList(argv[++index]));
     else if (name === "--verdicts") parsed.verdicts.push(...splitList(argv[++index]));
@@ -86,8 +87,16 @@ function readChangeOfRevisions(repository, parsed) {
   return { change, kindChange };
 }
 
+function readChangeOfUncommittedFiles(repository, parsed) {
+  const top = readTopFolderOf(repository);
+  if (!top) { console.error("extract: --uncommitted needs --repo inside a git working tree"); process.exit(2); }
+  const namedFiles = parsed.uncommitted.map(given => convertToRepositoryPath(path.relative(top, path.resolve(repository, given))));
+  return ChangeReader.createFromUncommittedFiles(top, namedFiles, parsed.exclude);
+}
+
 function readChangeOfOneSide(parsed, repository) {
   if (parsed.kindBase) { console.error("extract: --kind-base needs --range"); process.exit(2); }
+  if (parsed.uncommitted.length) return readChangeOfUncommittedFiles(repository, parsed);
   if (parsed.diff) return ChangeReader.createFromPatch(parsed.diff, repository, parsed.exclude);
   if (parsed.files.length) return ChangeReader.createFromNamedFiles(repository, parsed.files, parsed.exclude);
   console.error(USAGE);
@@ -97,7 +106,7 @@ function readChangeOfOneSide(parsed, repository) {
 function readChange(parsed) {
   const repository = parsed.repo ? resolveAbsolutePath(parsed.repo) : null;
   if (!repository && !parsed.diff) { console.error(USAGE); process.exit(2); }
-  if (parsed.revisions && !parsed.diff) return readChangeOfRevisions(repository, parsed);
+  if (parsed.revisions && !parsed.diff && !parsed.uncommitted.length) return readChangeOfRevisions(repository, parsed);
   return { change: readChangeOfOneSide(parsed, repository), kindChange: null };
 }
 

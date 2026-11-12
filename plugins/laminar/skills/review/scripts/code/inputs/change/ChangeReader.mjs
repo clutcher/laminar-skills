@@ -3,8 +3,9 @@ import path from "node:path";
 import { resolveAbsolutePath, joinFilesystemPath, convertToRepositoryPath, convertToPathPrefix } from "../../../files/paths.mjs";
 import { ChangedFile, FILE_STATUS, Hunk } from "./Hunk.mjs";
 import { runNoIndexDiff, runWithDiffDrivers } from "./DiffDrivers.mjs";
-import { PLAIN_PATCH_OPTIONS, readGitOutputOrFail, readTopFolderOf } from "../repository/GitCommands.mjs";
+import { PLAIN_PATCH_OPTIONS, readGitOutputOrFail, readTopFolderOf, runGitProcess } from "../repository/GitCommands.mjs";
 import { movesAmong } from "./MovedFiles.mjs";
+import { readUntrackedPaths } from "../repository/TrackedFiles.mjs";
 import { joinLinesAsFileText } from "../source/SourceText.mjs";
 
 export const CHANGE_MODES = Object.freeze({ REPOSITORY: "REPOSITORY", PATCH: "PATCH", SHAPE: "SHAPE" });
@@ -174,6 +175,30 @@ function formatNamedFilesAsDiff(repository, given) {
   return fileDiffs.join("\n");
 }
 
+const NO_INDEX_DIFFERENCE_STATUSES = Object.freeze([0, 1]);
+
+function listUntrackedFilesAmong(top, namedFiles) {
+  const untracked = readUntrackedPaths(top, namedFiles);
+  if (untracked === null) throw new Error(`git ls-files --others failed in ${top}`);
+  return new Set(untracked);
+}
+
+function readCreatedFileDiff(top, driverArgs, created) {
+  const finished = runGitProcess([...driverArgs, "diff", "--no-index", ...PLAIN_PATCH_OPTIONS, "-U0", "--no-color", "--", "/dev/null", created], top);
+  if (finished.error || !NO_INDEX_DIFFERENCE_STATUSES.includes(finished.status)) throw new Error(`git diff --no-index of ${created} failed: ${(finished.stderr || "").trim()}`);
+  return finished.stdout;
+}
+
+// The untracked files come as created files by --no-index, because an intent-to-add would be a git write.
+function formatUncommittedFilesAsDiff(top, namedFiles) {
+  const untracked = listUntrackedFilesAmong(top, namedFiles);
+  const tracked = namedFiles.filter(given => !untracked.has(given));
+  return runWithDiffDrivers(driverArgs => {
+    const trackedDiff = tracked.length ? readGitOutputOrFail([...driverArgs, "diff", "HEAD", ...PLAIN_PATCH_OPTIONS, "--no-relative", "-U0", "--no-color", "--find-renames", "--", ...tracked], top) : "";
+    return [trackedDiff, ...[...untracked].map(created => readCreatedFileDiff(top, driverArgs, created))].join("\n");
+  });
+}
+
 const isUnderPrefix = (filePath, prefix) => Boolean(prefix) && (filePath === prefix || filePath.startsWith(`${prefix}/`));
 
 const isExcluded = (filePath, excluded) => excluded.some(given => isUnderPrefix(filePath, convertToPathPrefix(given)));
@@ -205,6 +230,7 @@ export class ChangeReader {
     this.mode = mode;
     this.modeReason = reason;
     this.namesWholeFiles = false;
+    this.listsUntrackedFiles = false;
     this.readTheWholeFiles();
   }
 
@@ -230,6 +256,14 @@ export class ChangeReader {
     return reader;
   }
 
+  // The named files are relative to the top folder; the search of this change also lists the untracked files, so it reaches the uncommitted files of earlier migration groups.
+  static createFromUncommittedFiles(top, namedFiles, excluded) {
+    const reader = new ChangeReader(top, formatUncommittedFilesAsDiff(top, namedFiles), excluded);
+    reader.files = pairUnnamedMoves(reader.files);
+    reader.listsUntrackedFiles = true;
+    return reader;
+  }
+
   static readBackFrom(saved) {
     const reader = Object.create(ChangeReader.prototype);
     Object.assign(reader, {
@@ -239,6 +273,7 @@ export class ChangeReader {
       mode: saved.mode,
       modeReason: saved.modeReason,
       namesWholeFiles: saved.namesWholeFiles,
+      listsUntrackedFiles: Boolean(saved.listsUntrackedFiles),
     });
     reader.readTheWholeFiles();
     return reader;
@@ -251,6 +286,7 @@ export class ChangeReader {
       mode: this.mode,
       modeReason: this.modeReason,
       namesWholeFiles: this.namesWholeFiles,
+      ...(this.listsUntrackedFiles ? { listsUntrackedFiles: true } : {}),
       files: this.files.map(file => file.toJSON()),
     };
   }

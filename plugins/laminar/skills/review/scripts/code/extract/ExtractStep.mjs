@@ -175,7 +175,7 @@ export class ExtractStep {
     this.kindBase = kindBase;
     this.kindChange = kindChange;
     this.tree = new AbstractionTree();
-    this.cachedSourceIndex = new CachedSourceIndex(change.repository, { cacheFolder: indexCacheFolder });
+    this.cachedSourceIndex = new CachedSourceIndex(change.repository, { cacheFolder: indexCacheFolder, listsUntrackedFiles: change.listsUntrackedFiles });
     this.repositoryText = new RepositoryText(change.repository, change.mode, change.files, { cachedSourceIndex: this.cachedSourceIndex });
     this.createdFolders = CreatedFolders.createFromChange(change);
     this.decisionSearches = [];
