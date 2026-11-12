@@ -106,9 +106,11 @@ export class ShapeAbstractions {
     this.basePaths = readBasePaths(repository);
     this.shapeFiles = new ShapeFiles(shapeModel, this.basePaths);
     this.changedFiles = this.shapeFiles.listChangedFiles();
-    this.pathsAfterTheShape = this.shapeFiles.listPathsAfterTheShape();
-    this.createdFolders = new CreatedFolders(this.basePaths, this.changedFiles);
+    this.filesOfTheRemovedFolders = this.listFilesOfTheRemovedFolders();
+    this.pathsAfterTheShape = this.leaveOutTheFilesOfTheRemovedFolders(this.shapeFiles.listPathsAfterTheShape());
+    this.createdFolders = new CreatedFolders(this.basePaths, [...this.changedFiles, ...this.filesOfTheRemovedFolders]);
     this.foldersAFileLeft = new Set(this.listFoldersAFileLeft());
+    this.foldersARemovedFolderLeft = new Set(this.createdFolders.listFoldersARemovedFolderLeft(this.listPathsTakenAway().map(readFolderPath)));
     this.createdSubfoldersByJoinedFolderMap = this.createdFolders.readCreatedSubfoldersByJoinedFolder(this.listFoldersWithChangedFiles());
     this.moduleReading = new ModuleReading(repository);
     const applicationRoots = findDeployableRoots(repository);
@@ -225,19 +227,34 @@ export class ShapeAbstractions {
     return new Set(this.changedFiles.filter(file => file.existsAfterTheChange).map(file => readFolderPath(file.path)));
   }
 
+  listFilesOfTheRemovedFolders() {
+    const removedFolders = this.shapeModel.folders.filter(folder => folder.kind === SHAPE_KINDS.REMOVED).map(folder => folder.path);
+    return this.basePaths
+      .filter(basePath => removedFolders.some(folder => basePath.startsWith(`${folder}/`)))
+      .map(basePath => ({ path: basePath, status: FILE_STATUS.REMOVED }));
+  }
+
+  leaveOutTheFilesOfTheRemovedFolders(filePaths) {
+    const removedPaths = new Set(this.filesOfTheRemovedFolders.map(file => file.path));
+    return filePaths.filter(filePath => !removedPaths.has(filePath));
+  }
+
+  listPathsTakenAway() {
+    return [...this.changedFiles.filter(file => !file.existsAfterTheChange).map(file => file.path), ...this.changedFiles.map(file => file.oldPath).filter(Boolean), ...this.filesOfTheRemovedFolders.map(file => file.path)];
+  }
+
   listFoldersAFileLeft() {
-    const takenAway = [...this.changedFiles.filter(file => !file.existsAfterTheChange).map(file => file.path), ...this.changedFiles.map(file => file.oldPath).filter(Boolean)];
-    return [...new Set(takenAway.map(readFolderPath))].filter(folder => this.createdFolders.existsAfterTheChange(folder));
+    return [...new Set(this.listPathsTakenAway().map(readFolderPath))].filter(folder => this.createdFolders.existsAfterTheChange(folder));
   }
 
   listModuleFolders() {
     const listed = this.shapeModel.folders.filter(folder => folder.kind !== SHAPE_KINDS.REMOVED).map(folder => folder.path);
-    return [...new Set([...listed, ...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.foldersAFileLeft])];
+    return [...new Set([...listed, ...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.foldersAFileLeft, ...this.foldersARemovedFolderLeft])];
   }
 
   readChangeKindOfTheFolder(folder) {
     if (this.createdFolders.isCreated(folder)) return CHANGE_KINDS.CREATED;
-    if (this.createdSubfoldersByJoinedFolderMap.has(folder) || this.foldersAFileLeft.has(folder)) return CHANGE_KINDS.BOUNDARY_CHANGED;
+    if (this.createdSubfoldersByJoinedFolderMap.has(folder) || this.foldersAFileLeft.has(folder) || this.foldersARemovedFolderLeft.has(folder)) return CHANGE_KINDS.BOUNDARY_CHANGED;
     const ownFiles = this.listChangedFilesOf(folder);
     if (!ownFiles.length) return null;
     return ownFiles.some(file => BOUNDARY_MOVING_FILE_STATUSES.has(file.status)) ? CHANGE_KINDS.BOUNDARY_CHANGED : CHANGE_KINDS.INTERNALS_CHANGED;

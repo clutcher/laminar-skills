@@ -38,6 +38,22 @@ export class CreatedFolders {
     return this.readsTheBase && this.after.holds(folder);
   }
 
+  isRemoved(folder) {
+    return this.readsTheBase && folder !== THE_REPOSITORY_ROOT && this.before.holds(folder) && !this.after.holds(folder);
+  }
+
+  findTopRemoved(folder) {
+    let top = folder;
+    while (this.isRemoved(readFolderPath(top))) top = readFolderPath(top);
+    return top;
+  }
+
+  listFoldersARemovedFolderLeft(changedFolders) {
+    const removedTops = new Set([...changedFolders].filter(folder => this.isRemoved(folder)).map(folder => this.findTopRemoved(folder)));
+    const parents = [...removedTops].map(readFolderPath).filter(parent => parent !== THE_REPOSITORY_ROOT);
+    return [...new Set(parents)];
+  }
+
   findTopCreated(folder) {
     let top = folder;
     while (this.isCreated(readFolderPath(top))) top = readFolderPath(top);

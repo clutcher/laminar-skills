@@ -369,7 +369,8 @@ export class ExtractStep {
     this.pathEndFoldersReadAlone = this.createdFolders.findPathEndsReadAlone(foldersWithReadings);
     this.openedByTheChange = this.moduleOpenings.collectFoldersOpenedByTheChange();
     this.foldersAFileLeft = new Set(this.listTheFoldersAFileLeft(foldersWithReadings));
-    this.moduleFolders = new Set([...modules.keys(), ...this.pathEndFoldersReadAlone, ...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange, ...this.foldersAFileLeft]);
+    this.foldersARemovedFolderLeft = new Set(this.createdFolders.listFoldersARemovedFolderLeft([...foldersWithReadings, ...listTheFoldersFilesLeft(this.change.files)]));
+    this.moduleFolders = new Set([...modules.keys(), ...this.pathEndFoldersReadAlone, ...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange, ...this.foldersAFileLeft, ...this.foldersARemovedFolderLeft]);
   }
 
   addTheModules(changedFolders, modules) {
@@ -383,7 +384,7 @@ export class ExtractStep {
       this.addModule({ ...NO_FILES_OF_ITS_OWN, folder }, systemsByFolderMap);
     }
     const foldersWithAModule = new Set([...modules.keys(), ...this.pathEndFoldersReadAlone]);
-    for (const folder of [...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange, ...this.foldersAFileLeft]) {
+    for (const folder of [...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange, ...this.foldersAFileLeft, ...this.foldersARemovedFolderLeft]) {
       if (foldersWithAModule.has(folder)) continue;
       foldersWithAModule.add(folder);
       this.addModule({ ...NO_FILES_OF_ITS_OWN, folder }, systemsByFolderMap);
@@ -426,7 +427,7 @@ export class ExtractStep {
 
   readModuleChangeKind(module) {
     if (this.createdFolders.isCreated(module.folder)) return CHANGE_KINDS.CREATED;
-    if (this.createdSubfoldersByJoinedFolderMap.has(module.folder) || this.openedByTheChange.has(module.folder) || this.foldersAFileLeft.has(module.folder)) return CHANGE_KINDS.BOUNDARY_CHANGED;
+    if (this.createdSubfoldersByJoinedFolderMap.has(module.folder) || this.openedByTheChange.has(module.folder) || this.foldersAFileLeft.has(module.folder) || this.foldersARemovedFolderLeft.has(module.folder)) return CHANGE_KINDS.BOUNDARY_CHANGED;
     return [...module.statuses].some(status => BOUNDARY_MOVING_FILE_STATUS.has(status))
       ? CHANGE_KINDS.BOUNDARY_CHANGED : CHANGE_KINDS.INTERNALS_CHANGED;
   }
