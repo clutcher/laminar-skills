@@ -1,6 +1,6 @@
 import { isAText, isAnInterface, isMarkedUnchanged, readHeadTypeName, readList } from "../model/DesignModel.mjs";
 import { readParsedLanguage } from "../model/SourceLanguages.mjs";
-import { readBodyStatements } from "./BodyCalls.mjs";
+import { readMethodBodyStatements } from "./BodyCalls.mjs";
 import { DEFECT_CODES, createDefect, createRecheckDefect } from "./DesignDefect.mjs";
 
 // The values of Java, JavaScript and TypeScript that a body passes with no source to check.
@@ -204,7 +204,7 @@ class BodyFlow {
   }
 
   checkBody() {
-    for (const statement of readBodyStatements(this.method.body)) {
+    for (const statement of readMethodBodyStatements(this.method)) {
       for (const variable of [...statement.loopVariables, ...statement.patternVariables, ...statement.lambdaParameters]) this.typeOfSourceMap.set(variable.name, variable.typeText);
       for (const call of statement.calls) this.checkCall(call);
       for (const declaration of statement.declarations) this.typeOfSourceMap.set(declaration.name, declaration.typeText || this.readTypeOfTheDeclaration(statement));

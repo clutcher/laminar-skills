@@ -220,3 +220,64 @@ export const readBodyStatements = body => splitStatements(blankTheStringTexts(bo
   patternVariables: readPatternVariables(text),
   lambdaParameters: readLambdaParameters(text),
 }));
+
+// The words that may stand before the name of a method on its signature line: modifiers, annotations and a return type with its type arguments.
+const SIGNATURE_PREFIX = /^[\w$\s<>[\],.?@]*$/;
+
+// The keywords of Java, JavaScript and TypeScript that start an expression, so a name after them is a call and no declaration.
+const EXPRESSION_KEYWORDS = /\b(?:return|new|await|throw|yield|else|case)\b/;
+
+// After the parameter list, a signature line holds a body brace, a return type, a throws clause or an arrow, and never a statement end.
+const DECLARATION_MARK = /[{:]|\bthrows\b|=>/;
+
+const escapeForRegExp = text => text.replace(/[$]/g, "\\$");
+
+const findEndOfTheParameterList = (line, openAt) => {
+  let depth = 0;
+  for (let at = openAt; at < line.length; at += 1) {
+    if (line[at] === "(") depth += 1;
+    else if (line[at] === ")") depth -= 1;
+    if (depth === 0) return at;
+  }
+  return -1;
+};
+
+// The name a parameter of a signature declares: before the colon of its type in TypeScript and Kotlin, else its last word, as in Java.
+const readDeclaredParameterName = parameterText => {
+  const declared = parameterText.split("=")[0];
+  const named = declared.includes(":") ? declared.split(":")[0] : declared;
+  const words = named.trim().split(/\s+/);
+  return words[words.length - 1].replace(/^\.\.\./, "").replace(/\?$/, "");
+};
+
+// A line is the signature of the method where it names the method before its parameter list, declares the parameters of the model in their order, and holds a type, a modifier or a declaration mark, so a call of the method by its own parameters stays a call.
+const isTheSignatureLine = (line, method) => {
+  const nameMatch = new RegExp(`(^|[^\\w$.])${escapeForRegExp(method.name)}\\s*\\(`).exec(line);
+  if (!nameMatch) return false;
+
+  const prefix = line.slice(0, nameMatch.index + nameMatch[1].length);
+  if (!SIGNATURE_PREFIX.test(prefix) || EXPRESSION_KEYWORDS.test(prefix)) return false;
+  const openAt = nameMatch.index + nameMatch[0].length - 1;
+  const closeAt = findEndOfTheParameterList(line, openAt);
+  if (closeAt < 0) return false;
+  const rest = line.slice(closeAt + 1);
+  if (rest.includes(";") || /^\s*[.?]/.test(rest)) return false;
+
+  const parameterTexts = splitAtTopLevelCommas(line.slice(openAt + 1, closeAt)).map(parameterText => parameterText.trim()).filter(Boolean);
+  const declaredNames = parameterTexts.map(readDeclaredParameterName);
+  const modelNames = (method.parameters || []).map(parameter => parameter.name);
+  if (declaredNames.join(",") !== modelNames.join(",")) return false;
+
+  const holdsAType = parameterTexts.some((parameterText, at) => parameterText !== declaredNames[at]);
+  return prefix.trim() !== "" || holdsAType || DECLARATION_MARK.test(rest);
+};
+
+// A body may start with the signature line of its own method, as the shape model allows, and that line declares the parameters and calls nothing.
+const dropTheSignatureLine = method => {
+  const lines = method.body.split("\n");
+  const firstAt = lines.findIndex(line => line.trim() !== "");
+  if (firstAt < 0 || !isTheSignatureLine(lines[firstAt], method)) return method.body;
+  return lines.slice(firstAt + 1).join("\n");
+};
+
+export const readMethodBodyStatements = method => readBodyStatements(dropTheSignatureLine(method));
