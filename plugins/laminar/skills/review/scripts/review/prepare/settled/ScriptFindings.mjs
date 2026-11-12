@@ -4,7 +4,7 @@ import { readFileName } from "../../../files/paths.mjs";
 import { APPLICATION_ROOT_SECTION, formatPlacedSliceLine } from "../formats/SliceFormat.mjs";
 import { MODULE_BOUNDARY_FACT_SECTIONS } from "../abstractions/slices/CodeSlice.mjs";
 import { JUDGE_TYPE_BY_SCALE_MAP, JUDGE_TYPE_BY_TRACK_MAP } from "../../../checks/JudgeType.mjs";
-import { findTheSingleLetterName, findTheTestNameWithNoShould, listNotesOfWorkWithNoTicket, listPhaseCommentsInProductionCode } from "./ScriptSettledForms.mjs";
+import { findTheMethodNameWithARelatingWord, findTheSingleLetterName, findTheTestNameWithNoShould, listNotesOfWorkWithNoTicket, listPhaseCommentsInProductionCode, RELATING_WORD_POSITIONS } from "./ScriptSettledForms.mjs";
 
 export const SCRIPT_JUDGE_TYPE = "script";
 
@@ -150,8 +150,24 @@ const buildSingleLetterFindingTexts = ({ abstraction }) => {
   };
 };
 
+const SAYS_WHERE_THE_RELATING_WORD_STANDS_MAP = Object.freeze({
+  [RELATING_WORD_POSITIONS.FIRST]: "starts with",
+  [RELATING_WORD_POSITIONS.LAST]: "ends with",
+});
+
+const buildRelatingWordFindingTexts = ({ abstraction, place }) => {
+  const methodName = formatInlineCode(abstraction.name);
+  const standsAt = `${SAYS_WHERE_THE_RELATING_WORD_STANDS_MAP[place.position]} ${formatInlineCode(place.word)}`;
+  return {
+    summary: `${methodName} ${standsAt}, a word that relates instead of acting, so the name does not say what the method does`,
+    prediction: "A method name starts with a verb that states the work the method does, and does not end in a preposition.",
+    found: `${methodName} ${standsAt}.`,
+  };
+};
+
 const SCRIPT_SETTLED_SECTIONS = Object.freeze({
   SINGLE_LETTER_NAME: "singleLetterName",
+  METHOD_NAME_WITH_A_RELATING_WORD: "methodNameWithARelatingWord",
   TEST_NAME_WITH_NO_SHOULD: "testNameWithNoShould",
   PHASE_COMMENT_IN_PRODUCTION_CODE: "phaseCommentInProductionCode",
   NOTE_OF_WORK_WITH_NO_TICKET: "noteOfWorkWithNoTicket",
@@ -177,6 +193,16 @@ const ABSTRACTION_KINDS = Object.freeze([
     listPlaces: singleLetterName => [singleLetterName.place],
     listFiles: singleLetterName => [singleLetterName.place.path],
     buildFindingTexts: singleLetterName => buildSingleLetterFindingTexts(singleLetterName),
+  },
+  {
+    section: SCRIPT_SETTLED_SECTIONS.METHOD_NAME_WITH_A_RELATING_WORD,
+    track: TRACKS.SIMPLICITY,
+    check: CHECKS_BY_ID_MAP.S2,
+    standsInFor: JUDGE_TYPE_BY_SCALE_MAP[Scale.METHOD.name],
+    listSettled: abstraction => [findTheMethodNameWithARelatingWord(abstraction)].filter(Boolean).map(place => ({ abstraction, place })),
+    listPlaces: methodNameWithARelatingWord => [methodNameWithARelatingWord.place],
+    listFiles: methodNameWithARelatingWord => [methodNameWithARelatingWord.place.path],
+    buildFindingTexts: methodNameWithARelatingWord => buildRelatingWordFindingTexts(methodNameWithARelatingWord),
   },
   {
     section: SCRIPT_SETTLED_SECTIONS.PHASE_COMMENT_IN_PRODUCTION_CODE,
