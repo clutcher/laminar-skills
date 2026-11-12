@@ -231,6 +231,12 @@ const writeUnitTestSection = (model, unitTests) => {
   return lines.length > 2 ? lines : [...lines, "None."];
 };
 
+// The section stands only where the design removes a test, so a design that removes none renders as before.
+const writeRemovedTestSection = removedTests => {
+  if (!removedTests.length) return [];
+  return ["## Removed tests", "", ...removedTests.map(removedTest => `- ${writeCode(removedTest.test)} of ${writeCode(removedTest.file)}, by ${writeCode(removedTest.class)}: ${removedTest.why}`), ""];
+};
+
 const writeAnswer = question => {
   if (!question.answer) return `Open; with no user, ${question.autonomous}.`;
   if (question.answer.by === ANSWER_GIVERS.DEFAULT) return `Taken by default: ${question.answer.option}.`;
@@ -370,6 +376,7 @@ export const writeDesignText = (model, roundCounts = null, findingsToConsider = 
     "",
     ...writeUnitTestSection(model, readList(tests.unit)),
     "",
+    ...writeRemovedTestSection(readList(tests.removed)),
     ...writeQuestionSection(readList(decisions.questions)),
     ...writeProposedRuleSection(decisions.conventions),
     ...writeFindingSection(readList(decisions.findings), findingsToConsider),

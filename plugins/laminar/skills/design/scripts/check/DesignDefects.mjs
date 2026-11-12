@@ -24,7 +24,7 @@ import { readZoneOrder } from "./ZoneOrder.mjs";
 
 const describeCurrentTree = currentTree => (currentTree
   ? `current tree: read from ${currentTree.describe()}`
-  : "current tree: not read, no --repo given, so old paths, old names, removed names, current classes, current members, the fields and the public methods of modified classes, the methods marked unchanged, the conventions files, the project files of the convention overrides, the closed sets and the tables of the files the model names and each shape-run item left outside the change are not checked");
+  : "current tree: not read, no --repo given, so old paths, old names, removed names, current classes, current members, the fields and the public methods of modified classes, the methods marked unchanged, the removed tests, the conventions files, the project files of the convention overrides, the closed sets and the tables of the files the model names and each shape-run item left outside the change are not checked");
 
 const describeResponseTypes = libraryTypeNames => (libraryTypeNames.length
   ? `response types: library type, not checked: ${libraryTypeNames.join(", ")}`

@@ -242,6 +242,25 @@ const findUnchangedMethodDefects = (model, currentTree) => {
   return defects;
 };
 
+const TEST_NAME_AS_A_WORD = /^[A-Za-z_$][\w$]*$/;
+
+// A test name that is a word, such as a method name, stands in the code as a whole word, and a test name with spaces, such as a text a test call takes, stands as written.
+const holdsTheTestName = (codeText, testName) => (TEST_NAME_AS_A_WORD.test(testName) ? isAWordIn(codeText, testName) : codeText.includes(testName));
+
+// A removed test names a test of the current tree, so a wrong name or a wrong file is caught before a writer looks for it; the search reads the text, so it holds in every language.
+const findRemovedTestDefects = (model, currentTree) => {
+  const defects = [];
+  readList(model.decisions.tests?.removed).forEach((removedTest, at) => {
+    if (!isAText(removedTest.file) || !isAText(removedTest.test)) return;
+
+    const currentText = currentTree.readFileText(removedTest.file);
+    if (currentText !== null && holdsTheTestName(stripComments(currentText, removedTest.file), removedTest.test)) return;
+    const what = currentText === null ? `the current tree holds no file ${removedTest.file}` : `the current file ${removedTest.file} holds no test ${removedTest.test}`;
+    defects.push(createDefect(DEFECT_CODES.REMOVED_TEST_NOT_IN_TREE, `decisions.tests.removed[${at}]`, `${what} to remove`));
+  });
+  return defects;
+};
+
 export const findCurrentTreeDefects = (model, currentTree) => [
   ...findUnchangedEntryDefects(model, currentTree),
   ...findUnchangedMethodDefects(model, currentTree),
@@ -249,4 +268,5 @@ export const findCurrentTreeDefects = (model, currentTree) => [
   ...findOldNameDefects(model, currentTree),
   ...findUnaccountedNameDefects(model, currentTree),
   ...findConventionsFileDefects(model, currentTree),
+  ...findRemovedTestDefects(model, currentTree),
 ];

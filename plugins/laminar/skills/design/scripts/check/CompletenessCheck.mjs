@@ -313,12 +313,21 @@ const checkUnitTests = (check, unitTests) => {
   });
 };
 
+const checkRemovedTests = (check, removedTests) => {
+  removedTests.forEach((removedTest, at) => {
+    const path = `decisions.tests.removed[${at}]`;
+    if (check.requireKey("removed.class", removedTest, "class", path)) check.requireName(removedTest.class, `${path}.class`);
+    for (const key of ["file", "test", "why"]) check.requireKey(`removed.${key}`, removedTest, key, path);
+  });
+};
+
 const checkTests = check => {
   const { tests } = check.model.decisions;
   if (!check.requireKey("decisions.tests", check.model.decisions, "tests", "decisions")) return;
 
   checkIntegrationTests(check, readList(tests.integration));
   checkUnitTests(check, readList(tests.unit));
+  checkRemovedTests(check, readList(tests.removed));
 };
 
 const checkAnswer = (check, question, path) => {

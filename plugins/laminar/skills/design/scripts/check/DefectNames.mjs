@@ -14,6 +14,7 @@ const NAME_OF_DECISION_MAP = new Map([
   ["exits", exit => exit.exit],
   ["tests.integration", integration => integration.entry],
   ["tests.unit", unitTest => unitTest.class],
+  ["tests.removed", removedTest => `${removedTest.file}#${removedTest.test}`],
   ["questions", question => question.id],
   ["stops", stop => stop.at],
   ["findings", describeFinding],

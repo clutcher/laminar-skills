@@ -24,6 +24,7 @@ export const DEFECT_CODES = Object.freeze({
   OLD_PATH_NOT_IN_TREE: "old-path-not-in-tree",
   OLD_NAME_NOT_IN_TREE: "old-name-not-in-tree",
   REMOVED_NAME_NOT_IN_TREE: "removed-name-not-in-tree",
+  REMOVED_TEST_NOT_IN_TREE: "removed-test-not-in-tree",
   CURRENT_CLASS_UNACCOUNTED: "current-class-unaccounted",
   CURRENT_MEMBER_UNACCOUNTED: "current-member-unaccounted",
   CONVENTIONS_FILE_UNLISTED: "conventions-file-unlisted",

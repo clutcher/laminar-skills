@@ -84,6 +84,7 @@ const DECISIONS_FORM = createObjectOf({
   tests: createObjectOf({
     integration: createListOf(createObjectOf({ entry: TEXT, file: TEXT, substitutes: TEXTS, tests: TEXTS })),
     "unit": createListOf(createObjectOf({ "class": TEXT, file: TEXT, tests: TEXTS })),
+    removed: createListOf(createObjectOf({ "class": TEXT, file: TEXT, test: TEXT, why: TEXT })),
   }),
   questions: createListOf(createObjectOf({
     id: TEXT_WITH_NO_SPACE, fact: TEXT, recommendation: TEXT, autonomous: createTextOf(Object.values(AUTONOMOUS_ANSWERS)),

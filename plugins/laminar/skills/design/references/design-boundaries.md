@@ -51,10 +51,12 @@ In `failure`, `absent` is the normal result for absent or not found, where the e
 
 ## `tests`
 
-An object with 2 lists. The book: "Integration tests are the starting point for every application" and "Unit tests belong where combinatorial logic demands them" (*What Testing Means*, *How to Distribute Tests*).
+An object with 3 lists, `integration`, `unit` and `removed`. The book: "Integration tests are the starting point for every application" and "Unit tests belong where combinatorial logic demands them" (*What Testing Means*, *How to Distribute Tests*).
 
 - `integration`: 1 object per object of `entries`, with `entry`, `file`, `substitutes`, the exits that a substitute replaces, and `tests`, the test names. The names hold each branch where the entry refuses a request. All 4 keys are required, and the design check reports an entry with no `integration` object (`entry-without-integration-tests`) and an `integration` object whose `entry` no object of `entries` holds (`integration-without-entry`).
 - `unit`: 1 object per class whose `does` is `computes` and whose branches multiply, with `class`, `file` and `tests`, all required. The design check does not require a unit test, because the model holds no key for branches that multiply; the render prints each class whose `does` is `computes` and that has no `unit` object, so the designer sees it. A unit test of a class whose `does` is `coordinates` is a recheck case: such a test needs a substitute for each part the class calls, which is the friction the book reads as a sign of the design. The book: "mock chains, and assertions that depend on implementation all signal that production code needs redesign" (*How to Verify Correctness*, *How Tests Expose Design Problems*). The designer keeps the test where its class has branches that only a unit test reaches, and says so under `scriptCases`.
+
+- `removed`: 1 object per existing test of a check that the change removes or moves, such as a validation that an entry or a method held, with `class`, the class whose code removes or moves the check, `file`, the test file of the current tree, `test`, the name of the test as the file writes it, and `why`, 1 sentence on why the test goes, all required. No script finds a check inside a body, so the designer names each existing test that asserts such a check: under `removed`, or, where the test stays with a new name or a new assertion, as a test of `integration` or `unit`. The migration writes 1 step in the migration stage tests of the group of `class`, `removes the test <test> of <file>: <why>`, so the writer removes the test by that step and does not stop on a behavior the design did not decide. With `--repo`, the design check reports an object whose test the file of the current tree does not hold (`removed-test-not-in-tree`, `design-checks.md`, section 4). This key is a format of this skill, not of the book.
 
 The test names take the forms of `conventions.testNameForms` (`design-decisions.md`). Where that key is missing, the design check reports only a name that states no behavior.
 
@@ -64,4 +66,4 @@ The test names take the forms of `conventions.testNameForms` (`design-decisions.
 
 ## Which script reads which key
 
-The prepare command reads none of these keys, so no judge of the shape check reads them. The design check and the render read every key, as each table says. The migration script reads `tests` for its test steps, and neither `entries` nor `exits`.
+The prepare command reads none of these keys, so no judge of the shape check reads them. The design check and the render read every key, as each table says. The migration script reads `tests` for its test steps, `removed` among them, and neither `entries` nor `exits`. The render prints the section `## Removed tests` only where `removed` holds an object.

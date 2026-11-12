@@ -603,15 +603,23 @@ class MigrationPlan {
       });
   }
 
+  // A test of a check that the change removes or moves goes in the group of the class that removes the check, and it belongs to that class in a cut plan.
+  createRemovedTestStep(removedTest) {
+    const step = this.createStep(MIGRATION_STAGES.TESTS, this.getGroupOfTheName(removedTest.class), `removes the test ${removedTest.test} of ${removedTest.file}: ${removedTest.why}`, [removedTest.file]);
+    const theClass = this.model.findClass(removedTest.class);
+    return theClass && isAText(theClass.file) ? { ...step, testedFiles: [theClass.file] } : step;
+  }
+
   listTestSteps() {
     const tests = this.model.decisions.tests || {};
+    const removedTestSteps = readList(tests.removed).map(removedTest => this.createRemovedTestStep(removedTest));
     const unitTestSteps = readList(tests.unit).map(unitTest => this.createStep(MIGRATION_STAGES.TESTS, this.getGroupOfTheName(unitTest.class), `writes the unit tests of ${unitTest.class}: ${readList(unitTest.tests).join(", ")}`, [unitTest.file]));
     const createTestStep = (group, says, files) => this.createStep(MIGRATION_STAGES.TESTS, group, says, files);
     const integrationSteps = readList(tests.integration).flatMap(integration => [
       this.integrationTestPlacement.createWriteStep(integration, createTestStep),
       ...this.integrationTestPlacement.createLaterSteps(integration, createTestStep),
     ]);
-    return [...this.listTestUpdateSteps(), ...this.listRemovedClassTestSteps(), ...this.listNewOutsideCallTestSteps(), ...unitTestSteps, ...integrationSteps];
+    return [...this.listTestUpdateSteps(), ...this.listRemovedClassTestSteps(), ...this.listNewOutsideCallTestSteps(), ...removedTestSteps, ...unitTestSteps, ...integrationSteps];
   }
 
   // A modified file in no language the scripts read and with no class of the model, such as the XML wiring of a framework, gets 1 step that the writer does by hand.
