@@ -108,6 +108,8 @@ function startPlan() {
 
   const headCommit = resolveCommit(repositoryRoot, "HEAD");
   if (!headCommit) exitWith(`repo: git cannot read the head of ${repositoryRoot}`);
+  const hasModel = fs.existsSync(modelPath);
+  const model = hasModel ? readDesignModelOrExit(modelPath) : null;
   keepTheFirstPlan(resultsFolder, modelPath);
   const { plan, isNew } = choosePlan(resultsFolder);
   const baseCommit = resolveTheBaseOrEnd(options, repositoryRoot, headCommit, resultsFolder, plan);
@@ -118,14 +120,12 @@ function startPlan() {
   console.log(`base commit: ${baseCommit}`);
   console.log(`plan commit: ${headCommit}`);
 
-  const hasModel = fs.existsSync(modelPath);
   if (options.stop && !hasModel) exitWith(`stop: ${modelPath} holds no model, so no writer of an earlier plan can have stopped`);
   if (!hasModel) {
     console.log(`RESULT ${JSON.stringify({ plan, later: false })}`);
     return;
   }
 
-  const model = readDesignModelOrExit(modelPath);
   let given = readModelTextOrExit(modelPath);
   let counts = null;
   const stopList = options.stop ? readStopListOrExit(options.stop) : [];
