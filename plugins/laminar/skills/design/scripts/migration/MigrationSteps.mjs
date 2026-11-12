@@ -1,6 +1,7 @@
 import path from "node:path";
 import { KINDS, getFileOfTheChild, getFolderPath, isAText, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readList, readOldTypeName, readTypeNames } from "../model/DesignModel.mjs";
 import { isAReadExtension, isATestFile } from "../model/SourceLanguages.mjs";
+import { IntegrationTestPlacement } from "./IntegrationTestPlacement.mjs";
 
 export const MIGRATION_STAGES = Object.freeze({
   FOLDERS: "folders",
@@ -58,6 +59,7 @@ class MigrationPlan {
       .map(({ child, file }) => [child.oldPath, file]));
     this.lastGroup = Math.max(FIRST_GROUP, ...model.classes.map(getGroupOfTheClass));
     this.existingDefects = readList(model.decisions.existingDefects).filter(existingDefect => Number.isFinite(existingDefect.group) && !isLeftUnfixed(existingDefect));
+    this.integrationTestPlacement = new IntegrationTestPlacement(model, currentTree, removedFile => this.getGroupOfTheRemoval(removedFile));
   }
 
   listExistingDefectsOf(theClass) {
@@ -441,15 +443,6 @@ class MigrationPlan {
     return seenNames;
   }
 
-  listClassesOnThePath(entryName) {
-    return [...this.listNamesOnThePath(entryName)].map(name => this.model.findClass(name)).filter(Boolean);
-  }
-
-  // An integration test runs the whole path of its entry, so it waits for the last group that writes a class on that path.
-  getGroupOfTheEntryPath(entryName) {
-    return Math.max(FIRST_GROUP, ...this.listClassesOnThePath(entryName).map(getGroupOfTheClass));
-  }
-
   changesTheMethodSignature(currentFile, method) {
     if (!isAPublicMethod(method) || isMarkedUnchanged(method)) return false;
     if (isAText(method.oldName)) return true;
@@ -485,7 +478,7 @@ class MigrationPlan {
     const tests = this.model.decisions.tests || {};
     const writingGroups = [
       ...readList(tests.unit).filter(unitTest => unitTest.file === testFile).map(unitTest => this.getGroupOfTheName(unitTest.class)),
-      ...readList(tests.integration).filter(integration => integration.file === testFile).map(integration => this.getGroupOfTheEntryPath(integration.entry)),
+      ...readList(tests.integration).filter(integration => integration.file === testFile).map(integration => this.integrationTestPlacement.getGroupOfTheTest(integration)),
     ].filter(writingGroup => writingGroup > group);
     return writingGroups.length ? Math.min(...writingGroups) : null;
   }
@@ -596,7 +589,11 @@ class MigrationPlan {
   listTestSteps() {
     const tests = this.model.decisions.tests || {};
     const unitTestSteps = readList(tests.unit).map(unitTest => this.createStep(MIGRATION_STAGES.TESTS, this.getGroupOfTheName(unitTest.class), `writes the unit tests of ${unitTest.class}: ${readList(unitTest.tests).join(", ")}`, [unitTest.file]));
-    const integrationSteps = readList(tests.integration).map(integration => this.createStep(MIGRATION_STAGES.TESTS, this.getGroupOfTheEntryPath(integration.entry), `writes the integration tests of ${integration.entry}: ${readList(integration.tests).join(", ")}`, [integration.file]));
+    const createTestStep = (group, says, files) => this.createStep(MIGRATION_STAGES.TESTS, group, says, files);
+    const integrationSteps = readList(tests.integration).flatMap(integration => [
+      this.integrationTestPlacement.createWriteStep(integration, createTestStep),
+      ...this.integrationTestPlacement.createLaterSteps(integration, createTestStep),
+    ]);
     return [...this.listTestUpdateSteps(), ...this.listRemovedClassTestSteps(), ...this.listNewOutsideCallTestSteps(), ...unitTestSteps, ...integrationSteps];
   }
 
