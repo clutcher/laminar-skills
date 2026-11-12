@@ -3,4 +3,4 @@
 ## Must not appear
 
 Module `apiary/src/main/kotlin/com/example/apiary/hives`, Unnamed Part Failure
-Module `apiary/src/main/kotlin/com/example/apiary/hives/topbar`, Unnamed Part Failure
+Module `apiary/src/main/kotlin/com/example/apiary/hives/topbar`, Unnamed Part Failure, at most 1 at Low confidence
