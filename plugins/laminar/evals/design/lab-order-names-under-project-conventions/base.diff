@@ -1,0 +1,141 @@
+diff --git a/.claude/rules/conventions/laborder.md b/.claude/rules/conventions/laborder.md
+new file mode 100644
+--- /dev/null
++++ b/.claude/rules/conventions/laborder.md
+@@ -0,0 +1,11 @@
++---
++paths:
++  - "src/main/java/com/example/clinic/laborder/**/*.java"
++---
++# Lab orders
++
++Contents: 1. Rules on an order as validators
++
++## 1. Rules on an order as validators
++
++Check each rule on a lab order in 1 class whose name is the rule followed by Validator, such as PanelValidator. Where the rule needs a value that the order misses, that same class also corrects the order before it checks it, such as filling in a missing time with the time of the order, and returns the corrected order; never put the correction in another class. The lab team finds every rule on an order, and every correction that the rule makes, by the word Validator.
+diff --git a/.claude/rules/conventions/web.md b/.claude/rules/conventions/web.md
+new file mode 100644
+--- /dev/null
++++ b/.claude/rules/conventions/web.md
+@@ -0,0 +1,11 @@
++---
++paths:
++  - "src/main/java/**/web/**/*.java"
++---
++# Web
++
++Contents: 1. Types of a call named for their resource
++
++## 1. Types of a call named for their resource
++
++End the name of each type that a controller takes or returns in Body, after the name of the resource it carries, such as AppointmentBody for an appointment that the controller returns and NewAppointmentBody for one that it takes. The front end of the clinic edits each resource as 1 form, and the word Body tells a reader of the front end and of the back end that the type is the form of that resource.
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# Clinic schedule and lab
++
++Java 21 and Spring Boot. Domain packages under `com.example.clinic`. Repositories are interfaces implemented by the persistence module, which is not in this repository slice.
+diff --git a/src/main/java/com/example/clinic/appointment/Appointment.java b/src/main/java/com/example/clinic/appointment/Appointment.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/Appointment.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.appointment;
++
++import java.time.LocalDateTime;
++
++public record Appointment(String appointmentId, String patientId, String clinicianId, LocalDateTime start, LocalDateTime end) {
++}
+diff --git a/src/main/java/com/example/clinic/appointment/AppointmentBook.java b/src/main/java/com/example/clinic/appointment/AppointmentBook.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/AppointmentBook.java
+@@ -0,0 +1,18 @@
++package com.example.clinic.appointment;
++
++import org.springframework.stereotype.Service;
++
++@Service
++public class AppointmentBook {
++
++    private final AppointmentRepository appointments;
++
++    public AppointmentBook(AppointmentRepository appointments) {
++        this.appointments = appointments;
++    }
++
++    public Appointment book(Appointment requested) {
++        appointments.save(requested);
++        return requested;
++    }
++}
+diff --git a/src/main/java/com/example/clinic/appointment/AppointmentRepository.java b/src/main/java/com/example/clinic/appointment/AppointmentRepository.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/AppointmentRepository.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.appointment;
++
++public interface AppointmentRepository {
++
++    void save(Appointment appointment);
++}
+diff --git a/src/main/java/com/example/clinic/appointment/web/AppointmentBody.java b/src/main/java/com/example/clinic/appointment/web/AppointmentBody.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/web/AppointmentBody.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.appointment.web;
++
++import java.time.LocalDateTime;
++
++public record AppointmentBody(String appointmentId, String clinicianId, LocalDateTime start, LocalDateTime end) {
++}
+diff --git a/src/main/java/com/example/clinic/appointment/web/AppointmentController.java b/src/main/java/com/example/clinic/appointment/web/AppointmentController.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/web/AppointmentController.java
+@@ -0,0 +1,29 @@
++package com.example.clinic.appointment.web;
++
++import com.example.clinic.appointment.Appointment;
++import com.example.clinic.appointment.AppointmentBook;
++import java.util.UUID;
++import org.springframework.http.HttpStatus;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.ResponseStatus;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class AppointmentController {
++
++    private final AppointmentBook appointmentBook;
++
++    public AppointmentController(AppointmentBook appointmentBook) {
++        this.appointmentBook = appointmentBook;
++    }
++
++    @PostMapping("/patients/{patientId}/appointments")
++    @ResponseStatus(HttpStatus.CREATED)
++    public AppointmentBody bookAppointment(@PathVariable String patientId, @RequestBody NewAppointmentBody newAppointment) {
++        Appointment requested = new Appointment(UUID.randomUUID().toString(), patientId, newAppointment.clinicianId(), newAppointment.start(), newAppointment.end());
++        Appointment booked = appointmentBook.book(requested);
++        return new AppointmentBody(booked.appointmentId(), booked.clinicianId(), booked.start(), booked.end());
++    }
++}
+diff --git a/src/main/java/com/example/clinic/appointment/web/NewAppointmentBody.java b/src/main/java/com/example/clinic/appointment/web/NewAppointmentBody.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/clinic/appointment/web/NewAppointmentBody.java
+@@ -0,0 +1,6 @@
++package com.example.clinic.appointment.web;
++
++import java.time.LocalDateTime;
++
++public record NewAppointmentBody(String clinicianId, LocalDateTime start, LocalDateTime end) {
++}

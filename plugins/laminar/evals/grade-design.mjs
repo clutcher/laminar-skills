@@ -21,6 +21,10 @@ const NUMBERS = /\d+/g;
 
 const KINDS = Object.freeze({ CREATED: "created", MOVED: "moved", REMOVED: "removed" });
 
+const OVERRIDE_KINDS = Object.freeze({ OVERRIDE: "override", CONTRADICTION: "contradiction" });
+const ID_SEPARATOR = ";";
+const ID_ALTERNATIVES = " or ";
+
 const DEFECT_MARK = "defect";
 const FIELD_SEPARATOR = "\t";
 const MEMBER_SEPARATOR = "#";
@@ -181,6 +185,28 @@ const gradeAClassTextAbsent = (graded, forbiddenText) => {
   return createResult(!holders.length, holders.length ? `${holders.length} text(s) of the classes hold it, the first: ${holders[0]}` : "no text of the classes holds it");
 };
 
+const normalizeTheId = given => String(given || "").replace(/`/g, "").replace(/\s+/g, " ").trim();
+
+// The ids of 1 line: the project id, then the code-style id, where 2 or more code-style ids joined by or let either match.
+const readTheWantedIds = idsText => {
+  const [projectId, codeStyleIds = ""] = idsText.split(ID_SEPARATOR);
+  return { projectId: normalizeTheId(projectId), codeStyleIds: codeStyleIds.split(ID_ALTERNATIVES).map(normalizeTheId) };
+};
+
+const describeTheOverride = override => `${override.project}; ${override.codeStyle}`;
+
+const gradeAConventionObject = (graded, kind, idsText) => {
+  const { projectId, codeStyleIds } = readTheWantedIds(idsText);
+  const overridesOfTheKind = readList(graded.model.decisions && graded.model.decisions.conventions && graded.model.decisions.conventions.overrides).filter(override => override.kind === kind);
+  const found = overridesOfTheKind.find(override => normalizeTheId(override.project) === projectId && codeStyleIds.includes(normalizeTheId(override.codeStyle)));
+  if (found) return createResult(true, `decisions.conventions.overrides holds the ${kind} ${describeTheOverride(found)}`);
+  return createResult(false, `the objects of kind ${kind}: ${overridesOfTheKind.map(describeTheOverride).join(", ") || "none"}`);
+};
+
+const gradeAConventionOverride = (graded, idsText) => gradeAConventionObject(graded, OVERRIDE_KINDS.OVERRIDE, idsText);
+
+const gradeAConventionContradiction = (graded, idsText) => gradeAConventionObject(graded, OVERRIDE_KINDS.CONTRADICTION, idsText);
+
 const LEVEL_1_FORMS = Object.freeze([
   { pattern: /^checkDesign: no defect$/, grade: gradeTheDesignCheck },
   { pattern: /^Model path present: `?([^`]+?)`?$/, grade: gradeAModelPathPresent },
@@ -190,6 +216,8 @@ const LEVEL_1_FORMS = Object.freeze([
   { pattern: /^No file moves$/, grade: gradeNoFileMove },
   { pattern: /^No name holds: `?([^`]+?)`?$/, grade: gradeNoNameHoldsTheWord },
   { pattern: /^Class text absent: `([^`]+)`$/, grade: gradeAClassTextAbsent },
+  { pattern: /^Convention override: (.+;.+)$/, grade: gradeAConventionOverride },
+  { pattern: /^Convention contradiction: (.+;.+)$/, grade: gradeAConventionContradiction },
 ]);
 
 export const isALevel1Line = line => LEVEL_1_FORMS.some(form => form.pattern.test(line));
