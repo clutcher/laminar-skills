@@ -1,0 +1,82 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# Ferry check-in
++
++Java 21. Domain packages under `com.example.ferry`. Repositories are interfaces implemented by the persistence module, which is not in this repository slice.
+diff --git a/src/main/java/com/example/ferry/boarding/BoardingPass.java b/src/main/java/com/example/ferry/boarding/BoardingPass.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/ferry/boarding/BoardingPass.java
+@@ -0,0 +1,13 @@
++package com.example.ferry.boarding;
++
++import com.example.ferry.fare.FareClass;
++import java.util.Map;
++
++public record BoardingPass(String bookingId, String passengerName, String sailingId, FareClass fareClass) {
++
++    private static final Map<FareClass, Integer> BAGGAGE_KILOS_BY_FARE_CLASS = Map.of(FareClass.ECONOMY, 23, FareClass.FLEX, 32);
++
++    public String describeAllowance() {
++        return "Baggage allowance: " + BAGGAGE_KILOS_BY_FARE_CLASS.get(fareClass) + " kg";
++    }
++}
+diff --git a/src/main/java/com/example/ferry/checkin/Booking.java b/src/main/java/com/example/ferry/checkin/Booking.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/ferry/checkin/Booking.java
+@@ -0,0 +1,6 @@
++package com.example.ferry.checkin;
++
++import com.example.ferry.fare.FareClass;
++
++public record Booking(String bookingId, String passengerName, String sailingId, FareClass fareClass) {
++}
+diff --git a/src/main/java/com/example/ferry/checkin/BookingRepository.java b/src/main/java/com/example/ferry/checkin/BookingRepository.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/ferry/checkin/BookingRepository.java
+@@ -0,0 +1,6 @@
++package com.example.ferry.checkin;
++
++public interface BookingRepository {
++
++    Booking findBooking(String bookingId);
++}
+diff --git a/src/main/java/com/example/ferry/checkin/CheckInDesk.java b/src/main/java/com/example/ferry/checkin/CheckInDesk.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/ferry/checkin/CheckInDesk.java
+@@ -0,0 +1,18 @@
++package com.example.ferry.checkin;
++
++import com.example.ferry.boarding.BoardingPass;
++
++public class CheckInDesk {
++
++    private final BookingRepository bookings;
++
++    public CheckInDesk(BookingRepository bookings) {
++        this.bookings = bookings;
++    }
++
++    public BoardingPass checkIn(String bookingId) {
++        Booking booking = bookings.findBooking(bookingId);
++
++        return new BoardingPass(booking.bookingId(), booking.passengerName(), booking.sailingId(), booking.fareClass());
++    }
++}
+diff --git a/src/main/java/com/example/ferry/fare/FareClass.java b/src/main/java/com/example/ferry/fare/FareClass.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/ferry/fare/FareClass.java
+@@ -0,0 +1,6 @@
++package com.example.ferry.fare;
++
++public enum FareClass {
++    ECONOMY,
++    FLEX
++}
