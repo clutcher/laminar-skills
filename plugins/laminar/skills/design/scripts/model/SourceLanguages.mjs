@@ -19,4 +19,9 @@ export const readParsedLanguage = file => PARSED_LANGUAGE_OF_EXTENSION_MAP.get(p
 
 export const isAReadExtension = file => READ_EXTENSIONS.has(path.extname(file));
 
+// The languages whose literal tables and sets the design check reads: the read ones, and Python.
+const TABLE_EXTENSIONS = new Set([...READ_EXTENSIONS, ".py"]);
+
+export const isATableExtension = file => TABLE_EXTENSIONS.has(path.extname(String(file || "")));
+
 export const isATestFile = file => TEST_FOLDER.test(file) || TEST_FILE_NAME.test(path.posix.basename(file));

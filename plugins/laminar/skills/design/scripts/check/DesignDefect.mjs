@@ -66,6 +66,7 @@ export const DEFECT_CODES = Object.freeze({
   INTERFACE_WITH_ONE_IMPLEMENTATION: "interface-with-one-implementation",
   RENAMED_WITHOUT_FINDING: "renamed-without-finding",
   OPTION_WITHOUT_CODE: "option-without-code",
+  OWNER_WITHOUT_ITS_VALUES: "owner-without-its-values",
 });
 
 export const createDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false });

@@ -13,6 +13,7 @@ import { findExitFailureResult, findFailureHandlingDefects } from "./FailureHand
 import { findFieldListResult } from "./FieldListCheck.mjs";
 import { listMigrationSteps } from "../migration/MigrationSteps.mjs";
 import { findGroupOrderDefects } from "../migration/GroupOrder.mjs";
+import { findOwnerValueDefects } from "./OwnerValues.mjs";
 import { findFindingsDefects } from "./FindingsCheck.mjs";
 import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
 import { findSimplestFormDefects } from "./SimplestForm.mjs";
@@ -21,7 +22,7 @@ import { readZoneOrder } from "./ZoneOrder.mjs";
 
 const describeCurrentTree = currentTree => (currentTree
   ? `current tree: read from ${currentTree.describe()}`
-  : "current tree: not read, no --repo given, so old paths, old names, removed names, current classes, current members, the fields of modified classes, the methods marked unchanged, the conventions files, the project files of the convention overrides and each shape-run item left outside the change are not checked");
+  : "current tree: not read, no --repo given, so old paths, old names, removed names, current classes, current members, the fields of modified classes, the methods marked unchanged, the conventions files, the project files of the convention overrides, the closed sets and the tables of the files the model names and each shape-run item left outside the change are not checked");
 
 const describeResponseTypes = libraryTypeNames => (libraryTypeNames.length
   ? `response types: library type, not checked: ${libraryTypeNames.join(", ")}`
@@ -89,6 +90,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
     ...findTriedNameDefects(model, shapeReviews, roundModels),
     ...findSimplestFormDefects(model),
+    ...findOwnerValueDefects(model, currentTree),
     ...findRenamesWithoutFindingDefects(model, { shapeRuns: shapeReviews, roundModels, reviewText, decidedList }),
     ...(currentTree ? findCurrentTreeDefects(model, currentTree) : []),
     ...findConventionOverrideDefects(model, currentTree),
