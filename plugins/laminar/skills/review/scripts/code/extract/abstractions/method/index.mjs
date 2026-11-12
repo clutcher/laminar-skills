@@ -72,6 +72,8 @@ import { JvmPowermockMethodRoleFinder } from "./jvm/powermock/JvmPowermockMethod
 import { PythonPytestMockMethodRoleFinder } from "./python/pytest-mock/PythonPytestMockMethodRoleFinder.mjs";
 import { PythonPytestMethodRoleFinder } from "./python/pytest/PythonPytestMethodRoleFinder.mjs";
 import { PythonUnittestMethodRoleFinder } from "./python/unittest/PythonUnittestMethodRoleFinder.mjs";
+import { PhpPhpunitMethodRoleFinder } from "./php/phpunit/PhpPhpunitMethodRoleFinder.mjs";
+import { SwiftXctestMethodRoleFinder } from "./swift/xctest/SwiftXctestMethodRoleFinder.mjs";
 import { TypeScriptMochaMethodRoleFinder } from "./typescript/mocha/TypeScriptMochaMethodRoleFinder.mjs";
 import { GenericMethodFinder } from "./generic/GenericMethodFinder.mjs";
 import { GenericMethodRelationFinder } from "./generic/GenericMethodRelationFinder.mjs";
@@ -174,6 +176,8 @@ export const METHOD_FINDER_REGISTRY = new FinderRegistry({
     PythonPytestMethodRoleFinder,
     PythonUnittestMethodRoleFinder,
     TypeScriptMochaMethodRoleFinder,
+    PhpPhpunitMethodRoleFinder,
+    SwiftXctestMethodRoleFinder,
   ],
 });
 
