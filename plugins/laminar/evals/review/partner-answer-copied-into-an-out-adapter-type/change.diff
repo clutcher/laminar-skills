@@ -19,16 +19,16 @@ new file mode 100644
 +        </dependency>
 +    </dependencies>
 +</project>
-diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/api/WateringPlan.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/api/WateringPlan.java
+diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/api/WateringCalculator.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/api/WateringCalculator.java
 new file mode 100644
 --- /dev/null
-+++ b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/api/WateringPlan.java
++++ b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/api/WateringCalculator.java
 @@ -0,0 +1,8 @@
 +package com.example.greenhouse.irrigation.app.api;
 +
 +import java.time.LocalDate;
 +
-+public interface WateringPlan {
++public interface WateringCalculator {
 +
 +    int calculateWateringMinutes(String plotCode, LocalDate day);
 +}
@@ -39,7 +39,7 @@ new file mode 100644
 @@ -0,0 +1,33 @@
 +package com.example.greenhouse.irrigation.app.domain;
 +
-+import com.example.greenhouse.irrigation.app.api.WateringPlan;
++import com.example.greenhouse.irrigation.app.api.WateringCalculator;
 +import com.example.greenhouse.irrigation.app.domain.model.DayOutlook;
 +import com.example.greenhouse.irrigation.app.domain.model.Plot;
 +import com.example.greenhouse.irrigation.app.spi.PlotStore;
@@ -47,7 +47,7 @@ new file mode 100644
 +
 +import java.time.LocalDate;
 +
-+public class IrrigationPlanner implements WateringPlan {
++public class IrrigationPlanner implements WateringCalculator {
 +
 +    private final PlotStore plotStore;
 +    private final WeatherSource weatherSource;
