@@ -39,8 +39,9 @@ Read every name together with its folder and its outer name, and drop a word tha
 
 ## 6. A file of mixed members
 
-Where no honest name fits a class, check the grouping before the name. Split the class by the groups that its members and its callers show: members that change together, members that share parameters the others never use, and members that use a different set of objects. A split by any other key gives parts that no reader can name, which is the unnamed part failure.
+Where no honest name fits a class, check the grouping before the name. Split the class by the groups that its members and its callers show: members that change together, members that share parameters the others never use, and members that use a different set of objects. A split by any other key gives parts that no reader can name, which is the unnamed part failure. In a plan, the signal is a second name that you tried for 1 class or folder and that the next shape run still keeps a prediction failure on: check the grouping before a third name, and the design check reports such a class as the recheck case `renamed-class-raised-again` (`design-checks.md`, section 4).
 
+- Book (*The Encapsulation Principle*, *When No Name Works*): "when naming an abstraction feels difficult, check what the abstraction contains before searching for a better name"
 - Book (*The Encapsulation Principle*, *When No Name Works*): "Methods that always change together but separately from their neighbors form a group the rest of the class does not join."
 - Book (*The Encapsulation Principle*, *When No Name Works*): "Methods that use a completely different set of objects to do their work belong behind different boundaries."
 

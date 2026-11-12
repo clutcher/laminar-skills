@@ -4,6 +4,7 @@ import { checkDesignModel } from "./check/DesignDefects.mjs";
 import { findAutonomousReasonDefects } from "./check/AutonomousReasons.mjs";
 import { findDecidedDefects } from "./check/DecidedCheck.mjs";
 import { findNameOfThePath } from "./check/DefectNames.mjs";
+import { listClassesOfTheAbstractions } from "./check/TriedNames.mjs";
 import { readBaseCommit, readDesignModelOrExit, readOptionsOrExit, readTreeCommit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
 import { DecidedListStop, checkDecidedListForm, resolveDecidedList } from "./plan/DecidedList.mjs";
 import { RoundStop, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
@@ -17,6 +18,12 @@ const SHAPE_REVIEW_OPTION = "shape-review";
 const AUTONOMOUS_SWITCH = "autonomous";
 
 const RUN_FOLDER_NAME = /^[1-9]\d*$/;
+
+const REVIEW_ABSTRACTIONS_FILE = "review-abstractions.json";
+
+const ROUNDS_FOLDER = "rounds";
+
+const MODEL_FILE = "design-model.json";
 
 const MARKS = Object.freeze({ DEFECT: "defect", RECHECK: "recheck", FOUND_WRONG: "found-wrong" });
 
@@ -46,10 +53,31 @@ const readTextOrExit = (label, textPath) => {
   }
 };
 
+// The classes of a shape run come from review-abstractions.json beside its review.md; a run folder without that file gives no class.
+const readShapeClassesOrExit = reviewPath => {
+  const abstractionsPath = path.join(path.dirname(path.resolve(reviewPath)), REVIEW_ABSTRACTIONS_FILE);
+  if (!fs.existsSync(abstractionsPath)) return [];
+  try {
+    return listClassesOfTheAbstractions(JSON.parse(readTextOrExit("shape abstractions", abstractionsPath)));
+  } catch (error) {
+    return exitWith(`shape abstractions: cannot read ${abstractionsPath}: ${error.message}`);
+  }
+};
+
 const readShapeReviewOrExit = reviewPath => {
   const runFolderName = path.basename(path.dirname(path.resolve(reviewPath)));
   if (!RUN_FOLDER_NAME.test(runFolderName)) exitWith(`shape review: ${reviewPath} stands in the folder ${runFolderName}, and the folder of a shape run is its number, as shape-runs/<n>/review.md`);
-  return { run: Number(runFolderName), text: readTextOrExit("shape review", reviewPath) };
+  return { run: Number(runFolderName), text: readTextOrExit("shape review", reviewPath), classes: readShapeClassesOrExit(reviewPath) };
+};
+
+// The copy of the model that the round script keeps for each round, in the folder rounds/ beside the model, in the order of the rounds.
+const readRoundModelsOrExit = modelPath => {
+  const roundsFolder = path.join(path.dirname(path.resolve(modelPath)), ROUNDS_FOLDER);
+  if (!fs.existsSync(roundsFolder)) return [];
+  return fs.readdirSync(roundsFolder)
+    .filter(name => RUN_FOLDER_NAME.test(name) && fs.existsSync(path.join(roundsFolder, name, MODEL_FILE)))
+    .sort((first, second) => Number(first) - Number(second))
+    .map(name => readDesignModelOrExit(path.join(roundsFolder, name, MODEL_FILE)));
 };
 
 // The decided list names findings of the run folder that holds review.md, so it needs --review; a list that is refused stops the check.
@@ -75,7 +103,7 @@ function checkDesign() {
 
   const repositoryRoot = options.repo ? path.resolve(options.repo) : null;
   const commits = repositoryRoot ? { treeCommit: readTreeCommit(options), baseCommit: readBaseCommit(options) } : undefined;
-  const result = runOrExitOnTreeStop(() => checkDesignModel(model, repositoryRoot, reviewText, shapeReviews, commits));
+  const result = runOrExitOnTreeStop(() => checkDesignModel(model, repositoryRoot, reviewText, shapeReviews, commits, readRoundModelsOrExit(options.model)));
   const autonomousDefects = options[AUTONOMOUS_SWITCH] ? findAutonomousReasonDefects(model, reviewText, shapeReviews).map(defect => ({ ...defect, name: findNameOfThePath(model, defect.path) || defect.path, foundWrong: false })) : [];
   const defects = [...result.defects, ...decidedDefects, ...autonomousDefects];
   for (const headLine of result.headLines) console.log(headLine);

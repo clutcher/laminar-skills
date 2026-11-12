@@ -21,11 +21,12 @@ const pairTheUniqueMatches = (goneItems, addedItems, isAMatch) => {
 
 const isTheSameClass = (gone, added) => gone.file === added.file || (readList(gone.methods).length > 0 && readMethodNamesKey(gone) === readMethodNamesKey(added));
 
-const listClassPairs = (modelBefore, model) => {
-  const namesNow = new Set(model.classes.map(theClass => theClass.name));
-  const namesBefore = new Set(modelBefore.classes.map(theClass => theClass.name));
-  const goneClasses = modelBefore.classes.filter(theClass => !namesNow.has(theClass.name));
-  const addedClasses = model.classes.filter(theClass => !namesBefore.has(theClass.name) && !theClass.oldName);
+// Each class gone from the first list with its 1 added class of the second list, of the same file or the same method names; a class is { name, file, methods }.
+export const listClassPairs = (classesBefore, classesNow) => {
+  const namesNow = new Set(classesNow.map(theClass => theClass.name));
+  const namesBefore = new Set(classesBefore.map(theClass => theClass.name));
+  const goneClasses = classesBefore.filter(theClass => !namesNow.has(theClass.name));
+  const addedClasses = classesNow.filter(theClass => !namesBefore.has(theClass.name) && !theClass.oldName);
   return pairTheUniqueMatches(goneClasses, addedClasses, isTheSameClass);
 };
 
@@ -42,7 +43,7 @@ const listRenamesOfTheModels = (modelBefore, model) => {
   const newNameOfOldNameMap = new Map();
   if (!modelBefore || !model) return newNameOfOldNameMap;
 
-  const classPairs = listClassPairs(modelBefore, model);
+  const classPairs = listClassPairs(modelBefore.classes, model.classes);
   for (const [classBefore, classNow] of classPairs) newNameOfOldNameMap.set(modelBefore.getClassDisplayName(classBefore), model.getClassDisplayName(classNow));
   const classNowOfBeforeMap = new Map(classPairs);
   for (const classBefore of modelBefore.classes) {

@@ -55,6 +55,23 @@ export const readNamedReviewItems = reportText => {
   return items;
 };
 
-export const readReviewItems = reportText => readNamedReviewItems(reportText).map(({ number, scale }) => ({ number, scale }));
+const LABEL_BULLET = /^ {3}- ([A-Z][A-Za-z ]+):/;
+
+// The labels of the bullets right under the head of each item, such as `Prediction Failure` of `   - Prediction Failure: <text>`, so a reader can ask which cognitive failure an item keeps.
+export const readItemsWithLabels = reportText => {
+  const items = [];
+  for (const line of reportText.split("\n")) {
+    const item = readNamedItemOfTheLine(line, false);
+    if (item) {
+      items.push({ ...item, labels: new Set() });
+      continue;
+    }
+    const bullet = LABEL_BULLET.exec(line);
+    if (bullet && items.length) items.at(-1).labels.add(bullet[1]);
+  }
+  return items;
+};
+
+export const readReviewItems =reportText => readNamedReviewItems(reportText).map(({ number, scale }) => ({ number, scale }));
 
 export const isPlacedByThePlan = item => SCALES_THE_PLAN_PLACES.has(item.scale);

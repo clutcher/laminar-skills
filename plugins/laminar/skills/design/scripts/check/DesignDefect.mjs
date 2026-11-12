@@ -59,6 +59,7 @@ export const DEFECT_CODES = Object.freeze({
   EXIT_UNLISTED: "exit-unlisted",
   EXISTING_DEFECT_FIXED_AND_NOT_FIXED: "existing-defect-fixed-and-not-fixed",
   EXISTING_DEFECT_NEITHER_FIXED_NOR_NOT_FIXED: "existing-defect-neither-fixed-nor-not-fixed",
+  RENAMED_CLASS_RAISED_AGAIN: "renamed-class-raised-again",
 });
 
 export const createDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false });

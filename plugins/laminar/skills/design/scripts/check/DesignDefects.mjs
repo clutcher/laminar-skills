@@ -13,6 +13,7 @@ import { findFieldListResult } from "./FieldListCheck.mjs";
 import { listMigrationSteps } from "../migration/MigrationSteps.mjs";
 import { findGroupOrderDefects } from "../migration/GroupOrder.mjs";
 import { findFindingsDefects } from "./FindingsCheck.mjs";
+import { findTriedNameDefects } from "./TriedNames.mjs";
 import { readZoneOrder } from "./ZoneOrder.mjs";
 
 const describeCurrentTree = currentTree => (currentTree
@@ -69,8 +70,8 @@ const readBaseTree = (repositoryRoot, commits, currentTree) => {
   return readCurrentTree(repositoryRoot, commits.baseCommit);
 };
 
-// With a tree commit, the current tree is that commit, never the working folder, which may hold the files of a writer.
-export const checkDesignModel = (model, repositoryRoot = null, reviewText = null, shapeReviews = [], commits = { treeCommit: null, baseCommit: null }) => {
+// With a tree commit, the current tree is that commit, never the working folder, which may hold the files of a writer. Each shape review may hold the classes of its run, and the round models are the copies of the model of each round in order.
+export const checkDesignModel = (model, repositoryRoot = null, reviewText = null, shapeReviews = [], commits = { treeCommit: null, baseCommit: null }, roundModels = []) => {
   const currentTree = repositoryRoot ? readCurrentTree(repositoryRoot, commits.treeCommit) : null;
   const baseTree = readBaseTree(repositoryRoot, commits, currentTree);
   const zoneOrder = readZoneOrder(model.decisions.conventions?.zoneOrder, currentTree, model.listScopeFolderPaths());
@@ -83,6 +84,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
   const defects = [
     ...completeness.defects,
     ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
+    ...findTriedNameDefects(model, shapeReviews, roundModels),
     ...(currentTree ? findCurrentTreeDefects(model, currentTree) : []),
     ...(fieldList ? fieldList.defects : []),
     ...cycleCheck.defects,
