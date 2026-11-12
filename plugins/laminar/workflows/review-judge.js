@@ -192,6 +192,10 @@ class WorkflowArguments {
     return this.prepared.ioGroups || []
   }
 
+  get prepareFingerprint() {
+    return this.prepared.prepareFingerprint || ''
+  }
+
   fileAt(relative) { return `${this.runFolder}/${relative}` }
 }
 
@@ -483,7 +487,7 @@ if (theArguments.waveNumber !== null && !theArguments.wave) return stoppedWith(`
 
 if (!theArguments.codeUnderReview.length && (theArguments.prepared.counts || {}).codeUnderReview === 0) {
   log('prepare found no code under review, so no judge ran')
-  return NOTHING_JUDGED
+  return addThePrepareFingerprint(NOTHING_JUDGED)
 }
 
 if (!theArguments.codeUnderReview.length) {
@@ -511,13 +515,17 @@ const answered = [...ungatedJudged, ...gatedRun.judged, ...ioPathsRun.judged].fi
 const findings = answered.flatMap(returned => returned.findings)
 const covered = answered.flatMap(returned => returned.covered)
 const notRun = [...gatedRun.narrowed.notRun, ...ioPathsRun.notRun, ...answered.flatMap(returned => returned.notRun)]
-return {
+return addThePrepareFingerprint({
   ...(theArguments.wave ? { wave: theArguments.wave.number } : {}),
   findings,
   covered,
   notRun,
   counts: { judgeCalls: everyJudgeCall.length, emptied: gatedRun.narrowed.emptied, findings: findings.length, notRun: notRun.length },
   ioScreen: ioPathsRun.ioScreen,
+})
+
+function addThePrepareFingerprint(judged) {
+  return theArguments.prepareFingerprint ? { ...judged, prepareFingerprint: theArguments.prepareFingerprint } : judged
 }
 
 function gateFieldsOf(code, check) {

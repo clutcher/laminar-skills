@@ -26,6 +26,7 @@ import { IoScreenResultWriter } from "./IoScreenResultWriter.mjs";
 import { splitSetFindingsFoldedIntoAUse } from "./filing/FallbackUseFold.mjs";
 import { VerifyHandOff } from "./verify/VerifyHandOff.mjs";
 import { CalledCodeUnderReview } from "./verify/CalledCodeUnderReview.mjs";
+import { findTheReturnsOfAnotherPrepare, isTakenUnchecked, ReturnsOfAnotherPrepareStop } from "./returns/ReturnsOfAnotherPrepare.mjs";
 
 const DRAFT_FILE = "draft.md";
 const DRAFT_LINES_FILE = "draft-lines.md";
@@ -78,6 +79,7 @@ export class MergeStep {
   }
 
   run() {
+    this.stopOnTheReturnsOfAnotherPrepare();
     const codeUnderReview = this.preparedRun.prepared.codeUnderReview || [];
     const judgeFindingsSplitByTheirCodeUnderReview = this.possibleFindingSource.splitTheJudgeFindingsByTheirCodeUnderReview();
     this.droppedWithNoCodeUnderReview = judgeFindingsSplitByTheirCodeUnderReview.withNoCodeUnderReview;
@@ -110,6 +112,13 @@ export class MergeStep {
     return this;
   }
 
+  stopOnTheReturnsOfAnotherPrepare() {
+    const prepareFingerprints = this.possibleFindingSource.judgeReturn.listPrepareFingerprints();
+    const returnsOfAnotherPrepare = findTheReturnsOfAnotherPrepare(prepareFingerprints, this.preparedRun.prepareFingerprint);
+    if (returnsOfAnotherPrepare) throw new ReturnsOfAnotherPrepareStop(returnsOfAnotherPrepare.file, returnsOfAnotherPrepare.prepareFingerprint, this.runFolder, this.preparedRun.prepareFingerprint);
+    this.returnsFilesTakenUnchecked = prepareFingerprints.filter(isTakenUnchecked).length;
+  }
+
   findGroupsToVerify() {
     return this.groups.filter(group => !isSettledByTheScript(group));
   }
@@ -137,6 +146,7 @@ export class MergeStep {
       possibleFindings: this.possibleFindings.length,
       dropped: this.dropped.length,
       ...(this.droppedWithNoCodeUnderReview.length ? { droppedWithNoCodeUnderReview: this.droppedWithNoCodeUnderReview.length } : {}),
+      ...(this.returnsFilesTakenUnchecked ? { returnsFilesTakenUnchecked: this.returnsFilesTakenUnchecked } : {}),
       refiled: this.refiled.length,
       filedUnderAnotherCheck: this.filedUnderAnotherCheck.length,
       linesNotInTheCode: countLinesNotInTheCode(this.possibleFindings),

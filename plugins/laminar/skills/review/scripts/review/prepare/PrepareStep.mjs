@@ -30,6 +30,7 @@ import { createPropertyWhenNotEmpty, writeJsonFile } from "../../files/jsonFile.
 import { formatChangedTestListLines, formatChangedTestListText, formatTestListLines, formatTestListText, formatTestNameListLines, formatTestNameListText, formatTestPlanText, holdsTheChangedTestsInline, holdsTheTestNamesInline } from "./relations/TestPlanText.mjs";
 import { buildScriptFindings, isAnApplicationWithNoTestRunner } from "./settled/ScriptFindings.mjs";
 import { createCodeUnderReviewId } from "./formats/CodeUnderReviewIds.mjs";
+import { computePrepareFingerprint } from "./PrepareFingerprint.mjs";
 
 export const TEST_PLAN_SLICE_LINES = 1000;
 
@@ -469,6 +470,7 @@ export class PrepareStep {
     return {
       ...this.buildPreparedFields(),
       costPlan: costPlanLine,
+      prepareFingerprint: computePrepareFingerprint(this.codeUnderReview),
       fileForm: FILE_FORM,
       codeUnderReview: compactCodeUnderReview(this.codeUnderReview, this.screenBatches),
       screenBatches: compactScreenBatches(this.screenBatches),

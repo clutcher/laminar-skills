@@ -4,6 +4,7 @@ import { buildFileAndLineKey } from "./abstractions/AbstractionsAtPlaces.mjs";
 import { ChangedLinesText } from "../prepare/formats/ChangedLinesText.mjs";
 import { REVIEW_ABSTRACTIONS_FILE } from "../prepare/PrepareStep.mjs";
 import { readJsonFile } from "../../files/jsonFile.mjs";
+import { computePrepareFingerprint } from "../prepare/PrepareFingerprint.mjs";
 
 const listTopClassesAboveTheBoundaries = codeUnderReview => codeUnderReview
   .flatMap(codeUnderReview => codeUnderReview.boundaries || [])
@@ -21,6 +22,7 @@ export class PreparedRun {
     const preparedScriptFindings = prepared.scriptFindings || [];
     this.prepared = { ...prepared, codeUnderReview: [...(prepared.codeUnderReview || []), ...preparedScriptFindings.map(scriptFinding => scriptFinding.codeUnderReview)] };
     this.scriptFindings = preparedScriptFindings.map(scriptFinding => scriptFinding.finding);
+    this.prepareFingerprint = computePrepareFingerprint(prepared.codeUnderReview || []);
     this.repository = chooseRepositoryToRead(this.prepared.mode, this.prepared.target) || "";
     const reviewed = readJsonFile(path.join(runFolder, REVIEW_ABSTRACTIONS_FILE));
     this.changedLinesOfTheMark = new ChangedLinesText(readTheChangedLinesOfTheMark(reviewed));

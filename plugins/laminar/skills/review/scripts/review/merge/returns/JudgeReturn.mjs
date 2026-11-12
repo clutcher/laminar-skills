@@ -37,16 +37,25 @@ export const joinReturns = returns => ({
 
 const listFindingsFiles = given => (Array.isArray(given) ? given : [given]).filter(Boolean);
 
+const readThePrepareFingerprint = (file, returned) => ({ file, prepareFingerprint: returned.prepareFingerprint || "" });
+
 export class JudgeReturn {
-  constructor(returned) {
+  constructor(returned, prepareFingerprints = []) {
     this.returned = returned;
+    this.prepareFingerprints = prepareFingerprints;
   }
 
   static readFrom(findingsFiles) {
     const files = listFindingsFiles(findingsFiles);
     if (!files.length) return new JudgeReturn(NOTHING_RETURNED);
-    if (files.length === 1) return new JudgeReturn(readJsonFile(files[0]));
-    return new JudgeReturn(joinReturns(files.map(file => readJsonFile(file))));
+    const returns = files.map(file => readJsonFile(file));
+    const prepareFingerprints = files.map((file, index) => readThePrepareFingerprint(file, returns[index]));
+    if (files.length === 1) return new JudgeReturn(returns[0], prepareFingerprints);
+    return new JudgeReturn(joinReturns(returns), prepareFingerprints);
+  }
+
+  listPrepareFingerprints() {
+    return this.prepareFingerprints;
   }
 
   listFindings() {
