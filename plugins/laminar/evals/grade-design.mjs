@@ -148,6 +148,39 @@ const gradeNoFileMove = graded => {
   return createResult(!moving.length, moving.length ? `moved: ${moving.join(", ")}` : "no child is moved and none holds oldPath");
 };
 
+const NAME_WORD_BREAK = /(?<=[a-z0-9])(?=[A-Z])|[^A-Za-z0-9]+/;
+
+const PLURAL_ENDING = "s";
+
+const readWordsOfTheName = name => String(name || "").split(NAME_WORD_BREAK).filter(Boolean).map(word => word.toLowerCase());
+
+const holdsTheWord = (name, word) => readWordsOfTheName(name).some(nameWord => nameWord === word || nameWord === `${word}${PLURAL_ENDING}`);
+
+// The names of the tree after the change: each folder segment, each child, each class with its fields and its methods.
+const listNamesOfTheTree = graded => [
+  ...graded.treeEntries.flatMap(entry => entry.segments),
+  ...readClassesOnTheTree(graded.model).flatMap(theClass => [theClass.name, ...readList(theClass.fields).map(field => field.name), ...readList(theClass.methods).map(method => method.name)]),
+];
+
+const gradeNoNameHoldsTheWord = (graded, wantedWord) => {
+  const word = wantedWord.trim().toLowerCase();
+  const holders = [...new Set(listNamesOfTheTree(graded).filter(name => holdsTheWord(name, word)))];
+  return createResult(!holders.length, holders.length ? `names that hold ${word}: ${holders.join(", ")}` : `no name of the tree holds the word ${word}`);
+};
+
+const listTextsOfTheValue = value => {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap(listTextsOfTheValue);
+  if (value && typeof value === "object") return Object.values(value).flatMap(listTextsOfTheValue);
+  return [];
+};
+
+// The classes are the code the writers write, so a text of decisions, such as a question that names a value of the input, does not count.
+const gradeAClassTextAbsent = (graded, forbiddenText) => {
+  const holders = listTextsOfTheValue(readClassesOnTheTree(graded.model)).filter(text => text.includes(forbiddenText));
+  return createResult(!holders.length, holders.length ? `${holders.length} text(s) of the classes hold it, the first: ${holders[0]}` : "no text of the classes holds it");
+};
+
 const LEVEL_1_FORMS = Object.freeze([
   { pattern: /^checkDesign: no defect$/, grade: gradeTheDesignCheck },
   { pattern: /^Model path present: `?([^`]+?)`?$/, grade: gradeAModelPathPresent },
@@ -155,6 +188,8 @@ const LEVEL_1_FORMS = Object.freeze([
   { pattern: /^New files: at most (\d+)$/, grade: gradeTheNewFiles },
   { pattern: /^Closed in 1 class: ([\d, ]+)$/, grade: gradeTheFindingsClosedInOneClass },
   { pattern: /^No file moves$/, grade: gradeNoFileMove },
+  { pattern: /^No name holds: `?([^`]+?)`?$/, grade: gradeNoNameHoldsTheWord },
+  { pattern: /^Class text absent: `([^`]+)`$/, grade: gradeAClassTextAbsent },
 ]);
 
 export const isALevel1Line = line => LEVEL_1_FORMS.some(form => form.pattern.test(line));

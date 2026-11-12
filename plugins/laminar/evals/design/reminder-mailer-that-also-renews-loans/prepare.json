@@ -1,0 +1,1705 @@
+{
+ "mode": "REPOSITORY",
+ "target": "/tmp/laminar-review/fixture/.claude/worktrees/laminar-review-change-12ea12",
+ "filter": {
+  "judges": [
+   "judge-simplicity-class",
+   "judge-simplicity-method",
+   "judge-simplicity-decision"
+  ],
+  "paths": [],
+  "scales": []
+ },
+ "counts": {
+  "codeUnderReview": 15,
+  "checks": 25,
+  "byTrack": {
+   "SIMPLICITY": 10,
+   "DESIGN": 0,
+   "PREVENTION": 0,
+   "TEST_METHOD": 0,
+   "TEST_PLAN": 0,
+   "PERFORMANCE": 0,
+   "DECISION": 5,
+   "COMMENT": 0,
+   "IO_PATHS": 0,
+   "ENTRY_BOUNDARY": 0,
+   "BOUNDARY": 0
+  },
+  "byJudgeType": {
+   "judge-simplicity-class": 3,
+   "judge-simplicity-method": 7,
+   "judge-simplicity-decision": 5
+  },
+  "screenBatches": 0,
+  "endCalls": 0,
+  "ioRuleScreenCalls": 0,
+  "ioEndMethods": 0,
+  "waves": 1
+ },
+ "notAnswered": [],
+ "codeUnderReview": [
+  {
+   "id": "U1",
+   "abstractionId": "A3",
+   "displayName": "ReminderLoan",
+   "name": "ReminderLoan",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderLoan.java",
+   "lines": {
+    "from": 7,
+    "to": 16
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_FILE_WHOLE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "7: public record ReminderLoan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHold) {",
+       "8: ",
+       "9:     public static ReminderLoan copyLoan(Loan loan) {",
+       "10:         return new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate(), loan.onHold());",
+       "11:     }",
+       "12: ",
+       "13:     public Loan restoreLoan() {",
+       "14:         return new Loan(loanId, memberId, memberEmail, itemTitle, dueDate, onHold);",
+       "15:     }",
+       "16: }"
+      ]
+     }
+    ],
+    "bytes": 489
+   }
+  },
+  {
+   "id": "U2",
+   "abstractionId": "A5",
+   "displayName": "ReminderLoan#copyLoan",
+   "name": "copyLoan",
+   "enclosing": "ReminderLoan",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderLoan.java",
+   "lines": {
+    "from": 9,
+    "to": 11
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "9:     public static ReminderLoan copyLoan(Loan loan) {",
+       "10:         return new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate(), loan.onHold());",
+       "11:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "7: public record ReminderLoan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHold) {",
+       "13: public Loan restoreLoan() {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/org/example/library/loan/Loan.java:5: public record Loan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHo …",
+       "src/main/java/org/example/library/loan/Loan.java:8: return new Loan(loanId, memberId, memberEmail, itemTitle, newDueDate, onHold);",
+       "src/main/java/org/example/library/reminder/ReminderLoan.java:7: public record ReminderLoan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, bool …",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:35: List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).to …",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:36: for (ReminderLoan loan : dueSoon) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:38: ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDa …",
+       "src/main/java/org/example/library/loan/Loan.java:7: public Loan withDueDate(LocalDate newDueDate) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:18: Loan renewed = loan.withDueDate(loan.dueDate().plusDays(RENEWAL_DAYS));",
+       "src/main/java/org/example/library/loan/LoanDesk.java:15: throw new LoanOnHoldException(loan.loanId());",
+       "src/main/java/org/example/library/loan/LoanDesk.java:14: if (loan.onHold()) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:13: public Loan renew(Loan loan) {",
+       "src/main/java/org/example/library/loan/LoanRepository.java:10: void save(Loan loan);",
+       "src/main/java/org/example/library/loan/LoanDesk.java:5: private static final int RENEWAL_DAYS = 14;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:12: public class ReminderMailer extends ScheduledTask {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:34: public void sendDueSoonReminders(LocalDate today) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:16: private final LoanRepository loans;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:19: private final int daysBeforeDue;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:14: private static final int RENEWAL_DAYS = 14;"
+      ]
+     }
+    ],
+    "bytes": 2581
+   }
+  },
+  {
+   "id": "U3",
+   "abstractionId": "A6",
+   "displayName": "ReminderLoan#restoreLoan",
+   "name": "restoreLoan",
+   "enclosing": "ReminderLoan",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderLoan.java",
+   "lines": {
+    "from": 13,
+    "to": 15
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "13:     public Loan restoreLoan() {",
+       "14:         return new Loan(loanId, memberId, memberEmail, itemTitle, dueDate, onHold);",
+       "15:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "7: public record ReminderLoan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHold) {",
+       "9: public static ReminderLoan copyLoan(Loan loan) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/org/example/library/loan/Loan.java:5: public record Loan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHo …",
+       "src/main/java/org/example/library/loan/Loan.java:7: public Loan withDueDate(LocalDate newDueDate) {",
+       "src/main/java/org/example/library/loan/Loan.java:8: return new Loan(loanId, memberId, memberEmail, itemTitle, newDueDate, onHold);",
+       "src/main/java/org/example/library/loan/LoanDesk.java:18: Loan renewed = loan.withDueDate(loan.dueDate().plusDays(RENEWAL_DAYS));",
+       "src/main/java/org/example/library/loan/LoanRepository.java:8: List<Loan> findLoansDueOn(LocalDate dueDate);",
+       "src/main/java/org/example/library/overdue/OverdueLetter.java:10: String dueDay = loan.dueDate().format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "src/main/java/org/example/library/reminder/ReminderLoan.java:7: public record ReminderLoan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, bool …",
+       "src/main/java/org/example/library/fine/FineStatement.java:9: public String writeStatementLine(String itemTitle, LocalDate issuedOn, BigDecimal amount) {",
+       "src/main/java/org/example/library/fine/FineStatement.java:11: return itemTitle + \": fine of \" + amount + \" issued on \" + issueDay;",
+       "src/main/java/org/example/library/overdue/OverdueLetter.java:11: return loan.itemTitle() + \" was due on \" + dueDay + \". Please return it to any branch.\";",
+       "src/main/java/org/example/library/loan/LoanDesk.java:15: throw new LoanOnHoldException(loan.loanId());",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:39: loans.save(renewed.restoreLoan());",
+       "src/main/java/org/example/library/loan/LoanDesk.java:13: public Loan renew(Loan loan) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:5: private static final int RENEWAL_DAYS = 14;",
+       "src/main/java/org/example/library/loan/LoanRepository.java:6: public interface LoanRepository {",
+       "src/main/java/org/example/library/overdue/OverdueLetter.java:9: public String writeLetterText(Loan loan) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:12: public class ReminderMailer extends ScheduledTask {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:34: public void sendDueSoonReminders(LocalDate today) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:16: private final LoanRepository loans;"
+      ]
+     }
+    ],
+    "bytes": 2673
+   }
+  },
+  {
+   "id": "U4",
+   "abstractionId": "A7",
+   "displayName": "ReminderMailer",
+   "name": "ReminderMailer",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderMailer.java",
+   "lines": {
+    "from": 12,
+    "to": 52
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_FILE_WHOLE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "12: public class ReminderMailer extends ScheduledTask {",
+       "13: ",
+       "14:     private static final int RENEWAL_DAYS = 14;",
+       "15: ",
+       "16:     private final LoanRepository loans;",
+       "17:     private final PostboxClient postbox;",
+       "18:     private final SentReminderLog sentReminders;",
+       "19:     private final int daysBeforeDue;",
+       "20: ",
+       "21:     public ReminderMailer(LoanRepository loans, PostboxClient postbox, SentReminderLog sentReminders, String schedule, int daysBeforeDue) {",
+       "22:         super(\"due-soon-reminders\", schedule);",
+       "23:         this.loans = loans;",
+       "24:         this.postbox = postbox;",
+       "25:         this.sentReminders = sentReminders;",
+       "26:         this.daysBeforeDue = daysBeforeDue;",
+       "27:     }",
+       "28: ",
+       "29:     @Override",
+       "30:     public void runOnce() {",
+       "31:         sendDueSoonReminders(LocalDate.now());",
+       "32:     }",
+       "33: ",
+       "34:     public void sendDueSoonReminders(LocalDate today) {",
+       "35:         List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).toList();",
+       "36:         for (ReminderLoan loan : dueSoon) {",
+       "37:             if (!loan.onHold()) {",
+       "38:                 ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate().plusDays(RENEWAL_DAYS), false);",
+       "39:                 loans.save(renewed.restoreLoan());",
+       "40:                 continue;",
+       "41:             }",
+       "42: ",
+       "43:             String text = loan.itemTitle() + \" is due on \" + formatDueDate(loan.dueDate()) + \". Another member waits for it, so it cannot be renewed.\";",
+       "44:             DeliveryReceipt receipt = postbox.send(List.of(loan.memberEmail()), \"An item is due soon\", text);",
+       "45:             sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());",
+       "46:         }",
+       "47:     }",
+       "48: ",
+       "49:     private String formatDueDate(LocalDate dueDate) {",
+       "50:         return dueDate.format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "51:     }",
+       "52: }"
+      ]
+     },
+     {
+      "section": "fieldTypeHeads",
+      "lines": [
+       "src/main/java/org/example/library/loan/LoanRepository.java:6: public interface LoanRepository {",
+       "vendor/postbox/src/main/java/org/example/postbox/PostboxClient.java:6: public class PostboxClient {",
+       "src/main/java/org/example/library/reminder/SentReminderLog.java:3: public interface SentReminderLog {"
+      ]
+     }
+    ],
+    "bytes": 2198
+   }
+  },
+  {
+   "id": "U5",
+   "abstractionId": "A7",
+   "displayName": "ReminderMailer",
+   "name": "ReminderMailer",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderMailer.java",
+   "lines": {
+    "from": 12,
+    "to": 52
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "DECISION",
+   "judgeType": "judge-simplicity-decision",
+   "checks": [
+    {
+     "id": "S1",
+     "name": "Incomplete Mental Model",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [
+    {
+     "key": "14",
+     "kind": "LITERAL",
+     "places": [
+      {
+       "path": "src/main/java/org/example/library/loan/LoanDesk.java",
+       "line": 5,
+       "text": "private static final int RENEWAL_DAYS = 14;",
+       "moduleRoot": ""
+      }
+     ]
+    }
+   ],
+   "homeModule": {
+    "root": "",
+    "rootForm": "",
+    "reason": "no module form for this language"
+   },
+   "searchScope": {
+    "family": "jvm",
+    "minifiedSkipped": 0
+   },
+   "slice": {
+    "need": "THE_FILE_WHOLE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "12: public class ReminderMailer extends ScheduledTask {",
+       "13: ",
+       "14:     private static final int RENEWAL_DAYS = 14;",
+       "15: ",
+       "16:     private final LoanRepository loans;",
+       "17:     private final PostboxClient postbox;",
+       "18:     private final SentReminderLog sentReminders;",
+       "19:     private final int daysBeforeDue;",
+       "20: ",
+       "21:     public ReminderMailer(LoanRepository loans, PostboxClient postbox, SentReminderLog sentReminders, String schedule, int daysBeforeDue) {",
+       "22:         super(\"due-soon-reminders\", schedule);",
+       "23:         this.loans = loans;",
+       "24:         this.postbox = postbox;",
+       "25:         this.sentReminders = sentReminders;",
+       "26:         this.daysBeforeDue = daysBeforeDue;",
+       "27:     }",
+       "28: ",
+       "29:     @Override",
+       "30:     public void runOnce() {",
+       "31:         sendDueSoonReminders(LocalDate.now());",
+       "32:     }",
+       "33: ",
+       "34:     public void sendDueSoonReminders(LocalDate today) {",
+       "35:         List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).toList();",
+       "36:         for (ReminderLoan loan : dueSoon) {",
+       "37:             if (!loan.onHold()) {",
+       "38:                 ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate().plusDays(RENEWAL_DAYS), false);",
+       "39:                 loans.save(renewed.restoreLoan());",
+       "40:                 continue;",
+       "41:             }",
+       "42: ",
+       "43:             String text = loan.itemTitle() + \" is due on \" + formatDueDate(loan.dueDate()) + \". Another member waits for it, so it cannot be renewed.\";",
+       "44:             DeliveryReceipt receipt = postbox.send(List.of(loan.memberEmail()), \"An item is due soon\", text);",
+       "45:             sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());",
+       "46:         }",
+       "47:     }",
+       "48: ",
+       "49:     private String formatDueDate(LocalDate dueDate) {",
+       "50:         return dueDate.format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "51:     }",
+       "52: }"
+      ]
+     },
+     {
+      "section": "fieldTypeHeads",
+      "lines": [
+       "src/main/java/org/example/library/loan/LoanRepository.java:6: public interface LoanRepository {",
+       "vendor/postbox/src/main/java/org/example/postbox/PostboxClient.java:6: public class PostboxClient {",
+       "src/main/java/org/example/library/reminder/SentReminderLog.java:3: public interface SentReminderLog {"
+      ]
+     }
+    ],
+    "bytes": 2198
+   }
+  },
+  {
+   "id": "U6",
+   "abstractionId": "A9",
+   "displayName": "ReminderMailer#ReminderMailer",
+   "name": "ReminderMailer",
+   "enclosing": "ReminderMailer",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderMailer.java",
+   "lines": {
+    "from": 21,
+    "to": 27
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "21:     public ReminderMailer(LoanRepository loans, PostboxClient postbox, SentReminderLog sentReminders, String schedule, int daysBeforeDue) {",
+       "22:         super(\"due-soon-reminders\", schedule);",
+       "23:         this.loans = loans;",
+       "24:         this.postbox = postbox;",
+       "25:         this.sentReminders = sentReminders;",
+       "26:         this.daysBeforeDue = daysBeforeDue;",
+       "27:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "12: public class ReminderMailer extends ScheduledTask {",
+       "14: private static final int RENEWAL_DAYS = 14;",
+       "16: private final LoanRepository loans;",
+       "17: private final PostboxClient postbox;",
+       "18: private final SentReminderLog sentReminders;",
+       "19: private final int daysBeforeDue;",
+       "30: @Override public void runOnce() {",
+       "34: public void sendDueSoonReminders(LocalDate today) {",
+       "49: private String formatDueDate(LocalDate dueDate) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:19: private final int daysBeforeDue;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:35: List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).to …",
+       "src/main/java/org/example/library/loan/LoanDesk.java:7: private final LoanRepository loans;",
+       "src/main/java/org/example/library/loan/LoanDesk.java:9: public LoanDesk(LoanRepository loans) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:10: this.loans = loans;",
+       "src/main/java/org/example/library/loan/LoanDesk.java:19: loans.save(renewed);",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:16: private final LoanRepository loans;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:17: private final PostboxClient postbox;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:44: DeliveryReceipt receipt = postbox.send(List.of(loan.memberEmail()), \"An item is due soon\", text);",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:18: private final SentReminderLog sentReminders;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:45: sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());",
+       "src/main/java/org/example/library/loan/LoanRepository.java:6: public interface LoanRepository {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:12: public class ReminderMailer extends ScheduledTask {",
+       "src/main/java/org/example/library/reminder/SentReminderLog.java:3: public interface SentReminderLog {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:14: private static final int RENEWAL_DAYS = 14;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:34: public void sendDueSoonReminders(LocalDate today) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:3: public class LoanDesk {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:13: public Loan renew(Loan loan) {"
+      ]
+     }
+    ],
+    "bytes": 2751
+   }
+  },
+  {
+   "id": "U7",
+   "abstractionId": "A9",
+   "displayName": "ReminderMailer#ReminderMailer",
+   "name": "ReminderMailer",
+   "enclosing": "ReminderMailer",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderMailer.java",
+   "lines": {
+    "from": 21,
+    "to": 27
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "DECISION",
+   "judgeType": "judge-simplicity-decision",
+   "checks": [
+    {
+     "id": "S1",
+     "name": "Incomplete Mental Model",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [
+    {
+     "key": "ReminderMailer",
+     "kind": "NAME_STEMS",
+     "places": [
+      {
+       "path": "src/main/java/org/example/library/reminder/ReminderLoan.java",
+       "line": 7,
+       "text": "public record ReminderLoan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, bool …",
+       "moduleRoot": ""
+      },
+      {
+       "path": "src/main/java/org/example/library/reminder/SentReminderLog.java",
+       "line": 5,
+       "text": "void recordSentReminder(String loanId, long sentAt);",
+       "moduleRoot": ""
+      }
+     ]
+    }
+   ],
+   "homeModule": {
+    "root": "",
+    "rootForm": "",
+    "reason": "no module form for this language"
+   },
+   "searchScope": {
+    "family": "jvm",
+    "minifiedSkipped": 0
+   },
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "21:     public ReminderMailer(LoanRepository loans, PostboxClient postbox, SentReminderLog sentReminders, String schedule, int daysBeforeDue) {",
+       "22:         super(\"due-soon-reminders\", schedule);",
+       "23:         this.loans = loans;",
+       "24:         this.postbox = postbox;",
+       "25:         this.sentReminders = sentReminders;",
+       "26:         this.daysBeforeDue = daysBeforeDue;",
+       "27:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "12: public class ReminderMailer extends ScheduledTask {",
+       "14: private static final int RENEWAL_DAYS = 14;",
+       "16: private final LoanRepository loans;",
+       "17: private final PostboxClient postbox;",
+       "18: private final SentReminderLog sentReminders;",
+       "19: private final int daysBeforeDue;",
+       "30: @Override public void runOnce() {",
+       "34: public void sendDueSoonReminders(LocalDate today) {",
+       "49: private String formatDueDate(LocalDate dueDate) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:19: private final int daysBeforeDue;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:35: List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).to …",
+       "src/main/java/org/example/library/loan/LoanDesk.java:7: private final LoanRepository loans;",
+       "src/main/java/org/example/library/loan/LoanDesk.java:9: public LoanDesk(LoanRepository loans) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:10: this.loans = loans;",
+       "src/main/java/org/example/library/loan/LoanDesk.java:19: loans.save(renewed);",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:16: private final LoanRepository loans;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:17: private final PostboxClient postbox;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:44: DeliveryReceipt receipt = postbox.send(List.of(loan.memberEmail()), \"An item is due soon\", text);",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:18: private final SentReminderLog sentReminders;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:45: sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());",
+       "src/main/java/org/example/library/loan/LoanRepository.java:6: public interface LoanRepository {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:12: public class ReminderMailer extends ScheduledTask {",
+       "src/main/java/org/example/library/reminder/SentReminderLog.java:3: public interface SentReminderLog {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:14: private static final int RENEWAL_DAYS = 14;",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:34: public void sendDueSoonReminders(LocalDate today) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:3: public class LoanDesk {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:13: public Loan renew(Loan loan) {"
+      ]
+     }
+    ],
+    "bytes": 2751
+   }
+  },
+  {
+   "id": "U8",
+   "abstractionId": "A10",
+   "displayName": "ReminderMailer#runOnce",
+   "name": "runOnce",
+   "enclosing": "ReminderMailer",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderMailer.java",
+   "lines": {
+    "from": 30,
+    "to": 32
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": true,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "30:     public void runOnce() {",
+       "31:         sendDueSoonReminders(LocalDate.now());",
+       "32:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "12: public class ReminderMailer extends ScheduledTask {",
+       "14: private static final int RENEWAL_DAYS = 14;",
+       "16: private final LoanRepository loans;",
+       "17: private final PostboxClient postbox;",
+       "18: private final SentReminderLog sentReminders;",
+       "19: private final int daysBeforeDue;",
+       "21: public ReminderMailer(LoanRepository loans, PostboxClient postbox, SentReminderLog sentReminders, String schedule, int daysBeforeDue) {",
+       "34: public void sendDueSoonReminders(LocalDate today) {",
+       "49: private String formatDueDate(LocalDate dueDate) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/org/example/library/fine/FineStatement.java:9: public String writeStatementLine(String itemTitle, LocalDate issuedOn, BigDecimal amount) {",
+       "src/main/java/org/example/library/loan/Loan.java:5: public record Loan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHo …",
+       "src/main/java/org/example/library/loan/Loan.java:7: public Loan withDueDate(LocalDate newDueDate) {",
+       "src/main/java/org/example/library/loan/LoanRepository.java:8: List<Loan> findLoansDueOn(LocalDate dueDate);",
+       "src/main/java/org/example/library/reminder/ReminderLoan.java:7: public record ReminderLoan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, bool …",
+       "vendor/postbox/src/main/java/org/example/postbox/ScheduledTask.java:23: public abstract void runOnce();",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:34: public void sendDueSoonReminders(LocalDate today) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:12: public class ReminderMailer extends ScheduledTask {",
+       "src/main/java/org/example/library/loan/LoanRepository.java:6: public interface LoanRepository {",
+       "vendor/postbox/src/main/java/org/example/postbox/ScheduledTask.java:3: public abstract class ScheduledTask {"
+      ]
+     },
+     {
+      "section": "calledBodies",
+      "lines": [
+       "34: public void sendDueSoonReminders(LocalDate today) {",
+       "35: List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).toList();",
+       "36: for (ReminderLoan loan : dueSoon) {",
+       "37: if (!loan.onHold()) {",
+       "38: ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate().plusDays(RENEWAL_DAYS), false);",
+       "39: loans.save(renewed.restoreLoan());",
+       "40: continue;",
+       "41: }",
+       "42: ",
+       "43: String text = loan.itemTitle() + \" is due on \" + formatDueDate(loan.dueDate()) + \". Another member waits for it, so it cannot be renewed.\";",
+       "44: DeliveryReceipt receipt = postbox.send(List.of(loan.memberEmail()), \"An item is due soon\", text);",
+       "45: sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());",
+       "49: private String formatDueDate(LocalDate dueDate) {",
+       "50: return dueDate.format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "51: }"
+      ]
+     }
+    ],
+    "bytes": 2807
+   }
+  },
+  {
+   "id": "U9",
+   "abstractionId": "A11",
+   "displayName": "ReminderMailer#sendDueSoonReminders",
+   "name": "sendDueSoonReminders",
+   "enclosing": "ReminderMailer",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderMailer.java",
+   "lines": {
+    "from": 34,
+    "to": 47
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": {
+     "line": 38,
+     "text": "ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate().plusDays(RENEWAL_DAYS), false);"
+    },
+    "constructs": [
+     {
+      "line": 36,
+      "text": "for (ReminderLoan loan : dueSoon) {"
+     },
+     {
+      "line": 37,
+      "text": "if (!loan.onHold()) {"
+     }
+    ]
+   },
+   "callArgumentCalls": [
+    {
+     "line": 35,
+     "outer": "loans.findLoansDueOn",
+     "inner": "today.plusDays"
+    },
+    {
+     "line": 38,
+     "outer": "ReminderLoan",
+     "inner": "plusDays"
+    }
+   ],
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "34:     public void sendDueSoonReminders(LocalDate today) {",
+       "35:         List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).toList();",
+       "36:         for (ReminderLoan loan : dueSoon) {",
+       "37:             if (!loan.onHold()) {",
+       "38:                 ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate().plusDays(RENEWAL_DAYS), false);",
+       "39:                 loans.save(renewed.restoreLoan());",
+       "40:                 continue;",
+       "41:             }",
+       "42: ",
+       "43:             String text = loan.itemTitle() + \" is due on \" + formatDueDate(loan.dueDate()) + \". Another member waits for it, so it cannot be renewed.\";",
+       "44:             DeliveryReceipt receipt = postbox.send(List.of(loan.memberEmail()), \"An item is due soon\", text);",
+       "45:             sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());",
+       "46:         }",
+       "47:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "12: public class ReminderMailer extends ScheduledTask {",
+       "14: private static final int RENEWAL_DAYS = 14;",
+       "16: private final LoanRepository loans;",
+       "17: private final PostboxClient postbox;",
+       "18: private final SentReminderLog sentReminders;",
+       "19: private final int daysBeforeDue;",
+       "21: public ReminderMailer(LoanRepository loans, PostboxClient postbox, SentReminderLog sentReminders, String schedule, int daysBeforeDue) {",
+       "30: @Override public void runOnce() {",
+       "49: private String formatDueDate(LocalDate dueDate) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/org/example/library/loan/Loan.java:5: public record Loan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHo …",
+       "src/main/java/org/example/library/reminder/ReminderLoan.java:7: public record ReminderLoan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, bool …",
+       "src/main/java/org/example/library/reminder/ReminderLoan.java:9: public static ReminderLoan copyLoan(Loan loan) {",
+       "src/main/java/org/example/library/reminder/ReminderLoan.java:10: return new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate(), loan.onHol …",
+       "src/main/java/org/example/library/loan/LoanDesk.java:18: Loan renewed = loan.withDueDate(loan.dueDate().plusDays(RENEWAL_DAYS));",
+       "src/main/java/org/example/library/loan/LoanRepository.java:8: List<Loan> findLoansDueOn(LocalDate dueDate);",
+       "src/main/java/org/example/library/overdue/OverdueLetter.java:10: String dueDay = loan.dueDate().format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "src/main/java/org/example/library/fine/FineStatement.java:9: public String writeStatementLine(String itemTitle, LocalDate issuedOn, BigDecimal amount) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:15: throw new LoanOnHoldException(loan.loanId());",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:16: private final LoanRepository loans;",
+       "src/main/java/org/example/library/loan/LoanDesk.java:13: public Loan renew(Loan loan) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:14: if (loan.onHold()) {",
+       "src/main/java/org/example/library/loan/LoanRepository.java:10: void save(Loan loan);",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:12: public class ReminderMailer extends ScheduledTask {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:5: private static final int RENEWAL_DAYS = 14;",
+       "src/main/java/org/example/library/loan/LoanRepository.java:6: public interface LoanRepository {",
+       "src/main/java/org/example/library/overdue/OverdueLetter.java:9: public String writeLetterText(Loan loan) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:30: public void runOnce() {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:31: sendDueSoonReminders(LocalDate.now());",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:19: private final int daysBeforeDue;"
+      ]
+     },
+     {
+      "section": "callingMethods",
+      "lines": [
+       "Caller in this file of `sendDueSoonReminders`: `runOnce` · 30-32",
+       "30:     public void runOnce() {",
+       "31:         sendDueSoonReminders(LocalDate.now());",
+       "32:     }"
+      ]
+     },
+     {
+      "section": "calledBodies",
+      "lines": [
+       "49: private String formatDueDate(LocalDate dueDate) {",
+       "50: return dueDate.format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "51: }"
+      ]
+     }
+    ],
+    "bytes": 4112
+   }
+  },
+  {
+   "id": "U10",
+   "abstractionId": "A11",
+   "displayName": "ReminderMailer#sendDueSoonReminders",
+   "name": "sendDueSoonReminders",
+   "enclosing": "ReminderMailer",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderMailer.java",
+   "lines": {
+    "from": 34,
+    "to": 47
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "DECISION",
+   "judgeType": "judge-simplicity-decision",
+   "checks": [
+    {
+     "id": "S1",
+     "name": "Incomplete Mental Model",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": {
+     "line": 38,
+     "text": "ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate().plusDays(RENEWAL_DAYS), false);"
+    },
+    "constructs": [
+     {
+      "line": 36,
+      "text": "for (ReminderLoan loan : dueSoon) {"
+     },
+     {
+      "line": 37,
+      "text": "if (!loan.onHold()) {"
+     }
+    ]
+   },
+   "callArgumentCalls": [
+    {
+     "line": 35,
+     "outer": "loans.findLoansDueOn",
+     "inner": "today.plusDays"
+    },
+    {
+     "line": 38,
+     "outer": "ReminderLoan",
+     "inner": "plusDays"
+    }
+   ],
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [
+    {
+     "key": "onHold",
+     "kind": "READ_IDENTIFIER",
+     "places": [
+      {
+       "path": "src/main/java/org/example/library/loan/LoanDesk.java",
+       "line": 14,
+       "text": "if (loan.onHold()) {",
+       "moduleRoot": ""
+      }
+     ]
+    }
+   ],
+   "homeModule": {
+    "root": "",
+    "rootForm": "",
+    "reason": "no module form for this language"
+   },
+   "searchScope": {
+    "family": "jvm",
+    "minifiedSkipped": 0
+   },
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "34:     public void sendDueSoonReminders(LocalDate today) {",
+       "35:         List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).toList();",
+       "36:         for (ReminderLoan loan : dueSoon) {",
+       "37:             if (!loan.onHold()) {",
+       "38:                 ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate().plusDays(RENEWAL_DAYS), false);",
+       "39:                 loans.save(renewed.restoreLoan());",
+       "40:                 continue;",
+       "41:             }",
+       "42: ",
+       "43:             String text = loan.itemTitle() + \" is due on \" + formatDueDate(loan.dueDate()) + \". Another member waits for it, so it cannot be renewed.\";",
+       "44:             DeliveryReceipt receipt = postbox.send(List.of(loan.memberEmail()), \"An item is due soon\", text);",
+       "45:             sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());",
+       "46:         }",
+       "47:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "12: public class ReminderMailer extends ScheduledTask {",
+       "14: private static final int RENEWAL_DAYS = 14;",
+       "16: private final LoanRepository loans;",
+       "17: private final PostboxClient postbox;",
+       "18: private final SentReminderLog sentReminders;",
+       "19: private final int daysBeforeDue;",
+       "21: public ReminderMailer(LoanRepository loans, PostboxClient postbox, SentReminderLog sentReminders, String schedule, int daysBeforeDue) {",
+       "30: @Override public void runOnce() {",
+       "49: private String formatDueDate(LocalDate dueDate) {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/org/example/library/loan/Loan.java:5: public record Loan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHo …",
+       "src/main/java/org/example/library/reminder/ReminderLoan.java:7: public record ReminderLoan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, bool …",
+       "src/main/java/org/example/library/reminder/ReminderLoan.java:9: public static ReminderLoan copyLoan(Loan loan) {",
+       "src/main/java/org/example/library/reminder/ReminderLoan.java:10: return new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate(), loan.onHol …",
+       "src/main/java/org/example/library/loan/LoanDesk.java:18: Loan renewed = loan.withDueDate(loan.dueDate().plusDays(RENEWAL_DAYS));",
+       "src/main/java/org/example/library/loan/LoanRepository.java:8: List<Loan> findLoansDueOn(LocalDate dueDate);",
+       "src/main/java/org/example/library/overdue/OverdueLetter.java:10: String dueDay = loan.dueDate().format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "src/main/java/org/example/library/fine/FineStatement.java:9: public String writeStatementLine(String itemTitle, LocalDate issuedOn, BigDecimal amount) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:15: throw new LoanOnHoldException(loan.loanId());",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:16: private final LoanRepository loans;",
+       "src/main/java/org/example/library/loan/LoanDesk.java:13: public Loan renew(Loan loan) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:14: if (loan.onHold()) {",
+       "src/main/java/org/example/library/loan/LoanRepository.java:10: void save(Loan loan);",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:12: public class ReminderMailer extends ScheduledTask {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:5: private static final int RENEWAL_DAYS = 14;",
+       "src/main/java/org/example/library/loan/LoanRepository.java:6: public interface LoanRepository {",
+       "src/main/java/org/example/library/overdue/OverdueLetter.java:9: public String writeLetterText(Loan loan) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:30: public void runOnce() {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:31: sendDueSoonReminders(LocalDate.now());",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:19: private final int daysBeforeDue;"
+      ]
+     },
+     {
+      "section": "callingMethods",
+      "lines": [
+       "Caller in this file of `sendDueSoonReminders`: `runOnce` · 30-32",
+       "30:     public void runOnce() {",
+       "31:         sendDueSoonReminders(LocalDate.now());",
+       "32:     }"
+      ]
+     },
+     {
+      "section": "calledBodies",
+      "lines": [
+       "49: private String formatDueDate(LocalDate dueDate) {",
+       "50: return dueDate.format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "51: }"
+      ]
+     }
+    ],
+    "bytes": 4112
+   }
+  },
+  {
+   "id": "U11",
+   "abstractionId": "A16",
+   "displayName": "ReminderMailer#formatDueDate",
+   "name": "formatDueDate",
+   "enclosing": "ReminderMailer",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderMailer.java",
+   "lines": {
+    "from": 49,
+    "to": 51
+   },
+   "isTest": false,
+   "boundaryRank": "UNKNOWN",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": true,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_ITS_CALLERS_IN_FILE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "49:     private String formatDueDate(LocalDate dueDate) {",
+       "50:         return dueDate.format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "51:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "12: public class ReminderMailer extends ScheduledTask {",
+       "14: private static final int RENEWAL_DAYS = 14;",
+       "16: private final LoanRepository loans;",
+       "17: private final PostboxClient postbox;",
+       "18: private final SentReminderLog sentReminders;",
+       "19: private final int daysBeforeDue;",
+       "21: public ReminderMailer(LoanRepository loans, PostboxClient postbox, SentReminderLog sentReminders, String schedule, int daysBeforeDue) {",
+       "30: @Override public void runOnce() {",
+       "34: public void sendDueSoonReminders(LocalDate today) {"
+      ]
+     },
+     {
+      "section": "callersInFile",
+      "lines": [
+       "43: String text = loan.itemTitle() + \" is due on \" + formatDueDate(loan.dueDate()) + \". Another member waits for it, so it cannot be renewed.\";"
+      ]
+     },
+     {
+      "section": "callingMethods",
+      "lines": [
+       "Caller in this file of `formatDueDate`: `sendDueSoonReminders` · 34-45",
+       "34:     public void sendDueSoonReminders(LocalDate today) {",
+       "35:         List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).toList();",
+       "36:         for (ReminderLoan loan : dueSoon) {",
+       "37:             if (!loan.onHold()) {",
+       "38:                 ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate().plusDays(RENEWAL_DAYS), false);",
+       "39:                 loans.save(renewed.restoreLoan());",
+       "40:                 continue;",
+       "41:             }",
+       "42: ",
+       "43:             String text = loan.itemTitle() + \" is due on \" + formatDueDate(loan.dueDate()) + \". Another member waits for it, so it cannot be renewed.\";",
+       "44:             DeliveryReceipt receipt = postbox.send(List.of(loan.memberEmail()), \"An item is due soon\", text);",
+       "45:             sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());"
+      ]
+     }
+    ],
+    "bytes": 1787
+   }
+  },
+  {
+   "id": "U12",
+   "abstractionId": "A16",
+   "displayName": "ReminderMailer#formatDueDate",
+   "name": "formatDueDate",
+   "enclosing": "ReminderMailer",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/ReminderMailer.java",
+   "lines": {
+    "from": 49,
+    "to": 51
+   },
+   "isTest": false,
+   "boundaryRank": "UNKNOWN",
+   "track": "DECISION",
+   "judgeType": "judge-simplicity-decision",
+   "checks": [
+    {
+     "id": "S1",
+     "name": "Incomplete Mental Model",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": true,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [
+    {
+     "key": "d MMMM yyyy",
+     "kind": "LITERAL",
+     "places": [
+      {
+       "path": "src/main/java/org/example/library/fine/FineStatement.java",
+       "line": 10,
+       "text": "String issueDay = issuedOn.format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "moduleRoot": ""
+      },
+      {
+       "path": "src/main/java/org/example/library/overdue/OverdueLetter.java",
+       "line": 10,
+       "text": "String dueDay = loan.dueDate().format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "moduleRoot": ""
+      }
+     ]
+    }
+   ],
+   "homeModule": {
+    "root": "",
+    "rootForm": "",
+    "reason": "no module form for this language"
+   },
+   "searchScope": {
+    "family": "jvm",
+    "minifiedSkipped": 0
+   },
+   "slice": {
+    "need": "THE_MEMBER_AND_ITS_CALLERS_IN_FILE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "49:     private String formatDueDate(LocalDate dueDate) {",
+       "50:         return dueDate.format(DateTimeFormatter.ofPattern(\"d MMMM yyyy\"));",
+       "51:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "12: public class ReminderMailer extends ScheduledTask {",
+       "14: private static final int RENEWAL_DAYS = 14;",
+       "16: private final LoanRepository loans;",
+       "17: private final PostboxClient postbox;",
+       "18: private final SentReminderLog sentReminders;",
+       "19: private final int daysBeforeDue;",
+       "21: public ReminderMailer(LoanRepository loans, PostboxClient postbox, SentReminderLog sentReminders, String schedule, int daysBeforeDue) {",
+       "30: @Override public void runOnce() {",
+       "34: public void sendDueSoonReminders(LocalDate today) {"
+      ]
+     },
+     {
+      "section": "callersInFile",
+      "lines": [
+       "43: String text = loan.itemTitle() + \" is due on \" + formatDueDate(loan.dueDate()) + \". Another member waits for it, so it cannot be renewed.\";"
+      ]
+     },
+     {
+      "section": "callingMethods",
+      "lines": [
+       "Caller in this file of `formatDueDate`: `sendDueSoonReminders` · 34-45",
+       "34:     public void sendDueSoonReminders(LocalDate today) {",
+       "35:         List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).toList();",
+       "36:         for (ReminderLoan loan : dueSoon) {",
+       "37:             if (!loan.onHold()) {",
+       "38:                 ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate().plusDays(RENEWAL_DAYS), false);",
+       "39:                 loans.save(renewed.restoreLoan());",
+       "40:                 continue;",
+       "41:             }",
+       "42: ",
+       "43:             String text = loan.itemTitle() + \" is due on \" + formatDueDate(loan.dueDate()) + \". Another member waits for it, so it cannot be renewed.\";",
+       "44:             DeliveryReceipt receipt = postbox.send(List.of(loan.memberEmail()), \"An item is due soon\", text);",
+       "45:             sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());"
+      ]
+     }
+    ],
+    "bytes": 1787
+   }
+  },
+  {
+   "id": "U13",
+   "abstractionId": "A17",
+   "displayName": "SentReminderLog",
+   "name": "SentReminderLog",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/SentReminderLog.java",
+   "lines": {
+    "from": 3,
+    "to": 6
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_FILE_WHOLE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "3: public interface SentReminderLog {",
+       "4: ",
+       "5:     void recordSentReminder(String loanId, long sentAt);",
+       "6: }"
+      ]
+     }
+    ],
+    "bytes": 106
+   }
+  },
+  {
+   "id": "U14",
+   "abstractionId": "A18",
+   "displayName": "SentReminderLog#recordSentReminder",
+   "name": "recordSentReminder",
+   "enclosing": "SentReminderLog",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/SentReminderLog.java",
+   "lines": {
+    "from": 5,
+    "to": 7
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "5:     void recordSentReminder(String loanId, long sentAt);",
+       "6: }",
+       "7: "
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "3: public interface SentReminderLog {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/org/example/library/loan/Loan.java:5: public record Loan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHo …",
+       "src/main/java/org/example/library/loan/Loan.java:8: return new Loan(loanId, memberId, memberEmail, itemTitle, newDueDate, onHold);",
+       "src/main/java/org/example/library/loan/LoanDesk.java:15: throw new LoanOnHoldException(loan.loanId());",
+       "src/main/java/org/example/library/loan/LoanOnHoldException.java:5: public LoanOnHoldException(String loanId) {",
+       "src/main/java/org/example/library/loan/LoanOnHoldException.java:6: super(\"loan \" + loanId + \" is on hold for another member\");",
+       "vendor/postbox/src/main/java/org/example/postbox/DeliveryReceipt.java:3: public record DeliveryReceipt(long sentAt) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:45: sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());",
+       "src/main/java/org/example/library/reminder/SentReminderLog.java:3: public interface SentReminderLog {",
+       "src/main/java/org/example/library/loan/Loan.java:7: public Loan withDueDate(LocalDate newDueDate) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:13: public Loan renew(Loan loan) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:12: public class ReminderMailer extends ScheduledTask {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:34: public void sendDueSoonReminders(LocalDate today) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:18: private final SentReminderLog sentReminders;"
+      ]
+     }
+    ],
+    "bytes": 1643
+   }
+  },
+  {
+   "id": "U15",
+   "abstractionId": "A18",
+   "displayName": "SentReminderLog#recordSentReminder",
+   "name": "recordSentReminder",
+   "enclosing": "SentReminderLog",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "CREATED",
+   "path": "src/main/java/org/example/library/reminder/SentReminderLog.java",
+   "lines": {
+    "from": 5,
+    "to": 7
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "DECISION",
+   "judgeType": "judge-simplicity-decision",
+   "checks": [
+    {
+     "id": "S1",
+     "name": "Incomplete Mental Model",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [
+    {
+     "key": "recordSentReminder",
+     "kind": "NAME_STEMS",
+     "places": [
+      {
+       "path": "src/main/java/org/example/library/reminder/SentReminderLog.java",
+       "line": 3,
+       "text": "public interface SentReminderLog {",
+       "moduleRoot": ""
+      }
+     ]
+    }
+   ],
+   "homeModule": {
+    "root": "",
+    "rootForm": "",
+    "reason": "no module form for this language"
+   },
+   "searchScope": {
+    "family": "jvm",
+    "minifiedSkipped": 0
+   },
+   "slice": {
+    "need": "THE_MEMBER_AND_EVERY_REFERENCE",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "5:     void recordSentReminder(String loanId, long sentAt);",
+       "6: }",
+       "7: "
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "3: public interface SentReminderLog {"
+      ]
+     },
+     {
+      "section": "references",
+      "lines": [
+       "src/main/java/org/example/library/loan/Loan.java:5: public record Loan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHo …",
+       "src/main/java/org/example/library/loan/Loan.java:8: return new Loan(loanId, memberId, memberEmail, itemTitle, newDueDate, onHold);",
+       "src/main/java/org/example/library/loan/LoanDesk.java:15: throw new LoanOnHoldException(loan.loanId());",
+       "src/main/java/org/example/library/loan/LoanOnHoldException.java:5: public LoanOnHoldException(String loanId) {",
+       "src/main/java/org/example/library/loan/LoanOnHoldException.java:6: super(\"loan \" + loanId + \" is on hold for another member\");",
+       "vendor/postbox/src/main/java/org/example/postbox/DeliveryReceipt.java:3: public record DeliveryReceipt(long sentAt) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:45: sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());",
+       "src/main/java/org/example/library/reminder/SentReminderLog.java:3: public interface SentReminderLog {",
+       "src/main/java/org/example/library/loan/Loan.java:7: public Loan withDueDate(LocalDate newDueDate) {",
+       "src/main/java/org/example/library/loan/LoanDesk.java:13: public Loan renew(Loan loan) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:12: public class ReminderMailer extends ScheduledTask {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:34: public void sendDueSoonReminders(LocalDate today) {",
+       "src/main/java/org/example/library/reminder/ReminderMailer.java:18: private final SentReminderLog sentReminders;"
+      ]
+     }
+    ],
+    "bytes": 1643
+   }
+  }
+ ],
+ "screenBatches": [],
+ "gate": {
+  "D3": [
+   "namesMechanism"
+  ],
+  "CP1": [
+   "encodesCaseAsPrimitiveOrFallback"
+  ],
+  "CP3": [
+   "changesStateBeyondTheCall"
+  ],
+  "CP4": [
+   "signalsFailureAsValueOrError"
+  ],
+  "CP7": [
+   "recoversFromFailureInPlace"
+  ],
+  "P2": [
+   "repeatsWork",
+   "callsOutsideProcess"
+  ],
+  "P3": [
+   "callsOutsideProcess"
+  ],
+  "P4": [
+   "createsReusableResource"
+  ]
+ },
+ "checkNames": {
+  "S1": "Incomplete Mental Model",
+  "S2": "Prediction Failure",
+  "S4": "Compression Failure",
+  "S5": "Unnamed Part Failure",
+  "S6": "Open Construct Overload",
+  "D1": "Over-Extraction",
+  "D2": "Scoped Parameters",
+  "D3": "Leaked Details",
+  "D4": "Missing Boundary",
+  "D5": "Type per Variant",
+  "CP1": "Exclude Illegal States",
+  "CP3": "Protect the State",
+  "CP4": "Remove Edge Cases",
+  "CP5": "Remove Hidden Dependencies",
+  "CP6": "Validate at the Boundary",
+  "CP7": "Fail Fast",
+  "CD2": "Test Behavior",
+  "CD4": "Integration Test Needed",
+  "CD5": "Unit Test Needed",
+  "CD6": "Unit Test to Remove",
+  "CD7": "Partial Path Test",
+  "P1": "Looped I/O",
+  "P2": "Repeated Retrieval",
+  "P3": "Excess Retrieval",
+  "P4": "Resource Recreation"
+ },
+ "ioRuleScreenCall": null,
+ "ioCachedRules": null,
+ "ioGroups": [],
+ "ioPaths": [],
+ "ioRuleKey": "833d364c1bb15587fdddb5d0b911934c370c3347a840cc24367283442a8ece22",
+ "ioEnds": [],
+ "entryBoundaries": {
+  "boundaries": 0,
+  "applications": 0,
+  "judged": 0,
+  "noCaller": 0,
+  "notJudged": 0
+ },
+ "boundaryPaths": {
+  "paths": 0,
+  "inner": 0,
+  "entry": 0,
+  "judged": 0,
+  "notJudged": 0
+ },
+ "waves": [
+  {
+   "number": 1,
+   "agentCalls": 15,
+   "screenBatches": [],
+   "ioRules": false,
+   "codeUnderReview": [
+    [
+     1,
+     15
+    ]
+   ]
+  }
+ ]
+}

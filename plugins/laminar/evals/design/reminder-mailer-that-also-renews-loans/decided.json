@@ -1,0 +1,9 @@
+[
+  {
+    "displayName": "ReminderMailer#formatDueDate",
+    "check": "S1",
+    "reason": "fix apart",
+    "says": "The format of a date in a letter to a member also stands in the overdue and the fine modules, so its 1 owner is a change of its own. The user also rejected the word notice in every name of this change, because the members of the library know these messages as reminders.",
+    "decidedBy": "user"
+  }
+]

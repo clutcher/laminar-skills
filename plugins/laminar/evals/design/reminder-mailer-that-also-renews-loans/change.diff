@@ -1,0 +1,89 @@
+diff --git a/src/main/java/org/example/library/reminder/ReminderLoan.java b/src/main/java/org/example/library/reminder/ReminderLoan.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/reminder/ReminderLoan.java
+@@ -0,0 +1,16 @@
++package org.example.library.reminder;
++
++import org.example.library.loan.Loan;
++
++import java.time.LocalDate;
++
++public record ReminderLoan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHold) {
++
++    public static ReminderLoan copyLoan(Loan loan) {
++        return new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate(), loan.onHold());
++    }
++
++    public Loan restoreLoan() {
++        return new Loan(loanId, memberId, memberEmail, itemTitle, dueDate, onHold);
++    }
++}
+diff --git a/src/main/java/org/example/library/reminder/ReminderMailer.java b/src/main/java/org/example/library/reminder/ReminderMailer.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/reminder/ReminderMailer.java
+@@ -0,0 +1,52 @@
++package org.example.library.reminder;
++
++import org.example.library.loan.LoanRepository;
++import org.example.postbox.DeliveryReceipt;
++import org.example.postbox.PostboxClient;
++import org.example.postbox.ScheduledTask;
++
++import java.time.LocalDate;
++import java.time.format.DateTimeFormatter;
++import java.util.List;
++
++public class ReminderMailer extends ScheduledTask {
++
++    private static final int RENEWAL_DAYS = 14;
++
++    private final LoanRepository loans;
++    private final PostboxClient postbox;
++    private final SentReminderLog sentReminders;
++    private final int daysBeforeDue;
++
++    public ReminderMailer(LoanRepository loans, PostboxClient postbox, SentReminderLog sentReminders, String schedule, int daysBeforeDue) {
++        super("due-soon-reminders", schedule);
++        this.loans = loans;
++        this.postbox = postbox;
++        this.sentReminders = sentReminders;
++        this.daysBeforeDue = daysBeforeDue;
++    }
++
++    @Override
++    public void runOnce() {
++        sendDueSoonReminders(LocalDate.now());
++    }
++
++    public void sendDueSoonReminders(LocalDate today) {
++        List<ReminderLoan> dueSoon = loans.findLoansDueOn(today.plusDays(daysBeforeDue)).stream().map(ReminderLoan::copyLoan).toList();
++        for (ReminderLoan loan : dueSoon) {
++            if (!loan.onHold()) {
++                ReminderLoan renewed = new ReminderLoan(loan.loanId(), loan.memberId(), loan.memberEmail(), loan.itemTitle(), loan.dueDate().plusDays(RENEWAL_DAYS), false);
++                loans.save(renewed.restoreLoan());
++                continue;
++            }
++
++            String text = loan.itemTitle() + " is due on " + formatDueDate(loan.dueDate()) + ". Another member waits for it, so it cannot be renewed.";
++            DeliveryReceipt receipt = postbox.send(List.of(loan.memberEmail()), "An item is due soon", text);
++            sentReminders.recordSentReminder(loan.loanId(), receipt.sentAt());
++        }
++    }
++
++    private String formatDueDate(LocalDate dueDate) {
++        return dueDate.format(DateTimeFormatter.ofPattern("d MMMM yyyy"));
++    }
++}
+diff --git a/src/main/java/org/example/library/reminder/SentReminderLog.java b/src/main/java/org/example/library/reminder/SentReminderLog.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/reminder/SentReminderLog.java
+@@ -0,0 +1,6 @@
++package org.example.library.reminder;
++
++public interface SentReminderLog {
++
++    void recordSentReminder(String loanId, long sentAt);
++}

@@ -1,0 +1,256 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,5 @@
++# Lending library
++
++Java 21. Domain packages under `org.example.library`. Repositories are interfaces implemented by the persistence module, which is not in this repository slice.
++
++The mail library Postbox is vendored under `vendor/postbox/`, at the version and edition its README names.
+diff --git a/src/main/java/org/example/library/fine/FineStatement.java b/src/main/java/org/example/library/fine/FineStatement.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/fine/FineStatement.java
+@@ -0,0 +1,13 @@
++package org.example.library.fine;
++
++import java.math.BigDecimal;
++import java.time.LocalDate;
++import java.time.format.DateTimeFormatter;
++
++public class FineStatement {
++
++    public String writeStatementLine(String itemTitle, LocalDate issuedOn, BigDecimal amount) {
++        String issueDay = issuedOn.format(DateTimeFormatter.ofPattern("d MMMM yyyy"));
++        return itemTitle + ": fine of " + amount + " issued on " + issueDay;
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/Loan.java b/src/main/java/org/example/library/loan/Loan.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/Loan.java
+@@ -0,0 +1,10 @@
++package org.example.library.loan;
++
++import java.time.LocalDate;
++
++public record Loan(String loanId, String memberId, String memberEmail, String itemTitle, LocalDate dueDate, boolean onHold) {
++
++    public Loan withDueDate(LocalDate newDueDate) {
++        return new Loan(loanId, memberId, memberEmail, itemTitle, newDueDate, onHold);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/LoanDesk.java b/src/main/java/org/example/library/loan/LoanDesk.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/LoanDesk.java
+@@ -0,0 +1,22 @@
++package org.example.library.loan;
++
++public class LoanDesk {
++
++    private static final int RENEWAL_DAYS = 14;
++
++    private final LoanRepository loans;
++
++    public LoanDesk(LoanRepository loans) {
++        this.loans = loans;
++    }
++
++    public Loan renew(Loan loan) {
++        if (loan.onHold()) {
++            throw new LoanOnHoldException(loan.loanId());
++        }
++
++        Loan renewed = loan.withDueDate(loan.dueDate().plusDays(RENEWAL_DAYS));
++        loans.save(renewed);
++        return renewed;
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/LoanOnHoldException.java b/src/main/java/org/example/library/loan/LoanOnHoldException.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/LoanOnHoldException.java
+@@ -0,0 +1,8 @@
++package org.example.library.loan;
++
++public class LoanOnHoldException extends RuntimeException {
++
++    public LoanOnHoldException(String loanId) {
++        super("loan " + loanId + " is on hold for another member");
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/LoanRepository.java b/src/main/java/org/example/library/loan/LoanRepository.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/LoanRepository.java
+@@ -0,0 +1,11 @@
++package org.example.library.loan;
++
++import java.time.LocalDate;
++import java.util.List;
++
++public interface LoanRepository {
++
++    List<Loan> findLoansDueOn(LocalDate dueDate);
++
++    void save(Loan loan);
++}
+diff --git a/src/main/java/org/example/library/overdue/OverdueLetter.java b/src/main/java/org/example/library/overdue/OverdueLetter.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/overdue/OverdueLetter.java
+@@ -0,0 +1,13 @@
++package org.example.library.overdue;
++
++import org.example.library.loan.Loan;
++
++import java.time.format.DateTimeFormatter;
++
++public class OverdueLetter {
++
++    public String writeLetterText(Loan loan) {
++        String dueDay = loan.dueDate().format(DateTimeFormatter.ofPattern("d MMMM yyyy"));
++        return loan.itemTitle() + " was due on " + dueDay + ". Please return it to any branch.";
++    }
++}
+diff --git a/src/main/resources/reminders.properties b/src/main/resources/reminders.properties
+new file mode 100644
+--- /dev/null
++++ b/src/main/resources/reminders.properties
+@@ -0,0 +1,3 @@
++reminder.schedule=0 */30 * * * *
++reminder.days-before-due=2
++reminder.staff-recipients=desk01@library.example,desk02@library.example,desk03@library.example,desk04@library.example,desk05@library.example,desk06@library.example,desk07@library.example,desk08@library.example,desk09@library.example,desk10@library.example,desk11@library.example,desk12@library.example,desk13@library.example,desk14@library.example,desk15@library.example,desk16@library.example,desk17@library.example,desk18@library.example,desk19@library.example,desk20@library.example,desk21@library.example,desk22@library.example,desk23@library.example,desk24@library.example,desk25@library.example,desk26@library.example,desk27@library.example,desk28@library.example,desk29@library.example,desk30@library.example,desk31@library.example,desk32@library.example,desk33@library.example,desk34@library.example,desk35@library.example,desk36@library.example,desk37@library.example,desk38@library.example,desk39@library.example,desk40@library.example,desk41@library.example,desk42@library.example,desk43@library.example,desk44@library.example,desk45@library.example,desk46@library.example,desk47@library.example,desk48@library.example,desk49@library.example,desk50@library.example,desk51@library.example,desk52@library.example,desk53@library.example,desk54@library.example,desk55@library.example,desk56@library.example,desk57@library.example,desk58@library.example,desk59@library.example,desk60@library.example,desk61@library.example,desk62@library.example,desk63@library.example,desk64@library.example
+diff --git a/vendor/postbox/README.md b/vendor/postbox/README.md
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/README.md
+@@ -0,0 +1,15 @@
++# Postbox 3.2.0, free edition
++
++A small client for the Postbox mail service. This copy is the free edition.
++
++## Sending
++
++`PostboxClient#send(recipients, subject, body)` sends 1 message to every address of `recipients` and returns 1 `DeliveryReceipt`. It accepts at most 50 recipients per call; a call with more throws `RecipientLimitExceeded` and sends nothing.
++
++`PostboxClient#sendWithAttachment(recipients, subject, body, attachment)` is a feature of the paid edition. In the free edition it throws `EditionFeatureMissing` and sends nothing.
++
++`DeliveryReceipt#sentAt()` returns the time the service accepted the message, in seconds since the epoch, in UTC.
++
++## Scheduled tasks
++
++`ScheduledTask` runs `runOnce()` by the cron expression it gets. Its constructor registers the task under its name at once, so the name must be known before the constructor of a subclass runs. Each name must be unique for each schedule: write it as `<task>@<cron expression>`, because 2 tasks of 1 name replace each other.
+diff --git a/vendor/postbox/src/main/java/org/example/postbox/DeliveryReceipt.java b/vendor/postbox/src/main/java/org/example/postbox/DeliveryReceipt.java
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/src/main/java/org/example/postbox/DeliveryReceipt.java
+@@ -0,0 +1,4 @@
++package org.example.postbox;
++
++public record DeliveryReceipt(long sentAt) {
++}
+diff --git a/vendor/postbox/src/main/java/org/example/postbox/EditionFeatureMissing.java b/vendor/postbox/src/main/java/org/example/postbox/EditionFeatureMissing.java
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/src/main/java/org/example/postbox/EditionFeatureMissing.java
+@@ -0,0 +1,8 @@
++package org.example.postbox;
++
++public class EditionFeatureMissing extends RuntimeException {
++
++    public EditionFeatureMissing(String feature) {
++        super(feature + " needs the paid edition of Postbox");
++    }
++}
+diff --git a/vendor/postbox/src/main/java/org/example/postbox/PostboxClient.java b/vendor/postbox/src/main/java/org/example/postbox/PostboxClient.java
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/src/main/java/org/example/postbox/PostboxClient.java
+@@ -0,0 +1,21 @@
++package org.example.postbox;
++
++import java.time.Instant;
++import java.util.List;
++
++public class PostboxClient {
++
++    private static final int MOST_RECIPIENTS_PER_CALL = 50;
++
++    public DeliveryReceipt send(List<String> recipients, String subject, String body) {
++        if (recipients.size() > MOST_RECIPIENTS_PER_CALL) {
++            throw new RecipientLimitExceeded(recipients.size(), MOST_RECIPIENTS_PER_CALL);
++        }
++
++        return new DeliveryReceipt(Instant.now().getEpochSecond());
++    }
++
++    public DeliveryReceipt sendWithAttachment(List<String> recipients, String subject, String body, byte[] attachment) {
++        throw new EditionFeatureMissing("sendWithAttachment");
++    }
++}
+diff --git a/vendor/postbox/src/main/java/org/example/postbox/RecipientLimitExceeded.java b/vendor/postbox/src/main/java/org/example/postbox/RecipientLimitExceeded.java
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/src/main/java/org/example/postbox/RecipientLimitExceeded.java
+@@ -0,0 +1,8 @@
++package org.example.postbox;
++
++public class RecipientLimitExceeded extends RuntimeException {
++
++    public RecipientLimitExceeded(int recipientCount, int mostRecipients) {
++        super(recipientCount + " recipients, and a call takes at most " + mostRecipients);
++    }
++}
+diff --git a/vendor/postbox/src/main/java/org/example/postbox/ScheduledTask.java b/vendor/postbox/src/main/java/org/example/postbox/ScheduledTask.java
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/src/main/java/org/example/postbox/ScheduledTask.java
+@@ -0,0 +1,24 @@
++package org.example.postbox;
++
++public abstract class ScheduledTask {
++
++    private final String taskName;
++
++    private final String cronExpression;
++
++    protected ScheduledTask(String taskName, String cronExpression) {
++        this.taskName = taskName;
++        this.cronExpression = cronExpression;
++        TaskRegistry.register(taskName, this);
++    }
++
++    public String getTaskName() {
++        return taskName;
++    }
++
++    public String getCronExpression() {
++        return cronExpression;
++    }
++
++    public abstract void runOnce();
++}
+diff --git a/vendor/postbox/src/main/java/org/example/postbox/TaskRegistry.java b/vendor/postbox/src/main/java/org/example/postbox/TaskRegistry.java
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/src/main/java/org/example/postbox/TaskRegistry.java
+@@ -0,0 +1,16 @@
++package org.example.postbox;
++
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++final class TaskRegistry {
++
++    private static final Map<String, ScheduledTask> TASK_BY_NAME_MAP = new ConcurrentHashMap<>();
++
++    private TaskRegistry() {
++    }
++
++    static void register(String taskName, ScheduledTask task) {
++        TASK_BY_NAME_MAP.put(taskName, task);
++    }
++}
