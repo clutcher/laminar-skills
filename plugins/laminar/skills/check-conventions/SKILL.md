@@ -53,6 +53,7 @@ Load the rules in this order, and keep the file and the number of each rule, bec
 - Give every finding 1 scale, as `references/scales.md` of this skill says.
 - A section of a reference file under `code-style/references/` with no mark narrower than the book is a design direction of the book. The skill `review` judges the design directions of the book, and the rules marked narrower than the book are the rules of this check, so never cite such a section for a finding, also where the change breaks it, unless the design direction stands in the list of item 5 of section 2 or in a common pitfall. Cite it only beside a project rule in a contradiction. A pointer to it inside a conventions file, such as `(methods, section 1)`, does not make it a rule to check.
 - Where the rule clearly applies, state the fix. Where the answer depends on an intent the code does not show, such as whether a value is a business rule, ask the author a question and state no fix.
+- Name in a finding only a name that stands in the checked code or in the text of the rule it cites. Where the fix needs a new type, member or value, say what it names by its business purpose and its kind, as the rule asks, and leave the word to the author: the check reads only the changed lines and the rule, so it does not know the words of the domain, and a session that fixes the finding copies a name it is given. Never give a list of possible names.
 - Do not build, run or change the code.
 
 A finding names its rule with 1 of these ids:
@@ -75,7 +76,7 @@ Each finding takes this form:
    - The line compares the days since the loan was issued with the bare value 14, and nothing on the line says what 14 controls.
    - The rule names a value whose line hides its meaning for its business purpose, with its kind last.
    - **Fix:**
-     - Add a private constant `RENEWAL_PERIOD_DAYS` and compare with it.
+     - Add a private constant named for the renewal period that 14 sets, with its kind days last, and compare with it.
 ```
 
 The first line names the place in exactly 1 of 3 forms, and in no other: `Type#method (path:line)` for a method, `Type (path:line)` for a type, and `path:line` where no type holds the line. Then it holds a colon and a space, then an action in the imperative that never ends in text in brackets, then the id of the rule in brackets, then ` · ` and the scale as 1 bare lowercase word, last on the line. A tool reads this line, so keep its form exact. Each bullet under it is 1 sentence. Where you ask a question, write `- **Question:**` with the question, in place of the fix.
