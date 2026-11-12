@@ -1,0 +1,710 @@
+{
+  "version": 1,
+  "folders": [
+    {
+      "path": "src/catalogue",
+      "kind": "modified",
+      "children": [
+        {
+          "name": "CachedCatalogue.js",
+          "kind": "created"
+        },
+        {
+          "name": "RemoteCatalogue.js",
+          "kind": "unchanged"
+        },
+        {
+          "name": "CatalogueUnavailable.js",
+          "kind": "unchanged"
+        }
+      ]
+    },
+    {
+      "path": "src/holds",
+      "kind": "created",
+      "children": [
+        {
+          "name": "HoldDesk.js",
+          "kind": "created"
+        },
+        {
+          "name": "Hold.js",
+          "kind": "created"
+        },
+        {
+          "name": "HoldLimitReached.js",
+          "kind": "created"
+        },
+        {
+          "name": "UnknownTitle.js",
+          "kind": "created"
+        },
+        {
+          "name": "UnknownMember.js",
+          "kind": "created"
+        }
+      ]
+    },
+    {
+      "path": "src/cli",
+      "kind": "created",
+      "children": [
+        {
+          "name": "HoldCommand.js",
+          "kind": "created"
+        },
+        {
+          "name": "CommandAnswer.js",
+          "kind": "created"
+        }
+      ]
+    },
+    {
+      "path": "src",
+      "kind": "modified",
+      "children": [
+        {
+          "name": "holds",
+          "kind": "created"
+        },
+        {
+          "name": "cli",
+          "kind": "created"
+        }
+      ]
+    },
+    {
+      "path": "src/members",
+      "kind": "modified",
+      "children": [
+        {
+          "name": "Member.js",
+          "kind": "unchanged"
+        },
+        {
+          "name": "MemberDirectory.js",
+          "kind": "unchanged"
+        },
+        {
+          "name": "MemberTier.js",
+          "kind": "unchanged"
+        },
+        {
+          "name": "MemberCard.js",
+          "kind": "modified"
+        }
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "file": "src/catalogue/CachedCatalogue.js",
+      "kindWord": "class",
+      "name": "CachedCatalogue",
+      "does": "coordinates",
+      "exposed": true,
+      "fields": [
+        {
+          "name": "remoteCatalogue",
+          "type": "RemoteCatalogue"
+        },
+        {
+          "name": "titlesByIsbnMap",
+          "type": "Map<Isbn, Title>"
+        }
+      ],
+      "methods": [
+        {
+          "visibility": "public",
+          "name": "findTitle",
+          "parameters": [
+            {
+              "name": "isbn",
+              "type": "Isbn"
+            }
+          ],
+          "returns": "Promise<Title|null>",
+          "uses": [
+            "titlesByIsbnMap",
+            "readAndRememberTitle"
+          ],
+          "body": "if (this.titlesByIsbnMap.has(isbn)) return this.titlesByIsbnMap.get(isbn);\n\nreturn this.readAndRememberTitle(isbn);"
+        },
+        {
+          "visibility": "private",
+          "name": "readAndRememberTitle",
+          "parameters": [
+            {
+              "name": "isbn",
+              "type": "Isbn"
+            }
+          ],
+          "returns": "Promise<Title|null>",
+          "uses": [
+            "remoteCatalogue",
+            "titlesByIsbnMap"
+          ],
+          "calls": [
+            "RemoteCatalogue#findTitle"
+          ],
+          "body": "const title = await this.remoteCatalogue.findTitle(isbn);\n// I/O: findTitle reads the title from the remote catalogue; null for an isbn it does not hold, which is remembered as well\n// Failure: CatalogueUnavailable, handled by HoldCommand#answerFailure\nthis.titlesByIsbnMap.set(isbn, title);\nreturn title;"
+        }
+      ]
+    },
+    {
+      "file": "src/holds/HoldDesk.js",
+      "kindWord": "class",
+      "name": "HoldDesk",
+      "does": "coordinates",
+      "exposed": true,
+      "fields": [
+        {
+          "name": "memberDirectory",
+          "type": "MemberDirectory"
+        },
+        {
+          "name": "catalogue",
+          "type": "CachedCatalogue"
+        },
+        {
+          "name": "memberCard",
+          "type": "MemberCard"
+        }
+      ],
+      "methods": [
+        {
+          "visibility": "public",
+          "name": "placeHold",
+          "parameters": [
+            {
+              "name": "memberId",
+              "type": "MemberId"
+            },
+            {
+              "name": "isbn",
+              "type": "Isbn"
+            }
+          ],
+          "returns": "Promise<Hold>",
+          "uses": [
+            "memberDirectory",
+            "catalogue",
+            "memberCard"
+          ],
+          "calls": [
+            "MemberDirectory#findMember",
+            "UnknownMember",
+            "Member#countHeldTitles",
+            "MemberCard#getHoldLimit",
+            "HoldLimitReached",
+            "CachedCatalogue#findTitle",
+            "UnknownTitle",
+            "Hold"
+          ],
+          "body": "const member = this.memberDirectory.findMember(memberId);\nif (member === null) throw new UnknownMember(memberId);\nif (member.countHeldTitles() >= this.memberCard.getHoldLimit(member)) throw new HoldLimitReached(memberId, member.tier);\n\nconst title = await this.catalogue.findTitle(isbn);\nif (title === null) throw new UnknownTitle(isbn);\n\nreturn new Hold(memberId, isbn, title.name);"
+        }
+      ]
+    },
+    {
+      "file": "src/holds/Hold.js",
+      "kindWord": "class",
+      "name": "Hold",
+      "exposed": true,
+      "fields": [
+        {
+          "name": "memberId",
+          "type": "MemberId"
+        },
+        {
+          "name": "isbn",
+          "type": "Isbn"
+        },
+        {
+          "name": "titleName",
+          "type": "string"
+        }
+      ],
+      "methods": []
+    },
+    {
+      "file": "src/holds/HoldLimitReached.js",
+      "kindWord": "class",
+      "name": "HoldLimitReached",
+      "extends": [
+        "Error"
+      ],
+      "exposed": true,
+      "fields": [
+        {
+          "name": "memberId",
+          "type": "MemberId"
+        },
+        {
+          "name": "tier",
+          "type": "MemberTier"
+        }
+      ],
+      "methods": []
+    },
+    {
+      "file": "src/holds/UnknownTitle.js",
+      "kindWord": "class",
+      "name": "UnknownTitle",
+      "extends": [
+        "Error"
+      ],
+      "exposed": true,
+      "fields": [
+        {
+          "name": "isbn",
+          "type": "Isbn"
+        }
+      ],
+      "methods": []
+    },
+    {
+      "file": "src/holds/UnknownMember.js",
+      "kindWord": "class",
+      "name": "UnknownMember",
+      "extends": [
+        "Error"
+      ],
+      "exposed": true,
+      "fields": [
+        {
+          "name": "memberId",
+          "type": "MemberId"
+        }
+      ],
+      "methods": []
+    },
+    {
+      "file": "src/cli/HoldCommand.js",
+      "kindWord": "class",
+      "name": "HoldCommand",
+      "does": "coordinates",
+      "exposed": true,
+      "fields": [
+        {
+          "name": "holdDesk",
+          "type": "HoldDesk"
+        }
+      ],
+      "methods": [
+        {
+          "visibility": "public",
+          "name": "placeHold",
+          "parameters": [
+            {
+              "name": "memberId",
+              "type": "string"
+            },
+            {
+              "name": "isbn",
+              "type": "string"
+            }
+          ],
+          "returns": "Promise<CommandAnswer>",
+          "uses": [
+            "holdDesk",
+            "isMissing",
+            "answerFailure"
+          ],
+          "calls": [
+            "CommandAnswer#refuseRequest",
+            "HoldDesk#placeHold",
+            "CommandAnswer#place"
+          ],
+          "body": "if (this.isMissing(memberId) || this.isMissing(isbn)) return CommandAnswer.refuseRequest(\"a member id and an isbn are required\");\n\ntry {\n  return CommandAnswer.place(await this.holdDesk.placeHold(memberId, isbn));\n} catch (failure) {\n  return this.answerFailure(failure);\n}"
+        },
+        {
+          "visibility": "private",
+          "name": "isMissing",
+          "parameters": [
+            {
+              "name": "text",
+              "type": "string"
+            }
+          ],
+          "returns": "boolean"
+        },
+        {
+          "visibility": "private",
+          "name": "answerFailure",
+          "parameters": [
+            {
+              "name": "failure",
+              "type": "Error"
+            }
+          ],
+          "returns": "CommandAnswer",
+          "calls": [
+            "CatalogueUnavailable",
+            "CommandAnswer#reportUnavailable",
+            "UnknownMember",
+            "HoldLimitReached",
+            "UnknownTitle",
+            "CommandAnswer#refuseHold"
+          ],
+          "body": "if (failure instanceof CatalogueUnavailable) return CommandAnswer.reportUnavailable(failure);\nif (failure instanceof UnknownMember || failure instanceof HoldLimitReached || failure instanceof UnknownTitle) return CommandAnswer.refuseHold(failure);\n\nthrow failure;"
+        }
+      ]
+    },
+    {
+      "file": "src/cli/CommandAnswer.js",
+      "kindWord": "class",
+      "name": "CommandAnswer",
+      "does": "computes",
+      "exposed": true,
+      "fields": [
+        {
+          "name": "exitCode",
+          "type": "ExitCode"
+        },
+        {
+          "name": "text",
+          "type": "string"
+        }
+      ],
+      "methods": [
+        {
+          "visibility": "public",
+          "name": "place",
+          "parameters": [
+            {
+              "name": "hold",
+              "type": "Hold"
+            }
+          ],
+          "returns": "CommandAnswer"
+        },
+        {
+          "visibility": "public",
+          "name": "refuseRequest",
+          "parameters": [
+            {
+              "name": "reason",
+              "type": "string"
+            }
+          ],
+          "returns": "CommandAnswer"
+        },
+        {
+          "visibility": "public",
+          "name": "refuseHold",
+          "parameters": [
+            {
+              "name": "failure",
+              "type": "Error"
+            }
+          ],
+          "returns": "CommandAnswer"
+        },
+        {
+          "visibility": "public",
+          "name": "reportUnavailable",
+          "parameters": [
+            {
+              "name": "failure",
+              "type": "CatalogueUnavailable"
+            }
+          ],
+          "returns": "CommandAnswer"
+        }
+      ]
+    },
+    {
+      "file": "src/cli/CommandAnswer.js",
+      "kindWord": "enum",
+      "name": "ExitCode",
+      "exposed": false,
+      "fields": [
+        {
+          "name": "HOLD_PLACED"
+        },
+        {
+          "name": "REQUEST_REFUSED"
+        },
+        {
+          "name": "UNKNOWN_MEMBER"
+        },
+        {
+          "name": "HOLD_LIMIT_REACHED"
+        },
+        {
+          "name": "UNKNOWN_TITLE"
+        },
+        {
+          "name": "CATALOGUE_UNAVAILABLE"
+        }
+      ]
+    },
+    {
+      "file": "src/catalogue/RemoteCatalogue.js",
+      "kindWord": "class",
+      "name": "RemoteCatalogue",
+      "exposed": true,
+      "fields": [
+        {
+          "name": "baseUrl",
+          "type": "string"
+        }
+      ],
+      "methods": [
+        {
+          "visibility": "public",
+          "name": "findTitle",
+          "parameters": [
+            {
+              "name": "isbn",
+              "type": "Isbn"
+            }
+          ],
+          "returns": "Promise<Title|null>",
+          "unchanged": true
+        }
+      ]
+    },
+    {
+      "file": "src/catalogue/CatalogueUnavailable.js",
+      "kindWord": "class",
+      "name": "CatalogueUnavailable",
+      "extends": [
+        "Error"
+      ],
+      "exposed": true,
+      "fields": [
+        {
+          "name": "status",
+          "type": "number"
+        }
+      ],
+      "methods": []
+    },
+    {
+      "file": "src/members/MemberDirectory.js",
+      "kindWord": "class",
+      "name": "MemberDirectory",
+      "exposed": true,
+      "fields": [
+        {
+          "name": "membersById",
+          "type": "Map<MemberId, Member>"
+        }
+      ],
+      "methods": [
+        {
+          "visibility": "public",
+          "name": "findMember",
+          "parameters": [
+            {
+              "name": "memberId",
+              "type": "MemberId"
+            }
+          ],
+          "returns": "Member|null",
+          "unchanged": true
+        }
+      ]
+    },
+    {
+      "file": "src/members/Member.js",
+      "kindWord": "class",
+      "name": "Member",
+      "exposed": true,
+      "fields": [
+        {
+          "name": "memberId",
+          "type": "MemberId"
+        },
+        {
+          "name": "tier",
+          "type": "MemberTier"
+        },
+        {
+          "name": "heldIsbns",
+          "type": "Isbn[]"
+        }
+      ],
+      "methods": [
+        {
+          "visibility": "public",
+          "name": "countHeldTitles",
+          "parameters": [],
+          "returns": "number",
+          "unchanged": true
+        }
+      ]
+    },
+    {
+      "file": "src/members/MemberCard.js",
+      "kindWord": "class",
+      "name": "MemberCard",
+      "does": "computes",
+      "exposed": true,
+      "fields": [],
+      "methods": [
+        {
+          "visibility": "public",
+          "name": "describeHoldLimit",
+          "parameters": [
+            {
+              "name": "member",
+              "type": "Member"
+            }
+          ],
+          "returns": "string",
+          "unchanged": true
+        },
+        {
+          "visibility": "public",
+          "name": "getHoldLimit",
+          "parameters": [
+            {
+              "name": "member",
+              "type": "Member"
+            }
+          ],
+          "returns": "number"
+        }
+      ]
+    }
+  ],
+  "decisions": {
+    "conventions": {
+      "folder": ".claude/rules/conventions",
+      "found": false,
+      "files": [],
+      "zoneOrder": "default"
+    },
+    "owners": [
+      {
+        "decision": "how many titles a member of a tier may hold at once",
+        "owner": "MemberCard#getHoldLimit",
+        "placement": "MemberCard already holds the limit of each tier in HOLD_LIMIT_BY_TIER_MAP, so the lookup stands beside it and HoldDesk asks it",
+        "callers": [
+          "HoldDesk#placeHold"
+        ],
+        "forecast": {
+          "sixMonths": "low",
+          "oneYear": "medium",
+          "threeYears": "medium",
+          "change": "new rule",
+          "evidence": "domain",
+          "reason": "Libraries add tiers, such as a student tier, and change limits per tier at a review of their lending rules."
+        }
+      },
+      {
+        "decision": "when a title is read from the remote catalogue again",
+        "owner": "CachedCatalogue#findTitle",
+        "placement": "CachedCatalogue holds the titles it read, so the decision stands beside them",
+        "callers": [
+          "HoldDesk#placeHold"
+        ],
+        "forecast": {
+          "sixMonths": "low",
+          "oneYear": "medium",
+          "threeYears": "medium",
+          "change": "new rule",
+          "evidence": "domain",
+          "reason": "A catalogue that changes titles during the day often asks for a time limit on a remembered title later."
+        }
+      }
+    ],
+    "entries": [
+      {
+        "entry": "HoldCommand#placeHold",
+        "changed": true,
+        "reads": [
+          "the argument memberId",
+          "the argument isbn"
+        ],
+        "validates": [
+          {
+            "data": "memberId",
+            "check": "present and not blank",
+            "at": "HoldCommand#placeHold"
+          },
+          {
+            "data": "isbn",
+            "check": "present and not blank",
+            "at": "HoldCommand#placeHold"
+          }
+        ],
+        "invariants": [],
+        "handler": "HoldCommand#answerFailure",
+        "responses": [
+          {
+            "outcome": "the hold is placed",
+            "status": 0,
+            "type": "CommandAnswer"
+          },
+          {
+            "outcome": "the request fails its checks",
+            "status": 2,
+            "type": "CommandAnswer"
+          },
+          {
+            "outcome": "no member has the member id",
+            "status": 3,
+            "type": "CommandAnswer"
+          },
+          {
+            "outcome": "the member holds as many titles as the tier allows",
+            "status": 4,
+            "type": "CommandAnswer"
+          },
+          {
+            "outcome": "the catalogue holds no title with the isbn",
+            "status": 5,
+            "type": "CommandAnswer"
+          },
+          {
+            "outcome": "the catalogue is unavailable",
+            "status": 6,
+            "type": "CommandAnswer"
+          }
+        ]
+      }
+    ],
+    "exits": [
+      {
+        "exit": "RemoteCatalogue#findTitle",
+        "from": "CachedCatalogue#readAndRememberTitle",
+        "does": "reads the title of an isbn from the remote catalogue",
+        "failure": {
+          "absent": "null for an isbn the catalogue does not hold, which CachedCatalogue remembers, and HoldDesk#placeHold fails fast with UnknownTitle",
+          "failed": "CatalogueUnavailable",
+          "handledAt": "HoldCommand#answerFailure"
+        }
+      }
+    ],
+    "tests": {
+      "integration": [
+        {
+          "entry": "HoldCommand#placeHold",
+          "file": "test/cli/HoldCommand.test.js",
+          "substitutes": [
+            "RemoteCatalogue"
+          ],
+          "tests": [
+            "shouldPlaceTheHoldWithTheTitleNameWhenTheMemberHoldsFewerTitlesThanTheTierAllows",
+            "shouldRefuseTheHoldWhenAStandardMemberAlreadyHoldsThreeTitles",
+            "shouldPlaceTheHoldWhenAGoldMemberHoldsThreeTitles",
+            "shouldRefuseTheHoldWhenTheCatalogueHoldsNoTitleWithTheIsbn",
+            "shouldAskTheRemoteCatalogueOnceWhenTwoMembersHoldTheSameTitle",
+            "shouldRefuseTheRequestWhenTheIsbnIsBlank",
+            "shouldRefuseTheHoldWhenNoMemberHasTheMemberId",
+            "shouldReportTheCatalogueUnavailableWhenTheRemoteCatalogueFails"
+          ]
+        }
+      ],
+      "unit": []
+    },
+    "questions": [],
+    "findings": [],
+    "stops": [],
+    "existingDefects": [],
+    "scriptCases": []
+  }
+}

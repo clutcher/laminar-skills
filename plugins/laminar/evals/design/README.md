@@ -1,6 +1,6 @@
 # Evaluation cases for the design skill
 
-A case is a small fictional repository with the input of the skill `design` of the plugin laminar, and the checks that its design model or its shape run must pass. There are 2 kinds of cases. A design case gives the skill a review run or a described change, and grades the design model the skill writes before any code is written. A shape case gives the review a shape model alone, and grades the `review.md` of 1 shape run.
+A case is a small fictional repository with the input of the skill `design` of the plugin laminar, and the checks that its design model or its shape run must pass. There are 3 kinds of cases. A design case gives the skill a review run or a described change, and grades the design model the skill writes before any code is written. A shape case gives the review a shape model alone, and grades the `review.md` of 1 shape run. A writer case gives the writer workflow a stored design model, so no designer runs, and grades the code the writers write at level 2.
 
 ## What a design case holds
 
@@ -8,6 +8,7 @@ A case is a small fictional repository with the input of the skill `design` of t
 - `change.diff`, where the input is a review run: the change that the review reviewed, as `main...change`.
 - `review.md`, `review.sarif` and `review-evidence.md`, where the input is a review run: the 3 report files of 1 run of the skill `review` on that change. The findings are written by hand, and the 3 files are rendered by the extract, prepare, merge and render commands of the review scripts, so they have the exact form of a real run.
 - `plan.md`, where the input is a described change: the plan text that the skill designs.
+- `design-model.json`, in a writer case: the stored design model that the finish command plans and the writers write.
 - `task.md`: the task, as an agent receives it, with `<run folder>`, `<plan file>` and `<results folder>` for the paths of the operator.
 - `expected.md`: the checks of the design model, under `## Level 1` and `## Level 2`.
 - `judges.txt`: the judge types of the review run of the inputs, which a level 2 review of the written code also runs, in the form `runReview.mjs prepare --judges` takes.
@@ -27,7 +28,7 @@ Level 1 grades `design-model.json` of the results folder at no model cost. `desi
 
 The model holds an object of `decisions.findings` only for an item at the application, module or class scale, so a method item has no object, and `Closed in 1 class` grades only the numbers that have one.
 
-Level 2 is an agent grade, and no case runs it yet. An agent reads the design model against the items under `## Level 2`: the cause of the findings, the owner of the decision in the tree of the model, and a review of the code that the writers write from the model, run on `main...change` with the judge types of `judges.txt`.
+Level 2 is an agent grade, and only the writer case runs it, by its task and the run plan below. An agent reads the design model against the items under `## Level 2`: the cause of the findings, the owner of the decision in the tree of the model, and a review of the code that the writers write from the model, run on `main...change` with the judge types of `judges.txt`.
 
 ## Running a design case
 
@@ -61,6 +62,10 @@ The judge workflow, the merge and the render follow as in a review. A run costs 
 node evals/grade.mjs <case> <run>/review.md
 ```
 
+## The writer case
+
+The writer case `hold-limit-checked-over-a-cached-catalogue` measures the self-check of the writer workflow (`references/writer.md` of the skill, section 5): arm A runs today's workflow with `selfCheck: false`, arm B runs it with the self-check, on the same stored model, 3 runs per arm. The model gives each decision 1 owner, so the case measures what the self-check catches in the code that only the writer names: the test helpers, the substitute, the private steps and the locals. Its repository is JavaScript with no dependency, and `npm test` runs the tests with the test runner of Node. Build the fixture with `grade.mjs --build`, then follow `task.md` from a session, which starts the writer workflow itself. Grade the model at level 1 with `grade-design.mjs`, and read each line under `## Level 2` against the return of the writer workflow, `plans/1/self-check.json` and the `review.md` of the closing review. A run costs about $1.4 in arm A, the writer and the closing review with the 4 judges of `judges.txt`, and about $2.3 in arm B, which adds the self-check and 1 answer round. The model declares `ExitCode`, the type of the field `exitCode` of `CommandAnswer`, as a closed set in the file of `CommandAnswer`. The model of the recorded runs typed that field with `ExitCode` and declared no such type, so each writer of those runs declared it, and a new run reads a model that the recorded runs did not read.
+
 ## The cases
 
 | Case | Kind | Input | What it shows |
@@ -70,6 +75,7 @@ node evals/grade.mjs <case> <run>/review.md
 | `contact-channel-chosen-in-two-reminder-methods` | design | A review run with a class finding on `ReminderSender` and 2 method findings on its send methods, all from 1 cause, the contact channel that has no name | 1 class of the model closes the findings |
 | `described-validator-that-only-reads-a-referral` | design | A plan that adds the class `ReferralValidator`, whose method only answers whether a referral covers a day | The model answers the described shape with a name that says what the method answers, and moves no file |
 | `due-date-rule-inline-in-three-loan-methods` | shape | A shape model where the 3 public methods of `LoanDesk`, lend, renew and transfer, each hold the rule of the due date inline, with no private part | The shape run raises Unnamed Part Failure on each of the 3 methods; a finding on a name of `Item` or a prediction on `transfer` is an honest finding the case does not measure |
+| `hold-limit-checked-over-a-cached-catalogue` | writer | A stored model of 1 migration group: a command that places a hold on a title, a desk that checks the hold limit of the tier of the member through a new public method of `MemberCard`, and a cache over a remote catalogue, with 8 integration tests over a substitute of the catalogue | The self-check of arm B catches what it can in the code that only the writer names, which is the test helpers, the substitute, the private steps and the locals, and the closing review of arm B keeps no name or unnamed-part finding on the substitute or the test helpers |
 | `due-date-rule-named-as-a-private-part` | shape | The same shape model, where the 3 methods name the private part `calculateDueDate` | The shape run raises no finding |
 
 The measured shape runs raised Unnamed Part Failure on 8 of the 9 methods of the first shape case in 3 runs, so that case fails about 1 run in 3 by known variance.
@@ -78,4 +84,4 @@ The measured shape runs raised Unnamed Part Failure on 8 of the 9 methods of the
 
 The design cases are written fresh in a fictional clinic domain, in Java, so they can be published. The possible findings that the judges return behind the review files of each design case are written by hand, and the merge and the render that turn them into those files are the real review scripts, so no finding of a case is the answer of a judge.
 
-The shape cases are written fresh in a fictional library domain, as shape models with Java bodies, so they can be published.
+The shape cases are written fresh in a fictional library domain, as shape models with Java bodies, so they can be published. The writer case is written fresh in a fictional lending-library domain, in JavaScript, so it can be published.

@@ -1,0 +1,6 @@
+Write the plan of the stored design model `design-model.json` of this case into the repository in the current folder, with the writer workflow of the plugin laminar, and review what it wrote. No designer runs: the model is the input. The results folder is `<results folder>`, outside the repository.
+
+1. Run the start command of the skill `design` with `--repo` on the current folder and `--autonomous` on the empty `<results folder>`, then copy `design-model.json` into `<results folder>`, then run the finish command with the same `--repo` and `--autonomous`, so `<results folder>` holds the migration and `migration.workflow.js` of plan 1.
+2. Start the writer workflow on `<results folder>` with the arguments of the arm: arm A with `selfCheck: false`, arm B with no `selfCheck` argument, so the self-check runs. Write `selfCheck` of each group of the return into `<results folder>/plans/1/self-check.json`, as the section *The self-check of each group* of `references/writer.md` of the skill `design` says.
+3. Commit each group with `finished` and a build that passed, with its files and its commit message, on the branch `change`.
+4. Run the skill `review` on `main...change` with the judge types of `judges.txt`, and keep its run folder.

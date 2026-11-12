@@ -1,0 +1,127 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,5 @@
++# Lending library
++
++Node 22, ES modules, no dependencies. Run the tests with `npm test`, which runs `node --test` over each `*.test.js` file under `test/`.
++
++The catalogue of titles is a remote service; `RemoteCatalogue` is the only class that calls it.
+diff --git a/package.json b/package.json
+new file mode 100644
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1,8 @@
++{
++  "name": "lending-library",
++  "private": true,
++  "type": "module",
++  "scripts": {
++    "test": "node --test \"test/**/*.test.js\""
++  }
++}
+diff --git a/src/catalogue/CatalogueUnavailable.js b/src/catalogue/CatalogueUnavailable.js
+new file mode 100644
+--- /dev/null
++++ b/src/catalogue/CatalogueUnavailable.js
+@@ -0,0 +1,6 @@
++export class CatalogueUnavailable extends Error {
++  constructor(status) {
++    super(`the catalogue answered ${status}`);
++    this.status = status;
++  }
++}
+diff --git a/src/catalogue/RemoteCatalogue.js b/src/catalogue/RemoteCatalogue.js
+new file mode 100644
+--- /dev/null
++++ b/src/catalogue/RemoteCatalogue.js
+@@ -0,0 +1,17 @@
++import { CatalogueUnavailable } from "./CatalogueUnavailable.js";
++
++const NOT_FOUND_STATUS = 404;
++
++export class RemoteCatalogue {
++  constructor(baseUrl) {
++    this.baseUrl = baseUrl;
++  }
++
++  async findTitle(isbn) {
++    const response = await fetch(`${this.baseUrl}/titles/${encodeURIComponent(isbn)}`);
++    if (response.status === NOT_FOUND_STATUS) return null;
++    if (!response.ok) throw new CatalogueUnavailable(response.status);
++
++    return response.json();
++  }
++}
+diff --git a/src/members/Member.js b/src/members/Member.js
+new file mode 100644
+--- /dev/null
++++ b/src/members/Member.js
+@@ -0,0 +1,11 @@
++export class Member {
++  constructor(memberId, tier, heldIsbns) {
++    this.memberId = memberId;
++    this.tier = tier;
++    this.heldIsbns = heldIsbns;
++  }
++
++  countHeldTitles() {
++    return this.heldIsbns.length;
++  }
++}
+diff --git a/src/members/MemberCard.js b/src/members/MemberCard.js
+new file mode 100644
+--- /dev/null
++++ b/src/members/MemberCard.js
+@@ -0,0 +1,9 @@
++import { MemberTier } from "./MemberTier.js";
++
++const HOLD_LIMIT_BY_TIER_MAP = Object.freeze({ [MemberTier.STANDARD]: 3, [MemberTier.GOLD]: 10 });
++
++export class MemberCard {
++  describeHoldLimit(member) {
++    return `${member.tier} members may hold ${HOLD_LIMIT_BY_TIER_MAP[member.tier]} titles at once`;
++  }
++}
+diff --git a/src/members/MemberDirectory.js b/src/members/MemberDirectory.js
+new file mode 100644
+--- /dev/null
++++ b/src/members/MemberDirectory.js
+@@ -0,0 +1,9 @@
++export class MemberDirectory {
++  constructor(membersById) {
++    this.membersById = membersById;
++  }
++
++  findMember(memberId) {
++    return this.membersById.get(memberId) ?? null;
++  }
++}
+diff --git a/src/members/MemberTier.js b/src/members/MemberTier.js
+new file mode 100644
+--- /dev/null
++++ b/src/members/MemberTier.js
+@@ -0,0 +1,1 @@
++export const MemberTier = Object.freeze({ STANDARD: "standard", GOLD: "gold" });
+diff --git a/test/members/MemberCard.test.js b/test/members/MemberCard.test.js
+new file mode 100644
+--- /dev/null
++++ b/test/members/MemberCard.test.js
+@@ -0,0 +1,16 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { Member } from "../../src/members/Member.js";
++import { MemberCard } from "../../src/members/MemberCard.js";
++import { MemberTier } from "../../src/members/MemberTier.js";
++
++test("should describe a hold limit of 10 titles when the member is gold", () => {
++  // given
++  const goldMember = new Member("m-1", MemberTier.GOLD, []);
++
++  // when
++  const description = new MemberCard().describeHoldLimit(goldMember);
++
++  // then
++  assert.equal(description, "gold members may hold 10 titles at once");
++});
