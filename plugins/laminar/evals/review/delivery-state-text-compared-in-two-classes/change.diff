@@ -68,7 +68,7 @@ new file mode 100644
 +
 +public class TrackingNotice {
 +
-+    public String noticeFor(Delivery delivery) {
++    public String writeDeliveryNotice(Delivery delivery) {
 +        if (delivery.isOnRoute()) {
 +            return "Your driver is on the way";
 +        }

@@ -37,7 +37,7 @@ new file mode 100644
 +
 +public interface LoanOverview {
 +
-+    List<Loan> openLoansOf(String readerId);
++    List<Loan> findOpenLoans(String readerId);
 +}
 diff --git a/loans-service/src/main/java/com/example/loans/app/domain/Loan.java b/loans-service/src/main/java/com/example/loans/app/domain/Loan.java
 new file mode 100644
@@ -74,8 +74,8 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public List<Loan> openLoansOf(String readerId) {
-+        return loanRecords.openLoansOf(readerId).stream()
++    public List<Loan> findOpenLoans(String readerId) {
++        return loanRecords.findOpenLoans(readerId).stream()
 +                .sorted(Comparator.comparing(Loan::dueOn))
 +                .toList();
 +    }
@@ -92,7 +92,7 @@ new file mode 100644
 +
 +public interface LoanRecords {
 +
-+    List<Loan> openLoansOf(String readerId);
++    List<Loan> findOpenLoans(String readerId);
 +}
 diff --git a/loans-service/src/main/java/com/example/loans/in/ReaderController.java b/loans-service/src/main/java/com/example/loans/in/ReaderController.java
 new file mode 100644
@@ -119,7 +119,7 @@ new file mode 100644
 +
 +    @GetMapping("/readers/{readerId}/loans")
 +    public List<Loan> openLoans(@PathVariable String readerId) {
-+        return loanOverview.openLoansOf(readerId);
++        return loanOverview.findOpenLoans(readerId);
 +    }
 +}
 diff --git a/loans-service/src/main/java/com/example/loans/out/JdbcLoanRecords.java b/loans-service/src/main/java/com/example/loans/out/JdbcLoanRecords.java
@@ -145,7 +145,7 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public List<Loan> openLoansOf(String readerId) {
++    public List<Loan> findOpenLoans(String readerId) {
 +        return jdbcClient.sql("""
 +                        select copy_barcode, title, borrowed_on, due_on
 +                        from loan

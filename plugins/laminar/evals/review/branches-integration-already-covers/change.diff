@@ -11,14 +11,14 @@ index 0000000..c16a502
 +@Component
 +public class LockerSizeAndHandoverRules {
 +
-+    public LockerSize lockerSizeFor(ShipmentShape shape) {
++    public LockerSize chooseLockerSize(ShipmentShape shape) {
 +        if (shape == ShipmentShape.HEAVY_PARCEL) {
 +            return LockerSize.LARGE;
 +        }
 +        return LockerSize.SMALL;
 +    }
 +
-+    public Handover handoverFor(ShipmentShape shape) {
++    public Handover chooseHandover(ShipmentShape shape) {
 +        if (shape == ShipmentShape.HIGH_VALUE_PARCEL) {
 +            return Handover.SIGNATURE;
 +        }
@@ -85,7 +85,7 @@ index 0000000..6f0349c
 +        Map.entry(new PostalPrefix("48"), 430),
 +        Map.entry(new PostalPrefix("49"), 450));
 +
-+    public int surchargeCentsFor(PostalPrefix postalPrefix) {
++    public int findSurchargeCents(PostalPrefix postalPrefix) {
 +        return SURCHARGE_CENTS_BY_POSTAL_PREFIX.getOrDefault(postalPrefix, UNLISTED_PREFIX_SURCHARGE_CENTS);
 +    }
 +}
@@ -114,7 +114,7 @@ index 0000000..52fa3a2
 +    private final LockerBankDirectory lockerBankDirectory;
 +
 +    public AdmittedShipment admit(ShipmentRequest request) {
-+        return new AdmittedShipment(requireRegisteredBank(request.destinationBankId()), shapeOf(request));
++        return new AdmittedShipment(requireRegisteredBank(request.destinationBankId()), classifyShape(request));
 +    }
 +
 +    private LockerBank requireRegisteredBank(String destinationBankId) {
@@ -122,7 +122,7 @@ index 0000000..52fa3a2
 +            .orElseThrow(() -> new ShipmentRejected("no locker bank is registered as " + destinationBankId));
 +    }
 +
-+    private ShipmentShape shapeOf(ShipmentRequest request) {
++    private ShipmentShape classifyShape(ShipmentRequest request) {
 +        if (request.declaredValueCents() >= HIGH_VALUE_MIN_CENTS) {
 +            return ShipmentShape.HIGH_VALUE_PARCEL;
 +        }
@@ -146,14 +146,14 @@ index 0000000..a242db8
 +@Component
 +public class ShipmentDispatchPlanner {
 +
-+    public DispatchPlan planFor(ValidatedShipment shipment) {
++    public DispatchPlan planDispatch(ValidatedShipment shipment) {
 +        return new DispatchPlan(
 +            shipment.destinationBank().bankId(),
-+            carrierFor(shipment.zone()),
++            chooseCarrier(shipment.zone()),
 +            shipment.lockerSize());
 +    }
 +
-+    private Carrier carrierFor(DestinationZone zone) {
++    private Carrier chooseCarrier(DestinationZone zone) {
 +        if (zone == DestinationZone.SUBURBAN) {
 +            return Carrier.REGIONAL_ROUTE;
 +        }
@@ -185,13 +185,13 @@ index 0000000..9be4f74
 +
 +    private final PostalSurchargeTable postalSurchargeTable;
 +
-+    public ShipmentPrice priceOf(ValidatedShipment shipment) {
-+        int surchargeCents = postalSurchargeTable.surchargeCentsFor(shipment.postalPrefix());
-+        int serviceFeeCents = serviceFeeCentsFor(shipment.serviceLevel());
++    public ShipmentPrice calculatePrice(ValidatedShipment shipment) {
++        int surchargeCents = postalSurchargeTable.findSurchargeCents(shipment.postalPrefix());
++        int serviceFeeCents = chooseServiceFeeCents(shipment.serviceLevel());
 +        return new ShipmentPrice(BASE_FEE_CENTS + surchargeCents + serviceFeeCents, shipment.serviceLevel());
 +    }
 +
-+    private int serviceFeeCentsFor(ServiceLevel serviceLevel) {
++    private int chooseServiceFeeCents(ServiceLevel serviceLevel) {
 +        if (serviceLevel == ServiceLevel.NEXT_DAY) {
 +            return NEXT_DAY_SERVICE_FEE_CENTS;
 +        }
@@ -241,10 +241,10 @@ index 0000000..52274e8
 +        ValidatedShipment shipment = new ValidatedShipment(
 +            request,
 +            admittedShipment.destinationBank(),
-+            lockerSizeAndHandoverRules.lockerSizeFor(admittedShipment.shape()),
-+            lockerSizeAndHandoverRules.handoverFor(admittedShipment.shape()));
-+        ShipmentPrice price = shipmentPricingCalculator.priceOf(shipment);
-+        DispatchPlan dispatchPlan = shipmentDispatchPlanner.planFor(shipment);
++            lockerSizeAndHandoverRules.chooseLockerSize(admittedShipment.shape()),
++            lockerSizeAndHandoverRules.chooseHandover(admittedShipment.shape()));
++        ShipmentPrice price = shipmentPricingCalculator.calculatePrice(shipment);
++        DispatchPlan dispatchPlan = shipmentDispatchPlanner.planDispatch(shipment);
 +        return new ShipmentBookingResponse(
 +            shipment.lockerSize(),
 +            shipment.handover(),

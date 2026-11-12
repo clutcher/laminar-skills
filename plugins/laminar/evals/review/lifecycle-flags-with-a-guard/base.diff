@@ -21,7 +21,7 @@ new file mode 100644
 +
 +class ParcelDesk {
 +
-+    fun parcelsToPack(orders: List<SeedOrder>): List<SeedOrder> {
++    fun selectParcelsToPack(orders: List<SeedOrder>): List<SeedOrder> {
 +        val ready = mutableListOf<SeedOrder>()
 +        for (order in orders) {
 +            if (order.isPaid && !order.isShipped) {
@@ -42,7 +42,7 @@ new file mode 100644
 +
 +class PaymentReminders {
 +
-+    fun remindersFor(orders: List<SeedOrder>): List<String> {
++    fun createReminders(orders: List<SeedOrder>): List<String> {
 +        val reminders = mutableListOf<String>()
 +        for (order in orders) {
 +            if (!order.isPaid) {

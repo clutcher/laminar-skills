@@ -39,9 +39,9 @@ new file mode 100644
 +    public Route routeParcel(Parcel parcel) {
 +        Carrier carrier = carrierDirectory.findCarrier(parcel.carrierCode());
 +        if (carrier == null) {
-+            return Route.toManualDesk(parcel);
++            return Route.sendToManualDesk(parcel);
 +        }
 +
-+        return Route.toCarrierBay(parcel, carrier);
++        return Route.sendToCarrierBay(parcel, carrier);
 +    }
 +}

@@ -27,7 +27,7 @@ new file mode 100644
 +        if (bike.station().region() != Region.ALPINE) {
 +            return List.of();
 +        }
-+        return accessoryCatalogue.accessoriesRentedWith(bike.serialNumber());
++        return accessoryCatalogue.findRentedAccessories(bike.serialNumber());
 +    }
 +
 +    @SchemaMapping(typeName = "Bike")

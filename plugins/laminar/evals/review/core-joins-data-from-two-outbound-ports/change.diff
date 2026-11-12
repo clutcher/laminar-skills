@@ -10,7 +10,7 @@ new file mode 100644
 +
 +public interface ReaderActivityAggregation {
 +
-+    List<ActivityEntry> combinedActivityOf(String readerId);
++    List<ActivityEntry> combineActivity(String readerId);
 +}
 diff --git a/loans-service/src/main/java/com/example/loans/app/domain/ActivityEntry.java b/loans-service/src/main/java/com/example/loans/app/domain/ActivityEntry.java
 new file mode 100644
@@ -64,19 +64,19 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public List<ActivityEntry> combinedActivityOf(String readerId) {
-+        Stream<ActivityEntry> loans = loanRecords.openLoansOf(readerId).stream().map(this::dueBackEntryOf);
-+        Stream<ActivityEntry> reservations = reservationRecords.activeReservationsOf(readerId).stream().map(this::reservedEntryOf);
++    public List<ActivityEntry> combineActivity(String readerId) {
++        Stream<ActivityEntry> loans = loanRecords.findOpenLoans(readerId).stream().map(this::mapToDueBackEntry);
++        Stream<ActivityEntry> reservations = reservationRecords.findActiveReservations(readerId).stream().map(this::mapToReservedEntry);
 +        return Stream.concat(loans, reservations)
 +                .sorted(Comparator.comparing(ActivityEntry::happenedOn))
 +                .toList();
 +    }
 +
-+    private ActivityEntry dueBackEntryOf(Loan loan) {
++    private ActivityEntry mapToDueBackEntry(Loan loan) {
 +        return new ActivityEntry(loan.dueOn(), loan.title(), "Due back");
 +    }
 +
-+    private ActivityEntry reservedEntryOf(Reservation reservation) {
++    private ActivityEntry mapToReservedEntry(Reservation reservation) {
 +        return new ActivityEntry(reservation.reservedOn(), reservation.title(), "Reserved, place " + reservation.queuePosition() + " in the queue");
 +    }
 +}
@@ -92,7 +92,7 @@ new file mode 100644
 +
 +public interface ReservationRecords {
 +
-+    List<Reservation> activeReservationsOf(String readerId);
++    List<Reservation> findActiveReservations(String readerId);
 +}
 diff --git a/loans-service/src/main/java/com/example/loans/in/ReaderController.java b/loans-service/src/main/java/com/example/loans/in/ReaderController.java
 --- a/loans-service/src/main/java/com/example/loans/in/ReaderController.java
@@ -120,12 +120,12 @@ diff --git a/loans-service/src/main/java/com/example/loans/in/ReaderController.j
  
      @GetMapping("/readers/{readerId}/loans")
      public List<Loan> openLoans(@PathVariable String readerId) {
-         return loanOverview.openLoansOf(readerId);
+         return loanOverview.findOpenLoans(readerId);
      }
 +
 +    @GetMapping("/readers/{readerId}/activity")
 +    public List<ActivityEntry> activity(@PathVariable String readerId) {
-+        return readerActivityAggregation.combinedActivityOf(readerId);
++        return readerActivityAggregation.combineActivity(readerId);
 +    }
  }
 diff --git a/loans-service/src/main/java/com/example/loans/out/JdbcReservationRecords.java b/loans-service/src/main/java/com/example/loans/out/JdbcReservationRecords.java
@@ -151,7 +151,7 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public List<Reservation> activeReservationsOf(String readerId) {
++    public List<Reservation> findActiveReservations(String readerId) {
 +        return jdbcClient.sql("""
 +                        select title, reserved_on, queue_position
 +                        from reservation

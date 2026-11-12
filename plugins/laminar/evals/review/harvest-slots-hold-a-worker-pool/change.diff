@@ -56,17 +56,17 @@ new file mode 100644
 +        return future
 +
 +    def _plan_chunk(self, chunk: list[Picking]) -> list[HarvestSlot]:
-+        answers = self._packhouse_client.plan_lines(self._to_packhouse_lines(chunk))
++        answers = self._packhouse_client.plan_lines(self._create_packhouse_lines(chunk))
 +        slots = []
 +        for answer in answers:
 +            picking = chunk[answer.line_number - 1]
 +            slots.append(HarvestSlot(picking.picking_id, answer.slot_opens, answer.slot_closes, self._find_late_crates(picking, answer)))
 +        return slots
 +
-+    def _to_packhouse_lines(self, chunk: list[Picking]) -> list[PackhouseLine]:
-+        return [self._to_packhouse_line(picking, index + 1) for index, picking in enumerate(chunk)]
++    def _create_packhouse_lines(self, chunk: list[Picking]) -> list[PackhouseLine]:
++        return [self._create_packhouse_line(picking, index + 1) for index, picking in enumerate(chunk)]
 +
-+    def _to_packhouse_line(self, picking: Picking, line_number: int) -> PackhouseLine:
++    def _create_packhouse_line(self, picking: Picking, line_number: int) -> PackhouseLine:
 +        return PackhouseLine(line_number, picking.block_code, picking.picked_at, self._resolve_crate_count(picking))
 +
 +    def _resolve_crate_count(self, picking: Picking) -> int:

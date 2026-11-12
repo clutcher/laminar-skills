@@ -51,11 +51,11 @@ new file mode 100644
 +
 +    private static final String MANUAL_DESK_BAY = "manual-desk";
 +
-+    public static Route toCarrierBay(Parcel parcel, Carrier carrier) {
++    public static Route sendToCarrierBay(Parcel parcel, Carrier carrier) {
 +        return new Route(parcel.trackingNumber(), carrier.pickupBay());
 +    }
 +
-+    public static Route toManualDesk(Parcel parcel) {
++    public static Route sendToManualDesk(Parcel parcel) {
 +        return new Route(parcel.trackingNumber(), MANUAL_DESK_BAY);
 +    }
 +}

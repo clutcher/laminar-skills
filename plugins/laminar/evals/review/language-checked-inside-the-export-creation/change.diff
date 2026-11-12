@@ -143,9 +143,9 @@ diff --git a/records/src/main/java/org/example/dental/records/export/in/rest/map
      @Mapping(target = "patients", source = "patients")
      @Mapping(target = "dentistId", source = "dentistId")
 +    @Mapping(target = "language", source = "language")
-     RecordSelection toSelection(RecordExportRequest request);
+     RecordSelection mapToSelection(RecordExportRequest request);
 +
-+    default Locale toLanguage(String language) {
++    default Locale parseLanguage(String language) {
 +        if (language == null) {
 +            return null;
 +        }

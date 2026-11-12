@@ -72,7 +72,7 @@ new file mode 100644
 +    public ItineraryPriceController(TourPriceService tourPriceService, BatchLoaderRegistry batchLoaderRegistry) {
 +        this.tourPriceService = tourPriceService;
 +        batchLoaderRegistry.forTypePair(ItineraryStop.class, StopPrice.class)
-+                .registerMappedBatchLoader((itineraryStops, environment) -> Mono.just(stopPricesOf(itineraryStops)));
++                .registerMappedBatchLoader((itineraryStops, environment) -> Mono.just(calculateStopPrices(itineraryStops)));
 +    }
 +
 +    @QueryMapping
@@ -82,7 +82,7 @@ new file mode 100644
 +
 +    @SchemaMapping(typeName = "Itinerary", field = "price")
 +    public TourPrice price(Itinerary itinerary) {
-+        return tourPriceService.priceOf(tourStopsOf(itinerary.stops()));
++        return tourPriceService.calculateTourPrice(createTourStops(itinerary.stops()));
 +    }
 +
 +    @SchemaMapping(typeName = "ItineraryStop", field = "price")
@@ -90,12 +90,12 @@ new file mode 100644
 +        return stopPrices.load(itineraryStop).thenApply(StopPrice::price);
 +    }
 +
-+    private Map<ItineraryStop, StopPrice> stopPricesOf(Set<ItineraryStop> itineraryStops) {
-+        TourPrice tourPrice = tourPriceService.priceOf(tourStopsOf(itineraryStops));
-+        return itineraryStops.stream().collect(toMap(identity(), itineraryStop -> tourPrice.priceFor(itineraryStop.stopCode())));
++    private Map<ItineraryStop, StopPrice> calculateStopPrices(Set<ItineraryStop> itineraryStops) {
++        TourPrice tourPrice = tourPriceService.calculateTourPrice(createTourStops(itineraryStops));
++        return itineraryStops.stream().collect(toMap(identity(), itineraryStop -> tourPrice.findStopPrice(itineraryStop.stopCode())));
 +    }
 +
-+    private static List<TourStop> tourStopsOf(Collection<ItineraryStop> itineraryStops) {
++    private static List<TourStop> createTourStops(Collection<ItineraryStop> itineraryStops) {
 +        return itineraryStops.stream().map(ItineraryStop::tourStop).toList();
 +    }
 +}
@@ -137,7 +137,7 @@ new file mode 100644
 +        this.jdbcClient = jdbcClient;
 +    }
 +
-+    public Map<String, BigDecimal> pricesPerGuestFor(Set<String> stopCodes) {
++    public Map<String, BigDecimal> findPricesPerGuest(Set<String> stopCodes) {
 +        return jdbcClient.sql("""
 +                        select stop_code, price_per_guest
 +                        from season_rate
@@ -175,7 +175,7 @@ new file mode 100644
 +
 +    private static final BigDecimal TOUR_DESK_APPROVAL_TOTAL = new BigDecimal("5000.00");
 +
-+    public List<PriceNotice> noticesFor(List<StopPrice> stopPrices, BigDecimal total) {
++    public List<PriceNotice> collectNotices(List<StopPrice> stopPrices, BigDecimal total) {
 +        List<PriceNotice> notices = new ArrayList<>();
 +        stopPrices.stream()
 +                .filter(stopPrice -> stopPrice.price().signum() == 0)
@@ -210,7 +210,7 @@ new file mode 100644
 +
 +public record TourPrice(List<StopPrice> stopPrices, BigDecimal total, List<PriceNotice> notices) {
 +
-+    public StopPrice priceFor(String stopCode) {
++    public StopPrice findStopPrice(String stopCode) {
 +        return stopPrices.stream()
 +                .filter(stopPrice -> stopPrice.stopCode().equals(stopCode))
 +                .findFirst()
@@ -242,17 +242,17 @@ new file mode 100644
 +        this.priceNoticeRules = priceNoticeRules;
 +    }
 +
-+    public TourPrice priceOf(List<TourStop> stops) {
-+        Map<String, BigDecimal> pricesPerGuest = seasonRateRepository.pricesPerGuestFor(
++    public TourPrice calculateTourPrice(List<TourStop> stops) {
++        Map<String, BigDecimal> pricesPerGuest = seasonRateRepository.findPricesPerGuest(
 +                stops.stream().map(TourStop::stopCode).collect(Collectors.toSet()));
 +        List<StopPrice> stopPrices = stops.stream()
-+                .map(stop -> stopPriceOf(stop, pricesPerGuest.getOrDefault(stop.stopCode(), BigDecimal.ZERO)))
++                .map(stop -> calculateStopPrice(stop, pricesPerGuest.getOrDefault(stop.stopCode(), BigDecimal.ZERO)))
 +                .toList();
 +        BigDecimal total = stopPrices.stream().map(StopPrice::price).reduce(BigDecimal.ZERO, BigDecimal::add);
-+        return new TourPrice(stopPrices, total, priceNoticeRules.noticesFor(stopPrices, total));
++        return new TourPrice(stopPrices, total, priceNoticeRules.collectNotices(stopPrices, total));
 +    }
 +
-+    private StopPrice stopPriceOf(TourStop stop, BigDecimal pricePerGuest) {
++    private StopPrice calculateStopPrice(TourStop stop, BigDecimal pricePerGuest) {
 +        return new StopPrice(stop.stopCode(), pricePerGuest.multiply(BigDecimal.valueOf(stop.guests())));
 +    }
 +}

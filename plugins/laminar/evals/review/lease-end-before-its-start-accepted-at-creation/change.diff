@@ -17,7 +17,7 @@ new file mode 100644
 +        this.endsOn = endsOn;
 +    }
 +
-+    public void moveEndTo(LocalDate newEnd) {
++    public void moveEnd(LocalDate newEnd) {
 +        if (!newEnd.isAfter(startsOn)) {
 +            throw new IllegalArgumentException("A plot lease ends after it starts");
 +        }
@@ -50,7 +50,7 @@ new file mode 100644
 +        this.endsOn = endsOn;
 +    }
 +
-+    public void moveEndTo(LocalDate newEnd) {
++    public void moveEnd(LocalDate newEnd) {
 +        if (!newEnd.isAfter(startsOn)) {
 +            throw new IllegalArgumentException("A shed lease ends after it starts");
 +        }

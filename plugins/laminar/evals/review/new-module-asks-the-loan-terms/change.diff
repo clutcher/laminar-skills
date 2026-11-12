@@ -19,7 +19,7 @@ new file mode 100644
 +
 +public class ReminderPlanner {
 +
-+    public LocalDate reminderDateFor(LoanTerms terms, LocalDate borrowedOn) {
++    public LocalDate calculateReminderDate(LoanTerms terms, LocalDate borrowedOn) {
 +        return borrowedOn.plusDays(terms.lendingDays() - 2);
 +    }
 +}
@@ -35,7 +35,7 @@ new file mode 100644
 +
 +public final class CatalogReminderMapper {
 +
-+    public ReminderLoan toReminderLoan(LoanTerms terms) {
++    public ReminderLoan createReminderLoan(LoanTerms terms) {
 +        return new ReminderLoan(terms.loanId(), terms.renewalAllowed());
 +    }
 +}

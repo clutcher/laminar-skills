@@ -68,7 +68,7 @@ index 0000000..de7218c
 +            return Money.zero();
 +        }
 +
-+        return Money.ofCents(Math.min(daysLate * lateFeeTable.centsPerDay(), lateFeeTable.maximumCents()));
++        return Money.createFromCents(Math.min(daysLate * lateFeeTable.centsPerDay(), lateFeeTable.maximumCents()));
 +    }
 +
 +    public void sendOverdueReminder(Loan loan, LocalDate dueDate) {
@@ -137,7 +137,7 @@ index 21dd0ab..c92341e 100644
 -            return Money.zero();
 -        }
 -
--        return Money.ofCents(daysLate * lateFeeTable.centsPerDay());
+-        return Money.createFromCents(daysLate * lateFeeTable.centsPerDay());
 -    }
 -
 -    public void sendOverdueReminder(Loan loan, LocalDate dueDate) {

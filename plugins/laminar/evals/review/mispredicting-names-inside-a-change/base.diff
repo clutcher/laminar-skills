@@ -184,12 +184,12 @@ new file mode 100644
 +        List<QuoteNotice> notices
 +    ) {
 +        List<QuoteNotice> withOneVoucherFailure =
-+            keepOnlyTheLastOf(notices, VoucherPricingFailed.class);
++            keepOnlyTheLast(notices, VoucherPricingFailed.class);
 +
-+        return keepOnlyTheLastOf(withOneVoucherFailure, PitchPricingFailed.class);
++        return keepOnlyTheLast(withOneVoucherFailure, PitchPricingFailed.class);
 +    }
 +
-+    private static List<QuoteNotice> keepOnlyTheLastOf(
++    private static List<QuoteNotice> keepOnlyTheLast(
 +        List<QuoteNotice> notices, Class<? extends QuoteNotice> noticeType
 +    ) {
 +        List<QuoteNotice> kept = new ArrayList<>();
@@ -218,12 +218,12 @@ new file mode 100644
 +        }
 +
 +        return affectedPitchIdsByAdjustment.entrySet().stream()
-+            .map(adjustment -> toNightsNotices(adjustment.getKey(), List.copyOf(adjustment.getValue())))
++            .map(adjustment -> createNightsNotices(adjustment.getKey(), List.copyOf(adjustment.getValue())))
 +            .flatMap(List::stream)
 +            .toList();
 +    }
 +
-+    private static List<QuoteNotice> toNightsNotices(
++    private static List<QuoteNotice> createNightsNotices(
 +        NightsAdjustment adjustment, List<String> affectedPitchIds
 +    ) {
 +        return switch (adjustment) {
@@ -240,7 +240,7 @@ new file mode 100644
 +        Map<QuoteFailure, SortedSet<String>> affectedPitchIdsByFailure = new LinkedHashMap<>();
 +
 +        for (Map.Entry<StayRequest.Line, Line> quotedLine : linesByRequest.entrySet()) {
-+            for (QuoteFailure failure : quotedLine.getValue().failuresNotShownOnTheLine()) {
++            for (QuoteFailure failure : quotedLine.getValue().findFailuresNotShownOnTheLine()) {
 +                affectedPitchIdsByFailure
 +                    .computeIfAbsent(failure, unused -> new TreeSet<>())
 +                    .add(quotedLine.getKey().pitchId());
@@ -484,7 +484,7 @@ new file mode 100644
 +    @Test
 +    void shouldReportWeekRoundingOnceForTheWholeQuoteNamingEveryAffectedPitch() {
 +        // given
-+        StayQuote quote = quoteOf(
++        StayQuote quote = createQuote(
 +            Map.of(
 +                LAKESIDE_PITCH, buildQuoteLine().requestedNights(5).quotedNights(7).build(),
 +                HILLTOP_PITCH, buildQuoteLine().requestedNights(6).quotedNights(7).build()));
@@ -500,7 +500,7 @@ new file mode 100644
 +    @Test
 +    void shouldReportWeeklyTariffAndMinimumStayAsSeparateQuoteWarnings() {
 +        // given
-+        StayQuote quote = quoteOf(
++        StayQuote quote = createQuote(
 +            Map.of(
 +                LAKESIDE_PITCH, buildQuoteLine()
 +                    .requestedNights(5)
@@ -525,7 +525,7 @@ new file mode 100644
 +    @Test
 +    void shouldReportOneQuoteFailureWhenSeveralPitchesAreRefusedForTheSameReason() {
 +        // given
-+        StayQuote quote = quoteOf(
++        StayQuote quote = createQuote(
 +            Map.of(
 +                LAKESIDE_PITCH, buildQuoteLine()
 +                    .failures(List.of(QuoteFailureType.PITCH_CLOSED_FOR_SEASON))
@@ -546,7 +546,7 @@ new file mode 100644
 +    @Test
 +    void shouldKeepTheBookingSystemWordingWhenItReportsAFailureWeDoNotRecognise() {
 +        // given
-+        StayQuote quote = quoteOf(
++        StayQuote quote = createQuote(
 +            Map.of(LAKESIDE_PITCH, buildQuoteLine()
 +                .failures(List.of(new UnrecognisedFailure("Pitch flooded after storm")))
 +                .build()));
@@ -563,7 +563,7 @@ new file mode 100644
 +    @Test
 +    void shouldKeepFailuresAlreadyShownOnTheLineOffTheQuoteSummary() {
 +        // given
-+        StayQuote quote = quoteOf(
++        StayQuote quote = createQuote(
 +            Map.of(LAKESIDE_PITCH, buildQuoteLine()
 +                .failures(List.of(QuoteFailureType.VOUCHER_EXPIRED))
 +                .build()));
@@ -578,7 +578,7 @@ new file mode 100644
 +    @Test
 +    void shouldWarnAboutAHighValueStayWhenALineSubtotalExceedsItsCurrencyThreshold() {
 +        // given
-+        StayQuote quote = quoteOf(
++        StayQuote quote = createQuote(
 +            Map.of(LAKESIDE_PITCH, buildQuoteLine().total(buildLineTotal("6200", EURO)).build()));
 +
 +        // when
@@ -591,7 +591,7 @@ new file mode 100644
 +    @Test
 +    void shouldWarnAboutAHighValueStayWhenACheaperLineExceedsItsOwnCurrencyThreshold() {
 +        // given
-+        StayQuote quote = quoteOf(
++        StayQuote quote = createQuote(
 +            Map.of(
 +                LAKESIDE_PITCH, buildQuoteLine().total(buildLineTotal("4500", EURO)).build(),
 +                HILLTOP_PITCH, buildQuoteLine().total(buildLineTotal("4300", SWISS_FRANC)).build()));
@@ -606,7 +606,7 @@ new file mode 100644
 +    @Test
 +    void shouldNotWarnAboutAHighValueStayWhenOnlyTheSumOfLinesExceedsTheThreshold() {
 +        // given
-+        StayQuote quote = quoteOf(
++        StayQuote quote = createQuote(
 +            Map.of(
 +                LAKESIDE_PITCH, buildQuoteLine().total(buildLineTotal("3000", EURO)).build(),
 +                HILLTOP_PITCH, buildQuoteLine().total(buildLineTotal("3000", EURO)).build()));
@@ -621,7 +621,7 @@ new file mode 100644
 +    @Test
 +    void shouldNotWarnAboutAHighValueStayWhenNoThresholdIsSetForTheCurrency() {
 +        // given
-+        StayQuote quote = quoteOf(
++        StayQuote quote = createQuote(
 +            Map.of(LAKESIDE_PITCH, buildQuoteLine().total(buildLineTotal("9000", "NOK")).build()));
 +
 +        // when
@@ -634,13 +634,13 @@ new file mode 100644
 +    @Test
 +    void shouldReportNoQuoteNoticesWhenNoPitchWasQuoted() {
 +        // when
-+        List<QuoteNotice> notices = service.resolveQuoteNotices(quoteOf(Map.of()));
++        List<QuoteNotice> notices = service.resolveQuoteNotices(createQuote(Map.of()));
 +
 +        // then
 +        assertThat(notices).isEmpty();
 +    }
 +
-+    private static StayQuote quoteOf(Map<String, Line> linesByPitchId) {
++    private static StayQuote createQuote(Map<String, Line> linesByPitchId) {
 +        Map<StayRequest.Line, Line> linesByRequest = new LinkedHashMap<>();
 +        linesByPitchId.forEach((pitchId, line) -> linesByRequest.put(
 +            StayRequest.Line.builder().pitchId(pitchId).guests(2).build(),

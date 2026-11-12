@@ -21,8 +21,8 @@ new file mode 100644
 +
 +    public List<BerthWindow> estimateBerthWindows(List<VesselCall> calls) {
 +        List<VesselCall> cargoCalls = withoutPilotBoats(calls);
-+        List<SlotAnswer> answers = batchedTerminalPlanner.planSlotsInBatches(toSlotRequests(cargoCalls));
-+        return toBerthWindows(cargoCalls, answers);
++        List<SlotAnswer> answers = batchedTerminalPlanner.planSlotsInBatches(createSlotRequests(cargoCalls));
++        return createBerthWindows(cargoCalls, answers);
 +    }
 +
 +    private List<VesselCall> withoutPilotBoats(List<VesselCall> calls) {
@@ -31,15 +31,15 @@ new file mode 100644
 +                .toList();
 +    }
 +
-+    private List<SlotRequest> toSlotRequests(List<VesselCall> calls) {
++    private List<SlotRequest> createSlotRequests(List<VesselCall> calls) {
 +        List<SlotRequest> requests = new ArrayList<>();
 +        for (int index = 0; index < calls.size(); index++) {
-+            requests.add(toSlotRequest(calls.get(index), index + 1));
++            requests.add(createSlotRequest(calls.get(index), index + 1));
 +        }
 +        return requests;
 +    }
 +
-+    private SlotRequest toSlotRequest(VesselCall call, int lineNumber) {
++    private SlotRequest createSlotRequest(VesselCall call, int lineNumber) {
 +        return new SlotRequest(lineNumber, call.terminalCode(), call.arrival(), resolveContainerCount(call));
 +    }
 +
@@ -53,7 +53,7 @@ new file mode 100644
 +        return call.bookedContainers();
 +    }
 +
-+    private List<BerthWindow> toBerthWindows(List<VesselCall> calls, List<SlotAnswer> answers) {
++    private List<BerthWindow> createBerthWindows(List<VesselCall> calls, List<SlotAnswer> answers) {
 +        List<BerthWindow> windows = new ArrayList<>();
 +        for (SlotAnswer answer : answers) {
 +            VesselCall call = calls.get(answer.lineNumber() - 1);

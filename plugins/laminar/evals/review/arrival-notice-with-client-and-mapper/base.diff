@@ -29,9 +29,9 @@ new file mode 100644
 +
 +public interface ArrivalNoticeMapper {
 +
-+    AuthorityNotice toAuthorityNotice(ArrivalNotice notice);
++    AuthorityNotice createAuthorityNotice(ArrivalNotice notice);
 +
-+    NoticeStatus toNoticeStatus(AuthorityNotice notice);
++    NoticeStatus readNoticeStatus(AuthorityNotice notice);
 +}
 diff --git a/harbour/src/main/java/com/example/harbour/arrival/AuthorityNotice.java b/harbour/src/main/java/com/example/harbour/arrival/AuthorityNotice.java
 new file mode 100644

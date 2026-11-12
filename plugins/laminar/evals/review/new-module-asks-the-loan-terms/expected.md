@@ -2,6 +2,6 @@
 
 ## Must not appear
 
-Method `ReminderPlanner#reminderDateFor`, Incomplete Mental Model
-Method `CatalogReminderMapper#toReminderLoan`, Incomplete Mental Model
+Method `ReminderPlanner#calculateReminderDate`, Incomplete Mental Model
+Method `CatalogReminderMapper#createReminderLoan`, Incomplete Mental Model
 Any other finding

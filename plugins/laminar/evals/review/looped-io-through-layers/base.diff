@@ -27,7 +27,7 @@ index 0000000..7d172b5
 +    }
 +
 +    public Assignment assign(Parcel parcel) {
-+        return slotReservation.reserveFor(parcel);
++        return slotReservation.reserve(parcel);
 +    }
 +}
 diff --git a/lockers/src/main/java/org/lockerpost/lockers/assignment/Parcel.java b/lockers/src/main/java/org/lockerpost/lockers/assignment/Parcel.java
@@ -117,7 +117,7 @@ index 0000000..06f4cc3
 +
 +public class SlotAvailability {
 +
-+    public long freeSlotsOf(SlotSize size, List<LockerSlot> slots) {
++    public long countFreeSlots(SlotSize size, List<LockerSlot> slots) {
 +        return slots.stream()
 +                .filter(SlotCriteria.select().whereSize(size).whereFree().build())
 +                .count();
@@ -165,7 +165,7 @@ index 0000000..fa2b15b
 +
 +public interface SlotFinder {
 +
-+    LockerSlot freeSlotOf(SlotSize size);
++    LockerSlot findFreeSlot(SlotSize size);
 +}
 diff --git a/lockers/src/main/java/org/lockerpost/lockers/slot/SlotReservation.java b/lockers/src/main/java/org/lockerpost/lockers/slot/SlotReservation.java
 new file mode 100644
@@ -186,8 +186,8 @@ index 0000000..6e6797a
 +        this.slotFinder = slotFinder;
 +    }
 +
-+    public Assignment reserveFor(Parcel parcel) {
-+        LockerSlot slot = slotFinder.freeSlotOf(parcel.size());
++    public Assignment reserve(Parcel parcel) {
++        LockerSlot slot = slotFinder.findFreeSlot(parcel.size());
 +        return new Assignment(parcel.trackingCode(), slot.lockerCode(), slot.number());
 +    }
 +}
@@ -246,7 +246,7 @@ index 0000000..4fee93a
 +    }
 +
 +    @Override
-+    public LockerSlot freeSlotOf(SlotSize size) {
++    public LockerSlot findFreeSlot(SlotSize size) {
 +        return lockerSlots.findFirstBySizeAndOccupiedFalse(size)
 +                .orElseThrow(() -> new NoFreeSlotException(size));
 +    }

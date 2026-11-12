@@ -4,13 +4,13 @@
 
 ### Production code
 
-1. Method `ReminderPlanner#reminderDateFor`
+1. Method `ReminderPlanner#calculateReminderDate`
    - Incomplete Mental Model
    - Also in `LoanTerms#lendingDays`
-2. Method `CatalogReminderMapper#toReminderLoan`
+2. Method `CatalogReminderMapper#createReminderLoan`
    - Incomplete Mental Model
-   - Also in `CatalogLoanMapper#toLoanTerms`
+   - Also in `CatalogLoanMapper#createLoanTerms`
 
 ## Must not appear
 
-Method `ReminderPlanner#reminderDateFor`, Incomplete Mental Model, also in `LoanStatistics#wasShortened`
+Method `ReminderPlanner#calculateReminderDate`, Incomplete Mental Model, also in `LoanStatistics#wasShortened`

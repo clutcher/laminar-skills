@@ -44,7 +44,7 @@ new file mode 100644
 +++ b/courier-desk/src/depot/DepartureGate.ts
 @@ -0,0 +1,5 @@
 +export class DepartureGate {
-+  openGateFor(vanId: string, gateNumber: number): string {
++  openGate(vanId: string, gateNumber: number): string {
 +    return `gate-${gateNumber}:${vanId}`;
 +  }
 +}
@@ -54,7 +54,7 @@ new file mode 100644
 +++ b/courier-desk/src/depot/ForkliftLicence.ts
 @@ -0,0 +1,5 @@
 +export class ForkliftLicence {
-+  isValidOn(expiresOn: Date, day: Date): boolean {
++  isValid(expiresOn: Date, day: Date): boolean {
 +    return day.getTime() <= expiresOn.getTime();
 +  }
 +}
@@ -94,7 +94,7 @@ new file mode 100644
 +++ b/courier-desk/src/depot/OpeningHours.ts
 @@ -0,0 +1,5 @@
 +export class OpeningHours {
-+  isOpenAt(hour: number): boolean {
++  isOpen(hour: number): boolean {
 +    return hour >= 5 && hour < 22;
 +  }
 +}
@@ -144,7 +144,7 @@ new file mode 100644
 +++ b/courier-desk/src/depot/VanCapacity.ts
 @@ -0,0 +1,5 @@
 +export class VanCapacity {
-+  hasRoomFor(loadedKilograms: number, parcelKilograms: number): boolean {
++  fits(loadedKilograms: number, parcelKilograms: number): boolean {
 +    return loadedKilograms + parcelKilograms <= 1200;
 +  }
 +}

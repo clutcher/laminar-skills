@@ -4,5 +4,5 @@
 
 ### Production code
 
-1. Method `Rebalancer#docks_to_free`
+1. Method `Rebalancer#find_docks_to_free`
    - Looped I/O

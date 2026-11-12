@@ -16,20 +16,20 @@ index fdca98f..5049b1e 100644
  
      @SchemaMapping
      public Availability availability(Product product, @Argument AvailabilityInput input) {
--        return stockLookup.availabilityFor(product.sku(), input.accountId(), input.languageId());
-+        return stockLookup.availabilityFor(ProductLookupKey.forAvailability(product, input));
+-        return stockLookup.getAvailability(product.sku(), input.accountId(), input.languageId());
++        return stockLookup.getAvailability(ProductLookupKey.createForAvailability(product, input));
      }
  
      @SchemaMapping
      public DeliveryEstimate deliveryEstimate(Product product, @Argument AvailabilityInput input) {
--        return stockLookup.deliveryEstimateFor(product.sku(), input.accountId(), input.languageId());
-+        return stockLookup.deliveryEstimateFor(ProductLookupKey.forAvailability(product, input));
+-        return stockLookup.getDeliveryEstimate(product.sku(), input.accountId(), input.languageId());
++        return stockLookup.getDeliveryEstimate(ProductLookupKey.createForAvailability(product, input));
      }
  
      @SchemaMapping
      public List<PickupStore> pickupStores(Product product, @Argument AvailabilityInput input) {
--        return stockLookup.pickupStoresFor(product.sku(), input.accountId(), input.languageId());
-+        return stockLookup.pickupStoresFor(ProductLookupKey.forAvailability(product, input));
+-        return stockLookup.getPickupStores(product.sku(), input.accountId(), input.languageId());
++        return stockLookup.getPickupStores(ProductLookupKey.createForAvailability(product, input));
      }
  }
 diff --git a/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java b/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java
@@ -37,11 +37,11 @@ index 5a04d52..483d707 100644
 --- a/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java
 +++ b/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java
 @@ -5,4 +5,8 @@ public record ProductLookupKey(String sku, String accountId, String languageId,
-     public static ProductLookupKey forPrice(Product product, PriceInput input) {
+     public static ProductLookupKey createForPrice(Product product, PriceInput input) {
          return new ProductLookupKey(product.sku(), input.accountId(), input.languageId(), input.quantity(), input.agreementId());
      }
 +
-+    public static ProductLookupKey forAvailability(Product product, AvailabilityInput input) {
++    public static ProductLookupKey createForAvailability(Product product, AvailabilityInput input) {
 +        return new ProductLookupKey(product.sku(), input.accountId(), input.languageId(), input.quantity(), input.agreementId());
 +    }
  }
@@ -53,14 +53,14 @@ index edbfdd4..69c0037 100644
  
  public interface StockLookup {
  
--    Availability availabilityFor(String sku, String accountId, String languageId);
-+    Availability availabilityFor(ProductLookupKey key);
+-    Availability getAvailability(String sku, String accountId, String languageId);
++    Availability getAvailability(ProductLookupKey key);
  
--    DeliveryEstimate deliveryEstimateFor(String sku, String accountId, String languageId);
-+    DeliveryEstimate deliveryEstimateFor(ProductLookupKey key);
+-    DeliveryEstimate getDeliveryEstimate(String sku, String accountId, String languageId);
++    DeliveryEstimate getDeliveryEstimate(ProductLookupKey key);
  
--    List<PickupStore> pickupStoresFor(String sku, String accountId, String languageId);
-+    List<PickupStore> pickupStoresFor(ProductLookupKey key);
+-    List<PickupStore> getPickupStores(String sku, String accountId, String languageId);
++    List<PickupStore> getPickupStores(ProductLookupKey key);
  }
 diff --git a/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java b/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java
 index 2005bec..14848f9 100644
@@ -70,24 +70,24 @@ index 2005bec..14848f9 100644
      }
  
      @Override
--    public Availability availabilityFor(String sku, String accountId, String languageId) {
+-    public Availability getAvailability(String sku, String accountId, String languageId) {
 -        return warehouseClient.stockLevel(sku, accountId).toAvailability();
-+    public Availability availabilityFor(ProductLookupKey key) {
++    public Availability getAvailability(ProductLookupKey key) {
 +        return warehouseClient.stockLevel(key.sku(), key.accountId()).toAvailability();
      }
  
      @Override
--    public DeliveryEstimate deliveryEstimateFor(String sku, String accountId, String languageId) {
+-    public DeliveryEstimate getDeliveryEstimate(String sku, String accountId, String languageId) {
 -        return warehouseClient.shippingWindow(sku, accountId).toDeliveryEstimate(languageId);
-+    public DeliveryEstimate deliveryEstimateFor(ProductLookupKey key) {
++    public DeliveryEstimate getDeliveryEstimate(ProductLookupKey key) {
 +        return warehouseClient.shippingWindow(key.sku(), key.accountId()).toDeliveryEstimate(key.languageId());
      }
  
      @Override
--    public List<PickupStore> pickupStoresFor(String sku, String accountId, String languageId) {
+-    public List<PickupStore> getPickupStores(String sku, String accountId, String languageId) {
 -        return warehouseClient.storesHolding(sku, accountId).stream()
 -                .map(store -> store.toPickupStore(languageId))
-+    public List<PickupStore> pickupStoresFor(ProductLookupKey key) {
++    public List<PickupStore> getPickupStores(ProductLookupKey key) {
 +        return warehouseClient.storesHolding(key.sku(), key.accountId()).stream()
 +                .map(store -> store.toPickupStore(key.languageId()))
                  .toList();

@@ -41,7 +41,7 @@ diff --git a/hotel-web/src/rates/rate-plan.service.ts b/hotel-web/src/rates/rate
 @@ -7,6 +7,7 @@ export class RatePlanService {
    ratePlans(input: RatePlanInput): RatePlan[] {
      return this.rateTable
-       .plansFor(input.hotelId, input.guestCount)
+       .findPlans(input.hotelId, input.guestCount)
 -      .filter(plan => plan.loyaltyTiers.includes(input.loyaltyTier));
 +      .filter(plan => plan.loyaltyTiers.includes(input.loyaltyTier))
 +      .filter(plan => plan.offeredFrom <= input.arrivalDate && input.departureDate <= plan.offeredUntil);
@@ -55,7 +55,7 @@ new file mode 100644
 +import { Room } from "./room-inventory";
 +
 +export interface PriceAdjustments {
-+  nightlyPriceFor(room: Room, guestCount: number, loyaltyTier: string): number;
++  calculateNightlyPrice(room: Room, guestCount: number, loyaltyTier: string): number;
 +}
 diff --git a/hotel-web/src/rooms/room-availability.service.ts b/hotel-web/src/rooms/room-availability.service.ts
 --- a/hotel-web/src/rooms/room-availability.service.ts
@@ -73,13 +73,13 @@ diff --git a/hotel-web/src/rooms/room-availability.service.ts b/hotel-web/src/ro
 +  ) {}
  
    freeRooms(input: RoomSearchInput): Room[] {
-     return this.inventory.roomsFreeBetween(input.hotelId, input.arrivalDate, input.departureDate);
+     return this.inventory.findFreeRooms(input.hotelId, input.arrivalDate, input.departureDate);
 @@ -20,7 +24,7 @@ export class RoomAvailabilityService {
    nightlyPrices(input: RoomSearchInput): Map<string, number> {
      const prices = new Map<string, number>();
      for (const room of this.freeRooms(input)) {
 -      prices.set(room.roomNumber, room.baseNightlyPrice);
-+      prices.set(room.roomNumber, this.priceAdjustments.nightlyPriceFor(room, input.guestCount, input.loyaltyTier));
++      prices.set(room.roomNumber, this.priceAdjustments.calculateNightlyPrice(room, input.guestCount, input.loyaltyTier));
      }
      return prices;
    }

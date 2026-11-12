@@ -13,7 +13,7 @@ index 7d172b5..9e350cf 100644
  public class LockerAssignmentService {
 @@ -13,4 +16,12 @@ public class LockerAssignmentService {
      public Assignment assign(Parcel parcel) {
-         return slotReservation.reserveFor(parcel);
+         return slotReservation.reserve(parcel);
      }
 +
 +    public List<Assignment> assignAll(List<Parcel> parcels) {
@@ -70,10 +70,10 @@ index 06f4cc3..78912ce 100644
                  .count();
      }
 +
-+    public Map<SlotSize, Long> freeSlotsBySize(List<LockerSlot> slots) {
++    public Map<SlotSize, Long> countFreeSlotsBySize(List<LockerSlot> slots) {
 +        Map<SlotSize, Long> freeSlots = new EnumMap<>(SlotSize.class);
 +        for (SlotSize size : SlotSize.values()) {
-+            freeSlots.put(size, freeSlotsOf(size, slots));
++            freeSlots.put(size, countFreeSlots(size, slots));
 +        }
 +        return freeSlots;
 +    }

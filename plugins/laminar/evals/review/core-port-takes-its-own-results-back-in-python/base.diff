@@ -29,7 +29,7 @@ new file mode 100644
 +        self._freight_rating = freight_rating
 +
 +    def context(self) -> dict[str, DataLoader]:
-+        return {"leg_charges": DataLoader(load_fn=self._leg_charges_of)}
++        return {"leg_charges": DataLoader(load_fn=self._calculate_leg_charges)}
 +
 +    def booking_rating(self, legs: list[Leg]) -> Rating:
 +        return self._freight_rating.rate(legs)
@@ -38,9 +38,9 @@ new file mode 100644
 +        leg_charge = await context["leg_charges"].load(leg)
 +        return leg_charge.charge
 +
-+    async def _leg_charges_of(self, legs: list[Leg]) -> list[LegCharge]:
++    async def _calculate_leg_charges(self, legs: list[Leg]) -> list[LegCharge]:
 +        rating = self._freight_rating.rate(legs)
-+        return [rating.charge_for(leg) for leg in legs]
++        return [rating.find_charge(leg) for leg in legs]
 diff --git a/freight-rating/src/freight_rating/adapters/http_tariff_source.py b/freight-rating/src/freight_rating/adapters/http_tariff_source.py
 new file mode 100644
 --- /dev/null
@@ -57,7 +57,7 @@ new file mode 100644
 +    def __init__(self, client: httpx.Client):
 +        self._client = client
 +
-+    def rates_per_kg(self, lanes: set[tuple[str, str]]) -> dict[tuple[str, str], Decimal]:
++    def find_rates_per_kg(self, lanes: set[tuple[str, str]]) -> dict[tuple[str, str], Decimal]:
 +        lane_requests = [{"origin": origin, "destination": destination} for origin, destination in lanes]
 +        response = self._client.post("/tariffs/per-kg", json=lane_requests)
 +        response.raise_for_status()
@@ -96,7 +96,7 @@ new file mode 100644
 +    total_charge: Decimal
 +    surcharge_notes: list[SurchargeNote]
 +
-+    def charge_for(self, leg: Leg) -> LegCharge:
++    def find_charge(self, leg: Leg) -> LegCharge:
 +        return next(leg_charge for leg_charge in self.leg_charges if leg_charge.leg == leg)
 diff --git a/freight-rating/src/freight_rating/domain/rating_service.py b/freight-rating/src/freight_rating/domain/rating_service.py
 new file mode 100644
@@ -117,10 +117,10 @@ new file mode 100644
 +        self._surcharge_rules = surcharge_rules
 +
 +    def rate(self, legs: list[Leg]) -> Rating:
-+        rates_per_kg = self._tariff_source.rates_per_kg({(leg.origin, leg.destination) for leg in legs})
-+        leg_charges = [LegCharge(leg, leg.weight_kg * rates_per_kg[(leg.origin, leg.destination)]) for leg in legs]
++        find_rates_per_kg = self._tariff_source.find_rates_per_kg({(leg.origin, leg.destination) for leg in legs})
++        leg_charges = [LegCharge(leg, leg.weight_kg * find_rates_per_kg[(leg.origin, leg.destination)]) for leg in legs]
 +        total_charge = sum((leg_charge.charge for leg_charge in leg_charges), Decimal("0"))
-+        return Rating(leg_charges, total_charge, self._surcharge_rules.notes_for(leg_charges, total_charge))
++        return Rating(leg_charges, total_charge, self._surcharge_rules.collect_notes(leg_charges, total_charge))
 diff --git a/freight-rating/src/freight_rating/domain/surcharge_rules.py b/freight-rating/src/freight_rating/domain/surcharge_rules.py
 new file mode 100644
 --- /dev/null
@@ -135,7 +135,7 @@ new file mode 100644
 +
 +
 +class SurchargeRules:
-+    def notes_for(self, leg_charges: list[LegCharge], total_charge: Decimal) -> list[SurchargeNote]:
++    def collect_notes(self, leg_charges: list[LegCharge], total_charge: Decimal) -> list[SurchargeNote]:
 +        notes = [
 +            SurchargeNote(f"{leg_charge.leg.origin}-{leg_charge.leg.destination}", "Heavy lift surcharge applies")
 +            for leg_charge in leg_charges
@@ -166,4 +166,4 @@ new file mode 100644
 +
 +
 +class TariffSource(Protocol):
-+    def rates_per_kg(self, lanes: set[tuple[str, str]]) -> dict[tuple[str, str], Decimal]: ...
++    def find_rates_per_kg(self, lanes: set[tuple[str, str]]) -> dict[tuple[str, str], Decimal]: ...

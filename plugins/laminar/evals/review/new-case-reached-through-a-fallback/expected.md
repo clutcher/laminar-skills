@@ -9,5 +9,5 @@
 
 ## Must not appear
 
-Method `DepartureBoard#colourFor`, Exclude Illegal States
+Method `DepartureBoard#chooseColour`, Exclude Illegal States
 Any other finding, except Integration Test Needed and Unit Test Needed

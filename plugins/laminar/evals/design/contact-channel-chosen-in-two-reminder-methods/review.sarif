@@ -259,7 +259,7 @@
           "baselineState": "new",
           "rank": 0.9,
           "message": {
-            "text": "Incomplete Mental Model: The method sendSameDay decides again which channel reaches a patient, by the same condition on the phone and the SMS consent that sendDayBefore holds."
+            "text": "Incomplete Mental Model: The method sendSameDay decides again which channel reaches a patient, by the same condition on the phone and the SMS consent that sendPreviousDay holds."
           },
           "locations": [
             {
@@ -287,11 +287,11 @@
             "direction": "Encapsulate: give the decision 1 owner that every place uses, or drop a copy that no place needs.",
             "confidence": "high",
             "what_would_confirm": "",
-            "failure": "a change to the consent rule made in sendSameDay leaves sendDayBefore on the old rule",
-            "also_abstraction": "ReminderSender#sendDayBefore",
+            "failure": "a change to the consent rule made in sendSameDay leaves sendPreviousDay on the old rule",
+            "also_abstraction": "ReminderSender#sendPreviousDay",
             "related_abstractions": [
               {
-                "abstraction": "ReminderSender#sendDayBefore",
+                "abstraction": "ReminderSender#sendPreviousDay",
                 "role": "also",
                 "changeKind": "created"
               }
@@ -355,7 +355,7 @@
           "baselineState": "new",
           "rank": 0.9,
           "message": {
-            "text": "Unnamed Part Failure: The method sendDayBefore picks the channel inline from the phone and the SMS consent of the patient, so the choice of a channel is a detail among the steps of sending a reminder."
+            "text": "Unnamed Part Failure: The method sendPreviousDay picks the channel inline from the phone and the SMS consent of the patient, so the choice of a channel is a detail among the steps of sending a reminder."
           },
           "locations": [
             {
@@ -369,13 +369,13 @@
               },
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "ReminderSender#sendDayBefore"
+                  "fullyQualifiedName": "ReminderSender#sendPreviousDay"
                 }
               ]
             }
           ],
           "properties": {
-            "abstraction": "ReminderSender#sendDayBefore",
+            "abstraction": "ReminderSender#sendPreviousDay",
             "scale": "METHOD",
             "changeKind": "created",
             "test_code": false,

@@ -21,14 +21,14 @@ new file mode 100644
 +
 +public class CrossingNotices {
 +
-+    public List<PassengerNotice> forDelay(int minutesLate) {
++    public List<PassengerNotice> createDelayNotices(int minutesLate) {
 +        if (minutesLate <= 0) {
 +            return List.of();
 +        }
 +        return List.of(new PassengerNotice(PassengerNoticeSeverity.WARN, "The crossing leaves " + minutesLate + " minutes late"));
 +    }
 +
-+    public List<PassengerNotice> forCancellation() {
++    public List<PassengerNotice> createCancellationNotices() {
 +        return List.of(new PassengerNotice(PassengerNoticeSeverity.ERROR, "The crossing is cancelled"));
 +    }
 +}

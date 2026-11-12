@@ -12,7 +12,7 @@ new file mode 100644
 +class BinStore(Protocol):
 +    def save(self, bin_: Bin) -> None: ...
 +
-+    def records_in_aisle(self, aisle: str) -> list[BinRecord]: ...
++    def find_records(self, aisle: str) -> list[BinRecord]: ...
 diff --git a/warehouse/src/warehouse/inventory/models.py b/warehouse/src/warehouse/inventory/models.py
 new file mode 100644
 --- /dev/null
@@ -60,5 +60,5 @@ new file mode 100644
 +    def add_bin(self, code: str, aisle: str, capacity: int, stored_units: int) -> None:
 +        self._store.save(Bin(code=code, aisle=aisle, capacity=capacity, stored_units=stored_units))
 +
-+    def units_in_aisle(self, aisle: str) -> int:
-+        return sum(record.stored_units for record in self._store.records_in_aisle(aisle))
++    def count_units(self, aisle: str) -> int:
++        return sum(record.stored_units for record in self._store.find_records(aisle))

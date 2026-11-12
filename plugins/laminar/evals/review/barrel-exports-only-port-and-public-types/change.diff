@@ -9,8 +9,8 @@ index 0000000..ff1535b
 +export class ChargesUsingRentalModule {
 +  constructor(private readonly rentalLookup: RentalLookup) {}
 +
-+  async chargedCentsOf(riderId: string): Promise<number> {
-+    const receipts: PublicRentalReceipt[] = await this.rentalLookup.receiptsOfRider(riderId, new Date());
++  async sumChargedCents(riderId: string): Promise<number> {
++    const receipts: PublicRentalReceipt[] = await this.rentalLookup.listReceipts(riderId, new Date());
 +    return receipts.reduce((sum, receipt) => sum + receipt.chargedCents, 0);
 +  }
 +}
@@ -36,13 +36,13 @@ index 3d456ad..ec0bdfd 100644
  export class RentalLookup {
    constructor(private readonly bikeStore: BikeStore) {}
 @@ -8,4 +9,9 @@ export class RentalLookup {
-     const rentals = await this.bikeStore.rentalsOfRider(riderId);
+     const rentals = await this.bikeStore.findRentals(riderId);
      return rentals.map(rental => ({ rentalId: rental.rentalId, bikeId: rental.bikeId, startedAt: rental.startedAt.toISOString() }));
    }
 +
-+  async receiptsOfRider(riderId: string, endedAt: Date): Promise<PublicRentalReceipt[]> {
-+    const rentals = await this.bikeStore.rentalsOfRider(riderId);
-+    return rentals.map(rental => ({ rentalId: rental.rentalId, chargedCents: rental.minutesUntil(endedAt) * 10 }));
++  async listReceipts(riderId: string, endedAt: Date): Promise<PublicRentalReceipt[]> {
++    const rentals = await this.bikeStore.findRentals(riderId);
++    return rentals.map(rental => ({ rentalId: rental.rentalId, chargedCents: rental.countMinutes(endedAt) * 10 }));
 +  }
  }
 diff --git a/bikes/src/rental/index.ts b/bikes/src/rental/index.ts

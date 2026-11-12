@@ -18,7 +18,7 @@ index 0000000..fcb1d23
 +    private final RestClient fareServiceClient;
 +
 +    @Override
-+    public int fareFor(String route) {
++    public int findFare(String route) {
 +        return fareServiceClient.get()
 +            .uri("/fares?route={route}", route)
 +            .retrieve()
@@ -99,7 +99,7 @@ index 0000000..1065db6
 +
 +public interface RouteFares {
 +
-+    int fareFor(String route);
++    int findFare(String route);
 +}
 diff --git a/ferry/src/main/java/com/example/harbourferry/booking/domain/Ticket.java b/ferry/src/main/java/com/example/harbourferry/booking/domain/Ticket.java
 new file mode 100644

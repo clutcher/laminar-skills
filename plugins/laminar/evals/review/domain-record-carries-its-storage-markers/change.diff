@@ -14,7 +14,7 @@ index 0000000..461b7fb
 +    this.bookings = dataSource.getRepository(BerthBooking);
 +  }
 +
-+  async bookingsOfBerth(berthNumber: number): Promise<BerthBooking[]> {
++  async findBookings(berthNumber: number): Promise<BerthBooking[]> {
 +    return this.bookings.findBy({ berthNumber });
 +  }
 +}

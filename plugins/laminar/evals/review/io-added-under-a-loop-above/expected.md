@@ -4,9 +4,9 @@
 
 ### Production code
 
-1. Method `TitleLabel#labelFor`
+1. Method `TitleLabel#createLabel`
    - Looped I/O
 
 ## Must not appear
 
-Method `OverdueNoticeRun#runFor`, Looped I/O
+Method `OverdueNoticeRun#run`, Looped I/O

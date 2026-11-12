@@ -11,4 +11,4 @@
 
 Method `PilotWindows#portsWithoutTideTable`, Looped I/O
 Method `PilotWindows#portsWithoutTideTable`, Repeated Retrieval
-Method `TideTables#tableOf`, Looped I/O
+Method `TideTables#findTable`, Looped I/O

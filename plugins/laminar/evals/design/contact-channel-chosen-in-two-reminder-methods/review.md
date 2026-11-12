@@ -9,16 +9,16 @@ The change created class `ReminderSender`. It changed no other abstraction, in 1
 ### Production code
 
 1. Method `sendSameDay` in `ReminderSender`
-   - Incomplete Mental Model: The method sendSameDay decides again which channel reaches a patient, by the same condition on the phone and the SMS consent that sendDayBefore holds.
+   - Incomplete Mental Model: The method sendSameDay decides again which channel reaches a patient, by the same condition on the phone and the SMS consent that sendPreviousDay holds.
    - Direction: Encapsulate: give the decision 1 owner that every place uses, or drop a copy that no place needs.
-   - Also in `ReminderSender#sendDayBefore`.
+   - Also in `ReminderSender#sendPreviousDay`.
 
 2. Class `ReminderSender`
    - Unnamed Part Failure: The class ReminderSender holds the contact channel of a patient, its 2 gateways and the rule that picks one, as loose fields and conditions, so the channel is a part the class never names.
    - Direction: Restore single level of abstraction: move the methods and fields of another part into a new class.
 
-3. Method `sendDayBefore` in `ReminderSender`
-   - Unnamed Part Failure: The method sendDayBefore picks the channel inline from the phone and the SMS consent of the patient, so the choice of a channel is a detail among the steps of sending a reminder.
+3. Method `sendPreviousDay` in `ReminderSender`
+   - Unnamed Part Failure: The method sendPreviousDay picks the channel inline from the phone and the SMS consent of the patient, so the choice of a channel is a detail among the steps of sending a reminder.
    - Direction: Restore single level of abstraction: move the low-level steps into a named method, or move this call up to the caller.
 
 ## Limits

@@ -19,7 +19,7 @@ diff --git a/ferry/src/main/java/com/example/harbourferry/crossing/DepartureBoar
  
  public class DepartureBoard {
  
-     public String noticeFor(CrossingStatus status) {
+     public String chooseNotice(CrossingStatus status) {
          if (status == CrossingStatus.SCHEDULED) {
              return "Boarding opens 45 minutes before departure";
          }
@@ -29,7 +29,7 @@ diff --git a/ferry/src/main/java/com/example/harbourferry/crossing/DepartureBoar
          return "This crossing has departed";
      }
 +
-+    public String colourFor(CrossingStatus status) {
++    public String chooseColour(CrossingStatus status) {
 +        return switch (status) {
 +            case SCHEDULED -> "white";
 +            case BOARDING -> "green";

@@ -8,19 +8,19 @@ new file mode 100644
 +from warehouse.inventory.summaries import BinSummary
 +
 +
-+def bins_in_aisle(store: BinStore, aisle: str) -> list[BinSummary]:
-+    return [summary_of(bin_) for bin_ in store.bins_in_aisle(aisle)]
++def find_bins(store: BinStore, aisle: str) -> list[BinSummary]:
++    return [map_to_summary(bin_) for bin_ in store.find_bins(aisle)]
 +
 +
 +def record_bin(store: BinStore, summary: BinSummary) -> None:
-+    store.save(bin_of(summary))
++    store.save(map_to_bin(summary))
 +
 +
-+def summary_of(bin_: Bin) -> BinSummary:
++def map_to_summary(bin_: Bin) -> BinSummary:
 +    return BinSummary(code=bin_.code, aisle=bin_.aisle, capacity=bin_.capacity, stored_units=bin_.stored_units)
 +
 +
-+def bin_of(summary: BinSummary) -> Bin:
++def map_to_bin(summary: BinSummary) -> Bin:
 +    return Bin(code=summary.code, aisle=summary.aisle, capacity=summary.capacity, stored_units=summary.stored_units)
 diff --git a/warehouse/src/warehouse/inventory/bin_store.py b/warehouse/src/warehouse/inventory/bin_store.py
 new file mode 100644
@@ -37,7 +37,7 @@ new file mode 100644
 +    def save(self, bin_: Bin) -> None:
 +        self._bins[bin_.code] = bin_
 +
-+    def bins_in_aisle(self, aisle: str) -> list[Bin]:
++    def find_bins(self, aisle: str) -> list[Bin]:
 +        return [bin_ for bin_ in self._bins.values() if bin_.aisle == aisle]
 diff --git a/warehouse/src/warehouse/inventory/models.py b/warehouse/src/warehouse/inventory/models.py
 new file mode 100644
@@ -78,7 +78,7 @@ new file mode 100644
 +from warehouse.inventory.summaries import BinSummary
 +
 +
-+def units_to_pick(summaries: list[BinSummary], wanted_units: int) -> list[tuple[str, int]]:
++def choose_units_to_pick(summaries: list[BinSummary], wanted_units: int) -> list[tuple[str, int]]:
 +    picks = []
 +    remaining_units = wanted_units
 +    for summary in summaries:

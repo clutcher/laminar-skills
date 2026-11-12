@@ -61,7 +61,7 @@ new file mode 100644
 +
 +  ratePlans(input: RatePlanInput): RatePlan[] {
 +    return this.rateTable
-+      .plansFor(input.hotelId, input.guestCount)
++      .findPlans(input.hotelId, input.guestCount)
 +      .filter(plan => plan.loyaltyTiers.includes(input.loyaltyTier));
 +  }
 +}
@@ -78,7 +78,7 @@ new file mode 100644
 +}
 +
 +export interface RateTable {
-+  plansFor(hotelId: string, guestCount: number): RatePlan[];
++  findPlans(hotelId: string, guestCount: number): RatePlan[];
 +}
 diff --git a/hotel-web/src/rooms/room-availability.service.ts b/hotel-web/src/rooms/room-availability.service.ts
 new file mode 100644
@@ -92,10 +92,10 @@ new file mode 100644
 +  constructor(private readonly inventory: RoomInventory) {}
 +
 +  freeRooms(input: RoomSearchInput): Room[] {
-+    return this.inventory.roomsFreeBetween(input.hotelId, input.arrivalDate, input.departureDate);
++    return this.inventory.findFreeRooms(input.hotelId, input.arrivalDate, input.departureDate);
 +  }
 +
-+  roomTypesOnOffer(input: RoomSearchInput): string[] {
++  listRoomTypesOnOffer(input: RoomSearchInput): string[] {
 +    const roomTypes = this.freeRooms(input).map(room => room.roomType);
 +    return [...new Set(roomTypes)];
 +  }
@@ -125,7 +125,7 @@ new file mode 100644
 +}
 +
 +export interface RoomInventory {
-+  roomsFreeBetween(hotelId: string, arrivalDate: string, departureDate: string): Room[];
++  findFreeRooms(hotelId: string, arrivalDate: string, departureDate: string): Room[];
 +}
 diff --git a/hotel-web/src/rooms/room-search-input.ts b/hotel-web/src/rooms/room-search-input.ts
 new file mode 100644

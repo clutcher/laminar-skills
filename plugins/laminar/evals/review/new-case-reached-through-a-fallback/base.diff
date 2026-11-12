@@ -19,7 +19,7 @@ new file mode 100644
 +
 +public class DepartureBoard {
 +
-+    public String noticeFor(CrossingStatus status) {
++    public String chooseNotice(CrossingStatus status) {
 +        if (status == CrossingStatus.SCHEDULED) {
 +            return "Boarding opens 45 minutes before departure";
 +        }

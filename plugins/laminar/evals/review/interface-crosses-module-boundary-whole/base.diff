@@ -47,11 +47,11 @@ index 0000000..6ad351b
 +        this.seasonalRates = seasonalRates;
 +    }
 +
-+    public int priceInCentsFor(RideDuration ridden, LocalDate rideDate) {
-+        return ridden.minutes() * seasonalRates.centsPerMinuteOn(rideDate);
++    public int calculatePriceInCents(RideDuration ridden, LocalDate rideDate) {
++        return ridden.minutes() * seasonalRates.findCentsPerMinute(rideDate);
 +    }
 +
-+    public int longRideDiscountInCentsFor(RideDuration ridden) {
++    public int calculateLongRideDiscountInCents(RideDuration ridden) {
 +        return ridden.minutes() >= 60 ? seasonalRates.longRideDiscountInCents() : 0;
 +    }
 +}
@@ -77,7 +77,7 @@ index 0000000..343450a
 +
 +    private static final int LONG_RIDE_DISCOUNT_IN_CENTS = 250;
 +
-+    int centsPerMinuteOn(LocalDate rideDate) {
++    int findCentsPerMinute(LocalDate rideDate) {
 +        Month month = rideDate.getMonth();
 +        boolean summer = month.getValue() >= Month.MAY.getValue() && month.getValue() <= Month.SEPTEMBER.getValue();
 +        return summer ? SUMMER_CENTS_PER_MINUTE : WINTER_CENTS_PER_MINUTE;
@@ -127,7 +127,7 @@ index 0000000..8c4154e
 +
 +public interface StationDirectory {
 +
-+    Optional<String> stationNameFor(String stationId);
++    Optional<String> findStationName(String stationId);
 +}
 diff --git a/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectoryUsingMemory.java b/bikeshare/src/main/java/com/example/bikeshare/station/internal/StationDirectoryUsingMemory.java
 new file mode 100644
@@ -151,7 +151,7 @@ index 0000000..ea561ae
 +        "ST-0347", "Linden Park North");
 +
 +    @Override
-+    public Optional<String> stationNameFor(String stationId) {
++    public Optional<String> findStationName(String stationId) {
 +        return Optional.ofNullable(STATION_NAMES_BY_ID.get(stationId));
 +    }
 +}

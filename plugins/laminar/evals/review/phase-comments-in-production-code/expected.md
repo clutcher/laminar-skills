@@ -4,5 +4,5 @@
 
 ### Production code
 
-1. Method `GreenhouseVentilation#openVentsFor`
+1. Method `GreenhouseVentilation#openVents`
    - Unnamed Part Failure

@@ -8,8 +8,8 @@ new file mode 100644
 +class BerthScheduleService(private val harbourMaster: HarbourMaster, private val pilotRoster: PilotRoster) {
 +
 +    fun schedule(request: BerthRequest): BerthSchedule =
-+        addPilotSlots(harbourMaster.scheduleFor(request.harbour), pilotRoster)
++        addPilotSlots(harbourMaster.findSchedule(request.harbour), pilotRoster)
 +
 +    private fun addPilotSlots(schedule: BerthSchedule, roster: PilotRoster): BerthSchedule =
-+        schedule.copy(slots = schedule.slots + roster.slotsFor(schedule.harbour))
++        schedule.copy(slots = schedule.slots + roster.findSlots(schedule.harbour))
 +}

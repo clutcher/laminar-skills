@@ -10,7 +10,7 @@ new file mode 100644
 +
 +class HighWaterEstimator private constructor(private val lowToHighWater: Duration) {
 +
-+    fun highWaterAfter(lowWaterTime: LocalTime): LocalTime = lowWaterTime.plus(lowToHighWater)
++    fun estimateHighWater(lowWaterTime: LocalTime): LocalTime = lowWaterTime.plus(lowToHighWater)
 +
 +    companion object {
 +        val INSTANCE = HighWaterEstimator(Duration.ofHours(6).plusMinutes(12))
@@ -29,7 +29,7 @@ new file mode 100644
 +class BerthDepartureWindow(private val lowWaterTime: LocalTime) {
 +
 +    fun latestDeparture(): LocalTime =
-+        HighWaterEstimator.INSTANCE.highWaterAfter(lowWaterTime)
++        HighWaterEstimator.INSTANCE.estimateHighWater(lowWaterTime)
 +}
 diff --git a/marina/src/main/kotlin/com/example/marina/berths/HarbourEntryBoard.kt b/marina/src/main/kotlin/com/example/marina/berths/HarbourEntryBoard.kt
 new file mode 100644
@@ -44,5 +44,5 @@ new file mode 100644
 +class HarbourEntryBoard {
 +
 +    fun nextFullDepthEntry(lowWaterTime: LocalTime): LocalTime =
-+        HighWaterEstimator.INSTANCE.highWaterAfter(lowWaterTime)
++        HighWaterEstimator.INSTANCE.estimateHighWater(lowWaterTime)
 +}

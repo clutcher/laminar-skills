@@ -173,7 +173,7 @@ new file mode 100644
 +    ) {
 +        ExhibitSearchCriteria criteria = ExhibitFilterMapper.INSTANCE.toCriteria(filter);
 +        PageRequest pageRequest = ExhibitFilterMapper.INSTANCE.toPageRequest(page);
-+        ExhibitSearchOptions options = ExhibitSearchOptionsMapper.INSTANCE.toOptions(selectionSet);
++        ExhibitSearchOptions options = ExhibitSearchOptionsMapper.INSTANCE.createSearchOptions(selectionSet);
 +
 +        List<? extends ExhibitSummary> exhibits = apiForExhibitSearch.search(criteria, pageRequest, options);
 +        return ExhibitResponseMapper.INSTANCE.toExhibitList(exhibits);
@@ -199,7 +199,7 @@ new file mode 100644
 +public interface ExhibitSearchOptionsMapper {
 +    ExhibitSearchOptionsMapper INSTANCE = Mappers.getMapper(ExhibitSearchOptionsMapper.class);
 +
-+    default ExhibitSearchOptions toOptions(DataFetchingFieldSelectionSet selectionSet) {
++    default ExhibitSearchOptions createSearchOptions(DataFetchingFieldSelectionSet selectionSet) {
 +        boolean summaryIsEnough = selectionSet.getImmediateFields().stream()
 +                .map(SelectedField::getName)
 +                .allMatch(ExhibitSummary.FIELDS::contains);

@@ -41,7 +41,7 @@ index 0000000..3b1b731
 +
 +public interface PriceLookup {
 +
-+    Price priceFor(ProductLookupKey key);
++    Price getPrice(ProductLookupKey key);
 +}
 diff --git a/storefront-api/src/main/java/com/example/storefront/product/Product.java b/storefront-api/src/main/java/com/example/storefront/product/Product.java
 new file mode 100644
@@ -80,22 +80,22 @@ index 0000000..fdca98f
 +
 +    @SchemaMapping
 +    public Price price(Product product, @Argument PriceInput input) {
-+        return priceLookup.priceFor(ProductLookupKey.forPrice(product, input));
++        return priceLookup.getPrice(ProductLookupKey.createForPrice(product, input));
 +    }
 +
 +    @SchemaMapping
 +    public Availability availability(Product product, @Argument AvailabilityInput input) {
-+        return stockLookup.availabilityFor(product.sku(), input.accountId(), input.languageId());
++        return stockLookup.getAvailability(product.sku(), input.accountId(), input.languageId());
 +    }
 +
 +    @SchemaMapping
 +    public DeliveryEstimate deliveryEstimate(Product product, @Argument AvailabilityInput input) {
-+        return stockLookup.deliveryEstimateFor(product.sku(), input.accountId(), input.languageId());
++        return stockLookup.getDeliveryEstimate(product.sku(), input.accountId(), input.languageId());
 +    }
 +
 +    @SchemaMapping
 +    public List<PickupStore> pickupStores(Product product, @Argument AvailabilityInput input) {
-+        return stockLookup.pickupStoresFor(product.sku(), input.accountId(), input.languageId());
++        return stockLookup.getPickupStores(product.sku(), input.accountId(), input.languageId());
 +    }
 +}
 diff --git a/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java b/storefront-api/src/main/java/com/example/storefront/product/ProductLookupKey.java
@@ -108,7 +108,7 @@ index 0000000..5a04d52
 +
 +public record ProductLookupKey(String sku, String accountId, String languageId, int quantity, String agreementId) {
 +
-+    public static ProductLookupKey forPrice(Product product, PriceInput input) {
++    public static ProductLookupKey createForPrice(Product product, PriceInput input) {
 +        return new ProductLookupKey(product.sku(), input.accountId(), input.languageId(), input.quantity(), input.agreementId());
 +    }
 +}
@@ -124,11 +124,11 @@ index 0000000..edbfdd4
 +
 +public interface StockLookup {
 +
-+    Availability availabilityFor(String sku, String accountId, String languageId);
++    Availability getAvailability(String sku, String accountId, String languageId);
 +
-+    DeliveryEstimate deliveryEstimateFor(String sku, String accountId, String languageId);
++    DeliveryEstimate getDeliveryEstimate(String sku, String accountId, String languageId);
 +
-+    List<PickupStore> pickupStoresFor(String sku, String accountId, String languageId);
++    List<PickupStore> getPickupStores(String sku, String accountId, String languageId);
 +}
 diff --git a/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java b/storefront-api/src/main/java/com/example/storefront/product/WarehouseStockLookup.java
 new file mode 100644
@@ -151,17 +151,17 @@ index 0000000..2005bec
 +    }
 +
 +    @Override
-+    public Availability availabilityFor(String sku, String accountId, String languageId) {
++    public Availability getAvailability(String sku, String accountId, String languageId) {
 +        return warehouseClient.stockLevel(sku, accountId).toAvailability();
 +    }
 +
 +    @Override
-+    public DeliveryEstimate deliveryEstimateFor(String sku, String accountId, String languageId) {
++    public DeliveryEstimate getDeliveryEstimate(String sku, String accountId, String languageId) {
 +        return warehouseClient.shippingWindow(sku, accountId).toDeliveryEstimate(languageId);
 +    }
 +
 +    @Override
-+    public List<PickupStore> pickupStoresFor(String sku, String accountId, String languageId) {
++    public List<PickupStore> getPickupStores(String sku, String accountId, String languageId) {
 +        return warehouseClient.storesHolding(sku, accountId).stream()
 +                .map(store -> store.toPickupStore(languageId))
 +                .toList();

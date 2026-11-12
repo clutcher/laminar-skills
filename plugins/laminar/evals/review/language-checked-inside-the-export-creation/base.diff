@@ -339,9 +339,9 @@ new file mode 100644
 +
 +    @PostMapping(produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
 +    public ResponseEntity<Resource> export(@Valid @RequestBody RecordExportRequest exportRequest) {
-+        RecordKind recordKind = RecordExportRequestMapper.INSTANCE.toRecordKind(exportRequest.recordKind());
-+        ExportFormat format = RecordExportRequestMapper.INSTANCE.toFormat(exportRequest);
-+        RecordSelection selection = RecordExportRequestMapper.INSTANCE.toSelection(exportRequest);
++        RecordKind recordKind = RecordExportRequestMapper.INSTANCE.mapToRecordKind(exportRequest.recordKind());
++        ExportFormat format = RecordExportRequestMapper.INSTANCE.mapToFormat(exportRequest);
++        RecordSelection selection = RecordExportRequestMapper.INSTANCE.mapToSelection(exportRequest);
 +
 +        ExportedFile exportedFile = apiForRecordExport.createExport(
 +            format,
@@ -442,16 +442,16 @@ new file mode 100644
 +
 +    RecordExportRequestMapper INSTANCE = Mappers.getMapper(RecordExportRequestMapper.class);
 +
-+    List<PatientRef> toPatientRefs(List<RecordExportRequest.Patient> patients);
++    List<PatientRef> mapToPatientRefs(List<RecordExportRequest.Patient> patients);
 +
-+    RecordKind toRecordKind(RecordExportRequest.RecordKind recordKind);
++    RecordKind mapToRecordKind(RecordExportRequest.RecordKind recordKind);
 +
 +    @Mapping(target = "fileType", source = "fileType")
 +    @Mapping(target = "layout", source = "layout", defaultValue = "STANDARD")
-+    ExportFormat toFormat(RecordExportRequest request);
++    ExportFormat mapToFormat(RecordExportRequest request);
 +
 +    @Mapping(target = "filters", source = "filters")
 +    @Mapping(target = "patients", source = "patients")
 +    @Mapping(target = "dentistId", source = "dentistId")
-+    RecordSelection toSelection(RecordExportRequest request);
++    RecordSelection mapToSelection(RecordExportRequest request);
 +}

@@ -32,7 +32,7 @@ new file mode 100644
 +
 +public interface OrderBook {
 +
-+    List<GroceryOrder> ordersOf(String shopperId);
++    List<GroceryOrder> findOrders(String shopperId);
 +}
 diff --git a/orders-api/src/main/java/com/example/freshlane/web/OrderQueries.java b/orders-api/src/main/java/com/example/freshlane/web/OrderQueries.java
 new file mode 100644
@@ -59,7 +59,7 @@ new file mode 100644
 +
 +    @QueryMapping
 +    public List<GroceryOrder> ordersOfShopper(@Argument String shopperId) {
-+        return orderBook.ordersOf(shopperId);
++        return orderBook.findOrders(shopperId);
 +    }
 +}
 diff --git a/orders-api/src/main/resources/graphql/orders.graphqls b/orders-api/src/main/resources/graphql/orders.graphqls

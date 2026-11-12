@@ -21,7 +21,7 @@ new file mode 100644
 +        this.mailer = mailer;
 +    }
 +
-+    public void sendDayBefore(Appointment appointment, Patient patient) {
++    public void sendPreviousDay(Appointment appointment, Patient patient) {
 +        String text = "Reminder: your visit is tomorrow at " + appointment.start().format(TIME_OF_DAY) + ".";
 +        if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {
 +            smsGateway.sendText(patient.phone(), text);

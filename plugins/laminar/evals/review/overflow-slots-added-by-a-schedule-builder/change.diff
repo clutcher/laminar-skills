@@ -30,7 +30,7 @@ new file mode 100644
 +class BerthScheduleService(private val harbourMaster: HarbourMaster) {
 +
 +    fun schedule(request: BerthRequest): BerthSchedule =
-+        BerthScheduleBuilder.from(harbourMaster.scheduleFor(request.harbour))
++        BerthScheduleBuilder.from(harbourMaster.findSchedule(request.harbour))
 +            .withOverflowSlotsFor(request)
 +            .build()
 +}

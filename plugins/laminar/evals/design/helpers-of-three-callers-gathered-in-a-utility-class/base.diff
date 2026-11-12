@@ -39,9 +39,9 @@ new file mode 100644
 +    }
 +
 +    public Appointment book(Appointment requested) {
-+        LocalDateTime start = getSlotStartAtOrAfter(requested.start());
++        LocalDateTime start = roundUpToSlotStart(requested.start());
 +        Appointment aligned = new Appointment(requested.appointmentId(), requested.patientId(), requested.clinicianId(), requested.visitType(), start, start.plus(java.time.Duration.between(requested.start(), requested.end())));
-+        List<Appointment> sameDay = appointments.findByClinicianOn(aligned.clinicianId(), aligned.start().toLocalDate());
++        List<Appointment> sameDay = appointments.findClinicianDayAppointments(aligned.clinicianId(), aligned.start().toLocalDate());
 +        for (Appointment booked : sameDay) {
 +            if (overlaps(booked, aligned)) throw new SlotTakenException(aligned.clinicianId(), aligned.start());
 +        }
@@ -50,7 +50,7 @@ new file mode 100644
 +        return aligned;
 +    }
 +
-+    private LocalDateTime getSlotStartAtOrAfter(LocalDateTime requested) {
++    private LocalDateTime roundUpToSlotStart(LocalDateTime requested) {
 +        int minutesPastSlot = requested.getMinute() % SLOT_MINUTES;
 +        LocalDateTime truncated = requested.withSecond(0).withNano(0);
 +        return minutesPastSlot == 0 ? truncated : truncated.plusMinutes(SLOT_MINUTES - minutesPastSlot);
@@ -72,7 +72,7 @@ new file mode 100644
 +
 +public interface AppointmentRepository {
 +
-+    List<Appointment> findByClinicianOn(String clinicianId, LocalDate day);
++    List<Appointment> findClinicianDayAppointments(String clinicianId, LocalDate day);
 +
 +    void save(Appointment appointment);
 +}
@@ -175,10 +175,10 @@ new file mode 100644
 +    private static final LocalTime SEND_TIME = LocalTime.of(18, 0);
 +
 +    public Reminder planReminder(Appointment appointment, Patient patient) {
-+        return new Reminder(patient.patientId(), normalizePhone(patient.phone()), getEveningBefore(appointment.start()));
++        return new Reminder(patient.patientId(), normalizePhone(patient.phone()), getPreviousEvening(appointment.start()));
 +    }
 +
-+    private LocalDateTime getEveningBefore(LocalDateTime start) {
++    private LocalDateTime getPreviousEvening(LocalDateTime start) {
 +        return start.toLocalDate().minusDays(1).atTime(SEND_TIME);
 +    }
 +

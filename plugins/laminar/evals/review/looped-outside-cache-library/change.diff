@@ -34,13 +34,13 @@ index 6bd1e79..5fc5282 100644
      private final TideTables tideTables;
  
 @@ -10,4 +12,10 @@ public class PilotWindows {
-     public boolean knowsTidesAt(String portCode) {
-         return tideTables.tableOf(portCode).isPresent();
+     public boolean knowsTides(String portCode) {
+         return tideTables.findTable(portCode).isPresent();
      }
 +
 +    public List<String> portsWithoutTideTable(List<String> portCodes) {
 +        return portCodes.stream()
-+                .filter(portCode -> !knowsTidesAt(portCode))
++                .filter(portCode -> !knowsTides(portCode))
 +                .toList();
 +    }
  }

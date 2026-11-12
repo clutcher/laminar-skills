@@ -139,8 +139,9 @@ It reaches a finding whose second place is outside the change.
 | `literal-in-a-line-that-states-it` | A | clean: the same method, where the value compared with 30 is named for the days passed since the booking was created, so the line states what the literal means | measured |
 | `constant-over-a-literal-the-line-states` | A | a TypeScript module constant `STARTING_TOTAL` over 0 starts a sum of ticket fares, where the line would state what the value means with the literal in its place | measured |
 | `predicate-name-drops-a-condition` | A | a new boolean helper in a shop domain whose name claims a cart line reaches its minimum order quantity, while its 1 expression also requires the requested quantity below it and holds 3 checks that each quantity is present | measured |
+| `method-named-by-a-noun-phrase-or-a-value` | A | a new repair quote service of a bicycle-repair shop, in Java, names a method that computes from its input by a noun phrase, `repairCostEstimate`, and a method that computes with no input by a value, `labourMinutes`, beside a field read of a type that only carries data and a verb-led method, which draw no Prediction Failure | set from `predicate-name-drops-a-condition`, not measured |
 | `status-held-as-a-string` | A | a new `Crossing` in the harbour-ferry domain holds its status as a string that 2 of its methods compare with a fixed set of values, so a caller can build a crossing with a status outside that set; Protect the State on the constructor is neither expected nor forbidden | measured |
-| `new-case-reached-through-a-fallback` | B | a change adds a fourth case to a crossing status, and the base's `noticeFor`, which names 2 cases and ends in a fallback, now gives the new case the notice of a departed crossing, beside a new `colourFor` that names every case | measured |
+| `new-case-reached-through-a-fallback` | B | a change adds a fourth case to a crossing status, and the base's `chooseNotice`, which names 2 cases and ends in a fallback, now gives the new case the notice of a departed crossing, beside a new `chooseColour` that names every case | measured |
 | `category-text-only-stored` | A | a new `Book` in a fictional bookshop domain, in Python, holds its genre as free text that every reference only stores or shows, so no line states a fixed set of values and Exclude Illegal States is not raised | copied from `status-held-as-a-string`, not measured |
 | `flag-set-read-in-three-conditionals` | B | a `Climber` in a fictional climbing-gym domain, in Kotlin, gains a third boolean that names 1 skill level, beside 2 that the base already reads in 2 conditionals of other classes, and a new conditional reads 2 of them again: an Unnamed Part Failure on the class and an Incomplete Mental Model on the new conditional, with the 2 old conditionals as its other places | copied from `category-held-as-two-enums`, not measured |
 | `lifecycle-flags-with-a-guard` | B | a `SeedOrder` in a fictional seed-shop domain, in Kotlin, holds its lifecycle in 3 booleans, paid, shipped and cancelled, and a new method of the class refuses to ship an order that is not paid, so a line of the class shows a mix the domain forbids while its constructor still lets a caller build it: an Unnamed Part Failure and an Exclude Illegal States on the class, and an Incomplete Mental Model on the new method, whose conditional reads a flag that 2 conditionals of the base read too | copied from `flag-set-read-in-three-conditionals`, not measured |
@@ -437,6 +438,13 @@ They measure 1 rule from 2 sides: a literal is a finding where nothing on its li
 Writing it fresh is what makes it publishable.
 It measures 1 method on 2 checks, because the name that leaves out a condition and the checks for missing values that sit in the same expression are the 2 failures of 1 line a reader reads once.
 
+`method-named-by-a-noun-phrase-or-a-value` is written fresh in a fictional bicycle-repair domain, in Java.
+Writing it fresh is what makes it publishable.
+It measures the method judge on the 2 forms of the method-name rule that the script does not settle: a noun phrase over a method that computes from its input, and a value name over a method that computes with no input on a class that does more than carry data.
+A field read of a type that only carries data, `RepairTicket#ticketNumber`, and the verb-led `estimatePartsCost` must draw no Prediction Failure.
+Its first run, on 2026-11-12, met all 4 lines of its expectation.
+It is tier A, because every method it grades sits in the files the change adds.
+
 `status-held-as-a-string`, `new-case-reached-through-a-fallback`, `guarded-list-handed-out-whole` and `session-value-cast-with-no-check` are written fresh in the same fictional harbour-ferry domain, after the sections *Exclude Illegal States*, *Protect the State* and *Remove Edge Cases* of *How Abstraction Design Prevents Errors*, in the chapter *What Correctness Means*, and, for the last, after the session read of the section *How the Detection Works in Practice*, in the chapter *How to Apply the Principles*.
 Writing them fresh is what makes them publishable.
 Each measures 1 design rule: a state held as a string, a new case that a fallback gives the behavior of another case, a mutable field handed out by an object with rules for its state, and a cast with no check of a value whose type the store does not declare.
@@ -508,11 +516,14 @@ It is tier B, because the billing application sits outside the change and a patc
 `handling-resolved-from-a-context-or-a-request` is written fresh in a fictional parcel-shipment domain, after the section *Remove Edge Cases* of *How Abstraction Design Prevents Errors*, in the chapter *What Correctness Means*, and after the section *How Understanding Works* of the chapter *What Simple Means*, where a lookup name predicts that the result can be missing.
 Writing it fresh is what makes it publishable.
 It measures 2 shapes of 1 value type: a missing result that no caller reads as absence, because every caller replaces it with the value the normal path builds, and a conversion name over a lookup whose return type allows no result, which does not repair the name.
+The expected Prediction Failure on `ParcelHandling#from` is a Prediction Failure the script raises, because the name starts with the relating word from, so that line no longer measures the method judge.
 It is tier A, because every caller of both methods sits in the class the change adds.
 
 `rule-cut-into-fragments-across-two-files` is written fresh in a fictional library-loan domain, after the section *How the Principles Restore Simplicity*, in the chapter *How to Apply the Principles*, where over-extraction is itself a simplicity failure.
 Writing it fresh is what makes it publishable.
 It measures Prediction Failure on the names of a rule cut into pieces: `resolve` and the `from` methods predict nothing about the rule they hold, and a reader cannot tell whether `from(session)` is a part of `resolve`. Over-Extraction on the same chain is allowed and not required, and a one-line forwarding method whose caller uses its result as it is must draw no Over-Extraction.
+The expected Prediction Failures on `LoanPeriod#from` and `RequestedLoanLength#from` are Prediction Failures the script raises, because each name starts with the relating word from, so those lines no longer measure the method judge; the line on `LoanPeriod#resolve` still does.
+The method judge may also raise a Prediction Failure at moderate confidence on `ReturnDesk#returnCopy`, whose body also charges a late return fine; it is known and stays, because the case measures another finding and a change of the body would change what it measures.
 It is tier B, because the 2 roots existed before the change and their callers are not changed.
 
 `general-verb-over-a-precedence-rule` is written fresh in a fictional kayak-rental domain, in Python.

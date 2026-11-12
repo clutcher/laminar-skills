@@ -28,7 +28,7 @@ new file mode 100644
 +
 +    void save(HoneyHarvest harvest);
 +
-+    List<HoneyHarvest> harvestsOfHive(String hiveCode);
++    List<HoneyHarvest> findHarvests(String hiveCode);
 +}
 diff --git a/apiary/src/main/java/com/example/apiary/hives/in/modules/HarvestLookup.java b/apiary/src/main/java/com/example/apiary/hives/in/modules/HarvestLookup.java
 new file mode 100644
@@ -50,21 +50,21 @@ new file mode 100644
 +        this.harvestStore = harvestStore;
 +    }
 +
-+    public List<PublicHoneyHarvest> harvestsOfHive(String hiveCode) {
-+        return harvestStore.harvestsOfHive(hiveCode).stream()
-+                .map(this::toPublicHarvest)
++    public List<PublicHoneyHarvest> findHarvests(String hiveCode) {
++        return harvestStore.findHarvests(hiveCode).stream()
++                .map(this::mapToPublicHarvest)
 +                .toList();
 +    }
 +
 +    public void recordHarvest(PublicHoneyHarvest harvest) {
-+        harvestStore.save(toHoneyHarvest(harvest));
++        harvestStore.save(mapToHoneyHarvest(harvest));
 +    }
 +
-+    private PublicHoneyHarvest toPublicHarvest(HoneyHarvest harvest) {
++    private PublicHoneyHarvest mapToPublicHarvest(HoneyHarvest harvest) {
 +        return new PublicHoneyHarvest(harvest.hiveCode(), harvest.harvestedOn(), harvest.jarCount(), harvest.flowerSource());
 +    }
 +
-+    private HoneyHarvest toHoneyHarvest(PublicHoneyHarvest harvest) {
++    private HoneyHarvest mapToHoneyHarvest(PublicHoneyHarvest harvest) {
 +        return new HoneyHarvest(harvest.hiveCode(), harvest.harvestedOn(), harvest.jarCount(), harvest.flowerSource());
 +    }
 +}
@@ -102,13 +102,13 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public List<JarBatch> batchesOfHive(String hiveCode) {
-+        return harvestLookup.harvestsOfHive(hiveCode).stream()
-+                .map(this::toJarBatch)
++    public List<JarBatch> findBatches(String hiveCode) {
++        return harvestLookup.findHarvests(hiveCode).stream()
++                .map(this::mapToJarBatch)
 +                .toList();
 +    }
 +
-+    private JarBatch toJarBatch(PublicHoneyHarvest harvest) {
++    private JarBatch mapToJarBatch(PublicHoneyHarvest harvest) {
 +        return new JarBatch(harvest.hiveCode(), harvest.jarCount());
 +    }
 +}

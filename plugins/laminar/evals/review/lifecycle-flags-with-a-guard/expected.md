@@ -6,7 +6,7 @@
 
 1. Method `SeedOrder#shipped`
    - Incomplete Mental Model
-   - Also in `ParcelDesk#parcelsToPack`
+   - Also in `ParcelDesk#selectParcelsToPack`
 2. Class `SeedOrder`
    - Unnamed Part Failure
 

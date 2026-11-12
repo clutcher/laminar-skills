@@ -7,7 +7,7 @@ new file mode 100644
 +
 +public record Money(long cents) {
 +
-+    public static Money ofCents(long cents) {
++    public static Money createFromCents(long cents) {
 +        return new Money(cents);
 +    }
 +}

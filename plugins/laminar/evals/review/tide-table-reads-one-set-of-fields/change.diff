@@ -14,13 +14,13 @@ new file mode 100644
 +    this.chartDatumInCentimetres = chartDatumInCentimetres;
 +  }
 +
-+  public depthAt(moment: Date): number {
-+    const before = this.readingBefore(moment);
-+    const after = this.readingAfter(moment);
++  public calculateDepth(moment: Date): number {
++    const before = this.findPrecedingReading(moment);
++    const after = this.findFollowingReading(moment);
 +    return this.chartDatumInCentimetres + this.interpolate(before, after, moment);
 +  }
 +
-+  public windowsAbove(draughtInCentimetres: number): TideWindow[] {
++  public findDeepEnoughWindows(draughtInCentimetres: number): TideWindow[] {
 +    const windows: TideWindow[] = [];
 +    let opens: Date | null = null;
 +    for (const reading of this.readings) {
@@ -34,12 +34,12 @@ new file mode 100644
 +    return windows;
 +  }
 +
-+  private readingBefore(moment: Date): TideReading {
++  private findPrecedingReading(moment: Date): TideReading {
 +    const earlier = this.readings.filter(reading => reading.at.getTime() <= moment.getTime());
 +    return earlier.length ? earlier[earlier.length - 1] : this.readings[0];
 +  }
 +
-+  private readingAfter(moment: Date): TideReading {
++  private findFollowingReading(moment: Date): TideReading {
 +    const later = this.readings.find(reading => reading.at.getTime() >= moment.getTime());
 +    return later ?? this.readings[this.readings.length - 1];
 +  }

@@ -77,7 +77,7 @@ index 0000000..e95739b
 +
 +public record DeskOpeningHours(DayOfWeek day, LocalTime opensAt, LocalTime closesAt) {
 +
-+    public boolean isOpenAt(LocalTime time) {
++    public boolean isOpen(LocalTime time) {
 +        return !time.isBefore(opensAt) && time.isBefore(closesAt);
 +    }
 +}
@@ -146,7 +146,7 @@ index 0000000..21dd0ab
 +        return renewed;
 +    }
 +
-+    public long countOpenLoansOf(Member member) {
++    public long countOpenLoans(Member member) {
 +        return openLoans.stream()
 +                .filter(loan -> loan.member().equals(member))
 +                .count();
@@ -168,7 +168,7 @@ index 0000000..21dd0ab
 +            return Money.zero();
 +        }
 +
-+        return Money.ofCents(daysLate * lateFeeTable.centsPerDay());
++        return Money.createFromCents(daysLate * lateFeeTable.centsPerDay());
 +    }
 +
 +    public void sendOverdueReminder(Loan loan, LocalDate dueDate) {
@@ -215,7 +215,7 @@ index 0000000..697619c
 +        return new Money(0);
 +    }
 +
-+    public static Money ofCents(long cents) {
++    public static Money createFromCents(long cents) {
 +        return new Money(cents);
 +    }
 +

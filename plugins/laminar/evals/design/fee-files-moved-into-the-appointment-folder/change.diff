@@ -15,7 +15,7 @@ diff --git a/src/main/java/com/example/clinic/appointment/AppointmentBook.java b
  
 -    public Appointment book(Appointment requested) {
 +    public BookingConfirmation book(Appointment requested) {
-         List<Appointment> sameDay = appointments.findByClinicianOn(requested.clinicianId(), requested.start().toLocalDate());
+         List<Appointment> sameDay = appointments.findClinicianDayAppointments(requested.clinicianId(), requested.start().toLocalDate());
          for (Appointment booked : sameDay) {
              if (booked.start().isBefore(requested.end()) && requested.start().isBefore(booked.end())) {
 @@ -19,6 +22,6 @@
@@ -23,7 +23,7 @@ diff --git a/src/main/java/com/example/clinic/appointment/AppointmentBook.java b
  
          appointments.save(requested);
 -        return requested;
-+        return new BookingConfirmation(requested, feeSchedule.findFeeOf(requested.visitType()));
++        return new BookingConfirmation(requested, feeSchedule.findFee(requested.visitType()));
      }
  }
 diff --git a/src/main/java/com/example/clinic/appointment/BookingConfirmation.java b/src/main/java/com/example/clinic/appointment/BookingConfirmation.java
@@ -53,7 +53,7 @@ new file mode 100644
 +        this.amountByVisitTypeMap = Map.copyOf(amountByVisitTypeMap);
 +    }
 +
-+    public VisitFee findFeeOf(VisitType visitType) {
++    public VisitFee findFee(VisitType visitType) {
 +        return new VisitFee(visitType, amountByVisitTypeMap.get(visitType));
 +    }
 +}
@@ -87,7 +87,7 @@ deleted file mode 100644
 -        this.amountByVisitTypeMap = Map.copyOf(amountByVisitTypeMap);
 -    }
 -
--    public VisitFee findFeeOf(VisitType visitType) {
+-    public VisitFee findFee(VisitType visitType) {
 -        return new VisitFee(visitType, amountByVisitTypeMap.get(visitType));
 -    }
 -}

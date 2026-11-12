@@ -25,13 +25,13 @@ Direction: Encapsulate: change the code to do what the name says, or rename it w
 
 **`src/main/java/com/example/clinic/util/ClinicUtils.java:17`** — class `ClinicUtils` · The class ClinicUtils holds 3 groups of members, each called by 1 class only, and names none of the 3 parts, so every member is a detail of a part the class never names.
 S5 Unnamed Part Failure
-> src/main/java/com/example/clinic/util/ClinicUtils.java:17: public static LocalDateTime getSlotStartAtOrAfter(LocalDateTime requested) {
+> src/main/java/com/example/clinic/util/ClinicUtils.java:17: public static LocalDateTime roundUpToSlotStart(LocalDateTime requested) {
 > src/main/java/com/example/clinic/util/ClinicUtils.java:27: public static BigDecimal getPatientShare(BigDecimal fee, int insuredPercent) {
-> src/main/java/com/example/clinic/util/ClinicUtils.java:35: public static LocalDateTime getEveningBefore(LocalDateTime start) {
+> src/main/java/com/example/clinic/util/ClinicUtils.java:35: public static LocalDateTime getPreviousEvening(LocalDateTime start) {
 Belonging answers:
-- getSlotStartAtOrAfter and overlaps are details of booking a slot, which only AppointmentBook calls
+- roundUpToSlotStart and overlaps are details of booking a slot, which only AppointmentBook calls
 - getPatientShare and roundToCents are details of the invoice amounts, which only InvoiceService calls
-- getEveningBefore and normalizePhone are details of planning a reminder, which only ReminderPlanner calls
+- getPreviousEvening and normalizePhone are details of planning a reminder, which only ReminderPlanner calls
 Cause: in the change
 Confidence: high
 Refutation: not refuted · ClinicUtils.java:17 · the rule of the check · No line of the code under review answers the finding.

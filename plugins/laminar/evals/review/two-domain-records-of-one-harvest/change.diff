@@ -11,7 +11,7 @@ new file mode 100644
 +
 +    void recordHarvest(String hiveCode, LocalDate harvestedOn, int jarCount, String flowerSource);
 +
-+    int jarsOfSeason(int year);
++    int countJars(int year);
 +}
 diff --git a/apiary/src/main/java/com/example/apiary/hives/app/domain/HarvestService.java b/apiary/src/main/java/com/example/apiary/hives/app/domain/HarvestService.java
 new file mode 100644
@@ -41,8 +41,8 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public int jarsOfSeason(int year) {
-+        return harvestStore.entriesOfSeason(year).stream()
++    public int countJars(int year) {
++        return harvestStore.findEntries(year).stream()
 +                .mapToInt(HarvestEntry::jarCount)
 +                .sum();
 +    }
@@ -89,5 +89,5 @@ new file mode 100644
 +
 +    void save(HoneyHarvest harvest);
 +
-+    List<HarvestEntry> entriesOfSeason(int year);
++    List<HarvestEntry> findEntries(int year);
 +}

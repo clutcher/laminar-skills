@@ -41,8 +41,8 @@ index 0000000..4c04025
 +    @Override
 +    public List<TrayToShip> readyTraysOfVariety(String variety) {
 +        LocalDate today = LocalDate.now();
-+        return seedlingLookup.fullSeedlingsOfVariety(variety).stream()
-+                .filter((Seedling seedling) -> seedling.readyToShipOn(today))
++        return seedlingLookup.findFullSeedlings(variety).stream()
++                .filter((Seedling seedling) -> seedling.isReadyToShip(today))
 +                .map(seedling -> new TrayToShip(seedling.variety(), seedling.trayNumber()))
 +                .toList();
 +    }
@@ -79,7 +79,7 @@ index 432e24e..06c486e 100644
                  .toList();
      }
 +
-+    public List<Seedling> fullSeedlingsOfVariety(String variety) {
-+        return trayStore.seedlingsOfVariety(variety);
++    public List<Seedling> findFullSeedlings(String variety) {
++        return trayStore.findSeedlings(variety);
 +    }
  }

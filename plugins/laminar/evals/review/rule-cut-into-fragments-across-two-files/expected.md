@@ -13,4 +13,4 @@
 
 ## Must not appear
 
-Method `ReturnDesk#openLoanFor`, Over-Extraction
+Method `ReturnDesk#findOpenLoan`, Over-Extraction

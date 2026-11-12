@@ -128,7 +128,7 @@ new file mode 100644
 +            throw new IllegalStateException("Repair job " + jobId + " is already finished");
 +        }
 +
-+        RepairJob finishedJob = job.finishOn(LocalDate.now(clock));
++        RepairJob finishedJob = job.finish(LocalDate.now(clock));
 +        repairJobRepository.save(finishedJob);
 +        return finishedJob;
 +    }
@@ -144,7 +144,7 @@ new file mode 100644
 +
 +public record RepairJob(String jobId, String customerId, String bikeDescription, RepairStatus status, LocalDate openedOn, LocalDate finishedOn) {
 +
-+    public RepairJob finishOn(LocalDate day) {
++    public RepairJob finish(LocalDate day) {
 +        return new RepairJob(jobId, customerId, bikeDescription, RepairStatus.FINISHED, openedOn, day);
 +    }
 +

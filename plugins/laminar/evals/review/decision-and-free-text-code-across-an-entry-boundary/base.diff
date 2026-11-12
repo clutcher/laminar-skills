@@ -30,7 +30,7 @@ new file mode 100644
 +
 +public interface AccessoryCatalogue {
 +
-+    List<Accessory> accessoriesRentedWith(String serialNumber);
++    List<Accessory> findRentedAccessories(String serialNumber);
 +}
 diff --git a/fleet-api/src/main/java/org/bikes/fleet/bike/Bike.java b/fleet-api/src/main/java/org/bikes/fleet/bike/Bike.java
 new file mode 100644
@@ -52,7 +52,7 @@ new file mode 100644
 +
 +public interface BikeRegistry {
 +
-+    List<Bike> bikesAt(String stationId);
++    List<Bike> findBikes(String stationId);
 +}
 diff --git a/fleet-api/src/main/java/org/bikes/fleet/bike/Region.java b/fleet-api/src/main/java/org/bikes/fleet/bike/Region.java
 new file mode 100644
@@ -109,7 +109,7 @@ new file mode 100644
 +
 +    @QueryMapping
 +    public List<Bike> bikesAtStation(@Argument String stationId) {
-+        return bikeRegistry.bikesAt(stationId);
++        return bikeRegistry.findBikes(stationId);
 +    }
 +}
 diff --git a/fleet-api/src/main/resources/graphql/fleet.graphqls b/fleet-api/src/main/resources/graphql/fleet.graphqls

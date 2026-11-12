@@ -18,8 +18,8 @@ diff --git a/freight-rating/src/freight_rating/adapters/booking_graph.py b/freig
 +        self._booking_charges = booking_charges
  
      def context(self) -> dict[str, DataLoader]:
--        return {"leg_charges": DataLoader(load_fn=self._leg_charges_of)}
-+        return {"leg_ratings": DataLoader(load_fn=self._ratings_per_leg)}
+-        return {"leg_charges": DataLoader(load_fn=self._calculate_leg_charges)}
++        return {"leg_ratings": DataLoader(load_fn=self._rate_legs)}
  
 -    def booking_rating(self, legs: list[Leg]) -> Rating:
 -        return self._freight_rating.rate(legs)
@@ -37,10 +37,10 @@ diff --git a/freight-rating/src/freight_rating/adapters/booking_graph.py b/freig
 +        leg_rating = await context["leg_ratings"].load(leg)
 +        return leg_rating.total_charge
  
--    async def _leg_charges_of(self, legs: list[Leg]) -> list[LegCharge]:
+-    async def _calculate_leg_charges(self, legs: list[Leg]) -> list[LegCharge]:
 -        rating = self._freight_rating.rate(legs)
--        return [rating.charge_for(leg) for leg in legs]
-+    async def _ratings_per_leg(self, legs: list[Leg]) -> list[Rating]:
+-        return [rating.find_charge(leg) for leg in legs]
++    async def _rate_legs(self, legs: list[Leg]) -> list[Rating]:
 +        return [self._freight_rating.rate([leg]) for leg in legs]
 diff --git a/freight-rating/src/freight_rating/domain/booking_charges_service.py b/freight-rating/src/freight_rating/domain/booking_charges_service.py
 new file mode 100644
@@ -63,7 +63,7 @@ new file mode 100644
 +
 +    def surcharge_notes(self, leg_ratings: list[Rating]) -> list[SurchargeNote]:
 +        leg_charges = [rating.leg_charges[0] for rating in leg_ratings if rating is not None]
-+        return self._surcharge_rules.notes_for(leg_charges, self.total_charge(leg_ratings))
++        return self._surcharge_rules.collect_notes(leg_charges, self.total_charge(leg_ratings))
 diff --git a/freight-rating/src/freight_rating/ports/booking_charges.py b/freight-rating/src/freight_rating/ports/booking_charges.py
 new file mode 100644
 --- /dev/null

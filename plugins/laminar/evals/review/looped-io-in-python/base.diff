@@ -27,7 +27,7 @@ index 0000000..ed6fe7c
 +        self.store = DockStore(database_path)
 +        self.minimum_free_docks = minimum_free_docks
 +
-+    def shortfall_at(self, station):
++    def calculate_shortfall(self, station):
 +        free = self.store.free_docks(station.station_id)
 +        return max(self.minimum_free_docks - free, 0)
 diff --git a/bikeshare/dock_query.py b/bikeshare/dock_query.py

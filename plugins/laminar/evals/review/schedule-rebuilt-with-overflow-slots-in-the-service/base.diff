@@ -34,7 +34,7 @@ new file mode 100644
 +
 +interface HarbourMaster {
 +
-+    fun scheduleFor(harbour: String): BerthSchedule
++    fun findSchedule(harbour: String): BerthSchedule
 +}
 diff --git a/marina/src/main/kotlin/com/example/marina/berths/PilotRoster.kt b/marina/src/main/kotlin/com/example/marina/berths/PilotRoster.kt
 new file mode 100644
@@ -45,5 +45,5 @@ new file mode 100644
 +
 +interface PilotRoster {
 +
-+    fun slotsFor(harbour: String): List<String>
++    fun findSlots(harbour: String): List<String>
 +}

@@ -76,7 +76,7 @@ new file mode 100644
 +import { VesselSummary } from "./vessel-summary";
 +
 +export class VesselStatusBadgeComponent {
-+  labelFor(vessel: VesselSummary): string {
++  chooseLabel(vessel: VesselSummary): string {
 +    if (vessel.spotCheckPassed === false) {
 +      return "Barred from sailing";
 +    }

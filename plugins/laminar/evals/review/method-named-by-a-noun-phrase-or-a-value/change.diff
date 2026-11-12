@@ -1,0 +1,93 @@
+diff --git a/bikeshop/src/main/java/com/example/bikeshop/repair/RepairQuoteService.java b/bikeshop/src/main/java/com/example/bikeshop/repair/RepairQuoteService.java
+new file mode 100644
+--- /dev/null
++++ b/bikeshop/src/main/java/com/example/bikeshop/repair/RepairQuoteService.java
+@@ -0,0 +1,40 @@
++package com.example.bikeshop.repair;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++public class RepairQuoteService {
++
++    private static final BigDecimal LABOUR_RATE_PER_MINUTE = new BigDecimal("0.90");
++
++    private static final BigDecimal CARBON_FRAME_SURCHARGE = new BigDecimal("15.00");
++
++    private final List<RepairStep> plannedSteps;
++
++    public RepairQuoteService(List<RepairStep> plannedSteps) {
++        this.plannedSteps = plannedSteps;
++    }
++
++    public BigDecimal repairCostEstimate(Bicycle bike, List<Part> wornParts) {
++        BigDecimal partsCost = estimatePartsCost(wornParts);
++        BigDecimal labourCost = LABOUR_RATE_PER_MINUTE.multiply(BigDecimal.valueOf(labourMinutes()));
++        BigDecimal frameSurcharge = bike.hasCarbonFrame() ? CARBON_FRAME_SURCHARGE : BigDecimal.ZERO;
++        return partsCost.add(labourCost).add(frameSurcharge);
++    }
++
++    public int labourMinutes() {
++        int minutes = 0;
++        for (RepairStep step : plannedSteps) {
++            minutes += step.minutes();
++        }
++        return minutes;
++    }
++
++    public BigDecimal estimatePartsCost(List<Part> wornParts) {
++        BigDecimal cost = BigDecimal.ZERO;
++        for (Part part : wornParts) {
++            cost = cost.add(part.price());
++        }
++        return cost;
++    }
++}
+diff --git a/bikeshop/src/main/java/com/example/bikeshop/repair/RepairTicket.java b/bikeshop/src/main/java/com/example/bikeshop/repair/RepairTicket.java
+new file mode 100644
+--- /dev/null
++++ b/bikeshop/src/main/java/com/example/bikeshop/repair/RepairTicket.java
+@@ -0,0 +1,14 @@
++package com.example.bikeshop.repair;
++
++public final class RepairTicket {
++
++    private final String ticketNumber;
++
++    public RepairTicket(String ticketNumber) {
++        this.ticketNumber = ticketNumber;
++    }
++
++    public String ticketNumber() {
++        return ticketNumber;
++    }
++}
+diff --git a/bikeshop/src/main/java/com/example/bikeshop/repair/Bicycle.java b/bikeshop/src/main/java/com/example/bikeshop/repair/Bicycle.java
+new file mode 100644
+--- /dev/null
++++ b/bikeshop/src/main/java/com/example/bikeshop/repair/Bicycle.java
+@@ -0,0 +1,4 @@
++package com.example.bikeshop.repair;
++
++public record Bicycle(String frameNumber, boolean hasCarbonFrame) {
++}
+diff --git a/bikeshop/src/main/java/com/example/bikeshop/repair/Part.java b/bikeshop/src/main/java/com/example/bikeshop/repair/Part.java
+new file mode 100644
+--- /dev/null
++++ b/bikeshop/src/main/java/com/example/bikeshop/repair/Part.java
+@@ -0,0 +1,6 @@
++package com.example.bikeshop.repair;
++
++import java.math.BigDecimal;
++
++public record Part(String name, BigDecimal price) {
++}
+diff --git a/bikeshop/src/main/java/com/example/bikeshop/repair/RepairStep.java b/bikeshop/src/main/java/com/example/bikeshop/repair/RepairStep.java
+new file mode 100644
+--- /dev/null
++++ b/bikeshop/src/main/java/com/example/bikeshop/repair/RepairStep.java
+@@ -0,0 +1,4 @@
++package com.example.bikeshop.repair;
++
++public record RepairStep(String name, int minutes) {
++}

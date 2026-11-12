@@ -35,7 +35,7 @@ new file mode 100644
 +    }
 +
 +    public Appointment book(Appointment requested) {
-+        List<Appointment> sameDay = appointments.findByClinicianOn(requested.clinicianId(), requested.start().toLocalDate());
++        List<Appointment> sameDay = appointments.findClinicianDayAppointments(requested.clinicianId(), requested.start().toLocalDate());
 +        for (Appointment booked : sameDay) {
 +            if (booked.start().isBefore(requested.end()) && requested.start().isBefore(booked.end())) {
 +                throw new SlotTakenException(requested.clinicianId(), requested.start());
@@ -58,7 +58,7 @@ new file mode 100644
 +
 +public interface AppointmentRepository {
 +
-+    List<Appointment> findByClinicianOn(String clinicianId, LocalDate day);
++    List<Appointment> findClinicianDayAppointments(String clinicianId, LocalDate day);
 +
 +    void save(Appointment appointment);
 +}

@@ -12,9 +12,9 @@ new file mode 100644
 +
 +public interface QuoteResultMerging {
 +
-+    BigDecimal totalPremiumOf(List<QuoteResult> lineQuotes);
++    BigDecimal sumTotalPremium(List<QuoteResult> lineQuotes);
 +
-+    List<UnderwritingNotice> noticesOf(List<QuoteResult> lineQuotes);
++    List<UnderwritingNotice> findUnderwritingNotices(List<QuoteResult> lineQuotes);
 +}
 diff --git a/quote-service/src/main/java/com/example/quote/app/services/QuoteResultMergingService.java b/quote-service/src/main/java/com/example/quote/app/services/QuoteResultMergingService.java
 new file mode 100644
@@ -42,7 +42,7 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public BigDecimal totalPremiumOf(List<QuoteResult> lineQuotes) {
++    public BigDecimal sumTotalPremium(List<QuoteResult> lineQuotes) {
 +        return lineQuotes.stream()
 +                .filter(Objects::nonNull)
 +                .map(QuoteResult::totalPremium)
@@ -50,12 +50,12 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public List<UnderwritingNotice> noticesOf(List<QuoteResult> lineQuotes) {
++    public List<UnderwritingNotice> findUnderwritingNotices(List<QuoteResult> lineQuotes) {
 +        List<LinePremium> linePremiums = lineQuotes.stream()
 +                .filter(Objects::nonNull)
 +                .map(lineQuote -> lineQuote.linePremiums().get(0))
 +                .toList();
-+        return underwritingNoticeRules.noticesFor(linePremiums, totalPremiumOf(lineQuotes));
++        return underwritingNoticeRules.collectNotices(linePremiums, sumTotalPremium(lineQuotes));
 +    }
 +}
 diff --git a/quote-service/src/main/java/com/example/quote/in/BasketQuoteController.java b/quote-service/src/main/java/com/example/quote/in/BasketQuoteController.java
@@ -86,10 +86,10 @@ diff --git a/quote-service/src/main/java/com/example/quote/in/BasketQuoteControl
 +            BatchLoaderRegistry batchLoaderRegistry) {
          this.quoteCalculation = quoteCalculation;
 -        batchLoaderRegistry.forTypePair(BasketLine.class, LinePremium.class)
--                .registerMappedBatchLoader((basketLines, environment) -> Mono.just(linePremiumsOf(basketLines)));
+-                .registerMappedBatchLoader((basketLines, environment) -> Mono.just(calculateLinePremiums(basketLines)));
 +        this.quoteResultMerging = quoteResultMerging;
 +        batchLoaderRegistry.forTypePair(BasketLine.class, QuoteResult.class)
-+                .registerMappedBatchLoader((basketLines, environment) -> Mono.just(lineQuotesOf(basketLines)));
++                .registerMappedBatchLoader((basketLines, environment) -> Mono.just(quoteBasketLines(basketLines)));
      }
  
      @QueryMapping
@@ -99,10 +99,10 @@ diff --git a/quote-service/src/main/java/com/example/quote/in/BasketQuoteControl
  
 -    @SchemaMapping(typeName = "Basket", field = "quote")
 -    public QuoteResult quote(Basket basket) {
--        return quoteCalculation.calculate(coverLinesOf(basket.lines()));
+-        return quoteCalculation.calculate(createCoverLines(basket.lines()));
 +    @SchemaMapping(typeName = "Basket", field = "totalPremium")
 +    public CompletableFuture<BigDecimal> totalPremium(Basket basket, DataLoader<BasketLine, QuoteResult> lineQuotes) {
-+        return lineQuotes.loadMany(basket.lines()).thenApply(quoteResultMerging::totalPremiumOf);
++        return lineQuotes.loadMany(basket.lines()).thenApply(quoteResultMerging::sumTotalPremium);
      }
  
 -    @SchemaMapping(typeName = "BasketLine", field = "premium")
@@ -110,20 +110,20 @@ diff --git a/quote-service/src/main/java/com/example/quote/in/BasketQuoteControl
 -        return linePremiums.load(basketLine).thenApply(LinePremium::premium);
 +    @SchemaMapping(typeName = "Basket", field = "notices")
 +    public CompletableFuture<List<UnderwritingNotice>> notices(Basket basket, DataLoader<BasketLine, QuoteResult> lineQuotes) {
-+        return lineQuotes.loadMany(basket.lines()).thenApply(quoteResultMerging::noticesOf);
++        return lineQuotes.loadMany(basket.lines()).thenApply(quoteResultMerging::findUnderwritingNotices);
      }
  
--    private Map<BasketLine, LinePremium> linePremiumsOf(Set<BasketLine> basketLines) {
--        QuoteResult quote = quoteCalculation.calculate(coverLinesOf(basketLines));
--        return basketLines.stream().collect(toMap(identity(), basketLine -> quote.premiumFor(basketLine.coverCode())));
+-    private Map<BasketLine, LinePremium> calculateLinePremiums(Set<BasketLine> basketLines) {
+-        QuoteResult quote = quoteCalculation.calculate(createCoverLines(basketLines));
+-        return basketLines.stream().collect(toMap(identity(), basketLine -> quote.findPremium(basketLine.coverCode())));
 +    @SchemaMapping(typeName = "BasketLine", field = "premium")
 +    public CompletableFuture<BigDecimal> premium(BasketLine basketLine, DataLoader<BasketLine, QuoteResult> lineQuotes) {
 +        return lineQuotes.load(basketLine).thenApply(QuoteResult::totalPremium);
      }
  
--    private static List<CoverLine> coverLinesOf(Collection<BasketLine> basketLines) {
+-    private static List<CoverLine> createCoverLines(Collection<BasketLine> basketLines) {
 -        return basketLines.stream().map(BasketLine::coverLine).toList();
-+    private Map<BasketLine, QuoteResult> lineQuotesOf(Set<BasketLine> basketLines) {
++    private Map<BasketLine, QuoteResult> quoteBasketLines(Set<BasketLine> basketLines) {
 +        return basketLines.stream()
 +                .collect(toMap(identity(), basketLine -> quoteCalculation.calculate(List.of(basketLine.coverLine()))));
      }

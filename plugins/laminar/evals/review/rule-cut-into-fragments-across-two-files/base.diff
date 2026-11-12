@@ -49,7 +49,7 @@ new file mode 100644
 +
 +public interface LateReturnFines {
 +
-+    void chargeFor(Loan returnedLoan);
++    void charge(Loan returnedLoan);
 +}
 diff --git a/library/src/main/java/com/example/library/loan/Loan.java b/library/src/main/java/com/example/library/loan/Loan.java
 new file mode 100644
@@ -62,11 +62,11 @@ new file mode 100644
 +
 +public record Loan(String memberId, String copyBarcode, LocalDate lentOn, LocalDate dueOn, LocalDate returnedOn) {
 +
-+    public Loan extendedTo(LocalDate newDueOn) {
++    public Loan extend(LocalDate newDueOn) {
 +        return new Loan(memberId, copyBarcode, lentOn, newDueOn, returnedOn);
 +    }
 +
-+    public Loan returnedOn(LocalDate day) {
++    public Loan markReturned(LocalDate day) {
 +        return new Loan(memberId, copyBarcode, lentOn, dueOn, day);
 +    }
 +
@@ -100,13 +100,13 @@ new file mode 100644
 +        Member member = memberDirectory.findByCardNumber(request.getLibraryCardNumber());
 +        LoanPeriod period = LoanPeriod.resolve(session, request);
 +        LocalDate lentOn = LocalDate.now(clock);
-+        return loanStore.save(new Loan(member.id(), request.getCopyBarcode(), lentOn, period.dueDateFrom(lentOn), null));
++        return loanStore.save(new Loan(member.id(), request.getCopyBarcode(), lentOn, period.calculateDueDate(lentOn), null));
 +    }
 +
 +    public Loan renew(CirculationSession session, RenewalRequest request) {
 +        Loan loan = loanStore.findFirstByCopyBarcodeAndReturnedOnIsNull(request.getCopyBarcode());
 +        LoanPeriod period = LoanPeriod.resolve(session, request);
-+        return loanStore.save(loan.extendedTo(period.dueDateFrom(LocalDate.now(clock))));
++        return loanStore.save(loan.extend(period.calculateDueDate(LocalDate.now(clock))));
 +    }
 +}
 diff --git a/library/src/main/java/com/example/library/loan/LoanPeriod.java b/library/src/main/java/com/example/library/loan/LoanPeriod.java
@@ -130,7 +130,7 @@ new file mode 100644
 +        return new LoanPeriod(STANDARD_DAYS);
 +    }
 +
-+    public LocalDate dueDateFrom(LocalDate lentOn) {
++    public LocalDate calculateDueDate(LocalDate lentOn) {
 +        return lentOn.plusDays(days);
 +    }
 +}
@@ -214,10 +214,10 @@ new file mode 100644
 +        this.clock = clock;
 +    }
 +
-+    public void checkIn(String copyBarcode) {
++    public void returnCopy(String copyBarcode) {
 +        Loan loan = loanStore.findFirstByCopyBarcodeAndReturnedOnIsNull(copyBarcode);
-+        Loan returned = loan.returnedOn(LocalDate.now(clock));
++        Loan returned = loan.markReturned(LocalDate.now(clock));
 +        loanStore.save(returned);
-+        lateReturnFines.chargeFor(returned);
++        lateReturnFines.charge(returned);
 +    }
 +}

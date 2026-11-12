@@ -75,7 +75,7 @@ new file mode 100644
 +        this.trackingApi = trackingApi;
 +    }
 +
-+    public String statusCodeOf(String parcelId) {
++    public String getStatusCode(String parcelId) {
 +        return trackingApi.get()
 +            .uri("/parcels/{parcelId}/status", parcelId)
 +            .retrieve()
@@ -148,8 +148,8 @@ new file mode 100644
 +    }
 +
 +    @GetMapping("/parcels/{parcelId}/status")
-+    public String statusCodeOf(@PathVariable String parcelId) {
-+        Shipment shipment = shipments.byParcelId(parcelId);
++    public String getStatusCode(@PathVariable String parcelId) {
++        Shipment shipment = shipments.findShipment(parcelId);
 +        return customsHoldPolicy.isHeldAtCustoms(shipment) ? "HELD_AT_CUSTOMS" : "IN_TRANSIT";
 +    }
 +}
@@ -171,5 +171,5 @@ new file mode 100644
 +
 +public interface ShipmentStore {
 +
-+    Shipment byParcelId(String parcelId);
++    Shipment findShipment(String parcelId);
 +}

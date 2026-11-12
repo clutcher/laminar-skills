@@ -15,7 +15,7 @@ new file mode 100644
 +    return new TideReading(stationCode, new Date(measuredAt), Number(height));
 +  }
 +
-+  toCsvLine(): string {
++  formatAsCsvLine(): string {
 +    return [this.stationCode, this.measuredAt.toISOString(), this.heightInCentimetres].join(";");
 +  }
 +
@@ -24,7 +24,7 @@ new file mode 100644
 +    return `${this.stationCode}: ${metres} m at ${this.measuredAt.toISOString().slice(11, 16)}`;
 +  }
 +
-+  isAbove(heightInCentimetres: number): boolean {
++  exceeds(heightInCentimetres: number): boolean {
 +    return this.heightInCentimetres > heightInCentimetres;
 +  }
 +}

@@ -28,7 +28,7 @@ new file mode 100644
 +        "NRF", Carrier.NORTH_RIVER_FREIGHT
 +    );
 +
-+    public Carrier toCarrier(String carrierCode) {
++    public Carrier resolveCarrier(String carrierCode) {
 +        return CARRIERS_BY_CODE.getOrDefault(carrierCode, Carrier.OTHER_CARRIER);
 +    }
 +}
@@ -44,7 +44,7 @@ diff --git a/dispatch/src/main/java/com/example/shipping/dispatch/release/Releas
 +    }
 +
 +    private boolean canRelease(Parcel parcel) {
-+        if ("HELD_AT_CUSTOMS".equals(trackingClient.statusCodeOf(parcel.id()))) {
++        if ("HELD_AT_CUSTOMS".equals(trackingClient.getStatusCode(parcel.id()))) {
 +            return false;
 +        }
 +        return !isHeldAtCustoms(parcel);
@@ -84,7 +84,7 @@ new file mode 100644
 +        "NRF", Carrier.NORTH_RIVER_FREIGHT
 +    );
 +
-+    public Carrier toCarrier(String carrierCode) {
++    public Carrier resolveCarrier(String carrierCode) {
 +        return CARRIERS_BY_CODE.getOrDefault(carrierCode, Carrier.OTHER_CARRIER);
 +    }
 +}

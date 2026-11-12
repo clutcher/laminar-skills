@@ -11,7 +11,7 @@ index 0000000..35b5c02
 +@Component
 +public class SeatAllocation {
 +
-+    public int lowestFreeSeatOn(Crossing crossing) {
++    public int findLowestFreeSeat(Crossing crossing) {
 +        if (crossing.seatsLeft().isEmpty()) {
 +            throw new CrossingFull(crossing);
 +        }
@@ -48,8 +48,8 @@ index 0000000..28fbd02
 +
 +    @PostMapping
 +    public Ticket book(@RequestBody BookingRequest request) {
-+        int seatNumber = seatAllocation.lowestFreeSeatOn(request.crossing());
-+        int fareCents = routeFares.fareFor(request.crossing().route());
++        int seatNumber = seatAllocation.findLowestFreeSeat(request.crossing());
++        int fareCents = routeFares.findFare(request.crossing().route());
 +        Ticket ticket = new Ticket(request.crossing(), seatNumber, fareCents);
 +        ticketStore.save(ticket);
 +        return ticket;
@@ -146,7 +146,7 @@ index 0000000..e1dec9b
 +    void shouldChargeTheFareOfTheRoute() {
 +        // given
 +        Crossing crossing = new Crossing(KELMAR_HARBOUR_TO_OSTVIK, EARLY_MORNING_DEPARTURE, new TreeSet<>(List.of(7)));
-+        given(routeFares.fareFor(KELMAR_HARBOUR_TO_OSTVIK)).willReturn(1850);
++        given(routeFares.findFare(KELMAR_HARBOUR_TO_OSTVIK)).willReturn(1850);
 +
 +        // when
 +        Ticket ticket = crossingBookingController.book(new BookingRequest(crossing, PASSENGER));

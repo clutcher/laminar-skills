@@ -61,12 +61,12 @@ index 0000000..3dc59b6
 +            return Money.zero();
 +        }
 +
-+        return Money.ofCents(daysLate * LATE_FEE_CENTS_PER_DAY);
++        return Money.createFromCents(daysLate * LATE_FEE_CENTS_PER_DAY);
 +    }
 +
 +    public Money calculateLostCopyCharge(Copy copy) {
 +        Money replacementPrice = copy.replacementPrice();
-+        return replacementPrice.plus(Money.ofCents(PROCESSING_FEE_CENTS));
++        return replacementPrice.plus(Money.createFromCents(PROCESSING_FEE_CENTS));
 +    }
 +}
 diff --git a/lending/src/main/java/com/example/lending/desk/LoanDesk.java b/lending/src/main/java/com/example/lending/loans/LoanService.java
@@ -120,7 +120,7 @@ index c82f318..c92341e 100644
 -            return Money.zero();
 -        }
 -
--        return Money.ofCents(daysLate * LATE_FEE_CENTS_PER_DAY);
+-        return Money.createFromCents(daysLate * LATE_FEE_CENTS_PER_DAY);
 -    }
 -
 -    public static final class LostCopyCharges {
@@ -129,7 +129,7 @@ index c82f318..c92341e 100644
 -
 -        public Money calculateLostCopyCharge(Copy copy) {
 -            Money replacementPrice = copy.replacementPrice();
--            return replacementPrice.plus(Money.ofCents(PROCESSING_FEE_CENTS));
+-            return replacementPrice.plus(Money.createFromCents(PROCESSING_FEE_CENTS));
 -        }
 -    }
  }

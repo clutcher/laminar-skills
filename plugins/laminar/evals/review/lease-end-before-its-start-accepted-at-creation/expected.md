@@ -10,8 +10,8 @@
 ## Must not appear
 
 Method `ShedLease#ShedLease`, Protect the State
-Method `ShedLease#moveEndTo`, Protect the State
-Method `PlotLease#moveEndTo`, Protect the State
+Method `ShedLease#moveEnd`, Protect the State
+Method `PlotLease#moveEnd`, Protect the State
 Class `ShedLease`, Protect the State
 Class `PlotLease`, Exclude Illegal States
 Class `ShedLease`, Exclude Illegal States

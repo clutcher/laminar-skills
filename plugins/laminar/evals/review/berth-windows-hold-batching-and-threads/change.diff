@@ -78,7 +78,7 @@ new file mode 100644
 +    }
 +
 +    private List<BerthWindow> estimateBatch(List<VesselCall> batch) {
-+        List<SlotAnswer> answers = terminalPlanner.planSlots(toSlotRequests(batch));
++        List<SlotAnswer> answers = terminalPlanner.planSlots(createSlotRequests(batch));
 +        List<BerthWindow> windows = new ArrayList<>();
 +        for (SlotAnswer answer : answers) {
 +            VesselCall call = batch.get(answer.lineNumber() - 1);
@@ -87,15 +87,15 @@ new file mode 100644
 +        return windows;
 +    }
 +
-+    private List<SlotRequest> toSlotRequests(List<VesselCall> batch) {
++    private List<SlotRequest> createSlotRequests(List<VesselCall> batch) {
 +        List<SlotRequest> requests = new ArrayList<>();
 +        for (int index = 0; index < batch.size(); index++) {
-+            requests.add(toSlotRequest(batch.get(index), index + 1));
++            requests.add(createSlotRequest(batch.get(index), index + 1));
 +        }
 +        return requests;
 +    }
 +
-+    private SlotRequest toSlotRequest(VesselCall call, int lineNumber) {
++    private SlotRequest createSlotRequest(VesselCall call, int lineNumber) {
 +        return new SlotRequest(lineNumber, call.terminalCode(), call.arrival(), resolveContainerCount(call));
 +    }
 +

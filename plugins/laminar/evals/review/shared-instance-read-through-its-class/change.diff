@@ -12,7 +12,7 @@ new file mode 100644
 +    private OccupiedFrameCounter() {
 +    }
 +
-+    public int occupiedFramesOf(HiveInspection inspection) {
++    public int countOccupiedFrames(HiveInspection inspection) {
 +        return inspection.broodFrames() + inspection.honeyFrames();
 +    }
 +}
@@ -30,7 +30,7 @@ new file mode 100644
 +    public int totalOccupiedFrames(List<HiveInspection> inspections) {
 +        int totalOccupiedFrames = 0;
 +        for (HiveInspection inspection : inspections) {
-+            totalOccupiedFrames += OccupiedFrameCounter.INSTANCE.occupiedFramesOf(inspection);
++            totalOccupiedFrames += OccupiedFrameCounter.INSTANCE.countOccupiedFrames(inspection);
 +        }
 +        return totalOccupiedFrames;
 +    }
@@ -51,6 +51,6 @@ new file mode 100644
 +    }
 +
 +    public boolean needsAnotherBox(HiveInspection inspection) {
-+        return OccupiedFrameCounter.INSTANCE.occupiedFramesOf(inspection) >= framesPerBox;
++        return OccupiedFrameCounter.INSTANCE.countOccupiedFrames(inspection) >= framesPerBox;
 +    }
 +}

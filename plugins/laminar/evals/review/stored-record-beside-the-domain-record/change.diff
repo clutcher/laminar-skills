@@ -26,11 +26,11 @@ index 0000000..af32156
 +
 +public class BerthBookingConverter {
 +
-+    public BerthBookingEntity toEntity(BerthBooking booking) {
++    public BerthBookingEntity mapToEntity(BerthBooking booking) {
 +        return new BerthBookingEntity(booking.vesselName(), booking.berthNumber(), booking.arrivesOn(), booking.leavesOn(), booking.lengthMetres());
 +    }
 +
-+    public BerthBooking toDomain(BerthBookingEntity entity) {
++    public BerthBooking mapToDomain(BerthBookingEntity entity) {
 +        return new BerthBooking(entity.getVesselName(), entity.getBerthNumber(), entity.getArrivesOn(), entity.getLeavesOn(), entity.getLengthMetres());
 +    }
 +}

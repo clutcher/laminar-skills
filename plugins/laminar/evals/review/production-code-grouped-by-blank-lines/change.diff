@@ -10,9 +10,9 @@ new file mode 100644
 +export class GreenhouseVentilation {
 +  constructor(private readonly ventSchedule: VentSchedule) {}
 +
-+  openVentsFor(greenhouse: Greenhouse, readingAt: Date): VentOpening {
-+    const insideTemperature = greenhouse.readTemperatureAt(readingAt);
-+    const targetTemperature = this.ventSchedule.readTargetTemperatureAt(readingAt);
++  openVents(greenhouse: Greenhouse, readingAt: Date): VentOpening {
++    const insideTemperature = greenhouse.readTemperature(readingAt);
++    const targetTemperature = this.ventSchedule.readTargetTemperature(readingAt);
 +
 +    const degreesTooWarm = insideTemperature - targetTemperature;
 +

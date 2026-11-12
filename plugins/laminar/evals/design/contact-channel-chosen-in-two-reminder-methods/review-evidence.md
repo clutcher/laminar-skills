@@ -12,11 +12,11 @@ Every kept finding with its check, the cognitive failure or the prevention decis
 
 ## Simplicity
 
-**`src/main/java/com/example/clinic/reminder/ReminderSender.java:30`** — method `ReminderSender#sendSameDay` · The method sendSameDay decides again which channel reaches a patient, by the same condition on the phone and the SMS consent that sendDayBefore holds.
-S1 Incomplete Mental Model: a change to the consent rule made in sendSameDay leaves sendDayBefore on the old rule
+**`src/main/java/com/example/clinic/reminder/ReminderSender.java:30`** — method `ReminderSender#sendSameDay` · The method sendSameDay decides again which channel reaches a patient, by the same condition on the phone and the SMS consent that sendPreviousDay holds.
+S1 Incomplete Mental Model: a change to the consent rule made in sendSameDay leaves sendPreviousDay on the old rule
 > src/main/java/com/example/clinic/reminder/ReminderSender.java:30: if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {
 > src/main/java/com/example/clinic/reminder/ReminderSender.java:21: if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {
-Also at: `src/main/java/com/example/clinic/reminder/ReminderSender.java:21`, `ReminderSender#sendDayBefore`
+Also at: `src/main/java/com/example/clinic/reminder/ReminderSender.java:21`, `ReminderSender#sendPreviousDay`
 Places:
 - src/main/java/com/example/clinic/reminder/ReminderSender.java:21: the same decision
 Cause: in the change
@@ -36,7 +36,7 @@ Confidence: high
 Refutation: not refuted · ReminderSender.java:10 · the rule of the check · No line of the code under review answers the finding.
 Direction: Restore single level of abstraction: move the methods and fields of another part into a new class.
 
-**`src/main/java/com/example/clinic/reminder/ReminderSender.java:21`** — method `ReminderSender#sendDayBefore` · The method sendDayBefore picks the channel inline from the phone and the SMS consent of the patient, so the choice of a channel is a detail among the steps of sending a reminder.
+**`src/main/java/com/example/clinic/reminder/ReminderSender.java:21`** — method `ReminderSender#sendPreviousDay` · The method sendPreviousDay picks the channel inline from the phone and the SMS consent of the patient, so the choice of a channel is a detail among the steps of sending a reminder.
 S5 Unnamed Part Failure
 > src/main/java/com/example/clinic/reminder/ReminderSender.java:21: if (patient.phone() != null && !patient.phone().isBlank() && patient.smsConsent()) {
 > src/main/java/com/example/clinic/reminder/ReminderSender.java:22: smsGateway.sendText(patient.phone(), text);
@@ -89,8 +89,8 @@ The line check dropped no possible finding.
 
 - ReminderSender: S2
 - ReminderSender#ReminderSender: S1
-- ReminderSender#sendDayBefore: S2
-- ReminderSender#sendDayBefore: S1
+- ReminderSender#sendPreviousDay: S2
+- ReminderSender#sendPreviousDay: S1
 - ReminderSender#sendSameDay: S2
 - ReminderSender#sendSameDay: S5
 

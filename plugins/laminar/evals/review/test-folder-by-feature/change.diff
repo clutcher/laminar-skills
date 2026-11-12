@@ -65,7 +65,7 @@ new file mode 100644
 +        this.dayPassDesk = dayPassDesk;
 +    }
 +
-+    public boolean opensFor(String passNumber, LocalDate today) {
++    public boolean admits(String passNumber, LocalDate today) {
 +        return dayPassDesk.findDayPass(passNumber)
 +                .filter(dayPass -> isValidToday(dayPass, today))
 +                .isPresent();
@@ -102,7 +102,7 @@ new file mode 100644
 +        DayPass dayPass = dayPassDesk.sellDayPass(FEBRUARY_TENTH);
 +
 +        // when
-+        boolean opened = liftGate.opensFor(dayPass.passNumber(), FEBRUARY_TENTH);
++        boolean opened = liftGate.admits(dayPass.passNumber(), FEBRUARY_TENTH);
 +
 +        // then
 +        assertThat(opened).isTrue();
@@ -116,7 +116,7 @@ new file mode 100644
 +        DayPass dayPass = dayPassDesk.sellDayPass(FEBRUARY_TENTH.plusDays(1));
 +
 +        // when
-+        boolean opened = liftGate.opensFor(dayPass.passNumber(), FEBRUARY_TENTH);
++        boolean opened = liftGate.admits(dayPass.passNumber(), FEBRUARY_TENTH);
 +
 +        // then
 +        assertThat(opened).isFalse();
@@ -150,7 +150,7 @@ new file mode 100644
 +        dayPassDesk.refundUnusedDayPass(dayPass.passNumber());
 +
 +        // when
-+        boolean opened = liftGate.opensFor(dayPass.passNumber(), FEBRUARY_TENTH);
++        boolean opened = liftGate.admits(dayPass.passNumber(), FEBRUARY_TENTH);
 +
 +        // then
 +        assertThat(opened).isFalse();

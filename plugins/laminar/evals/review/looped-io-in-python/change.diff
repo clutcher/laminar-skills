@@ -14,10 +14,10 @@ index 96b53b2..62bd4fa 100644
      def remember_capacity(self, station):
          self.capacity_cache.put(station.station_id, station.capacity)
 +
-+    def docks_to_free(self, stations):
++    def find_docks_to_free(self, stations):
 +        shortfalls = {}
 +        for station in stations:
-+            shortfalls[station.station_id] = self.availability.shortfall_at(station)
++            shortfalls[station.station_id] = self.availability.calculate_shortfall(station)
 +        return shortfalls
 +
 +    def broken_dock_statements(self, stations):

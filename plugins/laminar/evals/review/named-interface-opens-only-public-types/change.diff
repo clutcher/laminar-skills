@@ -74,8 +74,8 @@ index 432e24e..fcf87d3 100644
 +
 +    public List<PublicSeedlingReadiness> readinessOfVariety(String variety) {
 +        LocalDate today = LocalDate.now();
-+        return trayStore.seedlingsOfVariety(variety).stream()
-+                .map(seedling -> new PublicSeedlingReadiness(seedling.variety(), seedling.trayNumber(), seedling.readyToShipOn(today)))
++        return trayStore.findSeedlings(variety).stream()
++                .map(seedling -> new PublicSeedlingReadiness(seedling.variety(), seedling.trayNumber(), seedling.isReadyToShip(today)))
 +                .toList();
 +    }
  }

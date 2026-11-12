@@ -36,7 +36,7 @@ new file mode 100644
 +
 +public final class CatalogLoanMapper {
 +
-+    public LoanTerms toLoanTerms(CatalogLoanResponse response) {
++    public LoanTerms createLoanTerms(CatalogLoanResponse response) {
 +        boolean renewalAllowed = response.renewalCode() != null && !response.renewalCode().isBlank();
 +        return new LoanTerms(response.loanId(), renewalAllowed, response.requestedDays(), response.grantedDays());
 +    }

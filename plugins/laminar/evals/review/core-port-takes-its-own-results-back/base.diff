@@ -74,7 +74,7 @@ new file mode 100644
 +
 +public record QuoteResult(List<LinePremium> linePremiums, BigDecimal totalPremium, List<UnderwritingNotice> notices) {
 +
-+    public LinePremium premiumFor(String coverCode) {
++    public LinePremium findPremium(String coverCode) {
 +        return linePremiums.stream()
 +                .filter(linePremium -> linePremium.coverCode().equals(coverCode))
 +                .findFirst()
@@ -124,15 +124,15 @@ new file mode 100644
 +    @Override
 +    public QuoteResult calculate(List<CoverLine> coverLines) {
 +        Set<String> coverCodes = coverLines.stream().map(CoverLine::coverCode).collect(Collectors.toSet());
-+        Map<String, BigDecimal> annualRates = coverRates.annualRatesFor(coverCodes);
++        Map<String, BigDecimal> annualRates = coverRates.findAnnualRates(coverCodes);
 +        List<LinePremium> linePremiums = coverLines.stream()
-+                .map(coverLine -> premiumOf(coverLine, annualRates.getOrDefault(coverLine.coverCode(), BigDecimal.ZERO)))
++                .map(coverLine -> calculatePremium(coverLine, annualRates.getOrDefault(coverLine.coverCode(), BigDecimal.ZERO)))
 +                .toList();
 +        BigDecimal totalPremium = linePremiums.stream().map(LinePremium::premium).reduce(BigDecimal.ZERO, BigDecimal::add);
-+        return new QuoteResult(linePremiums, totalPremium, underwritingNoticeRules.noticesFor(linePremiums, totalPremium));
++        return new QuoteResult(linePremiums, totalPremium, underwritingNoticeRules.collectNotices(linePremiums, totalPremium));
 +    }
 +
-+    private LinePremium premiumOf(CoverLine coverLine, BigDecimal annualRate) {
++    private LinePremium calculatePremium(CoverLine coverLine, BigDecimal annualRate) {
 +        BigDecimal premium = coverLine.insuredValue().multiply(annualRate).setScale(2, RoundingMode.HALF_UP);
 +        return new LinePremium(coverLine.coverCode(), premium);
 +    }
@@ -156,7 +156,7 @@ new file mode 100644
 +
 +    private static final BigDecimal REFERRAL_PREMIUM = new BigDecimal("25000.00");
 +
-+    public List<UnderwritingNotice> noticesFor(List<LinePremium> linePremiums, BigDecimal totalPremium) {
++    public List<UnderwritingNotice> collectNotices(List<LinePremium> linePremiums, BigDecimal totalPremium) {
 +        List<UnderwritingNotice> notices = new ArrayList<>();
 +        linePremiums.stream()
 +                .filter(linePremium -> linePremium.premium().signum() == 0)
@@ -181,7 +181,7 @@ new file mode 100644
 +
 +public interface CoverRates {
 +
-+    Map<String, BigDecimal> annualRatesFor(Set<String> coverCodes);
++    Map<String, BigDecimal> findAnnualRates(Set<String> coverCodes);
 +}
 diff --git a/quote-service/src/main/java/com/example/quote/config/QuoteConfiguration.java b/quote-service/src/main/java/com/example/quote/config/QuoteConfiguration.java
 new file mode 100644
@@ -266,7 +266,7 @@ new file mode 100644
 +    public BasketQuoteController(QuoteCalculation quoteCalculation, BatchLoaderRegistry batchLoaderRegistry) {
 +        this.quoteCalculation = quoteCalculation;
 +        batchLoaderRegistry.forTypePair(BasketLine.class, LinePremium.class)
-+                .registerMappedBatchLoader((basketLines, environment) -> Mono.just(linePremiumsOf(basketLines)));
++                .registerMappedBatchLoader((basketLines, environment) -> Mono.just(calculateLinePremiums(basketLines)));
 +    }
 +
 +    @QueryMapping
@@ -276,7 +276,7 @@ new file mode 100644
 +
 +    @SchemaMapping(typeName = "Basket", field = "quote")
 +    public QuoteResult quote(Basket basket) {
-+        return quoteCalculation.calculate(coverLinesOf(basket.lines()));
++        return quoteCalculation.calculate(createCoverLines(basket.lines()));
 +    }
 +
 +    @SchemaMapping(typeName = "BasketLine", field = "premium")
@@ -284,12 +284,12 @@ new file mode 100644
 +        return linePremiums.load(basketLine).thenApply(LinePremium::premium);
 +    }
 +
-+    private Map<BasketLine, LinePremium> linePremiumsOf(Set<BasketLine> basketLines) {
-+        QuoteResult quote = quoteCalculation.calculate(coverLinesOf(basketLines));
-+        return basketLines.stream().collect(toMap(identity(), basketLine -> quote.premiumFor(basketLine.coverCode())));
++    private Map<BasketLine, LinePremium> calculateLinePremiums(Set<BasketLine> basketLines) {
++        QuoteResult quote = quoteCalculation.calculate(createCoverLines(basketLines));
++        return basketLines.stream().collect(toMap(identity(), basketLine -> quote.findPremium(basketLine.coverCode())));
 +    }
 +
-+    private static List<CoverLine> coverLinesOf(Collection<BasketLine> basketLines) {
++    private static List<CoverLine> createCoverLines(Collection<BasketLine> basketLines) {
 +        return basketLines.stream().map(BasketLine::coverLine).toList();
 +    }
 +}
@@ -317,7 +317,7 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public Map<String, BigDecimal> annualRatesFor(Set<String> coverCodes) {
++    public Map<String, BigDecimal> findAnnualRates(Set<String> coverCodes) {
 +        CoverRateResponse response = ratingRestClient.get()
 +                .uri(uri -> uri.path("/cover-rates").queryParam("codes", coverCodes).build())
 +                .retrieve()

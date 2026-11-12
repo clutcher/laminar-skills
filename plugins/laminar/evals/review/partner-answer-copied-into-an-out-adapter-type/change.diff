@@ -30,7 +30,7 @@ new file mode 100644
 +
 +public interface WateringPlan {
 +
-+    int wateringMinutesFor(String plotCode, LocalDate day);
++    int calculateWateringMinutes(String plotCode, LocalDate day);
 +}
 diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/IrrigationPlanner.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/domain/IrrigationPlanner.java
 new file mode 100644
@@ -58,9 +58,9 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public int wateringMinutesFor(String plotCode, LocalDate day) {
-+        Plot plot = plotStore.plotOf(plotCode);
-+        DayOutlook outlook = weatherSource.outlookFor(plot.stationCode(), day);
++    public int calculateWateringMinutes(String plotCode, LocalDate day) {
++        Plot plot = plotStore.findPlot(plotCode);
++        DayOutlook outlook = weatherSource.fetchOutlook(plot.stationCode(), day);
 +        if (outlook.rainChancePercent() >= 70 && outlook.rainMillimeters() >= 5.0) {
 +            return 0;
 +        }
@@ -99,7 +99,7 @@ new file mode 100644
 +
 +public interface PlotStore {
 +
-+    Plot plotOf(String plotCode);
++    Plot findPlot(String plotCode);
 +}
 diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/spi/WeatherSource.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/app/spi/WeatherSource.java
 new file mode 100644
@@ -114,7 +114,7 @@ new file mode 100644
 +
 +public interface WeatherSource {
 +
-+    DayOutlook outlookFor(String stationCode, LocalDate day);
++    DayOutlook fetchOutlook(String stationCode, LocalDate day);
 +}
 diff --git a/greenhouse/src/main/java/com/example/greenhouse/irrigation/out/weather/ForecastReply.java b/greenhouse/src/main/java/com/example/greenhouse/irrigation/out/weather/ForecastReply.java
 new file mode 100644
@@ -164,7 +164,7 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public DayOutlook outlookFor(String stationCode, LocalDate day) {
++    public DayOutlook fetchOutlook(String stationCode, LocalDate day) {
 +        HttpRequest request = HttpRequest.newBuilder(URI.create(partnerBaseUrl + "/v2/forecast?station=" + stationCode + "&date=" + day)).GET().build();
 +        try {
 +            String body = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body();

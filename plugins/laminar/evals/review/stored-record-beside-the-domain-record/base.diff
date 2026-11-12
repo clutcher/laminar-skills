@@ -28,7 +28,7 @@ index 0000000..56e6ae5
 +
 +public class BerthBookingService {
 +
-+    public List<String> berthsOf(String harbour) {
++    public List<String> listBerths(String harbour) {
 +        return List.of(harbour + "-1", harbour + "-2");
 +    }
 +}

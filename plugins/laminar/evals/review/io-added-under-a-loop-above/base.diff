@@ -8,7 +8,7 @@ index 0000000..6fb5d20
 +
 +public interface CatalogueHttpClient {
 +
-+    CatalogueRecord recordFor(String isbn);
++    CatalogueRecord fetchRecord(String isbn);
 +}
 diff --git a/src/main/java/org/riverside/library/catalogue/CatalogueRecord.java b/src/main/java/org/riverside/library/catalogue/CatalogueRecord.java
 new file mode 100644
@@ -45,7 +45,7 @@ index 0000000..e2d6523
 +
 +public interface LoanRepository {
 +
-+    List<Loan> findOverdueOn(LocalDate day);
++    List<Loan> findOverdueLoans(LocalDate day);
 +}
 diff --git a/src/main/java/org/riverside/library/notice/DueDateLabel.java b/src/main/java/org/riverside/library/notice/DueDateLabel.java
 new file mode 100644
@@ -59,7 +59,7 @@ index 0000000..03186e5
 +
 +public class DueDateLabel {
 +
-+    public String labelFor(LocalDate dueDate) {
++    public String createLabel(LocalDate dueDate) {
 +        return dueDate.toString();
 +    }
 +}
@@ -84,7 +84,7 @@ index 0000000..7374517
 +    }
 +
 +    public String describe(Loan loan) {
-+        return titleLabel.labelFor(loan.isbn()) + ", due " + dueDateLabel.labelFor(loan.dueDate());
++        return titleLabel.createLabel(loan.isbn()) + ", due " + dueDateLabel.createLabel(loan.dueDate());
 +    }
 +}
 diff --git a/src/main/java/org/riverside/library/notice/LongDateFormat.java b/src/main/java/org/riverside/library/notice/LongDateFormat.java
@@ -181,8 +181,8 @@ index 0000000..de6186d
 +        this.noticeMailer = noticeMailer;
 +    }
 +
-+    public void runFor(LocalDate day) {
-+        List<Loan> overdueLoans = loanRepository.findOverdueOn(day);
++    public void run(LocalDate day) {
++        List<Loan> overdueLoans = loanRepository.findOverdueLoans(day);
 +        for (Loan loan : overdueLoans) {
 +            OverdueNotice notice = noticeComposer.compose(loan, day);
 +            noticeMailer.queue(notice);
@@ -199,7 +199,7 @@ index 0000000..f996d43
 +
 +public class TitleLabel {
 +
-+    public String labelFor(String isbn) {
++    public String createLabel(String isbn) {
 +        return "the item with ISBN " + isbn;
 +    }
 +}

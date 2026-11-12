@@ -27,7 +27,7 @@ index 0000000..8cdfb75
 +    }
 +
 +    public boolean reserveStock(String sku, int quantity) {
-+        return stockService.unitsInStock(sku) >= quantity;
++        return stockService.countUnitsInStock(sku) >= quantity;
 +    }
 +}
 diff --git a/inventory-service/src/main/java/com/shop/inventory/StockService.java b/inventory-service/src/main/java/com/shop/inventory/StockService.java
@@ -45,7 +45,7 @@ index 0000000..c3f42f5
 +
 +    private final Map<String, Integer> unitsInStockBySku = new HashMap<>();
 +
-+    public int unitsInStock(String sku) {
++    public int countUnitsInStock(String sku) {
 +        return unitsInStockBySku.getOrDefault(sku, 0);
 +    }
 +}

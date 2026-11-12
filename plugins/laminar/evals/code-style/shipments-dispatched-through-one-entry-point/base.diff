@@ -121,12 +121,12 @@ index 0000000..fc96be8
 +    public void send(ShipmentBatch batch) {
 +        carrierRestClient.post()
 +                .uri("/manifests/{manifestId}", batch.batchId())
-+                .body(manifestParcelsOf(batch.shipments()))
++                .body(createManifestParcels(batch.shipments()))
 +                .retrieve()
 +                .toBodilessEntity();
 +    }
 +
-+    private static List<ManifestParcel> manifestParcelsOf(List<Shipment> shipments) {
++    private static List<ManifestParcel> createManifestParcels(List<Shipment> shipments) {
 +        return shipments.stream()
 +                .map(shipment -> new ManifestParcel(shipment.shipmentId(), shipment.weightGrams(), shipment.destinationPostcode()))
 +                .toList();
@@ -148,12 +148,12 @@ index 0000000..7f0dcdd
 +
 +public record BatchWindow(Instant opensAt, Duration length) {
 +
-+    public Instant closesAt() {
++    public Instant getClosingTime() {
 +        return opensAt.plus(length);
 +    }
 +
-+    public boolean hasClosedAt(Instant moment) {
-+        return !moment.isBefore(closesAt());
++    public boolean hasClosed(Instant moment) {
++        return !moment.isBefore(getClosingTime());
 +    }
 +}
 diff --git a/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/batching/ShipmentBatch.java b/src/main/java/com/example/warehouse/shipment/out/carrier/dispatch/batching/ShipmentBatch.java

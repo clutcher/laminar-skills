@@ -59,7 +59,7 @@ new file mode 100644
 +
 +public interface ShopStock {
 +
-+    int jarsOnSale(String hiveCode);
++    int countJarsOnSale(String hiveCode);
 +}
 diff --git a/apiary/src/main/java/com/example/apiary/shop/app/domain/ShopStockService.java b/apiary/src/main/java/com/example/apiary/shop/app/domain/ShopStockService.java
 new file mode 100644
@@ -81,8 +81,8 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public int jarsOnSale(String hiveCode) {
-+        return harvestsForSale.batchesOfHive(hiveCode).stream()
++    public int countJarsOnSale(String hiveCode) {
++        return harvestsForSale.findBatches(hiveCode).stream()
 +                .mapToInt(JarBatch::jarCount)
 +                .sum();
 +    }
@@ -109,7 +109,7 @@ new file mode 100644
 +
 +public interface HarvestsForSale {
 +
-+    List<JarBatch> batchesOfHive(String hiveCode);
++    List<JarBatch> findBatches(String hiveCode);
 +}
 diff --git a/apiary/src/main/java/com/example/apiary/shop/package-info.java b/apiary/src/main/java/com/example/apiary/shop/package-info.java
 new file mode 100644

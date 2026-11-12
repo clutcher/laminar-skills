@@ -46,14 +46,14 @@ new file mode 100644
 +    }
 +
 +    static Optional<LoanPeriod> from(CheckoutRequest request) {
-+        return inWeeks(request.getRequestedWeeks());
++        return createLoanPeriodFromWeeks(request.getRequestedWeeks());
 +    }
 +
 +    static Optional<LoanPeriod> from(RenewalRequest request) {
-+        return inWeeks(request.getRequestedWeeks());
++        return createLoanPeriodFromWeeks(request.getRequestedWeeks());
 +    }
 +
-+    private static Optional<LoanPeriod> inWeeks(Integer weeks) {
++    private static Optional<LoanPeriod> createLoanPeriodFromWeeks(Integer weeks) {
 +        if (weeks == null) {
 +            return Optional.empty();
 +        }
@@ -66,15 +66,15 @@ diff --git a/library/src/main/java/com/example/library/loan/ReturnDesk.java b/li
 @@ -16,9 +16,13 @@ public class ReturnDesk {
      }
  
-     public void checkIn(String copyBarcode) {
+     public void returnCopy(String copyBarcode) {
 -        Loan loan = loanStore.findFirstByCopyBarcodeAndReturnedOnIsNull(copyBarcode);
-+        Loan loan = openLoanFor(copyBarcode);
-         Loan returned = loan.returnedOn(LocalDate.now(clock));
++        Loan loan = findOpenLoan(copyBarcode);
+         Loan returned = loan.markReturned(LocalDate.now(clock));
          loanStore.save(returned);
-         lateReturnFines.chargeFor(returned);
+         lateReturnFines.charge(returned);
      }
 +
-+    private Loan openLoanFor(String copyBarcode) {
++    private Loan findOpenLoan(String copyBarcode) {
 +        return loanStore.findFirstByCopyBarcodeAndReturnedOnIsNull(copyBarcode);
 +    }
  }

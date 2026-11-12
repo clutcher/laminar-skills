@@ -50,8 +50,8 @@ index 343450a..86f645a 100644
  
      private static final int LONG_RIDE_DISCOUNT_IN_CENTS = 250;
  
--    int centsPerMinuteOn(LocalDate rideDate) {
-+    public int centsPerMinuteOn(LocalDate rideDate) {
+-    int findCentsPerMinute(LocalDate rideDate) {
++    public int findCentsPerMinute(LocalDate rideDate) {
          Month month = rideDate.getMonth();
          boolean summer = month.getValue() >= Month.MAY.getValue() && month.getValue() <= Month.SEPTEMBER.getValue();
          return summer ? SUMMER_CENTS_PER_MINUTE : WINTER_CENTS_PER_MINUTE;
@@ -85,8 +85,8 @@ index 0000000..19ddbd8
 +        this.ridePrices = ridePrices;
 +    }
 +
-+    int amountToChargeInCentsFor(RideDuration ridden, LocalDate rideDate) {
-+        return ridePrices.priceInCentsFor(ridden, rideDate) - ridePrices.longRideDiscountInCentsFor(ridden);
++    int calculateRideChargeInCents(RideDuration ridden, LocalDate rideDate) {
++        return ridePrices.calculatePriceInCents(ridden, rideDate) - ridePrices.calculateLongRideDiscountInCents(ridden);
 +    }
 +}
 diff --git a/bikeshare/src/main/java/com/example/bikeshare/ride/internal/RideChargeController.java b/bikeshare/src/main/java/com/example/bikeshare/ride/internal/RideChargeController.java
@@ -115,8 +115,8 @@ index 0000000..251b51b
 +    }
 +
 +    @GetMapping("/rides/charge")
-+    int amountToChargeInCents(@RequestParam int minutes, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate rideDate) {
-+        return rideCharges.amountToChargeInCentsFor(new RideDuration(minutes), rideDate);
++    int getRideChargeInCents(@RequestParam int minutes, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate rideDate) {
++        return rideCharges.calculateRideChargeInCents(new RideDuration(minutes), rideDate);
 +    }
 +}
 diff --git a/bikeshare/src/main/java/com/example/bikeshare/ride/package-info.java b/bikeshare/src/main/java/com/example/bikeshare/ride/package-info.java

@@ -12,7 +12,7 @@ index 03186e5..db1b68e 100644
 +        this.longDateFormat = longDateFormat;
 +    }
 +
-     public String labelFor(LocalDate dueDate) {
+     public String createLabel(LocalDate dueDate) {
 -        return dueDate.toString();
 +        return longDateFormat.render(dueDate);
      }
@@ -35,9 +35,9 @@ index f996d43..fe220e5 100644
 +        this.catalogueClient = catalogueClient;
 +    }
 +
-     public String labelFor(String isbn) {
+     public String createLabel(String isbn) {
 -        return "the item with ISBN " + isbn;
-+        CatalogueRecord record = catalogueClient.recordFor(isbn);
++        CatalogueRecord record = catalogueClient.fetchRecord(isbn);
 +        return "\"" + record.title() + "\" by " + record.author();
      }
  }

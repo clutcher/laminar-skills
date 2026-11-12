@@ -79,7 +79,7 @@ index 0000000..40781a4
 +
 +    public function book(string $dogId, string $arrival, int $nights): Stay
 +    {
-+        $stay = new Stay($dogId, $arrival, $nights, $this->kennelRuns->freeRunOn($arrival, $nights));
++        $stay = new Stay($dogId, $arrival, $nights, $this->kennelRuns->findFreeRun($arrival, $nights));
 +        $this->kennelRuns->reserve($stay);
 +        return $stay;
 +    }
@@ -100,7 +100,7 @@ index 0000000..121b7c3
 +
 +interface KennelRuns
 +{
-+    public function freeRunOn(string $arrival, int $nights): int;
++    public function findFreeRun(string $arrival, int $nights): int;
 +
 +    public function reserve(Stay $stay): void;
 +}
@@ -152,7 +152,7 @@ index 0000000..d8393b0
 +    {
 +    }
 +
-+    public function freeRunOn(string $arrival, int $nights): int
++    public function findFreeRun(string $arrival, int $nights): int
 +    {
 +        $query = $this->pdo->prepare('select min(run_number) from free_run where day = ?');
 +        $query->execute([$arrival]);

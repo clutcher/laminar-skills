@@ -9,7 +9,7 @@ new file mode 100644
 +
 +    private CartLineQuantityNotice() {}
 +
-+    public static QuantityNotice noticeFor(CartLine line) {
++    public static QuantityNotice decideNotice(CartLine line) {
 +        if (line.hasErpNotice(ErpNotice.ADJUSTED_TO_CONTRACT)) {
 +            return QuantityNotice.ADJUSTED_TO_CONTRACT;
 +        }

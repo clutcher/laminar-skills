@@ -94,8 +94,8 @@ index 0000000..6bd1e79
 +        this.tideTables = tideTables;
 +    }
 +
-+    public boolean knowsTidesAt(String portCode) {
-+        return tideTables.tableOf(portCode).isPresent();
++    public boolean knowsTides(String portCode) {
++        return tideTables.findTable(portCode).isPresent();
 +    }
 +}
 diff --git a/tides/src/main/java/org/tidewatch/tides/table/TideTable.java b/tides/src/main/java/org/tidewatch/tides/table/TideTable.java
@@ -134,7 +134,7 @@ index 0000000..6702ca8
 +        tablesByPort.put(table.portCode(), table);
 +    }
 +
-+    public Optional<TideTable> tableOf(String portCode) {
++    public Optional<TideTable> findTable(String portCode) {
 +        return Optional.ofNullable(tablesByPort.getIfPresent(portCode));
 +    }
 +}

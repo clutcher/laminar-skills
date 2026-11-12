@@ -75,7 +75,7 @@ index 0000000..af37ab0
 +
 +    @Override
 +    public DeliveryRound planRound(String variety, String gardenCentre) {
-+        return new DeliveryRound(gardenCentre, traysToShip.traysOfVariety(variety).stream().map(TrayToShip::trayNumber).toList());
++        return new DeliveryRound(gardenCentre, traysToShip.findTrays(variety).stream().map(TrayToShip::trayNumber).toList());
 +    }
 +}
 diff --git a/nursery/src/main/java/com/example/nursery/delivery/app/domain/model/DeliveryRound.java b/nursery/src/main/java/com/example/nursery/delivery/app/domain/model/DeliveryRound.java
@@ -114,7 +114,7 @@ index 0000000..ed443d7
 +
 +public interface TraysToShip {
 +
-+    List<TrayToShip> traysOfVariety(String variety);
++    List<TrayToShip> findTrays(String variety);
 +}
 diff --git a/nursery/src/main/java/com/example/nursery/delivery/in/rest/DeliveryController.java b/nursery/src/main/java/com/example/nursery/delivery/in/rest/DeliveryController.java
 new file mode 100644
@@ -168,8 +168,8 @@ index 0000000..9ea27a7
 +    }
 +
 +    @Override
-+    public List<TrayToShip> traysOfVariety(String variety) {
-+        return seedlingLookup.seedlingsOfVariety(variety).stream()
++    public List<TrayToShip> findTrays(String variety) {
++        return seedlingLookup.findSeedlings(variety).stream()
 +                .map(seedling -> new TrayToShip(seedling.variety(), seedling.trayNumber()))
 +                .toList();
 +    }
@@ -240,7 +240,7 @@ index 0000000..03d8c3f
 +
 +public record Seedling(String variety, int trayNumber, LocalDate sownOn) {
 +
-+    public boolean readyToShipOn(LocalDate day) {
++    public boolean isReadyToShip(LocalDate day) {
 +        return !sownOn.plusWeeks(6).isAfter(day);
 +    }
 +}
@@ -260,7 +260,7 @@ index 0000000..7388f98
 +
 +    void save(Seedling seedling);
 +
-+    List<Seedling> seedlingsOfVariety(String variety);
++    List<Seedling> findSeedlings(String variety);
 +}
 diff --git a/nursery/src/main/java/com/example/nursery/planting/in/modules/PublicSeedling.java b/nursery/src/main/java/com/example/nursery/planting/in/modules/PublicSeedling.java
 new file mode 100644
@@ -292,8 +292,8 @@ index 0000000..432e24e
 +        this.trayStore = trayStore;
 +    }
 +
-+    public List<PublicSeedling> seedlingsOfVariety(String variety) {
-+        return trayStore.seedlingsOfVariety(variety).stream()
++    public List<PublicSeedling> findSeedlings(String variety) {
++        return trayStore.findSeedlings(variety).stream()
 +                .map(seedling -> new PublicSeedling(seedling.variety(), seedling.trayNumber()))
 +                .toList();
 +    }
@@ -363,7 +363,7 @@ index 0000000..97188e5
 +    }
 +
 +    @Override
-+    public List<Seedling> seedlingsOfVariety(String variety) {
++    public List<Seedling> findSeedlings(String variety) {
 +        return jdbcClient.sql("select variety, tray_number, sown_on from seedling where variety = ?")
 +                .param(variety)
 +                .query(Seedling.class)

@@ -8,11 +8,11 @@ new file mode 100644
 +    this.departures = departures;
 +  }
 +
-+  nextDepartureAfter(time) {
++  findNextDeparture(time) {
 +    return this.departures.find(departure => departure.leavesAt > time) || null;
 +  }
 +
-+  departuresTo(harbour) {
++  findDeparturesByDestination(harbour) {
 +    return this.departures.filter(departure => departure.harbour === harbour);
 +  }
 +}

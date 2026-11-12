@@ -83,7 +83,7 @@ new file mode 100644
 +    public Long placeOrder(Long customerId, List<Long> productIds) {
 +        List<Product> products = productRepository.findAllById(productIds);
 +        Order order = orderRepository.save(new Order(customerId, products));
-+        consignmentRepository.planConsignmentsFor(order);
++        consignmentRepository.planOrderConsignments(order);
 +        return order.getId();
 +    }
 +}
@@ -98,7 +98,7 @@ new file mode 100644
 +
 +public interface ConsignmentRepository {
 +
-+    void planConsignmentsFor(Order order);
++    void planOrderConsignments(Order order);
 +}
 diff --git a/company-website/order/app/spi/OrderRepository.java b/company-website/order/app/spi/OrderRepository.java
 new file mode 100644
@@ -244,7 +244,7 @@ new file mode 100644
 +    }
 +
 +    @Override
-+    public void planConsignmentsFor(Order order) {
++    public void planOrderConsignments(Order order) {
 +        apiForConsignmentPlanning.planConsignments(order.getId(), order.getCustomerId());
 +    }
 +}

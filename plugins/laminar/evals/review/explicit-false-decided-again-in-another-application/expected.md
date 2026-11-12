@@ -4,7 +4,7 @@
 
 1. Method `Vessel#isBarredFromSailing`
    - Incomplete Mental Model
-   - Also in `VesselStatusBadgeComponent#labelFor`
+   - Also in `VesselStatusBadgeComponent#chooseLabel`
 
 ## Must not appear
 
