@@ -62,6 +62,19 @@ const choosePlan = resultsFolder => {
   return isInProgress ? { plan: lastPlan, isNew: false } : { plan: lastPlan + 1, isNew: true };
 };
 
+const readEarlierFileOrNull = filePath => (fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : null);
+
+// A plan with no run folder and no stop list, on another base than the ready plan before, starts a new change in a reused results folder.
+const startsANewChange = (resultsFolder, plan, options, baseCommit) => {
+  if (options.run || options.stop) return false;
+
+  const earlierFolder = getPlanFolder(resultsFolder, plan - 1);
+  const outcomeText = readEarlierFileOrNull(path.join(earlierFolder, OUTCOME_FILE));
+  const earlierBaseText = readEarlierFileOrNull(path.join(earlierFolder, BASE_COMMIT_FILE));
+  if (outcomeText === null || earlierBaseText === null) return false;
+  return JSON.parse(outcomeText).outcome === PLAN_OUTCOMES.READY && earlierBaseText.trim() !== baseCommit;
+};
+
 const endThePlan = (resultsFolder, plan, stop) => {
   writeOutcome(resultsFolder, plan, { word: PLAN_OUTCOMES.STOP, stop });
   console.log(formatPlanLine(plan, PLAN_OUTCOMES.STOP, resultsFolder));
@@ -117,7 +130,8 @@ function startPlan() {
   const stopList = options.stop ? readStopListOrExit(options.stop) : [];
   if (isNew) {
     const unfinishedGroups = listUnfinishedGroups(model, stopList.map(stopped => ({ group: stopped.group })), readPlannedGroups(getPlanFolder(resultsFolder, plan - 1)));
-    ({ model: given, counts } = runOrExitOnTreeStop(() => carryTheModel(given, readCurrentTree(repositoryRoot, headCommit), unfinishedGroups)));
+    const isANewChange = startsANewChange(resultsFolder, plan, options, baseCommit);
+    ({ model: given, counts } = runOrExitOnTreeStop(() => carryTheModel(given, readCurrentTree(repositoryRoot, headCommit), unfinishedGroups, isANewChange)));
     console.log(`carried: ${Object.entries(counts).map(([key, count]) => `${key} ${count}`).join(" · ")}`);
   }
   const { stops, secondStops } = options.stop ? recordTheStops(given.decisions || {}, stopList, plan - 1) : { stops: (given.decisions || {}).stops, secondStops: [] };
