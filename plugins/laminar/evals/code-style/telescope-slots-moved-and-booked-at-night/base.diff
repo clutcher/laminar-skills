@@ -1,0 +1,145 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..9f2a078
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,2 @@
++build/
++.gradle/
+diff --git a/build.gradle b/build.gradle
+new file mode 100644
+index 0000000..d642168
+--- /dev/null
++++ b/build.gradle
+@@ -0,0 +1,16 @@
++plugins {
++    id 'java'
++}
++
++repositories {
++    mavenCentral()
++}
++
++dependencies {
++    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.5'
++    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.5'
++}
++
++test {
++    useJUnitPlatform()
++}
+diff --git a/settings.gradle b/settings.gradle
+new file mode 100644
+index 0000000..f40d47b
+--- /dev/null
++++ b/settings.gradle
+@@ -0,0 +1 @@
++rootProject.name = 'observatory'
+diff --git a/src/main/java/com/example/observatory/schedule/NightSchedule.java b/src/main/java/com/example/observatory/schedule/NightSchedule.java
+new file mode 100644
+index 0000000..691922d
+--- /dev/null
++++ b/src/main/java/com/example/observatory/schedule/NightSchedule.java
+@@ -0,0 +1,22 @@
++package com.example.observatory.schedule;
++
++import java.time.LocalDate;
++import java.time.LocalDateTime;
++import java.util.List;
++
++public class NightSchedule {
++
++    private final LocalDate night;
++    private final LocalDateTime dawn;
++    private final List<ViewingSlot> slots;
++
++    public NightSchedule(LocalDate night, LocalDateTime dawn, List<ViewingSlot> slots) {
++        this.night = night;
++        this.dawn = dawn;
++        this.slots = List.copyOf(slots);
++    }
++
++    public List<ViewingSlot> listSlots() {
++        return slots;
++    }
++}
+diff --git a/src/main/java/com/example/observatory/schedule/ViewingSlot.java b/src/main/java/com/example/observatory/schedule/ViewingSlot.java
+new file mode 100644
+index 0000000..5906a4c
+--- /dev/null
++++ b/src/main/java/com/example/observatory/schedule/ViewingSlot.java
+@@ -0,0 +1,10 @@
++package com.example.observatory.schedule;
++
++import java.time.LocalDateTime;
++
++public record ViewingSlot(String telescopeCode, LocalDateTime start, int minutes, String observerName) {
++
++    public LocalDateTime calculateEnd() {
++        return start.plusMinutes(minutes);
++    }
++}
+diff --git a/src/main/java/com/example/observatory/telescope/Telescope.java b/src/main/java/com/example/observatory/telescope/Telescope.java
+new file mode 100644
+index 0000000..b88adc6
+--- /dev/null
++++ b/src/main/java/com/example/observatory/telescope/Telescope.java
+@@ -0,0 +1,4 @@
++package com.example.observatory.telescope;
++
++public record Telescope(String code, int apertureMillimetres) {
++}
+diff --git a/src/test/java/com/example/observatory/schedule/NightScheduleTest.java b/src/test/java/com/example/observatory/schedule/NightScheduleTest.java
+new file mode 100644
+index 0000000..35b759b
+--- /dev/null
++++ b/src/test/java/com/example/observatory/schedule/NightScheduleTest.java
+@@ -0,0 +1,23 @@
++package com.example.observatory.schedule;
++
++import java.time.LocalDate;
++import java.time.LocalDateTime;
++import java.util.List;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++
++class NightScheduleTest {
++
++    @Test
++    void shouldListEverySlotWhenSlotsAreStored() {
++        LocalDate night = LocalDate.of(2026, 3, 14);
++        LocalDateTime dawn = LocalDateTime.of(2026, 3, 15, 6, 10);
++        ViewingSlot refractorSlot = new ViewingSlot("REF-200", LocalDateTime.of(2026, 3, 14, 22, 0), 90, "Ada Lovelace");
++        ViewingSlot reflectorSlot = new ViewingSlot("REFL-400", LocalDateTime.of(2026, 3, 15, 1, 0), 60, "Caroline Herschel");
++        NightSchedule schedule = new NightSchedule(night, dawn, List.of(refractorSlot, reflectorSlot));
++
++        List<ViewingSlot> listedSlots = schedule.listSlots();
++
++        Assertions.assertEquals(List.of(refractorSlot, reflectorSlot), listedSlots);
++    }
++}
+diff --git a/src/test/java/com/example/observatory/schedule/ViewingSlotTest.java b/src/test/java/com/example/observatory/schedule/ViewingSlotTest.java
+new file mode 100644
+index 0000000..b1a631e
+--- /dev/null
++++ b/src/test/java/com/example/observatory/schedule/ViewingSlotTest.java
+@@ -0,0 +1,19 @@
++package com.example.observatory.schedule;
++
++import java.time.LocalDateTime;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++
++class ViewingSlotTest {
++
++    @Test
++    void shouldEndAfterItsMinutesWhenSlotStarts() {
++        LocalDateTime start = LocalDateTime.of(2026, 3, 14, 22, 0);
++        int slotMinutes = 90;
++        ViewingSlot slot = new ViewingSlot("REF-200", start, slotMinutes, "Ada Lovelace");
++
++        LocalDateTime end = slot.calculateEnd();
++
++        Assertions.assertEquals(LocalDateTime.of(2026, 3, 14, 23, 30), end);
++    }
++}
