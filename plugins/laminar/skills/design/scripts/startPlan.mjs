@@ -53,6 +53,7 @@ const keepTheFirstPlan = (resultsFolder, modelPath) => {
   const baseCommitPath = path.join(resultsFolder, BASE_COMMIT_FILE);
   if (fs.existsSync(baseCommitPath)) fs.copyFileSync(baseCommitPath, path.join(firstPlanFolder, BASE_COMMIT_FILE));
   writeJson(path.join(firstPlanFolder, OUTCOME_FILE), { plan: 1, outcome: PLAN_OUTCOMES.READY, questions: [], stop: null });
+  console.log(`older results folder: the folder held ${MODEL_FILE} and no plans/ folder, so its model is plan 1 and this start is plan 2; a new design starts in an empty results folder, and the model is written after the start command`);
 };
 
 // A plan folder with no outcome is the plan in progress, so a second start of the same plan keeps its number and carries nothing again.
