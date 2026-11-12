@@ -2,9 +2,12 @@ import { FINDING_REASONS } from "../model/DesignModelForm.mjs";
 import { KINDS, getFolderPath, isAText, isMarkedUnchanged, readList } from "../model/DesignModel.mjs";
 import { isPlacedByThePlan, readNamedReviewItems, readReviewItems } from "./ReviewItems.mjs";
 import { DEFECT_CODES, createDefect } from "./DesignDefect.mjs";
-import { describeTheChangeOfTheFolder, describeTheChangeOfTheMember } from "./MemberChange.mjs";
+import { describeTheChangeOfTheFields, describeTheChangeOfTheFolder, describeTheChangeOfTheMember } from "./MemberChange.mjs";
 
 const OUTSIDE_THE_CHANGE = "outside the change";
+
+// Shape mode names a group of fields by their names joined with this separator.
+const FIELD_GROUP_SEPARATOR = ", ";
 
 const isAShapeRunFinding = finding => finding.run !== undefined;
 
@@ -61,10 +64,22 @@ const findMemberOfTheItem = (model, item) => {
   return null;
 };
 
+// An item on a field names a class as its enclosing name, where an item on a local variable names a method.
+const findClassOfTheFieldItem = (model, item) => {
+  if (item.scale !== "variable" || model.findMethod(item.enclosing)) return null;
+  return model.findClass(item.enclosing);
+};
+
 const findOutsideTheChangeDefect = (model, item, path, currentTree) => {
   if (item.scale === "module") {
     const folderChange = describeTheChangeOfTheFolder(model, item.name, currentTree);
     return folderChange ? createDefect(DEFECT_CODES.OUTSIDE_THE_CHANGE_BUT_CHANGED, `${path}.reason`, `the item ${item.number} is left as ${OUTSIDE_THE_CHANGE}, and ${folderChange}`) : null;
+  }
+
+  const fieldClass = findClassOfTheFieldItem(model, item);
+  if (fieldClass) {
+    const fieldChange = describeTheChangeOfTheFields(model, fieldClass, item.name.split(FIELD_GROUP_SEPARATOR), currentTree);
+    return fieldChange ? createDefect(DEFECT_CODES.OUTSIDE_THE_CHANGE_BUT_CHANGED, `${path}.reason`, `the item ${item.number} is left as ${OUTSIDE_THE_CHANGE}, and ${fieldChange}`) : null;
   }
 
   const member = findMemberOfTheItem(model, item);
