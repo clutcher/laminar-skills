@@ -17,7 +17,7 @@ export const DOLLARS_LEAVE_OUT = "the session that runs the review, the calls st
 
 export const DOLLARS_PER_MILLION_TOKENS_BY_MODEL_MAP = Object.freeze({
   opus: Object.freeze({ model: "claude-opus-5-5", input: 4, cacheWrite: 5, cacheRead: 0.2, output: 20 }),
-  sonnet: Object.freeze({ model: "claude-sonnet-5-5", input: 2, cacheWrite: 2.5, cacheRead: 0.2, output: 10 }),
+  sonnet: Object.freeze({ model: "claude-sonnet-5-5", input: 2, cacheWrite: 2.5, cacheRead: 0.1, output: 10 }),
   haiku: Object.freeze({ model: "claude-haiku-5-5", input: 0.1, cacheWrite: 0.125, cacheRead: 0.01, output: 0.5 }),
 });
 
