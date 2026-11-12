@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { chooseRepositoryToRead, findDeployableRoots, Scale } from "../../code/index.mjs";
+import { CHANGE_MODES, chooseRepositoryToRead, findDeployableRoots, Scale } from "../../code/index.mjs";
 import { ChangedLinesText } from "./formats/ChangedLinesText.mjs";
 import { resolveAbsolutePath } from "../../files/paths.mjs";
 import { AbstractionTreeWalk } from "./selection/AbstractionTreeWalk.mjs";
@@ -280,6 +280,21 @@ export class PrepareStep {
     return leftOutCount ? { leftOutByThePaths: { [Scale.MODULE.name]: leftOutCount } } : {};
   }
 
+  isATestBodyLeftOutOfTheShapeRun(abstraction) {
+    return abstraction.isTest
+      && abstraction.scale === Scale.METHOD.name
+      && this.filter.keepsPath(abstraction.path)
+      && this.filter.keepsScale(abstraction.scale)
+      && listTracks(abstraction).includes(TRACKS.TEST_METHOD)
+      && !this.filter.keepsJudgeType(readJudgeType({ track: TRACKS.TEST_METHOD, scale: abstraction.scale }));
+  }
+
+  buildTheTestBodiesLeftOut() {
+    if (this.extracted.mode !== CHANGE_MODES.SHAPE) return {};
+    const methods = this.walk.collectSelectedAbstractions().filter(abstraction => this.isATestBodyLeftOutOfTheShapeRun(abstraction)).map(abstraction => abstraction.displayName);
+    return methods.length ? { testBodiesLeftOut: { count: methods.length, methods } } : {};
+  }
+
   keepsSystemTrack(track) {
     return this.filter.keepsJudgeType(readJudgeType({ track, scale: Scale.APPLICATION.name }));
   }
@@ -434,6 +449,7 @@ export class PrepareStep {
       boundaryPaths: this.boundaryPaths.counts,
       waves: this.waves,
       ...this.buildTheModulesLeftOutByThePaths(),
+      ...this.buildTheTestBodiesLeftOut(),
     };
   }
 

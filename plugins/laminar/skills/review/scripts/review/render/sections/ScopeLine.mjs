@@ -20,6 +20,7 @@ export function buildScope(prepared, plan, fullPlan, leftOutCountByScaleMap = nu
     scales: filter.scales || [],
     leftOut: leftOutCountByScaleMap,
     leftOutByThePaths: prepared.leftOutByThePaths || null,
+    testBodiesLeftOut: prepared.testBodiesLeftOut || null,
     judgeCallsPlanned: findJudgeCalls(fullPlan),
     judgeCallsInThisRun: findJudgeCalls(plan),
     shapeRun: markAShapeRun(prepared),
@@ -56,6 +57,10 @@ const formatJudgeCallsPhrase = ({ judgeCallsPlanned, judgeCallsInThisRun }) => {
 
 const formatCounted = (count, one, many) => `${formatCount(count)} ${count === 1 ? one : many}`;
 
+export const formatTestBodiesLeftOut = ({ count, methods }) => `a shape run has no test method judge, so the bodies of ${formatCounted(count, "test method", "test methods")} are not judged: ${methods.join(", ")}`;
+
+const formatTestBodiesPhrase = ({ testBodiesLeftOut }) => (testBodiesLeftOut ? `test bodies left out: ${formatCount(testBodiesLeftOut.count)} (${testBodiesLeftOut.methods.join(", ")})` : "");
+
 export const findAcrossApplicationsCounts = prepared => {
   const counts = prepared.entryBoundaries;
   return counts && counts.boundaries > 0 ? counts : null;
@@ -73,5 +78,5 @@ const FILTERED_WHEN_THE_REVIEW_STARTED = "filtered when the review was started";
 
 export function formatScopeLine(scope) {
   if (!scope) return "";
-  return [`**Scope** · ${scope.askedAtTheCostCheck ? FILTERED_AT_THE_COST_CHECK : FILTERED_WHEN_THE_REVIEW_STARTED}`, formatScalesPhrase(scope), formatJudgesPhrase(scope), formatPathsPhrase(scope), formatJudgeCallsPhrase(scope)].filter(Boolean).join(" · ");
+  return [`**Scope** · ${scope.askedAtTheCostCheck ? FILTERED_AT_THE_COST_CHECK : FILTERED_WHEN_THE_REVIEW_STARTED}`, formatScalesPhrase(scope), formatJudgesPhrase(scope), formatPathsPhrase(scope), formatTestBodiesPhrase(scope), formatJudgeCallsPhrase(scope)].filter(Boolean).join(" · ");
 }
