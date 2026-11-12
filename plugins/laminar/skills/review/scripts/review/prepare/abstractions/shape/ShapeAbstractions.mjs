@@ -152,7 +152,9 @@ export class ShapeAbstractions {
   }
 
   buildReviewAbstractions() {
+    this.methodsWithNoBody = [];
     const abstractions = this.buildTheTree();
+    for (const methodWithNoBody of this.methodsWithNoBody) this.numberTheTree(methodWithNoBody);
     const everyAbstraction = abstractions.flatMap(function listWithChildren(abstraction) { return [abstraction, ...abstraction.children.flatMap(listWithChildren)]; });
     return {
       mode: CHANGE_MODES.SHAPE,
@@ -172,6 +174,7 @@ export class ShapeAbstractions {
       entryBoundaries: [],
       boundaryPaths: [],
       publicChangeKinds: this.buildPublicChangeKinds(everyAbstraction),
+      methodsWithNoBody: this.methodsWithNoBody,
     };
   }
 
@@ -320,6 +323,7 @@ export class ShapeAbstractions {
     const methods = placement.methods
       .filter(({ method }) => Boolean(method.body))
       .map(methodPlacement => this.buildTheMethod(shapeClass, placement, methodPlacement, renderedLines));
+    for (const methodPlacement of placement.methods.filter(({ method }) => !method.body)) this.methodsWithNoBody.push(this.buildTheMethodWithNoBody(shapeClass, methodPlacement, renderedLines));
     shapeClass.children = [...this.buildTheFields(shapeClass, placement, renderedLines), ...methods];
     return shapeClass;
   }
@@ -375,10 +379,24 @@ export class ShapeAbstractions {
     });
   }
 
+  buildTheMethodWithNoBody(shapeClass, methodPlacement, renderedLines) {
+    const shapeMethod = this.createTheMethod(shapeClass, methodPlacement);
+    shapeMethod.slice = this.slices.buildOwnLinesSlice(shapeMethod, renderedLines, this.listTypeHeadSections(shapeMethod, renderedLines));
+    return shapeMethod;
+  }
+
   buildTheMethod(shapeClass, placement, methodPlacement, renderedLines) {
-    const { method, lines } = methodPlacement;
+    const shapeMethod = this.createTheMethod(shapeClass, methodPlacement);
+    const typeHeadSections = this.listTypeHeadSections(shapeMethod, renderedLines);
+    shapeMethod.slice = this.slices.buildOwnLinesSlice(shapeMethod, renderedLines, typeHeadSections);
+    shapeMethod.children = this.buildTheLocals(shapeMethod, renderedLines, typeHeadSections);
+    if (!shapeMethod.isTest) this.placeTheSameDecisions(shapeMethod, this.decisionSearch.findSameDecisionPlaces(placement, methodPlacement));
+    return shapeMethod;
+  }
+
+  createTheMethod(shapeClass, { method, lines }) {
     const visibility = readVisibilityOfTheMethod(method);
-    const shapeMethod = createAbstraction({
+    return createAbstraction({
       scale: Scale.METHOD.name,
       name: method.name,
       enclosingTypeName: shapeClass.name,
@@ -390,11 +408,6 @@ export class ShapeAbstractions {
       boundaryRank: readBoundaryRank([], [], visibility),
       lines,
     });
-    const typeHeadSections = this.listTypeHeadSections(shapeMethod, renderedLines);
-    shapeMethod.slice = this.slices.buildOwnLinesSlice(shapeMethod, renderedLines, typeHeadSections);
-    shapeMethod.children = this.buildTheLocals(shapeMethod, renderedLines, typeHeadSections);
-    if (!shapeMethod.isTest) this.placeTheSameDecisions(shapeMethod, this.decisionSearch.findSameDecisionPlaces(placement, methodPlacement));
-    return shapeMethod;
   }
 
   listTypeHeadSections(abstraction, renderedLines) {

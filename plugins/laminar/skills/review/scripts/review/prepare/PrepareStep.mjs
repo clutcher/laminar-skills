@@ -215,7 +215,7 @@ export class PrepareStep {
   run() {
     this.codeUnderReview = [];
     this.scriptFindings = buildScriptFindings(this.walk.listEveryAbstraction().filter(abstraction => this.filter.keepsPath(abstraction.path)), this.extracted.changedLines || {}, {
-      selectedAbstractions: this.walk.collectSelectedAbstractions().filter(abstraction => this.filter.keepsPath(abstraction.path)),
+      selectedAbstractions: [...this.walk.collectSelectedAbstractions(), ...(this.extracted.methodsWithNoBody || [])].filter(abstraction => this.filter.keepsPath(abstraction.path)),
       applications: this.walk.findApplicationsWithChangedCode(abstraction => this.filter.keepsPath(abstraction.path)),
       keepsJudgeType: judgeType => this.filter.keepsJudgeType(judgeType),
       keepsScale: scale => this.filter.keepsScale(scale),
