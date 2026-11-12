@@ -43,6 +43,8 @@ const readsTheMember = (method, memberName) => isAText(method.body) && new RegEx
 
 const getGroupOfTheClass = theClass => (Number.isFinite(theClass.group) ? theClass.group : FIRST_GROUP);
 
+const namesTheRenamedMember = (existingDefect, member) => existingDefect.member === member.oldName || existingDefect.member === member.name;
+
 class MigrationPlan {
   constructor(model, currentTree) {
     this.model = model;
@@ -68,6 +70,19 @@ class MigrationPlan {
 
   isFixedApart(theClass, memberName) {
     return this.listExistingDefectsOf(theClass).some(existingDefect => existingDefect.member === memberName);
+  }
+
+  // A member renamed by oldName whose existing defect the model fixes in its own group is renamed in that group, so the rename stands once.
+  getGroupOfTheMemberRename(theClass, member) {
+    const existingDefect = this.listExistingDefectsOf(theClass).find(fixedDefect => namesTheRenamedMember(fixedDefect, member));
+    return existingDefect ? existingDefect.group : getGroupOfTheClass(theClass);
+  }
+
+  isFixedByARename(existingDefect) {
+    const theClass = this.model.findClass(existingDefect.class);
+    if (!theClass) return false;
+
+    return [...readList(theClass.methods), ...readList(theClass.fields)].some(member => isAText(member.oldName) && namesTheRenamedMember(existingDefect, member));
   }
 
   listClassesOfTheFile(file) {
@@ -229,13 +244,14 @@ class MigrationPlan {
         steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames the class ${oldTypeName} to ${theClass.name}, with no change of behavior${this.describeImportUpdate(importingFiles)}`, [theClass.file, ...callerFiles, ...importingFiles]));
       }
       for (const method of readList(theClass.methods)) {
-        if (isAText(method.oldName)) steps.push(this.createMethodRenameStep(theClass, method, group));
+        if (isAText(method.oldName)) steps.push(this.createMethodRenameStep(theClass, method, this.getGroupOfTheMemberRename(theClass, method)));
       }
       // A renamed field is a changed public member: the step updates each reader file in the group of the rename, so the group builds alone.
       for (const field of readList(theClass.fields)) {
         if (!isAText(field.oldName)) continue;
-        const readerFiles = this.listReaderFiles(theClass, field.oldName, group);
-        steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames ${this.model.getClassDisplayName(theClass)}#${field.oldName} to ${field.name}, with no change of behavior${this.describeReaderUpdate(readerFiles)}`, [theClass.file, ...readerFiles]));
+        const groupOfTheRename = this.getGroupOfTheMemberRename(theClass, field);
+        const readerFiles = this.listReaderFiles(theClass, field.oldName, groupOfTheRename);
+        steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, groupOfTheRename, `renames ${this.model.getClassDisplayName(theClass)}#${field.oldName} to ${field.name}, with no change of behavior${this.describeReaderUpdate(readerFiles)}`, [theClass.file, ...readerFiles]));
       }
     }
     return steps;
@@ -332,8 +348,9 @@ class MigrationPlan {
     return fixedApart.length ? `, except ${joinNames(fixedApart)}` : "";
   }
 
+  // An existing defect whose fix is a rename by oldName gets no step of its own, because the rename step stands in its group.
   listExistingDefectSteps() {
-    return this.existingDefects.map(existingDefect => {
+    return this.existingDefects.filter(existingDefect => !this.isFixedByARename(existingDefect)).map(existingDefect => {
       const theClass = this.model.findClass(existingDefect.class);
       return this.createStep(MIGRATION_STAGES.CHANGED_MEMBERS, existingDefect.group, `fixes ${existingDefect.member} of ${existingDefect.class}: ${existingDefect.fix}`, theClass ? [theClass.file] : []);
     });
