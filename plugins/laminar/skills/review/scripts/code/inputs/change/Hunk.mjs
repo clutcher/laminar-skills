@@ -153,8 +153,20 @@ export class ChangedFile {
     return this.hunks.reduce((highest, hunk) => Math.max(highest, hunk.lastLine), 1);
   }
 
+  copyAsWholeFile() {
+    if (!this.lines) return this;
+    const shownLines = this.lines[this.lines.length - 1] === "" ? this.lines.slice(0, -1) : this.lines;
+    const hunk = new Hunk(1, shownLines.length, "");
+    for (const text of shownLines) hunk.addAddedLine(text);
+    return Object.assign(new ChangedFile(this.path, null, FILE_STATUS.CREATED), { hunks: [hunk], lines: this.lines });
+  }
+
   toJSON() {
     return { path: this.path, oldPath: this.oldPath, status: this.status, hunks: this.hunks.map(hunk => hunk.toJSON()) };
+  }
+
+  static createUnchanged(filePath, lines) {
+    return Object.assign(new ChangedFile(filePath, null, FILE_STATUS.CHANGED), { lines });
   }
 
   static createFromJSON(saved) {

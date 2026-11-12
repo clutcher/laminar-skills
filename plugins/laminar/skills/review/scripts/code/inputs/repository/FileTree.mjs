@@ -25,6 +25,10 @@ export class Tree {
     return this.folders.has(folder);
   }
 
+  holdsTheFile(filePath) {
+    return this.paths.includes(filePath);
+  }
+
   listChildren(folder) {
     const childrenByNameMap = new Map();
     for (const given of this.paths) {

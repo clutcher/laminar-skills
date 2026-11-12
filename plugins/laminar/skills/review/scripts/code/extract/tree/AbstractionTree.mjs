@@ -19,6 +19,7 @@ export const readDescribedFields = abstraction => ({
   visibility: abstraction.visibility,
   isTest: abstraction.isTest,
   ...(abstraction.testKind ? { testKind: abstraction.testKind } : {}),
+  ...(abstraction.judgedWhole ? { judgedWhole: true } : {}),
   boundaryRank: abstraction.boundaryRank,
   lines: abstraction.lines,
 });

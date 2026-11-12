@@ -38,6 +38,10 @@ export class CreatedFolders {
     return this.readsTheBase && this.after.holds(folder);
   }
 
+  holdsTheFileAfterTheChange(filePath) {
+    return this.readsTheBase && this.after.holdsTheFile(filePath);
+  }
+
   isRemoved(folder) {
     return this.readsTheBase && folder !== THE_REPOSITORY_ROOT && this.before.holds(folder) && !this.after.holds(folder);
   }

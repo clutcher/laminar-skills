@@ -16,7 +16,7 @@ const KINDS_JUDGED_BELOW_THEIR_OWN_SCALE = new Set([CHANGE_KINDS.INTERNALS_CHANG
 const isAMethodWithItsOwnChange = abstraction => abstraction.scale === Scale.METHOD.name && abstraction.changeKind !== CHANGE_KINDS.MOVED;
 
 const schedulesItsOwnScale = abstraction => {
-  if (!KINDS_JUDGED_BELOW_THEIR_OWN_SCALE.has(abstraction.changeKind)) return true;
+  if (abstraction.judgedWhole || !KINDS_JUDGED_BELOW_THEIR_OWN_SCALE.has(abstraction.changeKind)) return true;
   return isAMethodWithItsOwnChange(abstraction) || (abstraction.scale === Scale.MODULE.name && holdsABoundaryFact(abstraction));
 };
 

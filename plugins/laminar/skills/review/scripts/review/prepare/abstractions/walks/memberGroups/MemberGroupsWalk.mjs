@@ -4,10 +4,10 @@ import { groupMembers } from "./MemberGroups.mjs";
 
 export const MIN_MEMBER_GROUPS = 2;
 
-export const SELECTION_REASONS = Object.freeze({ CREATED: "created", GROUP_CHANGED: "member group changed" });
+export const SELECTION_REASONS = Object.freeze({ CREATED: "created", GROUP_CHANGED: "member group changed", JUDGED_WHOLE: "judged whole" });
 
 const isAChangedProductionClass = abstraction => abstraction.scale === Scale.CLASS.name && !abstraction.isTest && !isTestPath(abstraction.path)
-  && Boolean(abstraction.lines) && changesTheCode(abstraction.changeKind);
+  && Boolean(abstraction.lines) && (changesTheCode(abstraction.changeKind) || Boolean(abstraction.judgedWhole));
 
 const readMethodDisplayName = (className, method) => formatDisplayNameOfMethod({ enclosingTypeName: className, name: method.name });
 
@@ -79,6 +79,7 @@ export class MemberGroupsWalk {
   readSelectionReason(abstraction, classUses, groups) {
     if (groups.length < MIN_MEMBER_GROUPS) return "";
     if (abstraction.changeKind === CHANGE_KINDS.CREATED) return SELECTION_REASONS.CREATED;
+    if (abstraction.judgedWhole) return SELECTION_REASONS.JUDGED_WHOLE;
     const addedLines = this.addedLinesByPathMap.get(abstraction.path);
     const touched = Boolean(addedLines) && listGroupLines(classUses, groups).some(span => holdsAnAddedLine(addedLines, span.from, span.to));
     return touched ? SELECTION_REASONS.GROUP_CHANGED : "";

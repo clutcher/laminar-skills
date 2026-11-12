@@ -17,7 +17,7 @@ const LEAST_TYPES_NAMED_TOGETHER = 2;
 const CHANGE_KINDS_OF_A_CHANGED_TYPE = new Set([CHANGE_KINDS.CREATED, CHANGE_KINDS.BOUNDARY_CHANGED]);
 
 const isAChangedProductionType = abstraction => abstraction.scale === Scale.CLASS.name && !abstraction.isTest && !isTestPath(abstraction.path)
-  && Boolean(abstraction.lines) && CHANGE_KINDS_OF_A_CHANGED_TYPE.has(abstraction.changeKind);
+  && Boolean(abstraction.lines) && (CHANGE_KINDS_OF_A_CHANGED_TYPE.has(abstraction.changeKind) || Boolean(abstraction.judgedWhole));
 
 const isAProductionTypeInSource = type => isADeclaredType(type) && Boolean(type.place) && type.place.hasASourceLine && !isTestPath(type.place.file);
 

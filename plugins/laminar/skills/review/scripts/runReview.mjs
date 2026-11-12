@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { ChangeReader, readTopFolderOf, CODE_GRAPH_FILE, ReviewWorktree, sweepUnusedReviewWorktreesBeside, WorktreeStop, findHeadOfRevisions, ExtractOutput, ExtractStep, listWhatTheShapeShows, readShapeModel, ShapeModelStop } from "./code/index.mjs";
+import { ChangeReader, readTopFolderOf, CODE_GRAPH_FILE, ReviewWorktree, sweepUnusedReviewWorktreesBeside, WorktreeStop, findHeadOfRevisions, ExtractOutput, ExtractStep, listWhatTheShapeShows, readShapeModel, ShapeModelStop, WholeFiles } from "./code/index.mjs";
 import { PrepareStep, REVIEW_ABSTRACTIONS_FILE } from "./review/prepare/PrepareStep.mjs";
 import { CodeGraphWalks } from "./review/prepare/abstractions/CodeGraphWalks.mjs";
 import { ShapeAbstractions } from "./review/prepare/abstractions/shape/ShapeAbstractions.mjs";
@@ -19,7 +19,7 @@ import { RunFileStop } from "./files/runFile.mjs";
 
 const SUBCOMMANDS = ["extract", "prepare", "merge", "render"];
 
-const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --repo <path> --uncommitted <file,...> | --diff <patch>] [prepare --repo <path> --shape <shape model>] [--kind-base <revision>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
+const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --repo <path> --uncommitted <file,...> | --diff <patch>] [prepare --repo <path> --shape <shape model>] [--kind-base <revision>] [--whole-files <path ...>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
 
 const PREPARE_RETURN_FILE = "prepare-return.json";
 
@@ -39,7 +39,7 @@ const MERGE_RETURN_META = { name: "merge-return", description: "The merge return
 const splitList = given => String(given || "").split(",").map(piece => piece.trim()).filter(Boolean);
 
 function parseArguments(argv) {
-  const parsed = { files: [], uncommitted: [], exclude: [], judges: [], paths: [], scales: [], findings: [], verdicts: [] };
+  const parsed = { files: [], wholeFiles: [], uncommitted: [], exclude: [], judges: [], paths: [], scales: [], findings: [], verdicts: [] };
   for (let index = 0; index < argv.length; index++) {
     const name = argv[index];
     if (name === "--run") parsed.run = argv[++index];
@@ -56,6 +56,7 @@ function parseArguments(argv) {
     else if (name === "--paths") parsed.paths = splitList(argv[++index]);
     else if (name === "--scales") parsed.scales = splitList(argv[++index]);
     else if (name === "--files") { while (index + 1 < argv.length && !argv[index + 1].startsWith("--")) parsed.files.push(argv[++index]); }
+    else if (name === "--whole-files") { while (index + 1 < argv.length && !argv[index + 1].startsWith("--")) parsed.wholeFiles.push(...splitList(argv[++index])); }
     else { console.error(`unknown argument ${name}`); process.exit(2); }
   }
   return parsed;
@@ -109,7 +110,7 @@ function readChangeOfOneSide(parsed, repository) {
 function readChange(parsed) {
   const repository = parsed.repo ? resolveAbsolutePath(parsed.repo) : null;
   if (!repository && !parsed.diff) { console.error(USAGE); process.exit(2); }
-  if (parsed.revisions && !parsed.diff && !parsed.uncommitted.length) return readChangeOfRevisions(repository, parsed);
+  if (readsTheRevisions(parsed)) return readChangeOfRevisions(repository, parsed);
   return { change: readChangeOfOneSide(parsed, repository), kindChange: null };
 }
 
@@ -121,9 +122,19 @@ function printTheExtractSummary(runFolder, written, indexUse, filesWithNoLanguag
   if (indexUse) console.log(`extract: search index read from the cache for ${indexUse.read.length} language famil${indexUse.read.length === 1 ? "y" : "ies"} and built for ${indexUse.built.length}, cache folder ${indexUse.folder}`);
 }
 
+const readsTheRevisions = parsed => Boolean(parsed.revisions) && !parsed.diff && !parsed.uncommitted.length;
+
+function stopOnWholeFilesThatCannotBeJudged(parsed) {
+  if (!parsed.wholeFiles.length) return;
+  if (!readsTheRevisions(parsed)) { console.error("extract: --whole-files needs --range"); process.exit(2); }
+  const outside = WholeFiles.listPathsOutsideTheFiles(parsed.wholeFiles, parsed.files);
+  if (outside.length) { console.error(`extract: --whole-files names ${outside.join(", ")}, which lies inside no path of --files`); process.exit(2); }
+}
+
 function extract(parsed) {
+  stopOnWholeFilesThatCannotBeJudged(parsed);
   const { change, kindChange } = readChange(parsed);
-  const step = new ExtractStep(change, { kindBase: parsed.kindBase || null, kindChange });
+  const step = new ExtractStep(change, { kindBase: parsed.kindBase || null, kindChange, wholeFilePaths: parsed.wholeFiles });
   const tree = step.run();
   const written = new ExtractOutput(step, tree).writeAndSummarize(parsed.run);
   printTheExtractSummary(parsed.run, written, step.cachedSourceIndex.readIndexUse(), step.listFilesWithNoLanguageDriver());

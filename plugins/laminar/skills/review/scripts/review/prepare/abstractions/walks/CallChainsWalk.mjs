@@ -176,9 +176,15 @@ export class CallChainsWalk {
     this.addedLinesByPathMap = change.readAddedLinesByPath();
   }
 
-  collectRootsByFamily(abstractions) {
+  readRootLinesByPath(seedLinesByPathMap) {
+    const rootLinesByPathMap = new Map(this.addedLinesByPathMap);
+    for (const [filePath, seedLines] of seedLinesByPathMap) rootLinesByPathMap.set(filePath, new Set([...(rootLinesByPathMap.get(filePath) || []), ...seedLines]));
+    return rootLinesByPathMap;
+  }
+
+  collectRootsByFamily(abstractions, seedLinesByPathMap) {
     const rootsByFamilyMap = new Map();
-    for (const [filePath, addedLines] of this.addedLinesByPathMap) {
+    for (const [filePath, addedLines] of this.readRootLinesByPath(seedLinesByPathMap)) {
       const family = readLanguageFamily(filePath);
       const callGraph = family && !isTestPath(filePath) ? this.findCallGraph(family) : null;
       if (!callGraph) continue;
@@ -191,9 +197,9 @@ export class CallChainsWalk {
     return rootsByFamilyMap;
   }
 
-  buildGroups(abstractions) {
+  buildGroups(abstractions, seedLinesByPathMap = new Map()) {
     const groups = [];
-    for (const { callGraph, abstractionIdByMethodMap } of this.collectRootsByFamily(abstractions).values()) {
+    for (const { callGraph, abstractionIdByMethodMap } of this.collectRootsByFamily(abstractions, seedLinesByPathMap).values()) {
       groups.push(...new FamilyCallChainsWalk(this.repositoryText, this.testCode, callGraph, this.references, this.callWalks).buildGroups(new Set(abstractionIdByMethodMap.keys()), abstractionIdByMethodMap));
     }
     return groups;

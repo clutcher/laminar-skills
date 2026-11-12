@@ -85,5 +85,6 @@ export { findDeclarationInLine } from "./extract/abstractions/variable/generic/t
 export { readDeclarations } from "./extract/walk/SourceWalk.mjs";
 export { SourceText } from "./inputs/source/SourceText.mjs";
 export { CreatedFolders } from "./inputs/change/CreatedFolders.mjs";
+export { WholeFiles } from "./inputs/change/WholeFiles.mjs";
 export { listWhatTheShapeShows, PUBLIC_METHOD_VISIBILITY, readShapeModel, SHAPE_KINDS, SHAPE_SHOWS, ShapeModelStop } from "./inputs/shape/ShapeModel.mjs";
 export { readBasePaths, ShapeFiles } from "./inputs/shape/ShapeFiles.mjs";

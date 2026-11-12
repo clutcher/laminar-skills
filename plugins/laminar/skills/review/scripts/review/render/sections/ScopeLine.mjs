@@ -10,9 +10,24 @@ const wasAskedAtTheCostCheck = fullPlan => Boolean(fullPlan && fullPlan.passesTh
 
 const markAShapeRun = prepared => (prepared.mode === CHANGE_MODES.SHAPE ? true : null);
 
+const buildTheScopeOfTheWholeFilesOnly = wholeFiles => ({
+  askedAtTheCostCheck: null,
+  judges: [],
+  paths: [],
+  scales: [],
+  leftOut: null,
+  leftOutByThePaths: null,
+  testBodiesLeftOut: null,
+  judgeCallsPlanned: null,
+  judgeCallsInThisRun: null,
+  shapeRun: null,
+  wholeFiles,
+});
+
 export function buildScope(prepared, plan, fullPlan, leftOutCountByScaleMap = null) {
   const filter = prepared.filter;
-  if (!filter) return null;
+  const wholeFiles = prepared.wholeFiles || null;
+  if (!filter) return wholeFiles ? buildTheScopeOfTheWholeFilesOnly(wholeFiles) : null;
   return {
     askedAtTheCostCheck: wasAskedAtTheCostCheck(fullPlan),
     judges: filter.judges || [],
@@ -24,6 +39,7 @@ export function buildScope(prepared, plan, fullPlan, leftOutCountByScaleMap = nu
     judgeCallsPlanned: findJudgeCalls(fullPlan),
     judgeCallsInThisRun: findJudgeCalls(plan),
     shapeRun: markAShapeRun(prepared),
+    wholeFiles,
   };
 }
 
@@ -76,7 +92,16 @@ const FILTERED_AT_THE_COST_CHECK = "filtered at the cost check";
 
 const FILTERED_WHEN_THE_REVIEW_STARTED = "filtered when the review was started";
 
+const formatFilterPhrase = ({ askedAtTheCostCheck }) => {
+  if (askedAtTheCostCheck === null) return "";
+  return askedAtTheCostCheck ? FILTERED_AT_THE_COST_CHECK : FILTERED_WHEN_THE_REVIEW_STARTED;
+};
+
+const formatFilesJudgedWholePhrase = ({ wholeFiles }) => (wholeFiles
+  ? `judged whole: ${formatCount(wholeFiles.paths.length)} file(s) at module and class scale, with the design relations of their methods, ${formatCount(wholeFiles.renamed.length)} renamed file(s) at every scale`
+  : "");
+
 export function formatScopeLine(scope) {
   if (!scope) return "";
-  return [`**Scope** · ${scope.askedAtTheCostCheck ? FILTERED_AT_THE_COST_CHECK : FILTERED_WHEN_THE_REVIEW_STARTED}`, formatScalesPhrase(scope), formatJudgesPhrase(scope), formatPathsPhrase(scope), formatTestBodiesPhrase(scope), formatJudgeCallsPhrase(scope)].filter(Boolean).join(" · ");
+  return ["**Scope**", formatFilterPhrase(scope), formatScalesPhrase(scope), formatJudgesPhrase(scope), formatPathsPhrase(scope), formatTestBodiesPhrase(scope), formatFilesJudgedWholePhrase(scope), formatJudgeCallsPhrase(scope)].filter(Boolean).join(" · ");
 }

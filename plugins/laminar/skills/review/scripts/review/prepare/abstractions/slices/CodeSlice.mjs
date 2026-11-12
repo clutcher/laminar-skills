@@ -53,7 +53,7 @@ export function needFor(abstraction) {
   if (abstraction.changeKind === CHANGE_KINDS.REMOVED) return SLICE_NEEDS.THE_REFERENCES_AND_TYPE_HEADS;
   if (abstraction.scale === Scale.VARIABLE.name) return abstraction.occurrences.length ? SLICE_NEEDS.THE_DECLARING_LINES_THEIR_TYPES_AND_USES : SLICE_NEEDS.THE_DECLARING_LINES_AND_THEIR_TYPES;
   if (abstraction.scale === Scale.CLASS.name) {
-    return abstraction.changeKind === CHANGE_KINDS.CREATED ? SLICE_NEEDS.THE_FILE_WHOLE : SLICE_NEEDS.THE_MEMBER_AND_ITS_TYPE_HEADS;
+    return abstraction.changeKind === CHANGE_KINDS.CREATED || abstraction.judgedWhole ? SLICE_NEEDS.THE_FILE_WHOLE : SLICE_NEEDS.THE_MEMBER_AND_ITS_TYPE_HEADS;
   }
   if (abstraction.isTest) return SLICE_NEEDS.THE_TEST_METHOD_AND_THE_HEADS_UNDER_TEST;
   if (abstraction.changeKind === CHANGE_KINDS.INTERNALS_CHANGED) return SLICE_NEEDS.THE_MEMBER_AND_ITS_TYPE_HEADS;

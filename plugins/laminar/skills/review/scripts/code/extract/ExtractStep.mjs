@@ -4,7 +4,8 @@ import { doesSpanHoldLine } from "../graph/abstractions/Place.mjs";
 import { Scale } from "../graph/abstractions/Scale.mjs";
 import { isADeclaredType } from "../graph/abstractions/Abstraction.mjs";
 import { findRepositoryToRead } from "../inputs/change/ChangeReader.mjs";
-import { FILE_STATUS } from "../inputs/change/Hunk.mjs";
+import { ChangedFile, FILE_STATUS } from "../inputs/change/Hunk.mjs";
+import { WholeFiles } from "../inputs/change/WholeFiles.mjs";
 import { RepositoryText } from "../inputs/repository/RepositoryText.mjs";
 import { CachedSourceIndex } from "../inputs/repository/index/CachedSourceIndex.mjs";
 import { CHANGE_KINDS, changesTheCode, readDeclaredMemberChangeKind, readFileChangeKind } from "../inputs/change/AbstractionChange.mjs";
@@ -170,7 +171,7 @@ const listTheAbstractionAndItsDescendants = abstraction => [abstraction, ...abst
 const leaveOutTheFoldersOfBuildFilesOnly = changedFolders => new Map([...changedFolders].filter(([, module]) => !holdsOnlyBuildFiles(module)));
 
 export class ExtractStep {
-  constructor(change, { indexCacheFolder, kindBase = null, kindChange = null } = {}) {
+  constructor(change, { indexCacheFolder, kindBase = null, kindChange = null, wholeFilePaths = [] } = {}) {
     this.change = change;
     this.kindBase = kindBase;
     this.kindChange = kindChange;
@@ -178,6 +179,7 @@ export class ExtractStep {
     this.cachedSourceIndex = new CachedSourceIndex(change.repository, { cacheFolder: indexCacheFolder, listsUntrackedFiles: change.listsUntrackedFiles });
     this.repositoryText = new RepositoryText(change.repository, change.mode, change.files, { cachedSourceIndex: this.cachedSourceIndex });
     this.createdFolders = CreatedFolders.createFromChange(change);
+    this.wholeFiles = wholeFilePaths.length ? WholeFiles.createFromTheChange(wholeFilePaths, change, this.createdFolders) : WholeFiles.createNone();
     this.decisionSearches = [];
     this.literalConstants = [];
     this.droppedAsTrivial = 0;
@@ -242,7 +244,7 @@ export class ExtractStep {
 
   markTheMovedMethods() {
     const movedMethods = this.tree.listEveryAbstraction()
-      .filter(abstraction => changesTheCode(abstraction.changeKind) && this.changeKindReadingOfTheReview.isAMovedMethod(abstraction));
+      .filter(abstraction => changesTheCode(abstraction.changeKind) && !this.wholeFiles.isWholeAtEveryScale(abstraction.path) && this.changeKindReadingOfTheReview.isAMovedMethod(abstraction));
     const moved = new Set(movedMethods.flatMap(listTheAbstractionAndItsDescendants));
     for (const abstraction of moved) abstraction.changeKind = CHANGE_KINDS.MOVED;
     this.decisionSearches = this.decisionSearches.filter(({ abstraction }) => !moved.has(abstraction));
@@ -340,10 +342,16 @@ export class ExtractStep {
   }
 
   readTheChangedFiles() {
-    const readings = this.change.files
+    const readings = this.listTheFilesToRead()
       .map(file => ({ file, driver: findDriverOfASourceFile(file.path), reading: null }))
       .map(changedFileReading => ({ ...changedFileReading, reading: changedFileReading.driver ? this.createReading(changedFileReading.file, changedFileReading.driver) : null }));
     return readings;
+  }
+
+  listTheFilesToRead() {
+    const changedFiles = this.change.files.map(file => (this.wholeFiles.isWholeAtEveryScale(file.path) ? file.copyAsWholeFile() : file));
+    const unchangedFiles = this.wholeFiles.listUnchangedPaths().map(filePath => ChangedFile.createUnchanged(filePath, this.change.readFileLines(filePath)));
+    return [...changedFiles, ...unchangedFiles];
   }
 
   countTheTrivialHunks(readings) {
@@ -370,7 +378,8 @@ export class ExtractStep {
     this.openedByTheChange = this.moduleOpenings.collectFoldersOpenedByTheChange();
     this.foldersAFileLeft = new Set(this.listTheFoldersAFileLeft(foldersWithReadings));
     this.foldersARemovedFolderLeft = new Set(this.createdFolders.listFoldersARemovedFolderLeft([...foldersWithReadings, ...listTheFoldersFilesLeft(this.change.files)]));
-    this.moduleFolders = new Set([...modules.keys(), ...this.pathEndFoldersReadAlone, ...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange, ...this.foldersAFileLeft, ...this.foldersARemovedFolderLeft]);
+    this.foldersJudgedWhole = new Set(this.wholeFiles.listModuleFolders());
+    this.moduleFolders = new Set([...modules.keys(), ...this.pathEndFoldersReadAlone, ...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange, ...this.foldersAFileLeft, ...this.foldersARemovedFolderLeft, ...this.foldersJudgedWhole]);
   }
 
   addTheModules(changedFolders, modules) {
@@ -384,7 +393,7 @@ export class ExtractStep {
       this.addModule({ ...NO_FILES_OF_ITS_OWN, folder }, systemsByFolderMap);
     }
     const foldersWithAModule = new Set([...modules.keys(), ...this.pathEndFoldersReadAlone]);
-    for (const folder of [...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange, ...this.foldersAFileLeft, ...this.foldersARemovedFolderLeft]) {
+    for (const folder of [...this.createdSubfoldersByJoinedFolderMap.keys(), ...this.openedByTheChange, ...this.foldersAFileLeft, ...this.foldersARemovedFolderLeft, ...this.foldersJudgedWhole]) {
       if (foldersWithAModule.has(folder)) continue;
       foldersWithAModule.add(folder);
       this.addModule({ ...NO_FILES_OF_ITS_OWN, folder }, systemsByFolderMap);
@@ -404,6 +413,7 @@ export class ExtractStep {
       lines: null,
     });
     moduleAbstraction.module = this.buildModuleReading(module);
+    if (this.foldersJudgedWhole.has(module.folder)) moduleAbstraction.judgedWhole = true;
     return parent ? parent.add(moduleAbstraction) : this.tree.addRoot(moduleAbstraction);
   }
 
@@ -468,7 +478,7 @@ export class ExtractStep {
     const { file, driver, reading } = changedFileReading;
     if (driver.holdsKeyTrees) { this.addKeysOfFile(changedFileReading, parents); return; }
     if (driver.fileHoldsTypesOnly && file.existsAfterTheChange) { this.addTypesOfFile({ file, driver, reading }, parents); return; }
-    const kind = readFileChangeKind(file, reading.events);
+    const kind = readFileChangeKind(file, reading.events) || this.readKindOfATrivialFileJudgedWhole(file);
     if (!kind) { this.dropAsTrivial(file); return; }
     const parent = parents.get(readFolderPath(file.path));
     const { tag: typeTag, span, bodyLines } = reading.readTheFilesOwnTypeAndSpan();
@@ -483,6 +493,7 @@ export class ExtractStep {
     }));
     classAbstraction.measures = measureClass(bodyLines, reading.tags.filter(tag => tag.scale === Scale.METHOD.name).length);
     classAbstraction.facts = AbstractionFacts.createNone();
+    if (this.wholeFiles.isJudgedWhole(file.path)) classAbstraction.judgedWhole = true;
     this.rememberSearch(classAbstraction, file, reading.createdTypes.flatMap(createdType => createdType.changedSpan.lines));
     for (const { tag, changedSpan } of reading.createdTypes) {
       if (isTheFilesOwnType(reading, tag)) continue;
@@ -495,6 +506,10 @@ export class ExtractStep {
     }
     for (const changedSpan of reading.changedBodySpans) this.addChangedBodySpan(classAbstraction, file, driver, reading, changedSpan);
     for (const form of readReferenceFormsOf(file, driver)) this.addReferenceForm(classAbstraction, file, form);
+  }
+
+  readKindOfATrivialFileJudgedWhole(file) {
+    return this.wholeFiles.isWholeAboveTheMethod(file.path) ? CHANGE_KINDS.INTERNALS_CHANGED : null;
   }
 
   addTypesOfFile({ file, driver, reading }, parents) {

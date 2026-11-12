@@ -89,10 +89,10 @@ const isAModuleWithOnlyItsInternalsChanged = abstraction => abstraction.scale ==
 
 const followsAKnownTestLayout = abstraction => abstraction.scale === Scale.MODULE.name && Boolean((abstraction.module || {}).followsAKnownTestLayout);
 
-const isReadOnly = abstraction => NAME_ONLY_KINDS.has(abstraction.changeKind)
+const isReadOnly = abstraction => !abstraction.judgedWhole && (NAME_ONLY_KINDS.has(abstraction.changeKind)
   || holdsOnlyCreatedSubfolders(abstraction)
   || holdsOnlyAnOpening(abstraction)
-  || isAModuleWithOnlyItsInternalsChanged(abstraction);
+  || isAModuleWithOnlyItsInternalsChanged(abstraction));
 
 export function listTracks(abstraction) {
   if (abstraction.commentsOnly) return holdsAJudgedComment(abstraction) ? [TRACKS.COMMENT] : [];

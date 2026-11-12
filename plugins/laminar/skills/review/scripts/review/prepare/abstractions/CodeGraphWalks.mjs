@@ -18,6 +18,7 @@ import { CoreOperationsWalk } from "./walks/core/CoreOperationsWalk.mjs";
 import { RebuiltValuesWalk } from "./walks/RebuiltValuesWalk.mjs";
 import { MemberGroupsWalk } from "./walks/memberGroups/MemberGroupsWalk.mjs";
 import { VariantTypesWalk } from "./walks/variantTypes/VariantTypesWalk.mjs";
+import { RelationSeeds } from "./walks/RelationSeeds.mjs";
 import { EntryBoundariesWalk } from "./walks/entryBoundaries/EntryBoundariesWalk.mjs";
 import { CodeForms } from "./walks/entryBoundaries/CodeForms.mjs";
 import { BoundaryPathsWalk } from "./walks/BoundaryPathsWalk.mjs";
@@ -155,6 +156,7 @@ export class CodeGraphWalks {
       boundaryPaths: this.boundaryPaths,
       ...createPropertyWhenNotEmpty("codeForms", this.codeForms),
       ...(this.extractedReview.publicChangeKinds ? { publicChangeKinds: this.extractedReview.publicChangeKinds } : {}),
+      ...(this.extractedReview.wholeFiles ? { wholeFiles: this.extractedReview.wholeFiles } : {}),
     };
   }
 
@@ -244,11 +246,13 @@ export class CodeGraphWalks {
     if (this.change.mode !== CHANGE_MODES.REPOSITORY) return;
     const abstractions = this.tree.listEveryAbstraction();
     const findCallGraph = family => this.findCallGraph(family);
-    this.relations.chainGroups = new CallChainsWalk(this.repositoryText, this.testCode, this.change, findCallGraph, this.references, this.callWalks).buildGroups(abstractions);
+    const relationSeeds = new RelationSeeds(this.codeGraph, abstractions);
+    const seededAbstractions = [...abstractions, ...relationSeeds.listSeeds()];
+    this.relations.chainGroups = new CallChainsWalk(this.repositoryText, this.testCode, this.change, findCallGraph, this.references, this.callWalks).buildGroups(seededAbstractions, relationSeeds.readSeedLinesByPath());
     this.relations.parameterRelations = new ScopedParameterRelationsWalk(this.repositoryText, this.testCode, this.change, findCallGraph, this.references, this.codeGraph).findRelations(abstractions);
-    this.relations.coreOperations = new CoreOperationsWalk(this.repositoryText, this.testCode, findCallGraph, filePath => this.findCoreSearchStart(filePath), this.references, this.callWalks).findRelations(abstractions);
-    this.relations.inOutOperations = new InOutOperationsWalk(this.codeGraph, filePath => this.repositoryText.readFileLines(filePath)).findRelations(abstractions);
-    this.relations.rebuiltValues = new RebuiltValuesWalk(this.repositoryText, this.testCode, findCallGraph, this.references, this.codeGraph).findRelations(abstractions);
+    this.relations.coreOperations = new CoreOperationsWalk(this.repositoryText, this.testCode, findCallGraph, filePath => this.findCoreSearchStart(filePath), this.references, this.callWalks).findRelations(seededAbstractions);
+    this.relations.inOutOperations = new InOutOperationsWalk(this.codeGraph, filePath => this.repositoryText.readFileLines(filePath)).findRelations(seededAbstractions);
+    this.relations.rebuiltValues = new RebuiltValuesWalk(this.repositoryText, this.testCode, findCallGraph, this.references, this.codeGraph).findRelations(seededAbstractions);
     this.relations.memberGroups = new MemberGroupsWalk(this.repositoryText, this.change, findCallGraph, this.codeGraph).findRelations(abstractions);
     this.relations.variantTypes = new VariantTypesWalk(this.repositoryText, this.codeGraph).findRelations(abstractions);
     this.entryBoundaryReading = new EntryBoundariesWalk(this.repositoryText, this.testCode, this.change, this.roots, findCallGraph, this.references, this.codeGraph);

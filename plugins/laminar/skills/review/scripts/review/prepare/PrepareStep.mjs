@@ -23,7 +23,7 @@ import { buildBoundaryPathCodeUnderReview, isABoundaryPathCodeUnderReview } from
 import { formatBoundaryPathText } from "./relations/BoundaryPathText.mjs";
 import { IoRuleCache, createRuleKey } from "./io/IoRuleCache.mjs";
 import { buildIoSummary } from "./io/IoSummary.mjs";
-import { COST_PLAN_FILE, formatCostPlanLine, FULL_COST_PLAN_FILE, buildCostPlan, estimateCostTotals, estimateVariableJudgeCost, collectModuleRoots, SCALES_OF_THE_SCALES_RUN } from "./agents/CostPlan.mjs";
+import { COST_PLAN_FILE, formatCostPlanLine, FULL_COST_PLAN_FILE, buildCostPlan, estimateCostTotals, estimateFilesJudgedWholeCost, estimateVariableJudgeCost, collectModuleRoots, SCALES_OF_THE_SCALES_RUN } from "./agents/CostPlan.mjs";
 import { NO_FILTER } from "./selection/ReviewFilter.mjs";
 import { isAnIoPathsCodeUnderReview, buildJudgeWaves } from "./agents/JudgeWaves.mjs";
 import { createPropertyWhenNotEmpty, writeJsonFile } from "../../files/jsonFile.mjs";
@@ -323,7 +323,17 @@ export class PrepareStep {
       scalesRun: this.estimateScalesRun(),
       waves: this.waves.length,
       variableJudge: this.extracted.mode === CHANGE_MODES.SHAPE ? estimateVariableJudgeCost(this.codeUnderReview) : null,
+      wholeFiles: this.extracted.wholeFiles ? estimateFilesJudgedWholeCost(this.extracted.wholeFiles, this.listCodeUnderReviewOfTheWholeFiles()) : null,
     });
+  }
+
+  // The code under review that only the files judged whole bring: items marked judged whole, relations started from their seeds, and every item of a renamed file.
+  listCodeUnderReviewOfTheWholeFiles() {
+    const judgedWholeIds = new Set(this.walk.listEveryAbstraction().filter(abstraction => abstraction.judgedWhole).map(abstraction => abstraction.id));
+    const renamedPaths = new Set(this.extracted.wholeFiles.renamed);
+    return this.codeUnderReview.filter(codeUnderReview => judgedWholeIds.has(codeUnderReview.abstractionId)
+      || (codeUnderReview.abstractionIds || []).some(id => judgedWholeIds.has(id))
+      || renamedPaths.has(codeUnderReview.path));
   }
 
   countByTrack() {
@@ -452,6 +462,7 @@ export class PrepareStep {
       waves: this.waves,
       ...this.buildTheModulesLeftOutByThePaths(),
       ...this.buildTheTestBodiesLeftOut(),
+      ...(this.extracted.wholeFiles ? { wholeFiles: this.extracted.wholeFiles } : {}),
     };
   }
 
