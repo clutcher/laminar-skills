@@ -2,6 +2,7 @@ import { readList } from "../model/DesignModel.mjs";
 import { readCurrentTree } from "../migration/CurrentTree.mjs";
 import { findCompletenessDefects } from "./CompletenessCheck.mjs";
 import { findCurrentTreeDefects } from "./CurrentTreeCheck.mjs";
+import { findConventionOverrideDefects } from "./ConventionOverrides.mjs";
 import { findCycleCheckDefects, findFolderPairOutsideTheBase } from "./CycleCheck.mjs";
 import { DEFECT_CODES, createDefect } from "./DesignDefect.mjs";
 import { findDataFlowDefects } from "./DataFlowCheck.mjs";
@@ -20,7 +21,7 @@ import { readZoneOrder } from "./ZoneOrder.mjs";
 
 const describeCurrentTree = currentTree => (currentTree
   ? `current tree: read from ${currentTree.describe()}`
-  : "current tree: not read, no --repo given, so old paths, old names, removed names, current classes, current members, the fields of modified classes, the methods marked unchanged, the conventions files and each shape-run item left outside the change are not checked");
+  : "current tree: not read, no --repo given, so old paths, old names, removed names, current classes, current members, the fields of modified classes, the methods marked unchanged, the conventions files, the project files of the convention overrides and each shape-run item left outside the change are not checked");
 
 const describeResponseTypes = libraryTypeNames => (libraryTypeNames.length
   ? `response types: library type, not checked: ${libraryTypeNames.join(", ")}`
@@ -90,6 +91,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findSimplestFormDefects(model),
     ...findRenamesWithoutFindingDefects(model, { shapeRuns: shapeReviews, roundModels, reviewText, decidedList }),
     ...(currentTree ? findCurrentTreeDefects(model, currentTree) : []),
+    ...findConventionOverrideDefects(model, currentTree),
     ...(fieldList ? fieldList.defects : []),
     ...cycleCheck.defects,
     ...findExitReachDefects(model, zoneOrder),

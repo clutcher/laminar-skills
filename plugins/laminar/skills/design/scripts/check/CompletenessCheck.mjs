@@ -1,4 +1,4 @@
-import { ANSWER_GIVERS, DOES, FRAMEWORK, KINDS, isAText, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readFolderOfTheFile, readList } from "../model/DesignModel.mjs";
+import { ANSWER_GIVERS, DOES, FRAMEWORK, KINDS, OVERRIDE_KINDS, isAText, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readFolderOfTheFile, readList } from "../model/DesignModel.mjs";
 import { DEFECT_CODES, createDefect, createRecheckDefect } from "./DesignDefect.mjs";
 import { createTestNameForm } from "./TestNameForm.mjs";
 import { isAStopOnItsGroup } from "../plan/StopList.mjs";
@@ -163,6 +163,24 @@ const checkClassNamesOnce = check => {
   }
 };
 
+// A proposed rule has no project file yet, so it names the question whose answer of the user states it, and the text of the rule.
+const KEYS_OF_OVERRIDE_KIND_MAP = new Map([
+  [OVERRIDE_KINDS.OVERRIDE, ["project", "codeStyle", "says"]],
+  [OVERRIDE_KINDS.CONTRADICTION, ["project", "codeStyle", "says"]],
+  [OVERRIDE_KINDS.PROPOSED, ["codeStyle", "says", "rule", "question"]],
+]);
+
+const checkOverrides = (check, overrides) => {
+  const questionIds = new Set(readList(check.model.decisions.questions).map(question => question.id));
+  overrides.forEach((override, at) => {
+    const path = `decisions.conventions.overrides[${at}]`;
+    if (!check.requireKey("override.kind", override, "kind", path)) return;
+
+    for (const key of KEYS_OF_OVERRIDE_KIND_MAP.get(override.kind) || []) check.requireKey(`override.${key}`, override, key, path);
+    if (override.kind === OVERRIDE_KINDS.PROPOSED && isAText(override.question) && !questionIds.has(override.question)) check.addDefect(DEFECT_CODES.QUESTION_UNKNOWN, `${path}.question`, `the question ${override.question} is no id of decisions.questions`);
+  });
+};
+
 const checkConventions = check => {
   const { conventions } = check.model.decisions;
   if (!isAnObject(conventions)) {
@@ -170,6 +188,7 @@ const checkConventions = check => {
     return;
   }
   for (const key of ["folder", "found", "files", "zoneOrder"]) check.requireKey(`conventions.${key}`, conventions, key, "decisions.conventions");
+  checkOverrides(check, readList(conventions.overrides));
 };
 
 const checkForecast = (check, forecast, path) => {

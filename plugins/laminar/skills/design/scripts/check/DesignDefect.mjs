@@ -27,6 +27,8 @@ export const DEFECT_CODES = Object.freeze({
   CURRENT_CLASS_UNACCOUNTED: "current-class-unaccounted",
   CURRENT_MEMBER_UNACCOUNTED: "current-member-unaccounted",
   CONVENTIONS_FILE_UNLISTED: "conventions-file-unlisted",
+  OVERRIDE_ON_A_BOOK_RULE: "override-on-a-book-rule",
+  OVERRIDE_FILE_UNLISTED: "override-file-unlisted",
   ZONE_OUTSIDE_THE_ORDER: "zone-outside-the-order",
   ZONE_ORDER_BROKEN: "zone-order-broken",
   CALL_INTO_THE_IMPLEMENTED_ZONE: "call-into-the-implemented-zone",

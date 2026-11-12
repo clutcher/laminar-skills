@@ -19,6 +19,7 @@ const NAME_OF_DECISION_MAP = new Map([
   ["findings", describeFinding],
   ["scriptCases", scriptCase => scriptCase.name],
   ["existingDefects", existingDefect => `${existingDefect.class}#${existingDefect.member}`],
+  ["conventions.overrides", override => override.project || override.codeStyle],
 ]);
 
 const findNameOfTheClassPath = (model, match) => {

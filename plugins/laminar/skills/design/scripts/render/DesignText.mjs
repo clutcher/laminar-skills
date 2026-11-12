@@ -1,4 +1,4 @@
-import { ANSWER_GIVERS, DOES, KINDS, getFileOfTheChild, getFolderPath, isAText, isAnInterface, isLeftUnfixed, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
+import { ANSWER_GIVERS, DOES, KINDS, OVERRIDE_KINDS, getFileOfTheChild, getFolderPath, isAText, isAnInterface, isLeftUnfixed, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
 
 const GUESS_EVIDENCE = new Set(["churn", "none"]);
 
@@ -12,6 +12,27 @@ const writeConventionsLine = conventions => {
   if (!conventions) return "Project conventions: not recorded in the model.";
   if (conventions.found === false) return `Project conventions: none found in ${writeCode(conventions.folder || "")}; the design follows the default zone order of the design skill and the rules of the skill.`;
   return `Project conventions: ${readList(conventions.files).map(writeCode).join(", ") || "none listed"} from ${writeCode(conventions.folder || "")}; zone order: ${writeCode(conventions.zoneOrder || "default")}.`;
+};
+
+// 1 head line per clash with a written project rule, so no question asks it again and the writer reads which rule holds.
+const writeOverrideLine = override => (override.kind === OVERRIDE_KINDS.OVERRIDE
+  ? `Convention override: ${writeCode(override.project)} wins over ${writeCode(override.codeStyle)}, a rule of the skill code-style marked narrower than the book: "${override.says}"`
+  : `Convention contradiction: ${writeCode(override.project)} contradicts ${writeCode(override.codeStyle)}, a design direction of the book, so the design follows the book: "${override.says}"`);
+
+const writeOverrideLines = conventions => readList(conventions?.overrides)
+  .filter(override => override.kind === OVERRIDE_KINDS.OVERRIDE || override.kind === OVERRIDE_KINDS.CONTRADICTION)
+  .map(writeOverrideLine);
+
+// A proposed rule overrides nothing until the project adds it to its own conventions folder, so the rule of code-style holds for the writers.
+const writeProposedRuleSection = conventions => {
+  const proposedRules = readList(conventions?.overrides).filter(override => override.kind === OVERRIDE_KINDS.PROPOSED);
+  if (!proposedRules.length) return [];
+
+  const lines = ["## Proposed project rules", "", `Each rule below is the answer of the user to its question, for the project to add to ${writeCode(conventions.folder || "")}. The design writes nothing into the repository, so until the project adds the rule, the rule of the skill code-style it names holds for the writers.`, ""];
+  for (const proposedRule of proposedRules) {
+    lines.push(`### Against ${writeCode(proposedRule.codeStyle)}, question ${writeCode(proposedRule.question)}`, "", `The rule of the skill: "${proposedRule.says}"`, "", `${CODE_FENCE}markdown`, proposedRule.rule, CODE_FENCE, "");
+  }
+  return lines;
 };
 
 const writeParameters = parameters => readList(parameters).map(parameter => (parameter.type ? `${parameter.name}: ${parameter.type}` : parameter.name)).join(", ");
@@ -336,6 +357,7 @@ export const writeDesignText = (model, roundCounts = null, findingsToConsider = 
   const tests = decisions.tests || {};
   return [
     writeConventionsLine(decisions.conventions),
+    ...writeOverrideLines(decisions.conventions),
     "",
     "# Design",
     "",
@@ -349,6 +371,7 @@ export const writeDesignText = (model, roundCounts = null, findingsToConsider = 
     ...writeUnitTestSection(model, readList(tests.unit)),
     "",
     ...writeQuestionSection(readList(decisions.questions)),
+    ...writeProposedRuleSection(decisions.conventions),
     ...writeFindingSection(readList(decisions.findings), findingsToConsider),
     ...writeToConsiderSection(readList(decisions.findings), findingsToConsider),
     ...writeOpenAfterCeilingSection(readList(decisions.findings)),

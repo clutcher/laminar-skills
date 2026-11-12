@@ -14,6 +14,8 @@ const DEPTH_TAKERS = Object.freeze(["user", "forecast", "designer"]);
 
 export const ANSWER_GIVERS = Object.freeze({ USER: "user", DEFAULT: "default", DELEGATE: "delegate" });
 
+export const OVERRIDE_KINDS = Object.freeze({ OVERRIDE: "override", CONTRADICTION: "contradiction", PROPOSED: "proposed" });
+
 export const FINDING_REASONS = Object.freeze(["outside the change", "question to the author", "project convention", "exempt by the book", "fix apart"]);
 
 export const STOP_REASONS = Object.freeze(["input-nothing-provides", "signature-the-stack-cannot-carry", "test-that-cannot-reach-its-branch", "behavior-the-design-did-not-decide", "migration-order-cannot-build", "fix-changes-the-model", "model-breaks-code-style", "stopped-without-a-reason", "build-failed"]);
@@ -61,7 +63,10 @@ const FORECAST_FORM = createObjectOf({
 });
 
 const DECISIONS_FORM = createObjectOf({
-  conventions: createObjectOf({ folder: TEXT, found: TRUE_OR_FALSE, files: TEXTS, zoneOrder: TEXT, testNameForms: TEXTS }),
+  conventions: createObjectOf({
+    folder: TEXT, found: TRUE_OR_FALSE, files: TEXTS, zoneOrder: TEXT, testNameForms: TEXTS,
+    overrides: createListOf(createObjectOf({ kind: createTextOf(Object.values(OVERRIDE_KINDS)), project: TEXT, codeStyle: TEXT, says: TEXT, rule: TEXT, question: TEXT })),
+  }),
   owners: createListOf(createObjectOf({
     decision: TEXT, owner: TEXT, placement: TEXT, callers: TEXTS, forecast: FORECAST_FORM,
     depth: createObjectOf({ shape: TEXT, takenBy: createTextOf(DEPTH_TAKERS), reason: TEXT }),

@@ -162,6 +162,45 @@ const matchesAFolderOfTheModel = (model, globs) => globs.some(glob => {
   return model.folders.some(folder => isAText(folder.path) && isPrefixRelated(`${getFolderPath(folder)}/`, literalPrefix));
 });
 
+const escapeForAPattern = text => text.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+
+const GLOB_CHOICES = /^\{([^{}]*)\}/;
+
+// The pattern of the glob piece at the start of the rest of a paths line, as Claude Code reads it: ** spans folders, * and ? stay inside 1 name, and {a,b} is either.
+const readGlobPiece = rest => {
+  if (rest.startsWith("**/")) return { piece: "(?:.*/)?", length: 3 };
+  if (rest.startsWith("**")) return { piece: ".*", length: 2 };
+  if (rest[0] === "*") return { piece: "[^/]*", length: 1 };
+  if (rest[0] === "?") return { piece: "[^/]", length: 1 };
+
+  const choices = GLOB_CHOICES.exec(rest);
+  if (choices) return { piece: `(?:${choices[1].split(",").map(escapeForAPattern).join("|")})`, length: choices[0].length };
+  return { piece: escapeForAPattern(rest[0]), length: 1 };
+};
+
+const createGlobPattern = glob => {
+  let pattern = "";
+  for (let at = 0; at < glob.length;) {
+    const { piece, length } = readGlobPiece(glob.slice(at));
+    pattern += piece;
+    at += length;
+  }
+  return new RegExp(`^${pattern}$`);
+};
+
+const KINDS_THAT_LEAVE_NO_FILE = new Set([KINDS.REMOVED, KINDS.UNCHANGED]);
+
+// The files the change writes: the file of each class whose file the change creates, moves or modifies, and each test file of the model, so a created file under a new folder meets the paths line too.
+const listWrittenFilesOfTheModel = model => [
+  ...model.classes.filter(theClass => isAText(theClass.file) && !KINDS_THAT_LEAVE_NO_FILE.has(model.getKindOfClass(theClass))).map(theClass => theClass.file),
+  ...[...readList(model.decisions.tests?.integration), ...readList(model.decisions.tests?.unit)].map(tests => tests.file).filter(isAText),
+];
+
+const matchesAFileOfTheModel = (model, globs) => {
+  const globPatterns = globs.map(createGlobPattern);
+  return listWrittenFilesOfTheModel(model).some(file => globPatterns.some(globPattern => globPattern.test(file)));
+};
+
 const findConventionsFileDefects = (model, currentTree) => {
   const conventions = model.decisions.conventions;
   if (!conventions || !isAText(conventions.folder)) return [];
@@ -173,8 +212,8 @@ const findConventionsFileDefects = (model, currentTree) => {
     if (listedFiles.has(repositoryFile) || listedFiles.has(path.posix.relative(conventionsFolder, repositoryFile))) continue;
 
     const globs = readPathGlobs(currentTree.readFileText(repositoryFile) || "");
-    if (globs !== null && !matchesAFolderOfTheModel(model, globs)) continue;
-    defects.push(createDefect(DEFECT_CODES.CONVENTIONS_FILE_UNLISTED, "decisions.conventions.files", `the conventions file ${repositoryFile} applies to a folder of the model, and the list does not hold it`));
+    if (globs !== null && !matchesAFolderOfTheModel(model, globs) && !matchesAFileOfTheModel(model, globs)) continue;
+    defects.push(createDefect(DEFECT_CODES.CONVENTIONS_FILE_UNLISTED, "decisions.conventions.files", `the conventions file ${repositoryFile} applies to a folder or a file of the model, and the list does not hold it`));
   }
   return defects;
 };

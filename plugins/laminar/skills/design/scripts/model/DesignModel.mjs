@@ -3,7 +3,7 @@ import path from "node:path";
 import { KINDS, findDesignModelFormProblems } from "./DesignModelForm.mjs";
 import { isAReadExtension, isATestFile } from "./SourceLanguages.mjs";
 
-export { ANSWER_GIVERS, DOES, KINDS } from "./DesignModelForm.mjs";
+export { ANSWER_GIVERS, DOES, KINDS, OVERRIDE_KINDS } from "./DesignModelForm.mjs";
 
 const CHANGED_KINDS = new Set([KINDS.CREATED, KINDS.MOVED, KINDS.MODIFIED]);
 
