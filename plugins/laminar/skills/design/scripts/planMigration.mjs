@@ -8,6 +8,7 @@ import { findGroupOrderDefects } from "./migration/GroupOrder.mjs";
 import { listMigrationSteps } from "./migration/MigrationSteps.mjs";
 import { writeMigrationText } from "./migration/MigrationText.mjs";
 import { writeMigrationWorkflowFile } from "./migration/MigrationWorkflowFile.mjs";
+import { estimateSelfCheckCost, formatSelfCheckCostLine } from "./migration/SelfCheckCost.mjs";
 
 const USAGE = "usage: node planMigration.mjs --model <design-model.json> --out <migration.md|migration.json> [--repo <repository root> [--tree <commit>]] [--findings <findings.json>] [--classes <display names>] [--plan <n>] [--unfinished <group numbers>] [--before <design-model.json of the plan before>]";
 
@@ -73,8 +74,9 @@ function planMigration() {
   const defects = [...planDefects, ...orderDefects];
   const outPath = path.resolve(options.out);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, outPath.endsWith(JSON_SUFFIX) ? `${JSON.stringify(steps, null, 2)}\n` : writeMigrationText(steps, describeCurrentTree(currentTree), orderDefects, { line: cutLine, defects: planDefects }, noStepLines));
-  const workflowFilePath = writeMigrationWorkflowFile(model, steps, { migrationPath: outPath, repositoryRoot, defectCount: defects.length });
+  const selfCheckLineOfGroup = group => formatSelfCheckCostLine(estimateSelfCheckCost(model, steps, group));
+  fs.writeFileSync(outPath, outPath.endsWith(JSON_SUFFIX) ? `${JSON.stringify(steps, null, 2)}\n` : writeMigrationText(steps, describeCurrentTree(currentTree), orderDefects, { line: cutLine, defects: planDefects }, noStepLines, selfCheckLineOfGroup));
+  const workflowFilePath = writeMigrationWorkflowFile(model, steps, { migrationPath: outPath, repositoryRoot, defectCount: defects.length, plan: readPlanNumberOrExit(options.plan) });
   for (const defect of defects) console.log(`defect\t${defect.code}\t${defect.sentence}`);
   for (const line of noStepLines) console.log(["no step", line.number, line.check, line.displayName, line.why].join("\t"));
   console.log(`RESULT ${JSON.stringify({ migration: outPath, steps: steps.length, groups: new Set(steps.map(step => step.group)).size, defects: defects.length, findingSteps: findingSteps.length, noSteps: noStepLines.length, workflowFile: workflowFilePath })}`);

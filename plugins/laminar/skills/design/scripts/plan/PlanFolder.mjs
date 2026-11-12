@@ -15,6 +15,8 @@ export const DISPOSITIONS_FILE = "dispositions.json";
 
 export const OUTCOME_FILE = "outcome.json";
 
+export const SELF_CHECK_FILE = "self-check.json";
+
 const PLANS_FOLDER = "plans";
 
 const PLAN_FOLDER_NAME = /^[1-9]\d*$/;
@@ -51,3 +53,13 @@ export const writeOutcome = (resultsFolder, plan, outcome) => {
 };
 
 export const formatPlanLine = (plan, outcomeWord, resultsFolder) => `plan ${plan} ${outcomeWord} ${resultsFolder}`;
+
+// The self-checks of each plan that holds a self-check file, in the order of the plans: the list the calling session writes from the selfCheck of each group.
+export const readSelfChecksOfThePlans = resultsFolder => {
+  const selfChecksOfThePlans = [];
+  for (let plan = 1; plan <= findLastPlan(resultsFolder); plan++) {
+    const selfCheckPath = path.join(getPlanFolder(resultsFolder, plan), SELF_CHECK_FILE);
+    if (fs.existsSync(selfCheckPath)) selfChecksOfThePlans.push({ plan, groups: JSON.parse(fs.readFileSync(selfCheckPath, "utf8")) });
+  }
+  return selfChecksOfThePlans;
+};

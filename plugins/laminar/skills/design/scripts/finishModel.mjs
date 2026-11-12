@@ -39,7 +39,7 @@ const listShapeReviewArguments = options => options[SHAPE_REVIEW_OPTION].flatMap
 
 // A later plan is cut, also where the designer changed no class, so it plans only the groups of its changes, its findings, its stopped writers and the groups that waited for them.
 const listCutArguments = (options, plan, paths) => {
-  if (plan === 1) return [];
+  if (plan === 1) return ["--plan", String(plan)];
   const modelBeforePath = path.join(getPlanFolder(paths.results, plan - 1), MODEL_FILE);
   const unfinished = paths.unfinishedGroups.length ? ["--unfinished", paths.unfinishedGroups.join(",")] : [];
   return ["--classes", options.classes || "", "--plan", String(plan), ...unfinished, ...(fs.existsSync(modelBeforePath) ? ["--before", modelBeforePath] : [])];

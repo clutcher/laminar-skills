@@ -20,6 +20,7 @@ Your message holds only data, 1 input per line, under these labels:
 - `Open questions:` the ids of the open questions of the model, or `none`. You write no code across an open question.
 - `Files left by the writer before:` the files that a writer of the same migration group changed and left uncommitted, or `none`. You go on from them.
 - `Review of the round:` the path of `review.md` of the run folder of the plan, only where the plan came from a run folder. The finding steps of your group name its findings.
+- `Self-check:` the path of `review.md` of the self-check of your migration group, only in the answer round, after a writer of your group finished it. You answer its kept findings by the section *The answer round*, and you write no step again.
 - `Commit:` `by the session` where the session commits your files.
 
 ## How to work
@@ -34,6 +35,19 @@ Your message holds only data, 1 input per line, under these labels:
 8. After the last step, build the code and run the tests of your migration group, and fix what they show inside the bodies. Where a test fails because a step of yours changed what it constructs or calls, fix or remove that test by the step that names it; a test case that a designed test of your group covers is removed, not kept. Where a test fails because the design changed the behavior it expects and no step names that test, stop with `behavior-the-design-did-not-decide`: that is a gap of the design, not a break of the build.
 9. Before you return, read each name you added again, the test names and the names of substitutes first, against steps 2 and 6, and fix each that does not hold. Then build and run the tests again where you changed a name.
 10. Make 1 commit for your migration group on the current branch, with a message that names the group. Where the host refuses a git write of yours, such as by a hook, or your message holds `Commit: by the session`, make no commit, and return the files you changed with the commit message. Never push, and change no file outside the steps of your migration group.
+
+## The answer round
+
+Where your message holds `Self-check:`, the steps of your group are already written and built. Read each kept finding of that `review.md`, and answer each 1 time:
+
+- Fix it inside the bodies or the tests of a class of your group, by the rule of a `fixes finding` step of step 5. A name you added that `design.md` does not give, such as a private method, a local, a helper of a test or a substitute, is yours, so its rename is a fix.
+- Or record it with 1 reason of this closed list, and change nothing for it:
+  - `changes-the-model`: the fix needs a name, a signature, a file or a folder that `design.md` gives, such as a new owner for a rule that stands in 2 places.
+  - `outside-the-group`: a cause line of the finding stands in a file that your group does not write.
+  - `rule-says-otherwise`: a rule of the skill `code-style` or a project convention keeps the form; `says` names it as `code-style <file> §<n>`, or by its file and section.
+  - `fix-breaks-the-build`: the fix turned the build or the tests red; undo it before you record it.
+
+Then build and run the tests of your group again. You never stop in the answer round, and you never answer an item to consider, because it waits for the author.
 
 ## When to stop
 
@@ -60,6 +74,7 @@ Return only the structured object your call asks for, or, where the call asks fo
 - `filled`: each getter and each text of a failure you wrote that `design.md` left out, with its display name.
 - `build`: the build command and its result, `passed`, `failed` or `not run` where you built nothing.
 - `tests`: each test command you ran, with its result, `passed` or `failed`.
+- `answers`: only in the answer round, 1 object per kept finding: `number`, its item number in `review.md`; `check`; `answer`, `fixed` or `recorded`; `reason`, 1 reason of the list of the answer round, only for `recorded`; and `says`, 1 sentence on what you changed or why you left it.
 - `stop`: only where you stopped, `reason`, 1 reason of the list; `at`, the display name, as Class#method or Class; and `says`, 1 sentence on what you met. For `model-breaks-code-style`, `says` names the rule as `code-style <file> §<n>`, such as `code-style methods.md §7`.
 
 Where you committed, also give the commit id.

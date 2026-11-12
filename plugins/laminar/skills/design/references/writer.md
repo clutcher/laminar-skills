@@ -1,6 +1,6 @@
 # The inputs of the writer
 
-Contents: 1. When it runs · 2. What it gets · 3. The agent · 4. What the designer does with a stop
+Contents: 1. When it runs · 2. What it gets · 3. The agent · 4. What the designer does with a stop · 5. The self-check of each group
 
 ## 1. When it runs
 
@@ -13,8 +13,9 @@ The session that runs the plan starts 1 writer for each migration group, after t
 - The open questions of the model whose `autonomous` is `open`, so the writer knows which code it may not write.
 - Where a writer of the same migration group stopped before, the files it changed and left uncommitted, which this writer goes on from.
 - Where the plan came from a run folder, the path of its `review.md`, whose findings the finding steps of the migration group name (`design-rounds.md`).
+- In the answer round only, the path of `review.md` of the self-check of its group, whose kept findings it answers once (section 5).
 
-The writer workflow gives each input on its own line, in this order: `Design:`, `Migration:`, `Migration group:`, `Repository:`, `Open questions:`, `Files left by the writer before:`, `Review of the round:` only where the plan came from a run folder, and `Commit: by the session`, because writers that run side by side share 1 index of git.
+The writer workflow gives each input on its own line, in this order: `Design:`, `Migration:`, `Migration group:`, `Repository:`, `Open questions:`, `Files left by the writer before:`, `Review of the round:` only where the plan came from a run folder, `Self-check:` only in the answer round, and `Commit: by the session`, because writers that run side by side share 1 index of git.
 
 ## 3. The agent
 
@@ -27,3 +28,13 @@ The writer commits nothing, because the writer workflow gives every writer `Comm
 The session that runs the plan passes each stop to the next call of the skill as `stop: <file>`, with the group and the files the writer left uncommitted, and the start command writes it as 1 object of `decisions.stops`, with the `plan` of the writer. A stop sends the abstraction it names back to the designer: change the model, run the shape check on the changed part where the shape half changed, and run the finish command, whose cut migration plans the stopped group whole. The files of the writer that stopped stay uncommitted, and the next writer of that group goes on from them. A writer that stops with no stop of its own, or gives no answer, gets the stop `stopped-without-a-reason` from the writer workflow, at the first class of its group, so every unfinished group reaches the next plan. A finished group whose `build.result` is `failed` is not committed either: the session writes it into `stop:` with the stop `build-failed`, at the first class of the group, else at `migration group <n>`, with the failing build command as `says`, so the next plan takes the group as stopped. A session that commits group by group calls the writer workflow once per group with `groups: [<n>]`, because 2 groups that share a file finish in 1 call, and the files of one then hold the lines of the other. The group is committed only when a writer finishes it with a build that did not fail. Where the writer stops a second time on the same abstraction, ask the user a question about it, with the 2 stops as its fact, in place of a third start; in autonomous mode, the start command ends the plan with that stop as its outcome. The writer never decides a design problem alone, because a shape it chose would reach the review with no check before it.
 
 - Book (*How to Verify Correctness*, *How to Produce Verified Code*): "Writing code often reveals design problems, so the developer returns to thinking, adjusts the decisions, and updates the code to match."
+
+## 5. The self-check of each group
+
+The writer workflow runs 1 self-check on each group that its writer finished with a build that passed or no build step, and with tests that passed, before the session commits the group, unless its call gives `selfCheck: false`. The self-check is a run of the skill `review` on the files of the group against the head, read by the extract input `--uncommitted`, with the decision, method, variable and test-method judges, the refuter and the verifier, in the run folder `<results>/plans/<n>/self-check/group-<g>`. The agent `design-self-check` of the plugin (`laminar:design-self-check`, in Claude Code) runs its commands, because a workflow runs no command and writes no file. The writer of the group then answers each kept finding once, in 1 answer round: fixed inside the bodies or the tests of its group, or recorded with 1 record reason, `changes-the-model`, `outside-the-group`, `rule-says-otherwise` or `fix-breaks-the-build`. Its fixes are not judged again before the commit, and no group gets a second self-check, because the closing review of the round judges every scale anyway. An item to consider goes to the record with no answer, because it waits for the author.
+
+Before the writers run, state the self-check share of each group from the line `Self-check: judge calls about <k> · dollars about $<d>` under the heading of the group in the migration, beside the cost of the writers; the group that writes the tests carries the largest share. A self-check whose cost line passes the threshold of the cost check of the review does not run, because that check asks a person. A self-check never fails its group: where it does not run or stops, the group still finishes, and `selfCheck.notRun` gives the reason.
+
+After the writer workflow returns, write `selfCheck` of each group into `<results>/plans/<n>/self-check.json`, a JSON list with 1 object per group, `{"group": <g>, ...selfCheck}`, then commit the groups as before. `needsModelChange` lists each kept finding that the writer recorded `changes-the-model`; this skill does not read it, and the designer meets such a finding again in the closing review of the round, which raises the same key on code that still stands. A calling session may pass it to the next plan as a finding. The render with `--rounds` prints 1 line per group of each plan under the rows of `## Rounds`: the judge calls, kept, fixed, recorded by reason, unanswered and to consider, or the reason it did not run.
+
+The search of a self-check also reads the files that are untracked and not ignored, so a group finds the other place of a rule in a file that an earlier group of the same call wrote and the session did not commit yet. The closing review drops no judge.

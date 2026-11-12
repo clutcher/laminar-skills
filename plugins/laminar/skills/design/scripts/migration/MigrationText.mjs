@@ -15,13 +15,14 @@ const writeNoStepLines = noStepLines => (noStepLines.length
   ? ["", NO_STEP_HEADING, "", ...noStepLines.map(line => `- ${formatNoStepLine(line)}`)]
   : []);
 
-export const writeMigrationText = (steps, currentTreeLine, orderDefects = [], cut = { line: "", defects: [] }, noStepLines = []) => {
+export const writeMigrationText = (steps, currentTreeLine, orderDefects = [], cut = { line: "", defects: [] }, noStepLines = [], selfCheckLineOfGroup = () => null) => {
   const lines = ["# Migration", "", ...(cut.line ? [cut.line, ""] : []), currentTreeLine, ...writeDefectLines("## Defects of the plan", cut.defects), ...writeDefectLines("## Defects of the order", orderDefects)];
   let group = null;
   for (const step of steps) {
     if (step.group !== group) {
       group = step.group;
-      lines.push("", writeGroupHeading(step), "");
+      const selfCheckLine = selfCheckLineOfGroup(step.group);
+      lines.push("", writeGroupHeading(step), "", ...(selfCheckLine ? [selfCheckLine, ""] : []));
     }
     lines.push(`${step.number}. [${step.stage}] ${step.says}`);
     lines.push(`   - Files: ${step.files.map(file => `\`${file}\``).join(", ")}`);

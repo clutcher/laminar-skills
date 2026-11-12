@@ -3,6 +3,7 @@ import path from "node:path";
 import { listFindingsToConsider } from "./check/AutonomousReasons.mjs";
 import { readDesignModelOrExit, readOptionsOrExit } from "./command/CommandLine.mjs";
 import { writeDesignText } from "./render/DesignText.mjs";
+import { readSelfChecksOfThePlans } from "./plan/PlanFolder.mjs";
 
 const USAGE = "usage: node renderDesign.mjs --model <design-model.json> --out <design.md> [--rounds <results>/rounds] [--review <run folder>/review.md] [--shape-review <results>/shape-runs/<n>/review.md]...";
 
@@ -29,6 +30,16 @@ const readRoundCountsOrExit = roundsFolder => {
   });
 };
 
+// The results folder holds the rounds folder and plans/, so the self-check files of the plans stand beside the rounds.
+const readSelfChecksOfThePlansOrExit = resultsFolder => {
+  try {
+    return readSelfChecksOfThePlans(resultsFolder);
+  } catch (error) {
+    console.error(`self-check: cannot read a self-check file under ${resultsFolder}: ${error.message}`);
+    return process.exit(STOP_EXIT_CODE);
+  }
+};
+
 const readTextOrExit = (label, textPath) => {
   try {
     return fs.readFileSync(path.resolve(textPath), "utf8");
@@ -49,10 +60,11 @@ function renderDesign() {
   const options = readOptionsOrExit(USAGE, ["model", "out", "rounds", "review"], ["model", "out"], [SHAPE_REVIEW_OPTION]);
   const model = readDesignModelOrExit(options.model);
   const roundCounts = options.rounds ? readRoundCountsOrExit(path.resolve(options.rounds)) : null;
+  const selfChecksOfThePlans = options.rounds ? readSelfChecksOfThePlansOrExit(path.dirname(path.resolve(options.rounds))) : [];
 
   const outPath = path.resolve(options.out);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, writeDesignText(model, roundCounts, readFindingsToConsiderOrExit(model, options)));
+  fs.writeFileSync(outPath, writeDesignText(model, roundCounts, readFindingsToConsiderOrExit(model, options), selfChecksOfThePlans));
   console.log(`RESULT ${JSON.stringify({ design: outPath, classes: model.classes.length, questions: (model.decisions.questions || []).length, ...(roundCounts ? { rounds: roundCounts.length } : {}) })}`);
 }
 

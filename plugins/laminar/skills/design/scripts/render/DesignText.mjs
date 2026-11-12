@@ -276,16 +276,37 @@ const writeRoundTableLine = countsOfTheRound => {
   return `| ${cells.map(escapeTableCell).join(" | ")} |`;
 };
 
-// 1 row per round that the round script recorded, with the dollars of the round and the sum so far.
-const writeRoundSection = roundCounts => {
-  if (roundCounts === null) return [];
-  const lines = ["## Rounds", ""];
-  if (!roundCounts.length) return [...lines, "None.", ""];
-  lines.push("| Round | Findings | Open | With a reason | Closed by an answer | Carried | To the designer | To the writers | Still open, not judged | Loop line | Dollars | Dollars so far |", "|---|---|---|---|---|---|---|---|---|---|---|---|");
-  return [...lines, ...roundCounts.map(writeRoundTableLine), ""];
+const formatRecordedReasons = recorded => Object.entries(recorded || {}).map(([reason, count]) => `recorded ${reason} ${count}`);
+
+const writeSelfCheckLine = (plan, selfCheck) => {
+  const head = `- Plan ${plan}, group ${selfCheck.group}: `;
+  if (selfCheck.notRun) return `${head}not run, ${selfCheck.notRun}`;
+  const unanswered = (selfCheck.unanswered || []).length;
+  return `${head}${[
+    `judge calls ${selfCheck.judgeCalls}`,
+    `kept ${(selfCheck.kept || []).length}`,
+    `fixed ${selfCheck.fixed || 0}`,
+    ...formatRecordedReasons(selfCheck.recorded),
+    ...(unanswered ? [`unanswered ${unanswered}`] : []),
+    `to consider ${(selfCheck.toConsider || []).length}`,
+  ].join(" · ")}`;
 };
 
-export const writeDesignText = (model, roundCounts = null, findingsToConsider = new Set()) => {
+// 1 line per migration group of each plan whose self-check file the calling session wrote, after the rows of the rounds.
+const writeSelfCheckLines = selfChecksOfThePlans => (selfChecksOfThePlans.length
+  ? ["Self-checks:", "", ...selfChecksOfThePlans.flatMap(({ plan, groups }) => readList(groups).map(selfCheck => writeSelfCheckLine(plan, selfCheck))), ""]
+  : []);
+
+// 1 row per round that the round script recorded, with the dollars of the round and the sum so far.
+const writeRoundSection = (roundCounts, selfChecksOfThePlans = []) => {
+  if (roundCounts === null) return [];
+  const lines = ["## Rounds", ""];
+  if (!roundCounts.length) return [...lines, "None.", "", ...writeSelfCheckLines(selfChecksOfThePlans)];
+  lines.push("| Round | Findings | Open | With a reason | Closed by an answer | Carried | To the designer | To the writers | Still open, not judged | Loop line | Dollars | Dollars so far |", "|---|---|---|---|---|---|---|---|---|---|---|---|");
+  return [...lines, ...roundCounts.map(writeRoundTableLine), "", ...writeSelfCheckLines(selfChecksOfThePlans)];
+};
+
+export const writeDesignText = (model, roundCounts = null, findingsToConsider = new Set(), selfChecksOfThePlans = []) => {
   const { decisions } = model;
   const tests = decisions.tests || {};
   return [
@@ -313,6 +334,6 @@ export const writeDesignText = (model, roundCounts = null, findingsToConsider = 
     "",
     ...writeScriptCaseSection(readList(decisions.scriptCases)),
     "",
-    ...writeRoundSection(roundCounts),
+    ...writeRoundSection(roundCounts, selfChecksOfThePlans),
   ].join("\n");
 };
