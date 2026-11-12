@@ -8,7 +8,7 @@ This file holds `conventions`, `owners` and `questions`. `design-boundaries.md` 
 
 ## `conventions`
 
-An object, required. The designer reads the project conventions at step 1 of the procedure, before the tree, and records them here in pass 2. It records the project conventions the designer read, as the skill `check-conventions` finds them: each `.md` file under `.claude/rules/conventions/` of the repository whose `paths:` match a folder of the model, and each file there with no `paths:`. A project convention may set the zones and their zone order, the naming grammar, the folder layout and the test file suffixes. It overrides a rule marked narrower than the book, and never a format of this skill or a design direction of the book.
+An object, required. The designer reads the project conventions at step 1 of the procedure, before the tree, and records them here in pass 2. It records the project conventions the designer read, as the skill `check-conventions` finds them: each `.md` file under `.claude/rules/conventions/` of the repository whose `paths:` match a folder of the model or a file that the model creates, moves or modifies, a test file included, and each file there with no `paths:`. A project convention may set the zones and their zone order, the naming grammar, the folder layout and the test file suffixes. It overrides a rule marked narrower than the book, and never a format of this skill or a design direction of the book.
 
 | Key | Type | Required | Read by |
 |---|---|---|---|
@@ -17,9 +17,22 @@ An object, required. The designer reads the project conventions at step 1 of the
 | `files` | list of paths | yes; empty where none is found | design check, which reports a file of the folder that the list does not hold; render |
 | `zoneOrder` | the path of the conventions file that holds the fenced block `zones` (`design-model.md`, section 3), or `default` for the default zone order of the design skill (`design-checks.md`, section 2) | yes | design check, render |
 | `testNameForms` | list of texts: each form of a test name that the conventions file of the language of the tests states, such as `should<Outcome>When<Condition>` or `test_should_<outcome>_when_<condition>`, where a word in angle brackets stands for 1 or more words | no | design check, which reports a test name that fits no form; where the key is missing, it reports only a name that states no behavior: 1 word, or `test` and the name of a method of the model |
+| `overrides` | list of objects: `kind`, 1 of `override`, `contradiction` and `proposed`, with the keys of its kind below | no; 1 object per clash of a project rule with a rule of the skill `code-style`, written once per plan | design check, which reports `override-on-a-book-rule` and `override-file-unlisted`; render, which prints each `override` and `contradiction` in the head of `design.md` and each `proposed` rule under its own heading |
 
 ```json
 "conventions": { "folder": ".claude/rules/conventions", "found": false, "files": [], "zoneOrder": "default", "testNameForms": ["should<Outcome>When<Condition>"] }
+```
+
+Each object of `overrides` names its rules by the ids of the findings of the skill `check-conventions`: `project <file> §<n>`, with the path of the file under the conventions folder, and `code-style <file> §<n>`, with the name of a reference file or a conventions file of `code-style`. `says` quotes the clause of the `code-style` rule word for word.
+
+- `override`: a rule that a project conventions file states wins over a rule of `code-style` marked narrower than the book. Keys: `kind`, `project`, `codeStyle` and `says`. Record it only from a rule that a file of `files` states, never from an answer alone. The writer and the skill `check-conventions` already follow the project file; the object records the clash once, so `design.md` prints it in its head and no question asks it again.
+- `contradiction`: a rule that a project conventions file states contradicts a design direction of the book. The design follows the book. Keys: `kind`, `project`, `codeStyle` and `says`. `design.md` prints it in its head, and the skill `check-conventions` reports the same contradiction on the line of the conventions file.
+- `proposed`: in the mode with a user, the user rules on a project form that no project file states, such as a suffix word that a rule marked narrower than the book forbids. Keys: `kind`, `codeStyle`, `says`, `question`, the id of the question that the user answered, and `rule`, the text of 1 project rule in the form of `../check-conventions/references/project-conventions.md`, for the project to add to its folder. You write nothing into the repository, so a `proposed` object overrides nothing: until the project adds the rule to its folder, the rule of `code-style` holds for the names of the model and for the writers. In autonomous mode, write no `proposed` object, because an override that no file states would be a silent override.
+
+The design check reads `overrides` at no agent cost. It reports `override-on-a-book-rule` where the section that `codeStyle` of an `override` or a `proposed` object names does not stand in the skill `code-style`, does not hold the clause of `says`, or holds no mark narrower than the book in a file whose lead does not mark the whole file. Where the section holds the mark and also a citation of the book, it prints that defect as a recheck case, because whether the mark reaches the quoted clause is a reading: such a clash is never an `override`, so write it as a `contradiction`, and the design follows the rule of `code-style`. With `--repo`, the design check reports `override-file-unlisted` where the file that `project` of an `override` or a `contradiction` object names is not in `files`, is not in the current tree, or holds no section of that number. The 3 kinds and the 2 defects are a format of this skill, not of the book.
+
+```json
+"overrides": [ { "kind": "override", "project": "project java.md §1", "codeStyle": "code-style java.md §2", "says": "use Optional" } ]
 ```
 
 ## `owners`
