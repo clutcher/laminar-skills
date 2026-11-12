@@ -1,0 +1,17 @@
+diff --git a/observatory/src/main/java/com/example/observatory/ObservatoryApplication.java b/observatory/src/main/java/com/example/observatory/ObservatoryApplication.java
+new file mode 100644
+--- /dev/null
++++ b/observatory/src/main/java/com/example/observatory/ObservatoryApplication.java
+@@ -0,0 +1,12 @@
++package com.example.observatory;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class ObservatoryApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(ObservatoryApplication.class, args);
++    }
++}

@@ -1,0 +1,99 @@
+diff --git a/observatory/src/main/java/com/example/observatory/telescope/MountControllerApi.java b/observatory/src/main/java/com/example/observatory/telescope/MountControllerApi.java
+new file mode 100644
+--- /dev/null
++++ b/observatory/src/main/java/com/example/observatory/telescope/MountControllerApi.java
+@@ -0,0 +1,6 @@
++package com.example.observatory.telescope;
++
++public interface MountControllerApi {
++
++    SlewResult target(double rightAscension, double declination);
++}
+diff --git a/observatory/src/main/java/com/example/observatory/telescope/SlewResult.java b/observatory/src/main/java/com/example/observatory/telescope/SlewResult.java
+new file mode 100644
+--- /dev/null
++++ b/observatory/src/main/java/com/example/observatory/telescope/SlewResult.java
+@@ -0,0 +1,4 @@
++package com.example.observatory.telescope;
++
++public record SlewResult(boolean reached, double rightAscension, double declination) {
++}
+diff --git a/observatory/src/main/java/com/example/observatory/telescope/TelescopePointing.java b/observatory/src/main/java/com/example/observatory/telescope/TelescopePointing.java
+new file mode 100644
+--- /dev/null
++++ b/observatory/src/main/java/com/example/observatory/telescope/TelescopePointing.java
+@@ -0,0 +1,14 @@
++package com.example.observatory.telescope;
++
++public class TelescopePointing {
++
++    private final MountControllerApi mountControllerApi;
++
++    public TelescopePointing(MountControllerApi mountControllerApi) {
++        this.mountControllerApi = mountControllerApi;
++    }
++
++    public SlewResult aim(double rightAscension, double declination) {
++        return mountControllerApi.target(rightAscension, declination);
++    }
++}
+diff --git a/observatory/src/test/java/com/example/observatory/telescope/TelescopePointingTest.java b/observatory/src/test/java/com/example/observatory/telescope/TelescopePointingTest.java
+new file mode 100644
+--- /dev/null
++++ b/observatory/src/test/java/com/example/observatory/telescope/TelescopePointingTest.java
+@@ -0,0 +1,21 @@
++package com.example.observatory.telescope;
++
++import com.example.observatory.telescope.testdata.StubMountControllerApi;
++import org.junit.jupiter.api.Test;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++class TelescopePointingTest {
++
++    private static final double ORION_NEBULA_RIGHT_ASCENSION = 83.82;
++    private static final double ORION_NEBULA_DECLINATION = -5.39;
++
++    @Test
++    void shouldReachTargetWhenMountAcceptsSlew() {
++        TelescopePointing pointing = new TelescopePointing(new StubMountControllerApi());
++
++        SlewResult result = pointing.aim(ORION_NEBULA_RIGHT_ASCENSION, ORION_NEBULA_DECLINATION);
++
++        assertThat(result.reached()).isTrue();
++    }
++}
+diff --git a/observatory/src/test/java/com/example/observatory/telescope/testdata/StubMountControllerApi.java b/observatory/src/test/java/com/example/observatory/telescope/testdata/StubMountControllerApi.java
+new file mode 100644
+--- /dev/null
++++ b/observatory/src/test/java/com/example/observatory/telescope/testdata/StubMountControllerApi.java
+@@ -0,0 +1,12 @@
++package com.example.observatory.telescope.testdata;
++
++import com.example.observatory.telescope.MountControllerApi;
++import com.example.observatory.telescope.SlewResult;
++
++public class StubMountControllerApi implements MountControllerApi {
++
++    @Override
++    public SlewResult target(double rightAscension, double declination) {
++        return new SlewResult(true, rightAscension, declination);
++    }
++}
+diff --git a/observatory/src/test/java/com/example/observatory/telescope/testdata/pointing-request.json b/observatory/src/test/java/com/example/observatory/telescope/testdata/pointing-request.json
+new file mode 100644
+--- /dev/null
++++ b/observatory/src/test/java/com/example/observatory/telescope/testdata/pointing-request.json
+@@ -0,0 +1,4 @@
++{
++  "rightAscension": 83.82,
++  "declination": -5.39
++}
+diff --git a/observatory/src/test/java/com/example/observatory/telescope/testdata/star-catalog-sample.csv b/observatory/src/test/java/com/example/observatory/telescope/testdata/star-catalog-sample.csv
+new file mode 100644
+--- /dev/null
++++ b/observatory/src/test/java/com/example/observatory/telescope/testdata/star-catalog-sample.csv
+@@ -0,0 +1,3 @@
++name,rightAscension,declination
++Betelgeuse,88.79,7.41
++Rigel,78.63,-8.20
