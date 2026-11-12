@@ -16,6 +16,7 @@ The change is `main...change`, checked with the argument `change`. A place names
 - `LoanRenewalService:20`, `project loans.md §2`, scale `variable` or `class`: the constant of the renewal fee is a bare decimal too.
 - `LoanRenewalService#renewLoan:38`, `code-style java.md §1`, scale `method`: the service builds the renewed loan again from the fields of the old loan, work the limits of the rule give to the record.
 - `RenewalReceipt:6`, `code-style classes.md §5` or `code-style naming.md §2`, scale `variable`: the component `renewalFee` repeats the word Renewal of the type around it.
+- `LoanRenewalService#renewLoan`, any line from 30 to 48, `code-style methods.md §10`, scale `method`: the method fetches the active loan and in the same body decides the renewal limit and calculates the new due date, a calculation the book puts apart from the fetching.
 
 ## Must not appear
 
@@ -24,6 +25,6 @@ The change is `main...change`, checked with the argument `change`. A place names
 - Any finding on `LoanService:9`, the wildcard import: the line is not changed.
 - Any finding on a line the change does not add or change.
 - Any finding on `Loan.java`: the changed record is clean.
-- Any finding that names a book direction that is not marked narrower than the book, such as `code-style naming.md §1` or `code-style methods.md §1`, on code.
+- Any finding that names a book direction that is not marked narrower than the book, such as `code-style naming.md §1` or `code-style methods.md §1`, on code, except a design direction that section 2 of the skill lists among those the review does not judge yet, such as `code-style methods.md §10`.
 - Any finding whose first line does not end in ` · ` and 1 of the words application, module, class, method or variable.
 - With the argument `change scales: module,class`, any finding of scale `application`, `method` or `variable`.
