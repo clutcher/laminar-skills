@@ -14,7 +14,10 @@ export class TypeHeads {
   }
 
   listSections(ownLines, { ownName, usedFrom }) {
-    const typeNames = collectTypeNames(ownLines).filter(name => name !== ownName);
+    return this.listSectionsOfTheTypes(collectTypeNames(ownLines).filter(name => name !== ownName), usedFrom);
+  }
+
+  listSectionsOfTheTypes(typeNames, usedFrom) {
     const shapeHeads = this.shapeTypeHeads.listHeads(typeNames).slice(0, MAX_TYPES_WITH_A_HEAD);
     const existingHeads = this.existingTypeHeads.listHeads(typeNames, usedFrom).slice(0, MAX_TYPES_WITH_A_HEAD - shapeHeads.length);
     return [

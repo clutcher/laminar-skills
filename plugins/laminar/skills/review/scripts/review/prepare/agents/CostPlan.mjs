@@ -318,7 +318,18 @@ const summarizeIoPathsCodeUnderReview = codeUnderReview => ({
   endCalls: (codeUnderReview.calls || []).length,
 });
 
-export function buildCostPlan({ codeUnderReview, screens, moduleRoots = new Map(), filter = null, scalesRun = null, waves: waveCount = 1, concurrentAgentCalls = readConcurrentAgentCalls() }) {
+const VARIABLE_JUDGE = "judge-simplicity-variable";
+
+const NO_SCREENS = Object.freeze({ presence: [], ioRules: [] });
+
+export function estimateVariableJudgeCost(everyCodeUnderReview, concurrentAgentCalls = readConcurrentAgentCalls()) {
+  const variableJudgeCalls = everyCodeUnderReview.filter(codeUnderReview => codeUnderReview.judgeType === VARIABLE_JUDGE);
+  if (!variableJudgeCalls.length) return null;
+  const { upTo } = estimateCostTotals(variableJudgeCalls, NO_SCREENS, concurrentAgentCalls);
+  return { judgeCalls: upTo.judgeCalls, dollars: upTo.dollars };
+}
+
+export function buildCostPlan({ codeUnderReview, screens, moduleRoots = new Map(), filter = null, scalesRun = null, waves: waveCount = 1, concurrentAgentCalls = readConcurrentAgentCalls(), variableJudge = null }) {
   const totals = estimateCostTotals(codeUnderReview, screens, concurrentAgentCalls);
   const folderKeys = collectFolderKeys(codeUnderReview, moduleRoots);
   return {
@@ -338,6 +349,7 @@ export function buildCostPlan({ codeUnderReview, screens, moduleRoots = new Map(
     byFolder: groupCosts(codeUnderReview, judgeCall => folderKeys.get(judgeCall), "folder"),
     ioPaths: codeUnderReview.filter(judgeCall => judgeCall.judgeType === "judge-performance-io-paths").map(summarizeIoPathsCodeUnderReview),
     scalesRun,
+    ...(variableJudge ? { variableJudge } : {}),
   };
 }
 
@@ -354,9 +366,13 @@ const formatDollars = dollars => (dollars >= 10 ? `$${Math.round(dollars)}` : `$
 
 const formatRunPhrase = run => `new tokens ${formatThousands(run.upTo.newTokens)} up to · ${formatThousands(run.afterScreen.newTokens)} after the screen · dollars about ${formatDollars(run.upTo.dollars)} up to · ${formatDollars(run.afterScreen.dollars)} after the screen · wall ${formatMinutes(run.upTo.wallSeconds)} up to`;
 
+const formatVariableJudgePhrase = variableJudge => (variableJudge
+  ? ` · variable judge: judge calls ${variableJudge.judgeCalls} up to · dollars about ${formatDollars(variableJudge.dollars)} up to`
+  : "");
+
 const formatScalesRunPhrase = scalesRun => scalesRun
   ? ` · ${formatScaleNames(scalesRun.scales)} only: judge calls ${scalesRun.upTo.judgeCalls} up to · ${scalesRun.afterScreen.judgeCalls} after the screen · ${formatRunPhrase(scalesRun)}`
   : "";
 
 export const formatCostPlanLine = plan =>
-  `cost plan: judge calls ${plan.upTo.judgeCalls} up to · ${plan.afterScreen.judgeCalls} after the screen · refuter calls ${plan.upTo.refuterCalls} up to · verifier calls ${plan.upTo.verifierCalls} up to · ${formatRunPhrase(plan)} · judge workflow waves ${plan.waves}${formatScalesRunPhrase(plan.scalesRun)} · threshold ${formatThousands(THRESHOLD.newTokens)} new tokens about ${formatDollars(plan.thresholdDollars)} · above the threshold of ${THRESHOLD.judgeCalls} calls or ${formatThousands(THRESHOLD.newTokens)} new tokens: ${plan.passesThreshold ? "yes" : "no"}${plan.filter ? " · filtered" : ""}`;
+  `cost plan: judge calls ${plan.upTo.judgeCalls} up to · ${plan.afterScreen.judgeCalls} after the screen · refuter calls ${plan.upTo.refuterCalls} up to · verifier calls ${plan.upTo.verifierCalls} up to · ${formatRunPhrase(plan)} · judge workflow waves ${plan.waves}${formatScalesRunPhrase(plan.scalesRun)}${formatVariableJudgePhrase(plan.variableJudge)} · threshold ${formatThousands(THRESHOLD.newTokens)} new tokens about ${formatDollars(plan.thresholdDollars)} · above the threshold of ${THRESHOLD.judgeCalls} calls or ${formatThousands(THRESHOLD.newTokens)} new tokens: ${plan.passesThreshold ? "yes" : "no"}${plan.filter ? " · filtered" : ""}`;

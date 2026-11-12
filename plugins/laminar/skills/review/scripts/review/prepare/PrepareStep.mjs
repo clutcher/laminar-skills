@@ -23,7 +23,7 @@ import { buildBoundaryPathCodeUnderReview, isABoundaryPathCodeUnderReview } from
 import { formatBoundaryPathText } from "./relations/BoundaryPathText.mjs";
 import { IoRuleCache, createRuleKey } from "./io/IoRuleCache.mjs";
 import { buildIoSummary } from "./io/IoSummary.mjs";
-import { COST_PLAN_FILE, formatCostPlanLine, FULL_COST_PLAN_FILE, buildCostPlan, estimateCostTotals, collectModuleRoots, SCALES_OF_THE_SCALES_RUN } from "./agents/CostPlan.mjs";
+import { COST_PLAN_FILE, formatCostPlanLine, FULL_COST_PLAN_FILE, buildCostPlan, estimateCostTotals, estimateVariableJudgeCost, collectModuleRoots, SCALES_OF_THE_SCALES_RUN } from "./agents/CostPlan.mjs";
 import { NO_FILTER } from "./selection/ReviewFilter.mjs";
 import { isAnIoPathsCodeUnderReview, buildJudgeWaves } from "./agents/JudgeWaves.mjs";
 import { createPropertyWhenNotEmpty, writeJsonFile } from "../../files/jsonFile.mjs";
@@ -321,6 +321,7 @@ export class PrepareStep {
       filter: this.filter.convertToFields(),
       scalesRun: this.estimateScalesRun(),
       waves: this.waves.length,
+      variableJudge: this.extracted.mode === CHANGE_MODES.SHAPE ? estimateVariableJudgeCost(this.codeUnderReview) : null,
     });
   }
 

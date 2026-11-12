@@ -28,7 +28,11 @@ export class ShapeSlices {
 
   buildOwnLinesSlice(abstraction, renderedLines, typeHeadSections) {
     const { from, to } = abstraction.lines;
-    const slice = cutTheSlice(abstraction, { ownLines: numberLines(renderedLines.slice(from - 1, to), from) });
+    return this.buildSliceOfTheLines(abstraction, numberLines(renderedLines.slice(from - 1, to), from), typeHeadSections);
+  }
+
+  buildSliceOfTheLines(abstraction, ownLines, typeHeadSections) {
+    const slice = cutTheSlice(abstraction, { ownLines });
     if (!typeHeadSections.length) return slice;
     const typeHeadBytes = typeHeadSections.reduce((sum, section) => sum + section.lines.join("\n").length, 0);
     return { ...slice, sections: [...slice.sections, ...typeHeadSections], bytes: slice.bytes + typeHeadBytes };

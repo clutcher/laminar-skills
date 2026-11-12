@@ -35,17 +35,19 @@ const resolveScaleNamed = name => {
 // Out until the next version: the slice of a shape names a shared constant and not its value, so the decision judge cannot see that 2 lists are 1.
 const DECISION_JUDGE_IN_SHAPE_MODE = false;
 
+const VARIABLE_JUDGE = JUDGE_TYPE_BY_SCALE_MAP[Scale.VARIABLE.name];
+
 const JUDGE_TYPES_OF_A_BODY = DECISION_JUDGE_IN_SHAPE_MODE
-  ? [JUDGE_TYPE_BY_SCALE_MAP[Scale.METHOD.name], JUDGE_TYPE_BY_TRACK_MAP[TRACKS.DECISION]]
-  : [JUDGE_TYPE_BY_SCALE_MAP[Scale.METHOD.name]];
+  ? [JUDGE_TYPE_BY_SCALE_MAP[Scale.METHOD.name], VARIABLE_JUDGE, JUDGE_TYPE_BY_TRACK_MAP[TRACKS.DECISION]]
+  : [JUDGE_TYPE_BY_SCALE_MAP[Scale.METHOD.name], VARIABLE_JUDGE];
 
 const JUDGE_TYPES_BY_WHAT_THE_SHAPE_SHOWS_MAP = Object.freeze({
   [SHAPE_SHOWS.FOLDERS]: [JUDGE_TYPE_BY_SCALE_MAP[Scale.MODULE.name]],
-  [SHAPE_SHOWS.CLASSES]: [JUDGE_TYPE_BY_SCALE_MAP[Scale.CLASS.name]],
+  [SHAPE_SHOWS.CLASSES]: [JUDGE_TYPE_BY_SCALE_MAP[Scale.CLASS.name], VARIABLE_JUDGE],
   [SHAPE_SHOWS.BODIES]: JUDGE_TYPES_OF_A_BODY,
 });
 
-export const listJudgeTypesAllowedByTheShape = shows => shows.flatMap(shown => JUDGE_TYPES_BY_WHAT_THE_SHAPE_SHOWS_MAP[shown]);
+export const listJudgeTypesAllowedByTheShape = shows => [...new Set(shows.flatMap(shown => JUDGE_TYPES_BY_WHAT_THE_SHAPE_SHOWS_MAP[shown]))];
 
 export class ReviewFilter {
   static createForAShapeRun({ judges = [], paths = [], scales = [] }, shows) {

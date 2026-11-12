@@ -1,5 +1,6 @@
-import { BOUNDARY_RANKS, CHANGE_KINDS, CHANGE_MODES, CreatedFolders, FILE_STATUS, findDeployableRoots, isTestPath, ModuleReading, PUBLIC_CHANGE_KINDS, PUBLIC_METHOD_VISIBILITY, readBasePaths, readBoundaryRank, readLanguageFamily, readRepositoryFileLines, renamesTheFile, Scale, SHAPE_KINDS, ShapeFiles, TestLayout, TestPlacements, VISIBILITIES } from "../../../../code/index.mjs";
+import { BOUNDARY_RANKS, CHANGE_KINDS, CHANGE_MODES, collectTypeNames, CreatedFolders, FILE_STATUS, findDeployableRoots, findDriver, formatDisplayName, isTestPath, ModuleReading, PUBLIC_CHANGE_KINDS, PUBLIC_METHOD_VISIBILITY, readBasePaths, readBoundaryRank, readLanguageFamily, readRepositoryFileLines, renamesTheFile, restatesTheTypeText, Scale, SHAPE_KINDS, ShapeFiles, TestLayout, TestPlacements, VISIBILITIES } from "../../../../code/index.mjs";
 import { readFolderPath } from "../../../../files/paths.mjs";
+import { numberLines } from "../../formats/SliceFormat.mjs";
 import { ShapeSlices } from "./ShapeSlices.mjs";
 import { ExistingTypeHeads } from "./ExistingTypeHeads.mjs";
 import { ShapeTypeHeads } from "./ShapeTypeHeads.mjs";
@@ -29,6 +30,23 @@ const readChangeKindOfTheFile = file => {
 const KINDS_THAT_KEEP_THE_BODY = new Set([CHANGE_KINDS.MOVED, CHANGE_KINDS.RENAMED]);
 
 const readChangeKindOfTheMethodBody = shapeClass => (KINDS_THAT_KEEP_THE_BODY.has(shapeClass.changeKind) ? shapeClass.changeKind : CHANGE_KINDS.CREATED);
+
+const holdsNamedValuesOfItsOwn = abstraction => !abstraction.isTest && !KINDS_THAT_KEEP_THE_BODY.has(abstraction.changeKind);
+
+const listFieldsNamedBeyondTheirType = placement => placement.shapeClass.fields
+  .map((field, index) => ({ field, line: placement.lines.from + 1 + index }))
+  .filter(({ field }) => !restatesTheTypeText(field.name, field.type));
+
+const describeTheField = (shapeClass, { field, line }) => ({
+  name: field.name,
+  displayName: formatDisplayName(Scale.VARIABLE.name, field.name, shapeClass.name),
+  lines: { from: line, to: line },
+  changedLines: { from: line, to: line },
+});
+
+const measureExtentOfTheFields = fields => (fields.length === 1
+  ? { lines: fields[0].lines }
+  : { lines: { from: fields[0].lines.from, to: fields[fields.length - 1].lines.to }, fields });
 
 const readVisibilityOfTheMethod = method => (method.visibility === PUBLIC_METHOD_VISIBILITY ? VISIBILITIES.EXPOSED : VISIBILITIES.PRIVATE);
 
@@ -299,10 +317,62 @@ export class ShapeAbstractions {
       lines: placement.lines,
     });
     shapeClass.slice = this.slices.buildOwnLinesSlice(shapeClass, renderedLines, this.listTypeHeadSections(shapeClass, renderedLines));
-    shapeClass.children = placement.methods
+    const methods = placement.methods
       .filter(({ method }) => Boolean(method.body))
       .map(methodPlacement => this.buildTheMethod(shapeClass, placement, methodPlacement, renderedLines));
+    shapeClass.children = [...this.buildTheFields(shapeClass, placement, renderedLines), ...methods];
     return shapeClass;
+  }
+
+  buildTheFields(shapeClass, placement, renderedLines) {
+    const fields = holdsNamedValuesOfItsOwn(shapeClass) ? listFieldsNamedBeyondTheirType(placement).map(placedField => describeTheField(shapeClass, placedField)) : [];
+    if (!fields.length) return [];
+    const name = fields.map(field => field.name).join(", ");
+    const fieldGroup = createAbstraction({
+      scale: Scale.VARIABLE.name,
+      name,
+      enclosingTypeName: shapeClass.name,
+      displayName: formatDisplayName(Scale.VARIABLE.name, name, shapeClass.name),
+      path: shapeClass.path,
+      changeKind: CHANGE_KINDS.CREATED,
+      publicChangeKind: PUBLIC_CHANGE_KINDS.CREATED,
+      visibility: VISIBILITIES.EXPOSED,
+      boundaryRank: shapeClass.boundaryRank,
+      ...measureExtentOfTheFields(fields),
+    });
+    const headLine = placement.lines.from;
+    const ownLines = [headLine, ...fields.map(field => field.lines.from)].flatMap(line => numberLines([renderedLines[line - 1]], line));
+    fieldGroup.slice = this.slices.buildSliceOfTheLines(fieldGroup, ownLines, this.listTypeHeadSectionsOfTheFields(shapeClass, placement.shapeClass, fields, renderedLines));
+    return [fieldGroup];
+  }
+
+  listTypeHeadSectionsOfTheFields(shapeClass, modeledClass, fields, renderedLines) {
+    const supertypeNames = [...modeledClass.extends, ...modeledClass.implements];
+    const fieldTypeNames = collectTypeNames(fields.map(field => renderedLines[field.lines.from - 1]));
+    const typeNames = [...new Set([...supertypeNames, ...fieldTypeNames])].filter(typeName => typeName !== shapeClass.name);
+    return this.typeHeads.listSectionsOfTheTypes(typeNames, shapeClass.path);
+  }
+
+  buildTheLocals(shapeMethod, renderedLines, typeHeadSections) {
+    const driver = findDriver(shapeMethod.path);
+    if (!driver || !holdsNamedValuesOfItsOwn(shapeMethod)) return [];
+    const { from, to } = shapeMethod.lines;
+    return driver.findLocalVariables(renderedLines.slice(from - 1, to)).map(name => {
+      const local = createAbstraction({
+        scale: Scale.VARIABLE.name,
+        name,
+        enclosingTypeName: shapeMethod.displayName,
+        displayName: formatDisplayName(Scale.VARIABLE.name, name, shapeMethod.displayName),
+        path: shapeMethod.path,
+        changeKind: CHANGE_KINDS.CREATED,
+        publicChangeKind: shapeMethod.publicChangeKind,
+        visibility: VISIBILITIES.PRIVATE,
+        boundaryRank: shapeMethod.boundaryRank,
+        lines: shapeMethod.lines,
+      });
+      local.slice = this.slices.buildOwnLinesSlice(local, renderedLines, typeHeadSections);
+      return local;
+    });
   }
 
   buildTheMethod(shapeClass, placement, methodPlacement, renderedLines) {
@@ -320,7 +390,9 @@ export class ShapeAbstractions {
       boundaryRank: readBoundaryRank([], [], visibility),
       lines,
     });
-    shapeMethod.slice = this.slices.buildOwnLinesSlice(shapeMethod, renderedLines, this.listTypeHeadSections(shapeMethod, renderedLines));
+    const typeHeadSections = this.listTypeHeadSections(shapeMethod, renderedLines);
+    shapeMethod.slice = this.slices.buildOwnLinesSlice(shapeMethod, renderedLines, typeHeadSections);
+    shapeMethod.children = this.buildTheLocals(shapeMethod, renderedLines, typeHeadSections);
     if (!shapeMethod.isTest) this.placeTheSameDecisions(shapeMethod, this.decisionSearch.findSameDecisionPlaces(placement, methodPlacement));
     return shapeMethod;
   }

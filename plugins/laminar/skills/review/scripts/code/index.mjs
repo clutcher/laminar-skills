@@ -33,7 +33,7 @@ export { findHeadOfRevisions, ReviewWorktree, WorktreeStop } from "./inputs/work
 export { sweepUnusedReviewWorktreesBeside } from "./inputs/worktree/ReviewWorktreeSweep.mjs";
 export { ABSTRACTION_KINDS, isADeclaredType, isAFileNamedByTheLanguage, isPlacedInSource } from "./graph/abstractions/Abstraction.mjs";
 export { CHANGE_KINDS, changesTheBoundary, changesTheCode, readDeclaredMemberChangeKind, renamesTheFile } from "./inputs/change/AbstractionChange.mjs";
-export { readDescribedFields, readFoundFields, isOwnCodeAt, readOwnSpans, readVisibilityOfDeclaration, VISIBILITIES } from "./extract/tree/AbstractionTree.mjs";
+export { formatDisplayName, readDescribedFields, readFoundFields, isOwnCodeAt, readOwnSpans, readVisibilityOfDeclaration, VISIBILITIES } from "./extract/tree/AbstractionTree.mjs";
 export { isTestPath, countPhaseMarks, TestCode } from "./inputs/source/TestCode.mjs";
 export { TEST_PLACEMENTS, TestPlacements } from "./inputs/source/TestPlacement.mjs";
 export { TestLayout } from "./extract/tree/TestLayout.mjs";
@@ -75,6 +75,7 @@ export { createFingerprint, collectWindows } from "./extract/abstractions/method
 export { CodeWindowIndex } from "./extract/abstractions/method/generic/measures/CodeWindowIndex.mjs";
 export { isACallAfter, isAnAssignmentAfter } from "./extract/abstractions/method/generic/references/NameReferences.mjs";
 export { buildFieldWritePattern } from "./extract/abstractions/variable/generic/fields/FieldWrites.mjs";
+export { restatesTheTypeText } from "./extract/abstractions/variable/generic/fields/FieldItems.mjs";
 export { listHeadLineNumbers, readMemberNames } from "./extract/abstractions/variable/generic/members/TypeMembers.mjs";
 export { declaresAnUpperSnakeValueIn, buildAnyValueDeclarationPattern } from "./extract/abstractions/variable/generic/GenericVariableFinder.mjs";
 export { MethodScope } from "./extract/calls/scope/MethodScope.mjs";

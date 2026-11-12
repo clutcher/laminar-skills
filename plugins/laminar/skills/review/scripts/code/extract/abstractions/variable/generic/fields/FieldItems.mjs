@@ -29,12 +29,16 @@ const findDeclaredType = (tag, diffDriver) => {
   return keepsAParameterAsItIs ? findDeclarationInLine(tag.constructorHead, declared.alias, diffDriver, false) : declared;
 };
 
+export function restatesTheTypeText(name, typeText) {
+  const type = typeText ? parseType(typeText) : null;
+  if (!type || isKeyed(type)) return false;
+  const nameWords = readWords(name);
+  return listNamesOfTheType(type).includes(nameWords) || listNamesOfItsElements(type.text).includes(nameWords);
+}
+
 export function restatesItsType(tag, diffDriver) {
   const declared = findDeclaredType(tag, diffDriver);
-  const type = declared && declared.type ? parseType(declared.type) : null;
-  if (!type || isKeyed(type)) return false;
-  const nameWords = readWords(tag.name);
-  return listNamesOfTheType(type).includes(nameWords) || listNamesOfItsElements(type.text).includes(nameWords);
+  return restatesTheTypeText(tag.name, declared && declared.type);
 }
 
 const isAMethod = member => member.tag.scale === Scale.METHOD.name;
