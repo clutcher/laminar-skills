@@ -84,7 +84,8 @@ class MigrationPlan {
     return { stage, group, says, files: [...new Set(files)] };
   }
 
-  listImportingFiles(className, oldFile, newFile) {
+  // A file that a later group removes still exists at the end of the group of the move, so its imports change in that group.
+  listImportingFiles(className, oldFile, newFile, groupOfTheChange) {
     if (!this.currentTree) return [];
 
     const oldFolder = isAText(oldFile) ? path.posix.dirname(oldFile) : null;
@@ -92,7 +93,7 @@ class MigrationPlan {
     const sameFolderFiles = leavesItsFolder ? this.currentTree.listFilesThatHoldEveryWord([className]).filter(file => path.posix.dirname(file) === oldFolder) : [];
     const importingFiles = [...this.currentTree.listFilesThatImportTheClass(className, oldFile), ...sameFolderFiles]
       .map(file => this.newFileOfOldPathMap.get(file) || file)
-      .filter(file => file !== oldFile && file !== newFile && !this.createdFiles.has(file) && !this.removedFiles.has(file));
+      .filter(file => file !== oldFile && file !== newFile && !this.createdFiles.has(file) && (!this.removedFiles.has(file) || this.getGroupOfTheRemoval(file) > groupOfTheChange));
     return [...new Set(importingFiles)];
   }
 
@@ -205,11 +206,12 @@ class MigrationPlan {
   listMoveSteps() {
     return this.children.filter(({ child }) => child.kind === KINDS.MOVED && isAText(child.oldPath)).map(({ child, file }) => {
       const classes = this.listClassesOfTheFile(file);
+      const group = this.getGroupOfClasses(classes);
       const verb = path.posix.basename(child.oldPath) === child.name ? "moves" : "renames and moves";
       const callerFiles = classes.flatMap(movedClass => this.listCallerFiles([movedClass.name], theClass => theClass !== movedClass && this.namesTheClass(theClass, movedClass), movedClass.oldName || movedClass.name, child.oldPath));
-      const importingFiles = [...new Set(classes.flatMap(movedClass => this.listImportingFiles(movedClass.oldName || movedClass.name, child.oldPath, file)))];
+      const importingFiles = [...new Set(classes.flatMap(movedClass => this.listImportingFiles(movedClass.oldName || movedClass.name, child.oldPath, file, group)))];
       const says = `${verb} ${child.oldPath} to ${file}, with no change of behavior${this.describeImportUpdate(importingFiles)}`;
-      return this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, this.getGroupOfClasses(classes), says, [child.oldPath, file, ...callerFiles.filter(callerFile => callerFile !== file), ...importingFiles]);
+      return this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, says, [child.oldPath, file, ...callerFiles.filter(callerFile => callerFile !== file), ...importingFiles]);
     });
   }
 
@@ -221,7 +223,7 @@ class MigrationPlan {
       if (isAText(theClass.oldName)) {
         const oldTypeName = readOldTypeName(theClass);
         const callerFiles = this.listCallerFiles(words, other => other !== theClass && this.namesTheClass(other, theClass), referredName, this.readCurrentFileOf(theClass.file));
-        const importingFiles = oldTypeName.includes(".") ? [] : this.listImportingFiles(theClass.oldName, theClass.file, theClass.file);
+        const importingFiles = oldTypeName.includes(".") ? [] : this.listImportingFiles(theClass.oldName, theClass.file, theClass.file, group);
         steps.push(this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, group, `renames the class ${oldTypeName} to ${theClass.name}, with no change of behavior${this.describeImportUpdate(importingFiles)}`, [theClass.file, ...callerFiles, ...importingFiles]));
       }
       for (const method of readList(theClass.methods)) {
@@ -292,7 +294,7 @@ class MigrationPlan {
       const child = createdChildOfFileMap.get(file);
       const group = this.getGroupOfTheFile(file);
       const takesFrom = isAText(child.oldPath) ? `, taking its code from ${child.oldPath}` : "";
-      const importingFiles = isAText(child.oldPath) ? [...new Set(this.listClassesOfTheFile(file).flatMap(theClass => this.listImportingFiles(theClass.oldName || theClass.name, child.oldPath, file)))] : [];
+      const importingFiles = isAText(child.oldPath) ? [...new Set(this.listClassesOfTheFile(file).flatMap(theClass => this.listImportingFiles(theClass.oldName || theClass.name, child.oldPath, file, group)))] : [];
       const says = `creates ${file}${this.describeCreatedFile(file)}${takesFrom}${this.describeImportUpdate(importingFiles)}`;
       const createStep = this.createStep(MIGRATION_STAGES.CREATED_CLASSES, group, says, isAText(child.oldPath) ? [file, child.oldPath, ...importingFiles] : [file]);
       if (this.createdFileOfRemovedFileMap.get(child.oldPath) !== file) return [createStep];
@@ -470,11 +472,45 @@ class MigrationPlan {
     return this.currentTree !== null && isAReadExtension(theClass.file);
   }
 
-  listTestFilesThatName(theClass) {
+  // A test file that a later group removes still exists at the end of the group of the change, so it is still a test to update.
+  listTestFilesThatName(theClass, groupOfTheChange = getGroupOfTheClass(theClass)) {
     if (!this.isSearchedForTests(theClass)) return [];
     const { words, referredName } = readTypeSearch(readCurrentTypeName(theClass));
     return this.currentTree.listFilesThatReferToTheClass(words, referredName, this.readCurrentFileOf(theClass.file))
-      .filter(file => isATestFile(file) && isAReadExtension(file) && !this.createdFiles.has(file) && !this.removedFiles.has(file));
+      .filter(file => isATestFile(file) && isAReadExtension(file) && !this.createdFiles.has(file) && (!this.removedFiles.has(file) || this.getGroupOfTheRemoval(file) > groupOfTheChange));
+  }
+
+  // The group of the step of decisions.tests that writes the test file, where a later group than the given one writes it.
+  findLaterGroupThatWritesTheTests(testFile, group) {
+    const tests = this.model.decisions.tests || {};
+    const writingGroups = [
+      ...readList(tests.unit).filter(unitTest => unitTest.file === testFile).map(unitTest => this.getGroupOfTheName(unitTest.class)),
+      ...readList(tests.integration).filter(integration => integration.file === testFile).map(integration => this.getGroupOfTheEntryPath(integration.entry)),
+    ].filter(writingGroup => writingGroup > group);
+    return writingGroups.length ? Math.min(...writingGroups) : null;
+  }
+
+  describeTestFileOfTheRemoval(testFile, group) {
+    const laterGroup = this.findLaterGroupThatWritesTheTests(testFile, group);
+    return laterGroup === null ? testFile : `${testFile} (remove or change only the tests that read it; group ${laterGroup} writes the tests of this file)`;
+  }
+
+  // A removed class breaks each existing test that names it, so the group of the removal updates or removes those tests, also where a later group writes new tests into the same file.
+  listRemovedClassTestSteps() {
+    const removedFileClasses = this.children
+      .filter(({ child }) => child.kind === KINDS.REMOVED)
+      .flatMap(({ file }) => this.listClassesOfTheFile(file).map(theClass => ({ theClass, group: this.getGroupOfTheRemoval(file) })));
+    const removedNestedClasses = this.children
+      .flatMap(({ child, file }) => readList(child.removedClasses).map(className => ({ theClass: this.model.findClass(className), group: this.getGroupOfTheFile(file) })))
+      .filter(({ theClass }) => theClass);
+    return [...removedFileClasses, ...removedNestedClasses]
+      .filter(({ theClass }) => !isATestFile(theClass.file))
+      .flatMap(({ theClass, group }) => {
+        const testFiles = this.listTestFilesThatName(theClass, group).filter(testFile => testFile !== theClass.file);
+        if (!testFiles.length) return [];
+        const found = joinNames(testFiles.map(testFile => this.describeTestFileOfTheRemoval(testFile, group)));
+        return [{ ...this.createStep(MIGRATION_STAGES.TESTS, group, `updates or removes the tests that read ${this.model.getClassDisplayName(theClass)}, which this group removes: ${found}`, testFiles), testedFiles: [theClass.file] }];
+      });
   }
 
   listTestUpdateSteps() {
@@ -483,7 +519,7 @@ class MigrationPlan {
       .flatMap(theClass => {
         const testFiles = this.listTestFilesThatName(theClass);
         if (this.isSearchedForTests(theClass) && !testFiles.length) return [];
-        const found = testFiles.length ? joinNames(testFiles.map(testFile => `${testFile}${this.describeLaterGroupFile(testFile, getGroupOfTheClass(theClass))}`)) : TESTS_NOT_FOUND;
+        const found = testFiles.length ? joinNames(testFiles.map(testFile => `${this.describeReaderFile(testFile)}${this.describeLaterGroupFile(testFile, getGroupOfTheClass(theClass))}`)) : TESTS_NOT_FOUND;
         return [{ ...this.createStep(MIGRATION_STAGES.TESTS, getGroupOfTheClass(theClass), `updates or removes the tests that construct or call ${this.model.getClassDisplayName(theClass)}: ${found}`, testFiles), testedFiles: [theClass.file] }];
       });
   }
@@ -561,7 +597,7 @@ class MigrationPlan {
     const tests = this.model.decisions.tests || {};
     const unitTestSteps = readList(tests.unit).map(unitTest => this.createStep(MIGRATION_STAGES.TESTS, this.getGroupOfTheName(unitTest.class), `writes the unit tests of ${unitTest.class}: ${readList(unitTest.tests).join(", ")}`, [unitTest.file]));
     const integrationSteps = readList(tests.integration).map(integration => this.createStep(MIGRATION_STAGES.TESTS, this.getGroupOfTheEntryPath(integration.entry), `writes the integration tests of ${integration.entry}: ${readList(integration.tests).join(", ")}`, [integration.file]));
-    return [...this.listTestUpdateSteps(), ...this.listNewOutsideCallTestSteps(), ...unitTestSteps, ...integrationSteps];
+    return [...this.listTestUpdateSteps(), ...this.listRemovedClassTestSteps(), ...this.listNewOutsideCallTestSteps(), ...unitTestSteps, ...integrationSteps];
   }
 
   // A modified file in no language the scripts read and with no class of the model, such as the XML wiring of a framework, gets 1 step that the writer does by hand.
