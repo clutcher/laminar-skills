@@ -198,10 +198,14 @@ function prepare(parsed) {
   printResult(returned);
 }
 
+const formatDroppedWithNoCodeUnderReviewWords = counts => (counts.droppedWithNoCodeUnderReview
+  ? `, ${counts.droppedWithNoCodeUnderReview} dropped as their code under review is not in prepare.json`
+  : "");
+
 function merge(parsed) {
   if (!parsed.findings.length) { console.error(USAGE); process.exit(2); }
   const written = new MergeStep(parsed.run, parsed.findings).run().writeTo();
-  console.log(`merge: ${written.counts.possibleFindings} possible finding(s), ${written.counts.dropped} dropped by the line check, ${written.counts.refiled} re-filed under the check their decision names, ${written.counts.filedUnderAnotherCheck} dropped as filed under a check their call did not answer, ${written.counts.linesNotInTheCode} named line(s) not in the code, ${written.counts.items} item(s) in the draft, ${formatSweepWords(written.sweep)}, written to merge.json and draft.md`);
+  console.log(`merge: ${written.counts.possibleFindings} possible finding(s), ${written.counts.dropped} dropped by the line check${formatDroppedWithNoCodeUnderReviewWords(written.counts)}, ${written.counts.refiled} re-filed under the check their decision names, ${written.counts.filedUnderAnotherCheck} dropped as filed under a check their call did not answer, ${written.counts.linesNotInTheCode} named line(s) not in the code, ${written.counts.items} item(s) in the draft, ${formatSweepWords(written.sweep)}, written to merge.json and draft.md`);
   console.log(`merge: ${written.counts.refuterCalls} refuter call(s), ${written.counts.excludedFromRefutation} possible finding(s) left out of the refuter, ${written.counts.verifyWaves} verify wave(s), written to refute/, verify/, ${MERGE_RETURN_FILE} and ${MERGE_RETURN_WORKFLOW_FILE}`);
   const returned = { step: "merge", runFolder: resolveAbsolutePath(parsed.run), counts: written.counts, draft: written.draft, draftLines: written.draftLines, verify: written.verify };
   writeJsonFile(path.join(parsed.run, MERGE_RETURN_FILE), returned);

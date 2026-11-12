@@ -47,6 +47,8 @@ const formatTargetLine = reviewed => `${readModeWord(reviewed)} mode, ${reviewed
 
 const formatRepairedWord = repaired => repaired.length ? `, ${repaired.length} repaired from the numbering of the code under review` : "";
 
+const formatDroppedWithNoCodeUnderReviewWord = counts => (counts || {}).droppedWithNoCodeUnderReview ? `, ${counts.droppedWithNoCodeUnderReview} dropped as their code under review is not in prepare.json` : "";
+
 const formatLinesNotInTheCodeWord = counts => (counts || {}).linesNotInTheCode ? `, ${counts.linesNotInTheCode} named line(s) not in the code` : "";
 
 export class RenderStep {
@@ -74,7 +76,7 @@ export class RenderStep {
     const prepared = this.prepared.counts || {};
     const sweep = this.sweep;
     const confidence = this.settled.countByConfidence();
-    return `**Run** · ${formatTargetLine(this.reviewed)} · ${counts.files || 0} file(s), ${counts.abstractions || 0} abstraction(s) · ${prepared.codeUnderReview || 0} abstraction(s) under review, ${formatSweepWords(sweep)} · findings: ${this.settled.kept.length} kept (${confidence.high} high, ${confidence.moderate} moderate, ${confidence.low} low), ${this.settled.considered.length} to consider (${this.settled.countConsideredInExistingCode()} in ${EXISTING_CODE}), ${this.settled.rejected.length} rejected, ${this.settled.notVerified.length} not verified, ${(this.merged.dropped || []).length} dropped by the line check${formatLinesNotInTheCodeWord(this.merged.counts)}${formatRepairedWord(this.merged.repaired || [])} · run folder: ${resolveAbsolutePath(this.runFolder)}`;
+    return `**Run** · ${formatTargetLine(this.reviewed)} · ${counts.files || 0} file(s), ${counts.abstractions || 0} abstraction(s) · ${prepared.codeUnderReview || 0} abstraction(s) under review, ${formatSweepWords(sweep)} · findings: ${this.settled.kept.length} kept (${confidence.high} high, ${confidence.moderate} moderate, ${confidence.low} low), ${this.settled.considered.length} to consider (${this.settled.countConsideredInExistingCode()} in ${EXISTING_CODE}), ${this.settled.rejected.length} rejected, ${this.settled.notVerified.length} not verified, ${(this.merged.dropped || []).length} dropped by the line check${formatDroppedWithNoCodeUnderReviewWord(this.merged.counts)}${formatLinesNotInTheCodeWord(this.merged.counts)}${formatRepairedWord(this.merged.repaired || [])} · run folder: ${resolveAbsolutePath(this.runFolder)}`;
   }
 
   readTheChangeKinds() {
@@ -106,7 +108,7 @@ export class RenderStep {
     };
     const files = {
       "review.md": buildReaderReport({ ...shared, leftOutFiles: this.reviewed.leftOutFiles || [] }),
-      "review-evidence.md": buildEvidenceReport({ ...shared, sweep: this.sweep, notAnswered: this.prepared.notAnswered || [], leftOutFiles: this.reviewed.leftOutFiles || [], io: this.readIo() }),
+      "review-evidence.md": buildEvidenceReport({ ...shared, droppedWithNoCodeUnderReview: this.merged.droppedWithNoCodeUnderReview || [], sweep: this.sweep, notAnswered: this.prepared.notAnswered || [], leftOutFiles: this.reviewed.leftOutFiles || [], io: this.readIo() }),
       "review.sarif": buildSarifReport(this.settled.kept, version, this.scope, this.acrossApplications, this.settled.considered, this.readTheChangeKinds()),
     };
     for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(this.runFolder, name), text);

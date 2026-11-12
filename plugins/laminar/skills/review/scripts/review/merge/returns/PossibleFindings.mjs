@@ -176,6 +176,11 @@ const readAbstractionOfTheFinding = (finding, codeUnderReview) => {
 
 const readTheRelationOf = codeUnderReview => (codeUnderReview.relation ? { relation: codeUnderReview.relation } : {});
 
+const findFirstEvidencePlace = finding => {
+  const named = (finding.evidence || []).find(each => each.file) || {};
+  return { file: finding.file || named.file || "", line: finding.line || listEvidenceLines(named)[0] || 0 };
+};
+
 const buildAbstractionFields = abstraction => ({
   scale: abstraction.scale,
   name: abstraction.name,
@@ -190,6 +195,16 @@ export class PossibleFindings {
     this.preparedRun = new PreparedRun(runFolder);
     this.judgeReturn = JudgeReturn.readFrom(given.findings);
     this.places = new AbstractionsAtPlaces(runFolder, this.preparedRun.repository, this.preparedRun.abstractionsOfTheChange);
+  }
+
+  splitTheJudgeFindingsByTheirCodeUnderReview() {
+    const kept = [];
+    const withNoCodeUnderReview = [];
+    for (const finding of this.judgeReturn.listFindings()) {
+      if (this.preparedRun.findCodeUnderReview(finding.codeUnderReviewId)) kept.push(finding);
+      else withNoCodeUnderReview.push({ ...finding, ...findFirstEvidencePlace(finding) });
+    }
+    return { kept, withNoCodeUnderReview };
   }
 
   findSameDecisionPlaces(finding, abstraction) {

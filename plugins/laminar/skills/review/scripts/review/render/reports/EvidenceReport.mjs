@@ -251,9 +251,12 @@ const formatNotCheckedSection = (excluded, leftOutFiles) => [
   ...(leftOutFiles.length ? [formatLeftOutFilesList(leftOutFiles)] : []),
 ].join("\n\n");
 
-export function buildEvidenceReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, rejectedCoveredPaths, sweep, notAnswered, dropped, excluded, leftOutFiles, io }) {
+export function buildEvidenceReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, rejectedCoveredPaths, sweep, notAnswered, dropped, droppedWithNoCodeUnderReview, excluded, leftOutFiles, io }) {
   const unmatched = settled.unmatchedVerdicts.map(verdict => `- ${verdict.itemId}${verdict.check ? `, ${verdict.check}` : ""}: ${verdict.reason}`);
-  const droppedLines = (dropped || []).map(finding => `- \`${finding.file}:${finding.line}\`, ${finding.check}: no line it names is in the code\n${quoteText((finding.quotes || []).map(named => `${named.file}:${named.line}`))}`);
+  const droppedLines = [
+    ...(dropped || []).map(finding => `- \`${finding.file}:${finding.line}\`, ${finding.check}: no line it names is in the code\n${quoteText((finding.quotes || []).map(named => `${named.file}:${named.line}`))}`),
+    ...(droppedWithNoCodeUnderReview || []).map(finding => `- \`${finding.file}:${finding.line}\`, ${finding.check}: its code under review ${finding.codeUnderReviewId} is not in prepare.json`),
+  ];
   return [
     banner,
     ...(scopeLine ? [scopeLine] : []),

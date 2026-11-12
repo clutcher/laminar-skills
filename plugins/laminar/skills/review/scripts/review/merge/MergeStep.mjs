@@ -79,7 +79,9 @@ export class MergeStep {
 
   run() {
     const codeUnderReview = this.preparedRun.prepared.codeUnderReview || [];
-    const keptAndFoldedJudgeFindings = splitJudgeFindingsTheScriptSettled(this.possibleFindingSource.judgeReturn.listFindings(), codeUnderReview);
+    const judgeFindingsSplitByTheirCodeUnderReview = this.possibleFindingSource.splitTheJudgeFindingsByTheirCodeUnderReview();
+    this.droppedWithNoCodeUnderReview = judgeFindingsSplitByTheirCodeUnderReview.withNoCodeUnderReview;
+    const keptAndFoldedJudgeFindings = splitJudgeFindingsTheScriptSettled(judgeFindingsSplitByTheirCodeUnderReview.kept, codeUnderReview);
     this.foldedIntoTheScript = keptAndFoldedJudgeFindings.folded;
     const keptAndFoldedSetFindings = splitSetFindingsFoldedIntoAUse(keptAndFoldedJudgeFindings.kept, codeUnderReview);
     this.foldedIntoAUse = keptAndFoldedSetFindings.folded;
@@ -134,6 +136,7 @@ export class MergeStep {
     return {
       possibleFindings: this.possibleFindings.length,
       dropped: this.dropped.length,
+      ...(this.droppedWithNoCodeUnderReview.length ? { droppedWithNoCodeUnderReview: this.droppedWithNoCodeUnderReview.length } : {}),
       refiled: this.refiled.length,
       filedUnderAnotherCheck: this.filedUnderAnotherCheck.length,
       linesNotInTheCode: countLinesNotInTheCode(this.possibleFindings),
@@ -162,6 +165,7 @@ export class MergeStep {
       counts: this.buildCounts(),
       sweep: this.sweep,
       dropped: this.dropped,
+      ...(this.droppedWithNoCodeUnderReview.length ? { droppedWithNoCodeUnderReview: this.droppedWithNoCodeUnderReview } : {}),
       refiled: this.refiled,
       ...(this.foldedIntoTheScript.length ? { foldedIntoTheScript: this.foldedIntoTheScript } : {}),
       ...(this.foldedIntoAUse.length ? { foldedIntoAUse: this.foldedIntoAUse } : {}),
