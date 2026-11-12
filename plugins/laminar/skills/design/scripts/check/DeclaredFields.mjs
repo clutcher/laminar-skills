@@ -1,25 +1,5 @@
-import path from "node:path";
+import { MEMBER_LANGUAGES, findMatchingClose, readClassDeclaration, readMemberLanguage } from "./ClassDeclaration.mjs";
 import { splitAtTopLevelCommas } from "../model/TypeArguments.mjs";
-
-const JAVA = "Java";
-
-const SCRIPT = "JavaScript or TypeScript";
-
-const LANGUAGE_OF_EXTENSION_MAP = new Map([
-  [".java", JAVA],
-  [".js", SCRIPT], [".mjs", SCRIPT], [".cjs", SCRIPT], [".jsx", SCRIPT],
-  [".ts", SCRIPT], [".tsx", SCRIPT], [".mts", SCRIPT], [".cts", SCRIPT],
-]);
-
-const QUOTED = /"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`/g;
-
-const BLOCK_COMMENTS = /\/\*[\s\S]*?\*\//g;
-
-// A line comment, never the 2 slashes of a URL in a text.
-const LINE_COMMENTS = /(^|[^:"'])\/\/.*$/gm;
-
-// A Java annotation or a TypeScript decorator, whose arguments in parentheses would read as a method head.
-const ANNOTATION = /@[\w$.]+(?:\s*\([^()]*\))?/g;
 
 // The words of Java, JavaScript and TypeScript that stand before a field name and are no part of it.
 const SCRIPT_MODIFIERS = /^(?:(?:private|public|protected|readonly|static|declare|override|accessor|abstract)\s+)*/;
@@ -31,33 +11,6 @@ const THIS_ASSIGNMENT = /\bthis\.#?([A-Za-z_$][\w$]*)\s*=(?![=>])/g;
 const NAME = /^#?([A-Za-z_$][\w$]*)/;
 
 const LAST_NAME = /([A-Za-z_$][\w$]*)\s*(?:\[\s*\])*\s*$/;
-
-export const readFieldLanguage = file => LANGUAGE_OF_EXTENSION_MAP.get(path.extname(file)) || null;
-
-const blankTheText = text => text.replace(BLOCK_COMMENTS, " ").replace(LINE_COMMENTS, "$1").replace(QUOTED, "\"\"").replace(ANNOTATION, " ");
-
-const findMatchingClose = (text, openAt, open, close) => {
-  let depth = 0;
-  for (let at = openAt; at < text.length; at += 1) {
-    if (text[at] === open) depth += 1;
-    else if (text[at] === close) {
-      depth -= 1;
-      if (depth === 0) return at;
-    }
-  }
-  return text.length;
-};
-
-const findTheDeclaration = (text, className) => {
-  const simpleName = className.split(".").pop();
-  const declaration = new RegExp(`\\b(class|record|enum|interface)\\s+${simpleName.replace(/[$]/g, "\\$")}\\b`).exec(text);
-  if (!declaration) return null;
-
-  const bodyOpen = text.indexOf("{", declaration.index);
-  if (bodyOpen < 0) return null;
-  const headText = text.slice(declaration.index, bodyOpen);
-  return { kindWord: declaration[1], headText, bodyText: text.slice(bodyOpen + 1, findMatchingClose(text, bodyOpen, "{", "}")) };
-};
 
 // The pieces of a class body at its own depth: each ends at a semicolon, a line end of a script or the start of a block, and a block itself is skipped.
 const listTopLevelPieces = (bodyText, endsAtLine) => {
@@ -134,11 +87,11 @@ const readScriptFieldNames = declaration => [
 
 // The fields a Java, JavaScript or TypeScript file declares for 1 class, read from its text; null where the file is in another language or declares no such class.
 export const readDeclaredFieldNames = (text, file, className) => {
-  const language = readFieldLanguage(file);
+  const language = readMemberLanguage(file);
   if (!language) return null;
 
-  const declaration = findTheDeclaration(blankTheText(text), className);
+  const declaration = readClassDeclaration(text, className);
   if (!declaration) return null;
-  const fieldNames = language === JAVA ? readJavaFieldNames(declaration) : readScriptFieldNames(declaration);
+  const fieldNames = language === MEMBER_LANGUAGES.JAVA ? readJavaFieldNames(declaration) : readScriptFieldNames(declaration);
   return new Set(fieldNames);
 };

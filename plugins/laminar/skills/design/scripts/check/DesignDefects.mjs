@@ -11,6 +11,7 @@ import { findExitListResult } from "./ExitList.mjs";
 import { findExitReachDefects } from "./ExitReach.mjs";
 import { findExitFailureResult, findFailureHandlingDefects } from "./FailureHandling.mjs";
 import { findFieldListResult } from "./FieldListCheck.mjs";
+import { findMethodListResult } from "./MethodListCheck.mjs";
 import { listMigrationSteps } from "../migration/MigrationSteps.mjs";
 import { findGroupOrderDefects } from "../migration/GroupOrder.mjs";
 import { findOwnerValueDefects } from "./OwnerValues.mjs";
@@ -23,7 +24,7 @@ import { readZoneOrder } from "./ZoneOrder.mjs";
 
 const describeCurrentTree = currentTree => (currentTree
   ? `current tree: read from ${currentTree.describe()}`
-  : "current tree: not read, no --repo given, so old paths, old names, removed names, current classes, current members, the fields of modified classes, the methods marked unchanged, the conventions files, the project files of the convention overrides, the closed sets and the tables of the files the model names and each shape-run item left outside the change are not checked");
+  : "current tree: not read, no --repo given, so old paths, old names, removed names, current classes, current members, the fields and the public methods of modified classes, the methods marked unchanged, the conventions files, the project files of the convention overrides, the closed sets and the tables of the files the model names and each shape-run item left outside the change are not checked");
 
 const describeResponseTypes = libraryTypeNames => (libraryTypeNames.length
   ? `response types: library type, not checked: ${libraryTypeNames.join(", ")}`
@@ -85,6 +86,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
   const dataFlow = findDataFlowDefects(model);
   const exitList = findExitListResult(model);
   const fieldList = currentTree ? findFieldListResult(model, currentTree) : null;
+  const methodList = currentTree ? findMethodListResult(model, currentTree) : null;
   const exitFailure = findExitFailureResult(model);
   const defects = [
     ...completeness.defects,
@@ -97,6 +99,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...(currentTree ? findCurrentTreeDefects(model, currentTree) : []),
     ...findConventionOverrideDefects(model, currentTree),
     ...(fieldList ? fieldList.defects : []),
+    ...(methodList ? methodList.defects : []),
     ...cycleCheck.defects,
     ...findExitReachDefects(model, zoneOrder),
     ...findFailureHandlingDefects(model),
@@ -107,7 +110,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
   ];
   const markedDefects = markTheScriptCases(model, defects, baseTree);
   return {
-    headLines: [...cycleCheck.headLines, dataFlow.headLine, describeCurrentTree(currentTree), ...(fieldList ? [fieldList.headLine] : []), exitList.headLine, exitFailure.headLine, describeResponseTypes(completeness.libraryTypeNames), describeReview(reviewText), describeShapeReviews(shapeReviews)],
+    headLines: [...cycleCheck.headLines, dataFlow.headLine, describeCurrentTree(currentTree), ...(fieldList ? [fieldList.headLine, methodList.headLine] : []), exitList.headLine, exitFailure.headLine, describeResponseTypes(completeness.libraryTypeNames), describeReview(reviewText), describeShapeReviews(shapeReviews)],
     defects: markedDefects,
     unmatchedScriptCases: listUnmatchedScriptCases(model, markedDefects),
     keyCountMap: completeness.keyCountMap,

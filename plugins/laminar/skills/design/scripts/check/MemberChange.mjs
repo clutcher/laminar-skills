@@ -1,5 +1,6 @@
 import { KINDS, getFolderPath, isAText, isMarkedUnchanged, readList } from "../model/DesignModel.mjs";
-import { readDeclaredFieldNames, readFieldLanguage } from "./DeclaredFields.mjs";
+import { readMemberLanguage } from "./ClassDeclaration.mjs";
+import { readDeclaredFieldNames } from "./DeclaredFields.mjs";
 
 const KINDS_OUTSIDE_THE_CHANGE = new Set([KINDS.MODIFIED, KINDS.UNCHANGED]);
 
@@ -48,7 +49,7 @@ export const describeTheChangeOfTheFields = (model, theClass, fieldNames, curren
   if (!KINDS_OUTSIDE_THE_CHANGE.has(kind)) return `its class ${theClass.name} stands in a ${kind} file`;
   if (isAText(theClass.oldName)) return `its class ${theClass.name} holds an oldName`;
   const currentFile = readCurrentFileOf(model, theClass);
-  if (!readFieldLanguage(currentFile)) return `the script cannot read the fields of ${currentFile}`;
+  if (!readMemberLanguage(currentFile)) return `the script cannot read the fields of ${currentFile}`;
 
   const currentText = currentTree.readFileText(currentFile);
   const declaredNames = currentText === null ? null : readDeclaredFieldNames(currentText, currentFile, theClass.name);

@@ -1,8 +1,7 @@
-import { KINDS, isAText, readList } from "../model/DesignModel.mjs";
-import { readDeclaredFieldNames, readFieldLanguage } from "./DeclaredFields.mjs";
+import { readList } from "../model/DesignModel.mjs";
+import { readMemberLanguage } from "./ClassDeclaration.mjs";
+import { readDeclaredFieldNames } from "./DeclaredFields.mjs";
 import { DEFECT_CODES, createDefect } from "./DesignDefect.mjs";
-
-const listClassesOfModifiedFiles = model => model.classes.filter(theClass => isAText(theClass.file) && model.findChildOfTheFile(theClass.file)?.kind === KINDS.MODIFIED);
 
 const findUnlistedFieldDefects = (model, theClass, currentText) => {
   const declaredNames = readDeclaredFieldNames(currentText, theClass.file, theClass.name);
@@ -23,8 +22,8 @@ const describeFieldCheck = uncheckedFiles => {
 export const findFieldListResult = (model, currentTree) => {
   const defects = [];
   const uncheckedFiles = new Set();
-  for (const theClass of listClassesOfModifiedFiles(model)) {
-    if (!readFieldLanguage(theClass.file)) {
+  for (const theClass of model.listClassesOfModifiedFiles()) {
+    if (!readMemberLanguage(theClass.file)) {
       uncheckedFiles.add(theClass.file);
       continue;
     }

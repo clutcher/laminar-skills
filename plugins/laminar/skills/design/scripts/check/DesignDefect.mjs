@@ -52,6 +52,7 @@ export const DEFECT_CODES = Object.freeze({
   GROUP_ORDER_BROKEN: "group-order-broken",
   EXISTING_DEFECT_GROUP_TAKEN: "existing-defect-group-taken",
   FIELD_UNLISTED: "field-unlisted",
+  METHOD_UNLISTED: "method-unlisted",
   HANDLER_TAKES_OTHER_TYPE: "handler-takes-other-type",
   FRAMEWORK_RESPONSE_UNLISTED: "framework-response-unlisted",
   EXIT_FAILURE_UNNAMED: "exit-failure-unnamed",

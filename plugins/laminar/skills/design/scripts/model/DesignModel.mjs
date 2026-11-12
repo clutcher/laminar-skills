@@ -200,6 +200,11 @@ export class DesignModel {
     return CHANGED_KINDS.has(this.getKindOfClass(theClass));
   }
 
+  // The classes whose file a folder of the model lists as modified, which the review judges whole, so the model lists every member the current file declares for them.
+  listClassesOfModifiedFiles() {
+    return this.classes.filter(theClass => isAText(theClass.file) && this.findChildOfTheFile(theClass.file)?.kind === KINDS.MODIFIED);
+  }
+
   listScopeFolderPaths() {
     const folderPaths = [...this.folders.map(getFolderPath), ...this.classes.map(theClass => readFolderOfTheFile(theClass.file))];
     return [...new Set(folderPaths.filter(isAText))];
