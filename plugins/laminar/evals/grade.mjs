@@ -2,7 +2,7 @@
 // Builds the fixture of an eval case, and grades a run's review.md against the case's expected.md.
 //
 //   node grade.mjs --build <dir> <case-dir>     make the fixture in <dir>, print the range or the diff path
-//   node grade.mjs <case-dir> <review.md>       print one line per expected result, then a summary; an expected item under ## To consider matches only an item under that heading of the run
+//   node grade.mjs <case-dir> <review.md>       print one line per expected result, then a summary; an expected item under ## To consider matches only an item under that heading of the run, and an expected item matches on its own abstraction or on 1 it lists under "Also accepted on:"
 //   node grade.mjs <case-dir> <review.md> --usage <usage.json>   also print one line per budget
 //   node grade.mjs --judges <case-dir>          print the --judges flag of the case's judges.txt, or nothing; stop with an error where <case-dir> holds no expected.md
 //
@@ -28,6 +28,7 @@ const A_SECTION_HEAD = /^##\s+(.+?)\s*$/;
 const A_LEAD_WORD_SEPARATOR = /,\s*|\s+and\s+/;
 const A_LEVEL_POINT = /^(?:Confidence:\s*(High|Moderate|Low)\b|(High|Moderate|Low) confidence)/i;
 const AN_ALSO_POINT = /^Also in\s+(.+)$/;
+const AN_ACCEPTED_ON_POINT = /^Also accepted on:?\s+(.+)$/;
 const A_DECLARED_BY_THE_SCHEMA_POINT = /^Declared by the schema:\s+(.+)$/;
 const A_CONFIDENCE_BLOCK = "Confidence:";
 const AN_ALSO_BLOCK = "Also in:";
@@ -188,7 +189,7 @@ const isALimitedLine = line => A_LIMITED_LINE.test(line);
 
 const abstractionsNamedIn = (named, line) => named.split(AN_ABSTRACTION_SEPARATOR).map(collapsed).map(given => {
   const found = A_NAMED_ABSTRACTION.exec(given);
-  if (!found) { console.error(`the limited line does not name its abstractions as <Kind> \`name\`, joined by or: ${line}`); process.exit(2); }
+  if (!found) { console.error(`the line does not name its abstractions as <Kind> \`name\`, joined by or: ${line}`); process.exit(2); }
   return { kind: found[1], name: found[2], enclosing: found[3] || "" };
 });
 
@@ -225,8 +226,14 @@ const namesItAsASecondPlace = (expected, raised, lead) => alsoUnder(raised, lead
 const isAMethodOfTheExpectedClass = (expected, raised) => expected.kind.toLowerCase() === "class"
   && raised.kind.toLowerCase() === "method" && raised.enclosing === canonicalOf(expected);
 
+const acceptedAbstractionsOf = item => item.points.filter(point => AN_ACCEPTED_ON_POINT.test(point))
+  .flatMap(point => abstractionsNamedIn(AN_ACCEPTED_ON_POINT.exec(point)[1], point));
+
+const isOnAnAcceptedAbstraction = (expected, raised) => acceptedAbstractionsOf(expected).some(accepted => isTheSameAbstraction(accepted, raised));
+
 const isRaisedOn = (expected, raised, lead) => isTheSameAbstraction(expected, raised)
-  || namesItAsASecondPlace(expected, raised, lead) || isAMethodOfTheExpectedClass(expected, raised);
+  || namesItAsASecondPlace(expected, raised, lead) || isAMethodOfTheExpectedClass(expected, raised)
+  || isOnAnAcceptedAbstraction(expected, raised);
 
 const sitsInTheSameSection = (expected, raised) => expected.considered === raised.considered;
 
@@ -333,8 +340,9 @@ function gradeExpected(expected, raisedItems) {
     return 1;
   }
   const places = alsoOf(expected).length ? `, also in ${alsoOf(expected).join(", ")}` : "";
+  const accepted = isOnAnAcceptedAbstraction(expected, raised) && !isTheSameAbstraction(expected, raised) ? `, on the accepted ${headTextOf(raised)}` : "";
   const schemaTypes = declaredByTheSchemaOf(expected).length ? `, declared by the schema ${declaredByTheSchemaOf(expected).join(", ")}` : "";
-  console.log(`PASS  ${head} — raised at confidence ${levelOf(raised, lead)}${places}${schemaTypes}`);
+  console.log(`PASS  ${head} — raised at confidence ${levelOf(raised, lead)}${accepted}${places}${schemaTypes}`);
   return 0;
 }
 
