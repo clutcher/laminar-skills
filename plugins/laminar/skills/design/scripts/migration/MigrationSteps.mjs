@@ -230,17 +230,30 @@ class MigrationPlan {
       || readList(theClass.fields).some(field => readTypeNames(field.type).some(typeName => this.model.findClassOfTheType(typeName, theClass) === namedClass));
   }
 
+  getGroupOfTheFolder(folderPath) {
+    return this.getGroupOfClasses(this.model.classes.filter(theClass => isAText(theClass.file) && theClass.file.startsWith(folderPath)));
+  }
+
   listFolderSteps() {
-    return this.model.folders
-      .filter(folder => FOLDER_KINDS_THAT_CREATE.has(folder.kind))
-      .map(folder => {
-        const folderPath = `${getFolderPath(folder)}/`;
-        const group = this.getGroupOfClasses(this.model.classes.filter(theClass => isAText(theClass.file) && theClass.file.startsWith(folderPath)));
-        return this.createStep(MIGRATION_STAGES.FOLDERS, group, `creates the folder ${folderPath}`, [folderPath]);
-      });
+    const createdFolderPaths = [
+      ...this.model.folders.filter(folder => FOLDER_KINDS_THAT_CREATE.has(folder.kind)).map(folder => `${getFolderPath(folder)}/`),
+      ...this.unlistedFolderChildren.filter(({ child }) => child.kind === KINDS.CREATED).map(({ folderPath }) => folderPath),
+    ];
+    return createdFolderPaths.map(folderPath => this.createStep(MIGRATION_STAGES.FOLDERS, this.getGroupOfTheFolder(folderPath), `creates the folder ${folderPath}`, [folderPath]));
   }
 
   listMoveSteps() {
+    return [...this.listFileMoveSteps(), ...this.listFolderChildMoveSteps()];
+  }
+
+  listFolderChildMoveSteps() {
+    return this.unlistedFolderChildren.filter(({ child }) => child.kind === KINDS.MOVED && isAText(child.oldPath)).map(({ child, folderPath }) => {
+      const oldFolderPath = `${readPathOfTheChild(child.oldPath)}/`;
+      return this.createStep(MIGRATION_STAGES.MOVES_AND_RENAMES, this.getGroupOfTheFolder(folderPath), `moves the folder ${oldFolderPath} to ${folderPath}`, [oldFolderPath, folderPath]);
+    });
+  }
+
+  listFileMoveSteps() {
     return this.children.filter(({ child }) => child.kind === KINDS.MOVED && isAText(child.oldPath)).map(({ child, file }) => {
       const classes = this.listClassesOfTheFile(file);
       const group = this.getGroupOfClasses(classes);
@@ -472,8 +485,8 @@ class MigrationPlan {
       if (readList(child.removedClasses).length) steps.push(this.createStep(MIGRATION_STAGES.REMOVALS, this.getGroupOfTheFile(file), `removes the classes ${readList(child.removedClasses).join(", ")} from ${file}`, [file]));
       if (child.kind === KINDS.REMOVED && !this.createdFileOfRemovedFileMap.has(file)) steps.push(this.createStep(MIGRATION_STAGES.REMOVALS, this.getGroupOfTheFile(file, this.lastGroup), `removes the file ${file}`, [file]));
     }
-    for (const folder of this.model.folders) {
-      if (folder.kind === KINDS.REMOVED) steps.push(this.createStep(MIGRATION_STAGES.REMOVALS, this.lastGroup, `removes the folder ${getFolderPath(folder)}/`, [`${getFolderPath(folder)}/`]));
+    for (const folderPath of this.model.listRemovedFolderPaths()) {
+      steps.push(this.createStep(MIGRATION_STAGES.REMOVALS, this.lastGroup, `removes the folder ${folderPath}`, [folderPath]));
     }
     return steps;
   }
@@ -672,15 +685,14 @@ class MigrationPlan {
     return [...this.listTestUpdateSteps(), ...this.listRemovedClassTestSteps(), ...this.listNewOutsideCallTestSteps(), ...removedTestSteps, ...unitTestSteps, ...integrationSteps];
   }
 
-  // A modified file in no language the scripts read and with no class of the model, such as the XML wiring of a framework, gets 1 step that the writer does by hand.
+  // A modified file in no language the scripts read and with no class of the model, such as the XML wiring of a framework, gets 1 step that the writer does by hand, and so does a modified folder child that no folder lists and that holds a class file.
   listNotModelledSteps() {
-    return this.children
-      .filter(({ child, file }) => child.kind === KINDS.MODIFIED && path.posix.extname(file) && !isAReadExtension(file) && !this.listClassesOfTheFile(file).length)
-      .map(({ folder, file }) => {
-        const folderPath = `${getFolderPath(folder)}/`;
-        const group = this.getGroupOfClasses(this.model.classes.filter(theClass => isAText(theClass.file) && theClass.file.startsWith(folderPath)));
-        return this.createStep(MIGRATION_STAGES.BODIES, group, `not modelled: edit ${file} by hand (framework wiring)`, [file]);
-      });
+    const notModelledFiles = this.children.filter(({ child, file }) => child.kind === KINDS.MODIFIED && !isAReadExtension(file) && !this.listClassesOfTheFile(file).length);
+    const notModelledFolderChildren = this.unlistedFolderChildren.filter(({ child, folderPath }) => child.kind === KINDS.MODIFIED && this.model.classes.some(theClass => isAText(theClass.file) && theClass.file.startsWith(folderPath)));
+    return [...notModelledFiles, ...notModelledFolderChildren].map(({ folder, file }) => {
+      const parentFolderPath = `${getFolderPath(folder)}/`;
+      return this.createStep(MIGRATION_STAGES.BODIES, this.getGroupOfTheFolder(parentFolderPath), `not modelled: edit ${file} by hand (framework wiring)`, [file]);
+    });
   }
 
   listSteps() {

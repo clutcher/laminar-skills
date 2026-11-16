@@ -252,6 +252,17 @@ export class DesignModel {
     return methodsWithClass;
   }
 
+  // The folders the change removes, each with its closing slash: a removed folder of the model and a removed child that names a folder.
+  listRemovedFolderPaths() {
+    const listedFolderPaths = this.folders.filter(folder => folder.kind === KINDS.REMOVED).map(folder => `${getFolderPath(folder)}/`);
+    const childFolderPaths = this.folders.flatMap(folder => readList(folder.children)
+      .filter(child => child.kind === KINDS.REMOVED)
+      .map(child => getFileOfTheChild(folder, child).replace(/\/+$/, ""))
+      .filter(childFile => this.isAFolderChild(childFile))
+      .map(childFile => `${childFile}/`));
+    return [...new Set([...listedFolderPaths, ...childFolderPaths])];
+  }
+
   implementsOrExtends(implementingClass, theClass) {
     const parentNames = [...readList(implementingClass.implements), ...readList(implementingClass.extends)];
     return parentNames.some(parentName => this.findClassOfTheType(readHeadTypeName(parentName), implementingClass) === theClass);
