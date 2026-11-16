@@ -31,6 +31,10 @@ const listTheFoldersOfTheFile = file => [file.path, ...(file.status === FILE_STA
 
 const changesTheFilesOfItsFolder = file => file.status !== FILE_STATUS.CHANGED;
 
+const isRemoved = file => file.status === FILE_STATUS.REMOVED;
+
+const isMovedToAnotherFolder = file => file.status === FILE_STATUS.RENAMED && Boolean(file.oldPath) && readFolderPath(file.oldPath) !== readFolderPath(file.path);
+
 const combineTheKinds = kinds => (new Set(kinds).size === 1 ? kinds[0] : PUBLIC_CHANGE_KINDS.MODIFIED);
 
 const readKindOfTheEnclosingAbstraction = parent => (parent && parent.publicChangeKind && parent.publicChangeKind !== PUBLIC_CHANGE_KINDS.UNCHANGED ? parent.publicChangeKind : PUBLIC_CHANGE_KINDS.MODIFIED);
@@ -206,8 +210,15 @@ export class PublicChangeKindReading {
       applications: [...this.listTheApplicationsWithAChangedFile()].map(folder => ({ path: folder, kind: PUBLIC_CHANGE_KINDS.MODIFIED })),
       folders: this.listTheFoldersWithAKind(),
       files: [...this.filesOfTheChangeByPathMap.keys()].map(filePath => this.buildTheKindsOfTheFile(filePath)),
+      removedPaths: this.listThePathsTakenAwayBy(this.files.filter(isRemoved).map(file => file.path)),
+      pathsMovedAway: this.listThePathsTakenAwayBy(this.files.filter(isMovedToAnotherFolder).map(file => file.oldPath)),
     });
     return this.publicChangeKinds;
+  }
+
+  listThePathsTakenAwayBy(filePaths) {
+    const removedFolders = filePaths.map(readFolderPath).filter(folder => this.createdFolders.isRemoved(folder)).map(folder => this.createdFolders.findTopRemoved(folder));
+    return [...new Set([...filePaths, ...removedFolders])];
   }
 
   listTheFoldersWithAKind() {

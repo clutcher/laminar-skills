@@ -26,9 +26,11 @@ const isTheChildOfTheFolder = (listedPath, folder, named) => isDirectlyInsideThe
 
 const indexByPath = listedKinds => new Map(listedKinds.map(listedKind => [listedKind.path, listedKind]));
 
+const isTheEndOf = (listedPath, ending) => listedPath === ending || listedPath.endsWith(`/${ending}`);
+
 export class PublicChangeKinds {
-  constructor({ kindBase = null, files = [], folders = [], applications = [], renames = [] } = {}) {
-    Object.assign(this, { kindBase, files, folders, applications, renames });
+  constructor({ kindBase = null, files = [], folders = [], applications = [], renames = [], removedPaths = [], pathsMovedAway = [] } = {}) {
+    Object.assign(this, { kindBase, files, folders, applications, renames, removedPaths, pathsMovedAway });
     this.filesByPathMap = indexByPath(files);
     this.foldersByPathMap = indexByPath(folders);
     this.applicationsByPathMap = indexByPath(applications);
@@ -53,6 +55,16 @@ export class PublicChangeKinds {
     const named = stripTrailingSlash(stripLeadingDotSlash(child));
     const found = [...this.files, ...this.folders].find(listed => isTheChildOfTheFolder(listed.path, folder, named));
     return found ? found.kind : PUBLIC_CHANGE_KINDS.UNCHANGED;
+  }
+
+  isTakenAway(listedPath) {
+    const given = stripTrailingSlash(stripLeadingDotSlash(listedPath));
+    return this.removedPaths.includes(given) || this.pathsMovedAway.includes(given);
+  }
+
+  listThePathsEndingIn(ending) {
+    const listedPaths = [...this.files, ...this.folders].map(listed => listed.path).concat(this.removedPaths, this.pathsMovedAway);
+    return [...new Set(listedPaths.filter(listedPath => isTheEndOf(listedPath, ending)))];
   }
 
   namesAKindBase() {
@@ -82,7 +94,7 @@ export class PublicChangeKinds {
   }
 
   toJSON() {
-    return { kindBase: this.kindBase, renames: this.renames, applications: this.applications, folders: this.folders, files: this.files };
+    return { kindBase: this.kindBase, renames: this.renames, applications: this.applications, folders: this.folders, files: this.files, removedPaths: this.removedPaths, pathsMovedAway: this.pathsMovedAway };
   }
 
   static createFromJSON(saved) {

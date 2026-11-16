@@ -77,9 +77,8 @@ export class ChangedLines {
     return this.readChanges(file).removedAfter.some(removedAfter => line === removedAfter || line === removedAfter + 1);
   }
 
-  touchesAPathEndingIn(folder, ending) {
-    return Object.keys(this.changedLinesByPathMap)
-      .some(file => file.startsWith(`${folder}/`) && (file.endsWith(`/${ending}`) || file.includes(`/${ending}/`)));
+  listThePathsEndingIn(folder, ending) {
+    return Object.keys(this.changedLinesByPathMap).filter(file => file.startsWith(`${folder}/`) && file.endsWith(`/${ending}`));
   }
 
   meetsTheChange(file, lines) {

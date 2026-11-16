@@ -41,13 +41,6 @@ const isCreatedInTheChange = (abstraction, publicChangeKinds) => publicChangeKin
   ? isCreatedSinceTheKindBase(abstraction, publicChangeKinds)
   : abstraction.changeKind === CHANGE_KINDS.CREATED;
 
-const doesTheListedFileMeetTheChange = (module, file, changedLines) => changedLines.touches(file)
-  || changedLines.touches(`${module.path}/${file}`)
-  || changedLines.touchesAPathEndingIn(module.path, file);
-
-const doesTheFileListMeetTheChange = (finding, module, changedLines) => (finding.evidence || [])
-  .some(named => named.file && doesTheListedFileMeetTheChange(module, stripLeadingDotSlash(named.file), changedLines));
-
 const indexTheAbstractionsJudged = codeUnderReview => {
   const abstractionByCodeUnderReviewIdMap = new Map(codeUnderReview.map(abstraction => [abstraction.id, abstraction]));
   return finding => abstractionByCodeUnderReviewIdMap.get(finding.codeUnderReviewId);
@@ -57,21 +50,59 @@ const isMarkedExistingCodeByTheJudge = finding => finding.inChange === false;
 
 const isMarkedInTheChangeByTheJudge = finding => finding.inChange === true;
 
-const KINDS_THAT_PUT_A_MODULE_FINDING_IN_THE_CHANGE = new Set([PUBLIC_CHANGE_KINDS.MODIFIED, PUBLIC_CHANGE_KINDS.CREATED]);
+const KINDS_OF_A_FILE_ADDED_OR_MOVED_IN = new Set([PUBLIC_CHANGE_KINDS.CREATED, PUBLIC_CHANGE_KINDS.MOVED]);
 
-const putsAModuleFindingInTheChange = publicChangeKind => KINDS_THAT_PUT_A_MODULE_FINDING_IN_THE_CHANGE.has(publicChangeKind);
+const isAKindOfAFileAddedOrMovedIn = publicChangeKind => KINDS_OF_A_FILE_ADDED_OR_MOVED_IN.has(publicChangeKind);
 
-const doesTheModuleFindingMeetTheChange = (finding, module, publicChangeKinds) => putsAModuleFindingInTheChange(publicChangeKinds.readKindOfTheFolder(module.path))
-  || (finding.evidence || []).some(named => named.file && putsAModuleFindingInTheChange(publicChangeKinds.readKindOfTheChildOfTheFolder(module.path, named.file)));
+const listThePathsOfTheEvidenceFile = (module, file, changedLines) => [file, `${module.path}/${file}`, ...changedLines.listThePathsEndingIn(module.path, file)];
+
+const isTheEvidenceFileAddedOrMovedIn = (module, file, changedLines, publicChangeKinds) => isAKindOfAFileAddedOrMovedIn(publicChangeKinds.readKindOfTheChildOfTheFolder(module.path, file))
+  || listThePathsOfTheEvidenceFile(module, file, changedLines).some(filePath => isAKindOfAFileAddedOrMovedIn(publicChangeKinds.readKindOfTheFile(filePath)) || changedLines.isAdded(filePath));
+
+const doesAnEvidenceLineOfTheFileChange = (module, file, lines, changedLines) => lines.length > 0
+  && listThePathsOfTheEvidenceFile(module, file, changedLines).some(filePath => changedLines.meetsTheChange(filePath, lines));
+
+const doesTheEvidenceFileMeetTheChange = (module, named, changedLines, publicChangeKinds) => {
+  const file = stripLeadingDotSlash(named.file);
+  return isTheEvidenceFileAddedOrMovedIn(module, file, changedLines, publicChangeKinds)
+    || doesAnEvidenceLineOfTheFileChange(module, file, listEvidenceLines(named), changedLines);
+};
+
+const BELONGING_ANSWER_FORM = /^\s*(\S+?)\s*:\s*(.*)$/s;
+
+const YES_ANSWER = /^yes\b/i;
+
+const PLACE_NAMED_BY_AN_ANSWER = /^(?:other place|detail of)\s+(\S+)/i;
+
+const stripTheMarksAroundTheName = named => named.replace(/^[("'`]+/, "").replace(/[)"'`,;:.]+$/, "").replace(/\/+$/, "");
+
+const listThePathsNamedByTheAnswer = belongingAnswer => {
+  const answered = typeof belongingAnswer === "string" ? BELONGING_ANSWER_FORM.exec(belongingAnswer) : null;
+  if (!answered || YES_ANSWER.test(answered[2])) return [];
+  const place = PLACE_NAMED_BY_AN_ANSWER.exec(answered[2]);
+  return [answered[1], ...(place ? [place[1]] : [])].map(stripTheMarksAroundTheName).filter(Boolean);
+};
+
+const listThePathsTheAnswerCanName = (module, named, changedLines, publicChangeKinds) => [
+  named,
+  `${module.path}/${named}`,
+  ...publicChangeKinds.listThePathsEndingIn(named),
+  ...changedLines.listThePathsEndingIn(module.path, named),
+];
+
+const isAddedMovedInOrTakenAway = (listedPath, changedLines, publicChangeKinds) => isAKindOfAFileAddedOrMovedIn(publicChangeKinds.readKindOfTheFile(listedPath))
+  || publicChangeKinds.readKindOfTheFolder(listedPath) === PUBLIC_CHANGE_KINDS.CREATED
+  || publicChangeKinds.isTakenAway(listedPath)
+  || changedLines.isAdded(listedPath);
+
+const doesTheAnswerNameAChildTheChangeAddedOrTookAway = (module, belongingAnswer, changedLines, publicChangeKinds) => listThePathsNamedByTheAnswer(belongingAnswer)
+  .some(named => listThePathsTheAnswerCanName(module, named, changedLines, publicChangeKinds).some(listedPath => isAddedMovedInOrTakenAway(listedPath, changedLines, publicChangeKinds)));
 
 const isAModule = abstraction => Boolean(abstraction) && abstraction.scale === Scale.MODULE.name;
 
-const isTheModuleFindingInTheChange = (finding, module, changedLines, publicChangeKinds) => {
-  if (isMarkedInTheChangeByTheJudge(finding)) return true;
-  if (publicChangeKinds.holdsAnyKind()) return doesTheModuleFindingMeetTheChange(finding, module, publicChangeKinds);
-  if (isCreatedInTheChange(module, publicChangeKinds) && !isMarkedExistingCodeByTheJudge(finding)) return true;
-  return doesTheFileListMeetTheChange(finding, module, changedLines);
-};
+const isTheModuleFindingInTheChange = (finding, module, changedLines, publicChangeKinds) => (finding.evidence || [])
+  .some(named => named.file && doesTheEvidenceFileMeetTheChange(module, named, changedLines, publicChangeKinds))
+  || [].concat(finding.belongingAnswers || []).some(belongingAnswer => doesTheAnswerNameAChildTheChangeAddedOrTookAway(module, belongingAnswer, changedLines, publicChangeKinds));
 
 const isTheFindingInTheChange = (finding, abstraction, changedLines, publicChangeKinds) => {
   if (isMarkedInTheChangeByTheJudge(finding)) return true;
