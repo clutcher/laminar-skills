@@ -72,7 +72,7 @@ An existing gap on the path of an entry whose `changed` is true, such as an exit
 The migration script writes each such group apart, with the label `existing defect of the modified class` after its group number, and 1 step per object with `fix` in the migration stage changed members, `fixes <member> of <class>: <fix>`; the step of that member stands in no other group, so the step of changed members of its class ends with `, except <Class>#<member>, which group <n> fixes`. So the user reads the fix apart from the change. The render prints the objects in the section `## Existing defects of modified classes`. The object of `findings` for an item of a shape run on such a defect takes `closedBy`, which names the fix.
 
 ```json
-{ "class": "RepairJob", "member": "labourMinutes", "defect": "bare int minutes", "fix": "type Minutes", "group": 3 }
+{ "class": "RepairJob", "member": "finishedAt", "defect": "nullable finishedAt on a job that is always finished when it is saved", "fix": "non-null finishedAt that the constructor sets", "group": 3 }
 ```
 
 ## `scriptCases`
