@@ -29,6 +29,9 @@ const PREPARE_RETURN_WORKFLOW_FILE = "prepare-return.workflow.js";
 
 const MERGE_RETURN_WORKFLOW_FILE = "merge-return.workflow.js";
 
+// The copy of the shape model a shape run judged, so the design check can pair the names of 2 shape runs, methods with no body included.
+const SHAPE_MODEL_FILE = "shape-model.json";
+
 const PREPARE_RETURN_META = { name: "prepare-return", description: "The prepare return of 1 run" };
 
 const MERGE_RETURN_META = { name: "merge-return", description: "The merge return of 1 run" };
@@ -187,6 +190,7 @@ function prepareTheShapeRun(parsed) {
   const shapeModel = readShapeModelOrStop(parsed.shape);
   const filter = filterOrStop(parsed, given => ReviewFilter.createForAShapeRun(given, listWhatTheShapeShows(shapeModel)));
   const reviewAbstractions = new ShapeAbstractions(shapeModel, resolveAbsolutePath(parsed.repo), resolveAbsolutePath(parsed.shape)).buildReviewAbstractions();
+  fs.copyFileSync(parsed.shape, path.join(parsed.run, SHAPE_MODEL_FILE));
   return { filter, reviewAbstractions };
 }
 

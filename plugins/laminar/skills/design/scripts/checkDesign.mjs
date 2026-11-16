@@ -25,6 +25,8 @@ const ROUNDS_FOLDER = "rounds";
 
 const MODEL_FILE = "design-model.json";
 
+const SHAPE_MODEL_FILE = "shape-model.json";
+
 const MARKS = Object.freeze({ DEFECT: "defect", RECHECK: "recheck", FOUND_WRONG: "found-wrong" });
 
 const markTheDefect = defect => {
@@ -64,10 +66,27 @@ const readShapeClassesOrExit = reviewPath => {
   }
 };
 
+// The shape model that the prepare command saved beside review.md; a run folder of an older version holds none.
+const readSavedShapeModelOrExit = reviewPath => {
+  const shapeModelPath = path.join(path.dirname(path.resolve(reviewPath)), SHAPE_MODEL_FILE);
+  return fs.existsSync(shapeModelPath) ? readDesignModelOrExit(shapeModelPath) : null;
+};
+
 const readShapeReviewOrExit = reviewPath => {
   const runFolderName = path.basename(path.dirname(path.resolve(reviewPath)));
   if (!RUN_FOLDER_NAME.test(runFolderName)) exitWith(`shape review: ${reviewPath} stands in the folder ${runFolderName}, and the folder of a shape run is its number, as shape-runs/<n>/review.md`);
-  return { run: Number(runFolderName), text: readTextOrExit("shape review", reviewPath), classes: readShapeClassesOrExit(reviewPath) };
+  const shapeModel = readSavedShapeModelOrExit(reviewPath);
+  return { run: Number(runFolderName), text: readTextOrExit("shape review", reviewPath), classes: shapeModel ? shapeModel.classes : readShapeClassesOrExit(reviewPath), shapeModel };
+};
+
+// The decided list as the input gives it; its form is checked with the findings it decides.
+const readDecidedList = options => {
+  if (!options.decided) return [];
+  try {
+    return JSON.parse(fs.readFileSync(path.resolve(options.decided), "utf8"));
+  } catch {
+    return [];
+  }
 };
 
 // The copy of the model that the round script keeps for each round, in the folder rounds/ beside the model, in the order of the rounds.
@@ -103,7 +122,7 @@ function checkDesign() {
 
   const repositoryRoot = options.repo ? path.resolve(options.repo) : null;
   const commits = repositoryRoot ? { treeCommit: readTreeCommit(options), baseCommit: readBaseCommit(options) } : undefined;
-  const result = runOrExitOnTreeStop(() => checkDesignModel(model, repositoryRoot, reviewText, shapeReviews, commits, readRoundModelsOrExit(options.model)));
+  const result = runOrExitOnTreeStop(() => checkDesignModel(model, repositoryRoot, reviewText, shapeReviews, commits, readRoundModelsOrExit(options.model), readDecidedList(options)));
   const autonomousDefects = options[AUTONOMOUS_SWITCH] ? findAutonomousReasonDefects(model, reviewText, shapeReviews).map(defect => ({ ...defect, name: findNameOfThePath(model, defect.path) || defect.path, foundWrong: false })) : [];
   const defects = [...result.defects, ...decidedDefects, ...autonomousDefects];
   for (const headLine of result.headLines) console.log(headLine);
