@@ -9,9 +9,8 @@
 
 ## To consider
 
-2. Variable `avalancheGear` in `hut-api:Hut`
+2. Method `HutCard`
    - Incomplete Mental Model
-   - Also in `HutFields#avalancheGear`; `HutCard`
 
 ## Must not appear
 
