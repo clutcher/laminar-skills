@@ -87,7 +87,7 @@ export class MergeStep {
     this.foldedIntoTheScript = keptAndFoldedJudgeFindings.folded;
     const keptAndFoldedSetFindings = splitSetFindingsFoldedIntoAUse(keptAndFoldedJudgeFindings.kept, codeUnderReview);
     this.foldedIntoAUse = keptAndFoldedSetFindings.folded;
-    const placedFindings = placeTheFindingsByTheirCodeUnderReview(keptAndFoldedSetFindings.kept, codeUnderReview);
+    const placedFindings = placeTheFindingsByTheirCodeUnderReview(keptAndFoldedSetFindings.kept, codeUnderReview, this.preparedRun.changedLinesOfTheMark);
     const markedFindings = markTheFindingsInTheChange([...placedFindings, ...this.preparedRun.scriptFindings], this.preparedRun.changedLinesOfTheMark, codeUnderReview, this.preparedRun.publicChangeKinds, { isAShapeRun: this.preparedRun.isAShapeRun() });
     const runFacts = { mode: this.preparedRun.prepared.mode, applicationRoots: this.listApplicationRoots() };
     const findingsWithTheirConsiderations = markTheConsiderations(markedFindings, codeUnderReview, runFacts);

@@ -1,6 +1,9 @@
 import { CHECKS_BY_ID_MAP, TRACKS } from "../../../checks/CheckCatalog.mjs";
 import { isACoreOperation, isARebuiltValue } from "../../prepare/relations/DesignRelationCodeUnderReview.mjs";
-import { buildFileAndLineKey } from "./AbstractionsAtPlaces.mjs";
+import { ChangedLines } from "../../../code/index.mjs";
+import { buildFileAndLineKey, stripLeadingDotSlash } from "./AbstractionsAtPlaces.mjs";
+
+const NO_CHANGED_LINES = new ChangedLines({});
 
 const CHAIN_GOES_DOWN = "down";
 
@@ -32,9 +35,35 @@ const findTheLoopAbstractionPlace = codeUnderReview => {
 
 const CHECKS_LANDING_ON_THE_ENTRY_BOUNDARY = Object.freeze([CHECKS_BY_ID_MAP.S1.id, CHECKS_BY_ID_MAP.CP1.id]);
 
-const findTheEntryBoundaryAbstractionPlace = (finding, codeUnderReview) => (CHECKS_LANDING_ON_THE_ENTRY_BOUNDARY.includes(finding.check) && (codeUnderReview.boundaries || []).length === 1
+const findTheOnlyBoundaryPlace = (finding, codeUnderReview) => (CHECKS_LANDING_ON_THE_ENTRY_BOUNDARY.includes(finding.check) && (codeUnderReview.boundaries || []).length === 1
   ? placeAt(codeUnderReview.boundaries[0].path, codeUnderReview.boundaries[0].line)
   : NO_PLACE);
+
+const listTheReadPlacesOfTheCallers = codeUnderReview => (codeUnderReview.boundaries || [])
+  .flatMap(boundary => boundary.callers || [])
+  .flatMap(caller => caller.readPlaces || []);
+
+const listTheEvidenceLines = finding => (finding.evidence || [])
+  .filter(named => named.file)
+  .flatMap(named => [].concat(named.lines || named.line || []).map(line => ({ file: stripLeadingDotSlash(named.file), line: Number(line) })));
+
+const isAReadPlaceLine = (readPlaces, evidenceLine) => readPlaces
+  .some(readPlace => stripLeadingDotSlash(readPlace.path) === evidenceLine.file && Number(readPlace.line) === evidenceLine.line);
+
+const findTheFirstChangedCallerLine = (finding, codeUnderReview, changedLines) => {
+  const readPlaces = listTheReadPlacesOfTheCallers(codeUnderReview);
+  const callerLine = listTheEvidenceLines(finding)
+    .find(evidenceLine => isAReadPlaceLine(readPlaces, evidenceLine) && changedLines.isChanged(evidenceLine.file, evidenceLine.line));
+  return callerLine ? placeAt(callerLine.file, callerLine.line) : NO_PLACE;
+};
+
+const findTheEntryBoundaryAbstractionPlace = (finding, codeUnderReview, changedLines) => {
+  const onlyBoundaryPlace = findTheOnlyBoundaryPlace(finding, codeUnderReview);
+  if (onlyBoundaryPlace) return onlyBoundaryPlace;
+  if (finding.abstractionPlace) return NO_PLACE;
+
+  return findTheFirstChangedCallerLine(finding, codeUnderReview, changedLines);
+};
 
 const ABSTRACTION_PLACE_FINDERS_BY_TRACK_MAP = Object.freeze({
   [TRACKS.DESIGN]: findTheRelationAbstractionPlace,
@@ -42,9 +71,9 @@ const ABSTRACTION_PLACE_FINDERS_BY_TRACK_MAP = Object.freeze({
   [TRACKS.ENTRY_BOUNDARY]: findTheEntryBoundaryAbstractionPlace,
 });
 
-const findTheAbstractionPlace = (finding, codeUnderReview) => {
+const findTheAbstractionPlace = (finding, codeUnderReview, changedLines) => {
   const findAbstractionPlace = ABSTRACTION_PLACE_FINDERS_BY_TRACK_MAP[codeUnderReview.track];
-  return findAbstractionPlace ? findAbstractionPlace(finding, codeUnderReview) : NO_PLACE;
+  return findAbstractionPlace ? findAbstractionPlace(finding, codeUnderReview, changedLines) : NO_PLACE;
 };
 
 const findTheSecondPlace = (finding, codeUnderReview) => (codeUnderReview.track === TRACKS.DESIGN ? findTheRelationSecondPlace(finding, codeUnderReview) : NO_PLACE);
@@ -53,8 +82,8 @@ const holdsThePlace = (places, place) => places.some(listedPlace => buildFileAnd
 
 const addTheSecondPlace = (alsoAt, place) => (place && !holdsThePlace(alsoAt, place) ? [...alsoAt, place] : alsoAt);
 
-const placeTheFinding = (finding, codeUnderReview) => {
-  const abstractionPlace = findTheAbstractionPlace(finding, codeUnderReview);
+const placeTheFinding = (finding, codeUnderReview, changedLines) => {
+  const abstractionPlace = findTheAbstractionPlace(finding, codeUnderReview, changedLines);
   const second = findTheSecondPlace(finding, codeUnderReview);
   if (!abstractionPlace && !second) return finding;
   return {
@@ -64,10 +93,10 @@ const placeTheFinding = (finding, codeUnderReview) => {
   };
 };
 
-export function placeTheFindingsByTheirCodeUnderReview(findings, everyCodeUnderReview = []) {
+export function placeTheFindingsByTheirCodeUnderReview(findings, everyCodeUnderReview = [], changedLines = NO_CHANGED_LINES) {
   const codeUnderReviewByIdMap = new Map(everyCodeUnderReview.map(codeUnderReview => [codeUnderReview.id, codeUnderReview]));
   return findings.map(finding => {
     const codeUnderReview = codeUnderReviewByIdMap.get(finding.codeUnderReviewId);
-    return codeUnderReview ? placeTheFinding(finding, codeUnderReview) : finding;
+    return codeUnderReview ? placeTheFinding(finding, codeUnderReview, changedLines) : finding;
   });
 }
