@@ -76,7 +76,7 @@ new file mode 100644
 diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
 --- a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
 +++ b/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
-@@ -1,13 +1,18 @@
+@@ -1,13 +1,19 @@
  package org.example.library.loan.app.domain;
  
  import org.example.library.loan.app.api.ApiForMemberLoans;
@@ -88,6 +88,7 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/s
  import org.example.library.loan.app.domain.model.Loan;
  import org.example.library.loan.app.domain.model.LoanOnHoldException;
  import org.example.library.loan.app.domain.model.Member;
++import org.example.library.loan.app.domain.model.RenewalCheck;
  import org.example.library.loan.app.spi.LoanRepository;
  import org.example.library.loan.app.spi.MemberRepository;
 +import org.example.postbox.PostboxClient;
@@ -95,7 +96,7 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/s
  
  import java.util.List;
  
-@@ -15,13 +20,18 @@ public class LoanDesk implements ApiForMemberLoans {
+@@ -15,13 +21,18 @@ public class LoanDesk implements ApiForMemberLoans {
  
      private static final int RENEWAL_DAYS = 14;
  
@@ -115,7 +116,7 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/s
      }
  
      @Override
-@@ -35,13 +45,48 @@ public class LoanDesk implements ApiForMemberLoans {
+@@ -35,13 +46,49 @@ public class LoanDesk implements ApiForMemberLoans {
          return new MemberLoans(memberId, loans, member.fineStatement().sumOwedAmount());
      }
  
@@ -128,11 +129,12 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/s
 +
 +        for (Loan loan : loanRepository.findLoansOfMember(memberId)) {
 +            if (loan.loanId().equals(loanId)) {
-+                if (loan.renewalCount() < MOST_RENEWALS) {
++                RenewalCheck check = new RenewalCheck(loanId, member, loan.renewalCount());
++                if (check.renewalCount() < MOST_RENEWALS) {
 +                    Loan renewed = renew(loan);
 +                    String mailStatus = "SENT";
 +                    try {
-+                        sendRenewalMail(member, renewed);
++                        sendRenewalMail(check, renewed);
 +                    } catch (PostboxUnavailable unavailable) {
 +                        mailStatus = "NOT_SENT";
 +                    }
@@ -156,9 +158,9 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/s
          return renewed;
      }
 +
-+    private void sendRenewalMail(Member member, Loan renewed) {
++    private void sendRenewalMail(RenewalCheck check, Loan renewed) {
 +        String body = writeRenewalMailBody(renewed);
-+        postboxClient.send(List.of(member.email()), "Your loan is renewed", body);
++        postboxClient.send(List.of(check.member().email()), "Your loan is renewed", body);
 +    }
 +
 +    private String writeRenewalMailBody(Loan renewed) {
@@ -184,6 +186,15 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/model/Loan.java b
 +        return new Loan(loanId, memberId, itemTitle, newDueDate, onHold, renewalCount + 1);
      }
  }
+diff --git a/src/main/java/org/example/library/loan/app/domain/model/RenewalCheck.java b/src/main/java/org/example/library/loan/app/domain/model/RenewalCheck.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/model/RenewalCheck.java
+@@ -0,0 +1,4 @@
++package org.example.library.loan.app.domain.model;
++
++public record RenewalCheck(String loanId, Member member, int renewalCount) {
++}
 diff --git a/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java b/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java
 --- a/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java
 +++ b/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java

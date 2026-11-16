@@ -145,11 +145,24 @@ const gradeTheFindingsClosedInOneClass = (graded, numbersText) => {
   return createResult(closingClasses.length === 1, `the objects of ${closedNumbers} are closed by ${closingClasses.join(", ")}`);
 };
 
+const readMovingChildren = model => readChildrenWithTheirPaths(model)
+  .filter(({ child }) => child.kind === KINDS.MOVED || child.oldPath !== undefined);
+
 const gradeNoFileMove = graded => {
-  const moving = readChildrenWithTheirPaths(graded.model)
-    .filter(({ child }) => child.kind === KINDS.MOVED || child.oldPath !== undefined)
-    .map(({ childPath }) => childPath);
+  const moving = readMovingChildren(graded.model).map(({ childPath }) => childPath);
   return createResult(!moving.length, moving.length ? `moved: ${moving.join(", ")}` : "no child is moved and none holds oldPath");
+};
+
+const isTheExceptedMove = ({ child, childPath }, exceptedSegments) => [childPath, child.oldPath]
+  .filter(movePath => movePath !== undefined)
+  .some(movePath => endsWithTheSegments(readSegmentsOfThePath(movePath), exceptedSegments));
+
+const gradeNoFileMoveExceptThePath = (graded, exceptedPath) => {
+  const exceptedSegments = readSegmentsOfThePath(exceptedPath);
+  const moving = readMovingChildren(graded.model)
+    .filter(movingChild => !isTheExceptedMove(movingChild, exceptedSegments))
+    .map(({ childPath }) => childPath);
+  return createResult(!moving.length, moving.length ? `moved: ${moving.join(", ")}` : `no child other than ${exceptedPath} is moved or holds oldPath`);
 };
 
 const NAME_WORD_BREAK = /(?<=[a-z0-9])(?=[A-Z])|[^A-Za-z0-9]+/;
@@ -214,6 +227,7 @@ const LEVEL_1_FORMS = Object.freeze([
   { pattern: /^New files: at most (\d+)$/, grade: gradeTheNewFiles },
   { pattern: /^Closed in 1 class: ([\d, ]+)$/, grade: gradeTheFindingsClosedInOneClass },
   { pattern: /^No file moves$/, grade: gradeNoFileMove },
+  { pattern: /^No file moves except: `?([^`]+?)`?$/, grade: gradeNoFileMoveExceptThePath },
   { pattern: /^No name holds: `?([^`]+?)`?$/, grade: gradeNoNameHoldsTheWord },
   { pattern: /^Class text absent: `([^`]+)`$/, grade: gradeAClassTextAbsent },
   { pattern: /^Convention override: (.+;.+)$/, grade: gradeAConventionOverride },
