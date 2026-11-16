@@ -1,4 +1,4 @@
-import { FRAMEWORK, isAText, readHeadTypeName, readList } from "../model/DesignModel.mjs";
+import { FRAMEWORK, KINDS, isAText, isMarkedUnchanged, readHeadTypeName, readList } from "../model/DesignModel.mjs";
 import { DEFECT_CODES, createDefect } from "./DesignDefect.mjs";
 import { findExitChain } from "./ExitReach.mjs";
 
@@ -122,24 +122,102 @@ const NO_REPLY_TYPE = /^(?:void|None|Unit)$|<\s*[Vv]oid\s*>$/;
 // A boolean or a number has no absent reply to state; the type text of the model cannot tell a boxed type from a primitive one, so both count here.
 const YES_NO_OR_NUMBER_TYPES = new Set(["boolean", "Boolean", "bool", "int", "Integer", "Int", "long", "Long", "short", "Short", "byte", "Byte", "float", "Float", "double", "Double", "number", "Number"]);
 
-const hasNoAbsentReply = returnType => NO_REPLY_TYPE.test(returnType) || YES_NO_OR_NUMBER_TYPES.has(returnType);
+// A promise or a future replies later with the type inside it, so that type decides: Promise of JavaScript and TypeScript, CompletableFuture and CompletionStage of Java, and Task and ValueTask of C#. A Mono of Reactor is no such wrapper, because it can complete with no item.
+const LATER_REPLY = /^(?:Promise|CompletableFuture|CompletionStage|Task|ValueTask)\s*<(.+)>$/;
+
+const readTheReplyType = returnType => {
+  const laterReply = LATER_REPLY.exec(returnType);
+  return laterReply ? laterReply[1].trim() : returnType;
+};
+
+// A returned collection or stream of items answers an empty or missing reply with no item, so its type states the absent reply. Each name is empty by type in the languages the scripts read:
+// Stream, IntStream, LongStream, DoubleStream: a Java stream, which can hold no item; Stream counts only with a type argument, because a Stream with none is the byte stream of C#.
+// List, Set, Collection, Iterable, Iterator: a collection of Java, Kotlin, the typing module of Python and C#, which can be empty.
+// ArrayList, LinkedList, HashSet, TreeSet, LinkedHashSet, SortedSet, NavigableSet, Queue, Deque: a Java collection, and HashSet also of C#, which can be empty.
+// MutableList, MutableSet, MutableCollection, Sequence: a Kotlin collection or lazy sequence, which can be empty; Sequence is also a sequence of the typing module of Python.
+// Flow, Flux: a reactive stream of Kotlin or of Reactor, which can complete with no item.
+// Array, ReadonlyArray, ReadonlySet: an array or a set of JavaScript, TypeScript or Kotlin, which can be empty.
+// AsyncIterable, AsyncIterator, Generator, AsyncGenerator: a sequence of items of JavaScript, TypeScript or Python, which can end with none.
+// list, set, frozenset: a collection built into Python, which can be empty.
+// IEnumerable, IAsyncEnumerable, IList, ICollection, IReadOnlyList, IReadOnlyCollection, ISet, IQueryable: a C# collection or query, which can be empty.
+// A type text that ends in [] is an array of Java, TypeScript and C#, which can be empty, unless it holds bytes.
+// A keyed reply or a reply of bytes still states absent, because an empty reply does not say whether the key or the item was missing:
+// Map, HashMap, TreeMap, SortedMap, LinkedHashMap, MutableMap: a Java or Kotlin map, where a missing key and a key with no value are 2 replies.
+// Record, ReadonlyMap, WeakMap: a TypeScript or JavaScript map, the same.
+// dict, Dict, Mapping, MutableMapping, defaultdict, OrderedDict: a Python map, the same.
+// Dictionary, IDictionary, IReadOnlyDictionary: a C# map, the same.
+// InputStream, Reader, BufferedReader: a Java stream of bytes or of text, where an empty file and a missing file are 2 replies.
+// Stream with no type argument, TextReader, StreamReader: a C# stream of bytes or of text, the same.
+// byte[], Byte[], ByteArray, Uint8Array, Buffer, ArrayBuffer, ReadableStream, Readable, bytes, bytearray, IO, BinaryIO, TextIO: bytes or a stream of bytes of Java, C#, Kotlin, JavaScript, TypeScript and Python, the same.
+const EMPTY_BY_TYPE_NAMES = new Set([
+  "Stream", "IntStream", "LongStream", "DoubleStream",
+  "List", "Set", "Collection", "Iterable", "Iterator",
+  "ArrayList", "LinkedList", "HashSet", "TreeSet", "LinkedHashSet", "SortedSet", "NavigableSet", "Queue", "Deque",
+  "MutableList", "MutableSet", "MutableCollection", "Sequence",
+  "Flow", "Flux",
+  "Array", "ReadonlyArray", "ReadonlySet",
+  "AsyncIterable", "AsyncIterator", "Generator", "AsyncGenerator",
+  "list", "set", "frozenset",
+  "IEnumerable", "IAsyncEnumerable", "IList", "ICollection", "IReadOnlyList", "IReadOnlyCollection", "ISet", "IQueryable",
+]);
+
+const BYTE_STREAM_WITHOUT_A_TYPE_ARGUMENT = "Stream";
+
+const BYTE_ELEMENT_TYPES = new Set(["byte", "Byte"]);
+
+const ARRAY_MARK = "[]";
+
+// 1 type with at most 1 type argument, so a nullable type, such as List<Rental>? or Rental[] | null, has a missing reply beside the empty one and is no type of this list.
+const ONE_TYPE = /^([\w.]+)\s*(<.*>|\[.*\])?$/;
+
+const isEmptyByType = replyType => {
+  if (replyType.endsWith(ARRAY_MARK)) return !BYTE_ELEMENT_TYPES.has(replyType.slice(0, -ARRAY_MARK.length).trim());
+
+  const oneType = ONE_TYPE.exec(replyType);
+  if (!oneType) return false;
+  const typeName = oneType[1].split(".").pop();
+  if (typeName === BYTE_STREAM_WITHOUT_A_TYPE_ARGUMENT && !oneType[2]) return false;
+  return EMPTY_BY_TYPE_NAMES.has(typeName);
+};
+
+const hasNoAbsentReply = returnType => {
+  const replyType = readTheReplyType(returnType);
+  return NO_REPLY_TYPE.test(returnType) || YES_NO_OR_NUMBER_TYPES.has(replyType) || isEmptyByType(replyType);
+};
 
 const readFirstWord = methodName => methodName.split(/(?=[A-Z])|_/)[0].toLowerCase();
 
 const readsAReply = method => isAText(method.name) && isAText(method.returns) && !hasNoAbsentReply(method.returns.trim()) && READING_VERBS.has(readFirstWord(method.name));
 
-// An execution that reads a reply can get an empty or missing one, so its failure line states the normal result for it, or the word none where absent has no normal result.
-const findAbsentResultDefect = (model, exit, at) => {
-  if (isAText(exit.failure.absent) || !isAText(exit.exit)) return null;
+// An exit the change writes is a method of a created file, or a method of a moved or modified file that the model does not mark unchanged; every other exit is existing code.
+const isWrittenByTheChange = (model, exitClass, exitMethod) => {
+  const kind = model.getKindOfClass(exitClass);
+  if (kind === KINDS.CREATED) return true;
+  return (kind === KINDS.MODIFIED || kind === KINDS.MOVED) && !isMarkedUnchanged(exitMethod);
+};
 
-  const exitMethod = model.findMethod(exit.exit);
-  if (!exitMethod || !readsAReply(exitMethod)) return null;
-  return createDefect(DEFECT_CODES.EXIT_ABSENT_UNSTATED, `decisions.exits[${at}].failure.absent`, `the exit ${exit.exit} reads a reply that can be empty or missing, and its failure states no absent; write the normal result for an empty or missing reply, or the word none where that reply has no normal result`);
+const describeTheExistingExits = count => `exit absent: not checked, existing code that the change does not write: ${count} ${count === 1 ? "exit" : "exits"} with no absent`;
+
+// An execution that reads a reply can get an empty or missing one, so its failure line states the normal result for it, or the word none where absent has no normal result. An exit of existing code is only counted, because a cause the change did not write is no defect of the change.
+export const findAbsentResult = model => {
+  const defects = [];
+  let existingCount = 0;
+  readList(model.decisions.exits).forEach((exit, at) => {
+    if (!exit.failure || isAText(exit.failure.absent) || !isAText(exit.exit)) return;
+
+    const exitMethod = model.findMethod(exit.exit);
+    if (!exitMethod || !readsAReply(exitMethod)) return;
+    if (!isWrittenByTheChange(model, model.findClass(exit.exit), exitMethod)) {
+      existingCount += 1;
+      return;
+    }
+    defects.push(createDefect(DEFECT_CODES.EXIT_ABSENT_UNSTATED, `decisions.exits[${at}].failure.absent`, `the exit ${exit.exit} reads a reply that can be empty or missing, and its failure states no absent; write the normal result for an empty or missing reply, or the word none where that reply has no normal result`));
+  });
+  return { defects, headLines: existingCount ? [describeTheExistingExits(existingCount)] : [] };
 };
 
 export const findFailureHandlingDefects = model => {
   const exits = readList(model.decisions.exits);
   const handlerDefects = exits.map((exit, at) => (exit.failure ? findHandlerTypeDefect(model, exit, at) : null)).filter(Boolean);
-  const absentDefects = exits.map((exit, at) => (exit.failure ? findAbsentResultDefect(model, exit, at) : null)).filter(Boolean);
-  return [...handlerDefects, ...findFrameworkResponseDefects(model, exits), ...findFrameworkHandlerDefects(model), ...absentDefects];
+  return [...handlerDefects, ...findFrameworkResponseDefects(model, exits), ...findFrameworkHandlerDefects(model)];
 };

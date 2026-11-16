@@ -9,7 +9,7 @@ import { findDataFlowDefects } from "./DataFlowCheck.mjs";
 import { findNameOfThePath } from "./DefectNames.mjs";
 import { findExitListResult } from "./ExitList.mjs";
 import { findExitReachDefects } from "./ExitReach.mjs";
-import { findExitFailureResult, findFailureHandlingDefects } from "./FailureHandling.mjs";
+import { findAbsentResult, findExitFailureResult, findFailureHandlingDefects } from "./FailureHandling.mjs";
 import { findFieldListResult } from "./FieldListCheck.mjs";
 import { findMethodListResult } from "./MethodListCheck.mjs";
 import { listMigrationSteps } from "../migration/MigrationSteps.mjs";
@@ -89,6 +89,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
   const fieldList = currentTree ? findFieldListResult(model, currentTree) : null;
   const methodList = currentTree ? findMethodListResult(model, currentTree) : null;
   const exitFailure = findExitFailureResult(model);
+  const exitAbsent = findAbsentResult(model);
   const defects = [
     ...completeness.defects,
     ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
@@ -105,6 +106,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...cycleCheck.defects,
     ...findExitReachDefects(model, zoneOrder),
     ...findFailureHandlingDefects(model),
+    ...exitAbsent.defects,
     ...exitFailure.defects,
     ...findGroupOrderDefects(model, listMigrationSteps(model, currentTree)),
     ...dataFlow.defects,
@@ -112,7 +114,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
   ];
   const markedDefects = markTheScriptCases(model, defects, baseTree);
   return {
-    headLines: [...cycleCheck.headLines, dataFlow.headLine, describeCurrentTree(currentTree), ...(fieldList ? [fieldList.headLine, methodList.headLine] : []), exitList.headLine, exitFailure.headLine, describeResponseTypes(completeness.libraryTypeNames), describeReview(reviewText), describeShapeReviews(shapeReviews)],
+    headLines: [...cycleCheck.headLines, dataFlow.headLine, describeCurrentTree(currentTree), ...(fieldList ? [fieldList.headLine, methodList.headLine] : []), exitList.headLine, exitFailure.headLine, ...exitAbsent.headLines, describeResponseTypes(completeness.libraryTypeNames), describeReview(reviewText), describeShapeReviews(shapeReviews)],
     defects: markedDefects,
     unmatchedScriptCases: listUnmatchedScriptCases(model, markedDefects),
     keyCountMap: completeness.keyCountMap,
