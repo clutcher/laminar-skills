@@ -167,7 +167,22 @@ class MigrationPlan {
   listReaderFiles(theClass, memberName, groupOfTheChange, currentMemberName = memberName) {
     const { words, referredName } = readTypeSearch(readCurrentTypeName(theClass));
     return this.listCallerFiles([...words, currentMemberName], other => this.isAReaderOfTheMember(other, theClass, memberName), referredName, this.readCurrentFileOf(theClass.file))
-      .filter(file => file !== theClass.file && (!this.removedFiles.has(file) || this.getGroupOfTheRemoval(file) > groupOfTheChange));
+      .filter(file => file !== theClass.file && this.standsAfterTheGroup(file, groupOfTheChange));
+  }
+
+  standsAfterTheGroup(file, groupOfTheChange) {
+    return !this.removedFiles.has(file) || this.getGroupOfTheRemoval(file) > groupOfTheChange;
+  }
+
+  // The files that call the constructor of the class: in the tree, each file that refers to the class and calls its name; in the model, the file of each class whose calls name the class alone.
+  listConstructorCallerFiles(theClass, groupOfTheChange) {
+    const currentName = readCurrentTypeName(theClass);
+    const { words, referredName } = readTypeSearch(currentName);
+    const callsTheConstructor = file => this.currentTree.holdsACallOf(file, readLastNamePiece(currentName));
+    const callsTheClassAlone = other => other !== theClass && this.callsAny(other, (calledClass, called) => calledClass === theClass && !called.includes("#"));
+    const treeFiles = this.currentTree ? this.currentTree.listFilesThatReferToTheClass(words, referredName, this.readCurrentFileOf(theClass.file)).filter(callsTheConstructor).map(file => this.newFileOfOldPathMap.get(file) || file) : [];
+    return [...treeFiles, ...this.listFilesOfTheModelThat(callsTheClassAlone)]
+      .filter(file => file !== theClass.file && !this.createdFiles.has(file) && this.standsAfterTheGroup(file, groupOfTheChange));
   }
 
   describeReaderFile(readerFile) {
@@ -331,7 +346,9 @@ class MigrationPlan {
         const group = this.getGroupOfClasses(classes);
         const callerFiles = [...new Set(classes.flatMap(theClass => this.listCallersOfChangedSignatures(theClass, group)))];
         const callers = callerFiles.length ? `; updates the callers of the changed signatures in ${this.describeSignatureReaderFiles(callerFiles, group)}` : "";
-        return this.createStep(MIGRATION_STAGES.CHANGED_MEMBERS, group, `changes the fields and method signatures of ${classes.map(theClass => theClass.name).join(", ")} to those of the model${this.describeMembersFixedApart(classes)}${callers}`, [file, ...callerFiles]);
+        const fieldUserFiles = [...new Set(classes.flatMap(theClass => this.listProductionUsersOfRetypedFields(theClass, group)))].filter(fieldUserFile => !callerFiles.includes(fieldUserFile));
+        const fieldUsers = fieldUserFiles.length ? `; updates the production files that construct the class or read a retyped field in ${this.describeSignatureReaderFiles(fieldUserFiles, group)}` : "";
+        return this.createStep(MIGRATION_STAGES.CHANGED_MEMBERS, group, `changes the fields and method signatures of ${classes.map(theClass => theClass.name).join(", ")} to those of the model${this.describeMembersFixedApart(classes)}${callers}${fieldUsers}`, [file, ...callerFiles, ...fieldUserFiles]);
       });
   }
 
@@ -341,6 +358,23 @@ class MigrationPlan {
     return readList(theClass.methods)
       .filter(method => !isAText(method.oldName) && this.changesTheMethodSignature(currentFile, method))
       .flatMap(method => this.listReaderFiles(theClass, method.name, groupOfTheChange));
+  }
+
+  // A field that keeps its name and changes its type, with no rename: the current file holds its name, but no line of it holds the type of the model beside the name.
+  listRetypedFields(theClass) {
+    if (!this.currentTree) return [];
+    const currentFile = this.readCurrentFileOf(theClass.file);
+    return readList(theClass.fields)
+      .filter(field => !isAText(field.oldName) && isAText(field.type) && this.currentTree.holdsTheWord(currentFile, field.name) && !this.currentTree.holdsTheTypeBesideTheName(currentFile, field));
+  }
+
+  // A retyped field breaks each production file that constructs the class, as a record component does, or reads the field; its tests stand in the test step of the class.
+  listProductionUsersOfRetypedFields(theClass, groupOfTheChange) {
+    const retypedFields = this.listRetypedFields(theClass);
+    if (!retypedFields.length) return [];
+
+    const readerFiles = retypedFields.flatMap(field => this.listReaderFiles(theClass, field.name, groupOfTheChange));
+    return [...this.listConstructorCallerFiles(theClass, groupOfTheChange), ...readerFiles].filter(file => !isATestFile(file));
   }
 
   describeMembersFixedApart(classes) {
@@ -476,7 +510,7 @@ class MigrationPlan {
     return this.currentTree.listParameterTextsOf(currentFile, method.name).length > 0 && !this.currentTree.holdsTheSignature(currentFile, method);
   }
 
-  // A modified class whose public signature, its constructor included, changes breaks the tests that construct or call it; a field the current file does not hold is a new constructor parameter.
+  // A modified class whose public signature, its constructor included, changes breaks the tests that construct or call it; a field the current file does not hold is a new constructor parameter, and a retyped field changes the type of one.
   changesThePublicSignature(theClass) {
     if (isAText(theClass.oldName) || readList(theClass.removed).length || readList(theClass.fields).some(field => isAText(field.oldName))) return true;
 
@@ -484,7 +518,9 @@ class MigrationPlan {
     const isInTheCurrentFile = this.currentTree && this.currentTree.holdsTheWord(currentFile, readLastNamePiece(readCurrentTypeName(theClass)));
     if (this.currentTree && !isInTheCurrentFile) return false;
     if (readList(theClass.methods).some(method => this.changesTheMethodSignature(currentFile, method))) return true;
-    return Boolean(isInTheCurrentFile) && readList(theClass.fields).some(field => !this.currentTree.holdsTheWord(currentFile, field.name));
+    if (!isInTheCurrentFile) return false;
+
+    return readList(theClass.fields).some(field => !this.currentTree.holdsTheWord(currentFile, field.name)) || this.listRetypedFields(theClass).length > 0;
   }
 
   isSearchedForTests(theClass) {

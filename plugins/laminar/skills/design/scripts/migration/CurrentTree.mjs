@@ -309,6 +309,18 @@ class CurrentTree {
     return declaredReturnTypes.some(declaredReturnType => holdsTheTypeNames(declaredReturnType, method.returns));
   }
 
+  // The file calls the name with an opening parenthesis after it, as a call of a constructor does: new Hive( in Java and TypeScript, Hive( in Kotlin and Python.
+  holdsACallOf(file, name) {
+    const text = this.readFileText(file);
+    return text !== null && new RegExp(`(^|[^\\w$])${name.replace(/[$]/g, "\\$")}\\s*\\(`).test(text);
+  }
+
+  // A line of the file holds the type of the field beside its name, as the declaration of a field or of a record component does; where none does, the model retypes the field.
+  holdsTheTypeBesideTheName(file, field) {
+    const text = this.readFileText(file);
+    return text !== null && text.split("\n").some(line => line.includes(field.type) && isAWordIn(line, field.name));
+  }
+
   // The files that hold every word and refer to the class of classFile; where another file of the tree declares a class of the same name, only a file of the same folder or one whose import names the qualified class counts.
   listFilesThatReferToTheClass(words, className, classFile) {
     return this.keepTheFilesThatReferToTheClass(this.listFilesThatHoldEveryWord(words), className, classFile);

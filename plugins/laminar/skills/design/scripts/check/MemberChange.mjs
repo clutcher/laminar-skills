@@ -38,11 +38,6 @@ export const describeTheChangeOfTheMember = (model, theClass, methods, currentTr
   return null;
 };
 
-const holdsTheTypeBesideTheName = (currentText, field) => {
-  const fieldName = new RegExp(`(^|[^\\w$])${field.name.replace(/[$]/g, "\\$")}([^\\w$]|$)`);
-  return currentText.split("\n").some(line => line.includes(field.type) && fieldName.test(line));
-};
-
 // A field is outside the change where the current tree declares it in its class with the type of the model, and the design renames neither the class nor the field; a file in a language the field reader does not read never passes.
 export const describeTheChangeOfTheFields = (model, theClass, fieldNames, currentTree) => {
   const kind = model.getKindOfClass(theClass);
@@ -58,7 +53,7 @@ export const describeTheChangeOfTheFields = (model, theClass, fieldNames, curren
     if (!field) return `the model lists no field ${fieldName} of ${theClass.name}`;
     if (isAText(field.oldName)) return `${theClass.name}#${fieldName} holds an oldName`;
     if (!declaredNames?.has(fieldName)) return `the current tree declares no field ${fieldName} in ${theClass.name}, so the design creates it`;
-    if (isAText(field.type) && !holdsTheTypeBesideTheName(currentText, field)) return `the current tree holds no line with the type ${field.type} and the field ${fieldName} of ${theClass.name}, so the design retypes it`;
+    if (isAText(field.type) && !currentTree.holdsTheTypeBesideTheName(currentFile, field)) return `the current tree holds no line with the type ${field.type} and the field ${fieldName} of ${theClass.name}, so the design retypes it`;
   }
   return null;
 };
