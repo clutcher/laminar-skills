@@ -4,7 +4,7 @@
 //   node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]
 //
 // --review, --repo and --range are needed where plan 1 ended ready; a plan that ended in a question or a stop starts no writer and no review.
-// --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left or back, and --expected gives the planted keys that split the kept findings of the closing review.
+// --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left, decided again or back, and --expected gives the planted keys that split the kept findings of the closing review.
 // It exits with 0 where the run is one shot, 1 where it is not, and 2 on a usage error or a missing file. It writes nothing but --json, and runs git only in --repo.
 // Node with no dependencies.
 import fs from "node:fs";
@@ -28,7 +28,7 @@ const PLACEMENTS = Object.freeze({
   LEFT: "left with a reason",
 });
 
-const STORED_STATES = Object.freeze({ CLOSED: "closed", LEFT: "left", BACK: "back" });
+const STORED_STATES = Object.freeze({ CLOSED: "closed", LEFT: "left", DECIDED: "decided again", BACK: "back" });
 
 // Who left a finding key: the decided list of the calling session, where the object or the entry has decidedBy, or the design by its own reason class.
 const LEFT_SOURCES = Object.freeze({ DECIDED_LIST: "by the decided list", DESIGN: "by the design" });
@@ -45,6 +45,9 @@ const BUILD_FAILED = "failed";
 const PLAN_READY = "ready";
 
 const KEPT_LEVEL = "warning";
+
+// A result the decided review file of the design marked carries this suppression status, and the grade counts it apart, never as kept on the change.
+const ACCEPTED_SUPPRESSION = "accepted";
 
 const NEW_BASELINE_STATE = "new";
 
@@ -171,7 +174,7 @@ const readFinding = result => {
     kept: result.level === KEPT_LEVEL && properties.to_consider !== true,
     testCode: properties.test_code === true,
     baselineState: result.baselineState || NEW_BASELINE_STATE,
-    decided: Array.isArray(result.suppressions) && result.suppressions.length > 0,
+    decided: (result.suppressions || []).some(suppression => suppression.status === ACCEPTED_SUPPRESSION),
     file: String((location.artifactLocation || {}).uri || ""),
     line: Number.isFinite((location.region || {}).startLine) ? location.region.startLine : null,
     track: CHECKS_BY_ID_MAP[check] ? CHECKS_BY_ID_MAP[check].track : "UNKNOWN",
@@ -410,7 +413,11 @@ const readJudgedKeys = reviewFolder => {
   return new Set((prepare.codeUnderReview || []).flatMap(code => (code.checks || []).map(check => createFindingKey(String(code.displayName || ""), String(check.id)))));
 };
 
-const decideTheStoredState = (finding, leftSourceOfKeyMap, keptKeys) => {
+const readDecidedKeys = review => new Set(review.findings.filter(finding => finding.decided).map(finding => finding.findingKey));
+
+// A stored finding the closing review marks decided again is the decision carried, before it counts as left.
+const decideTheStoredState = (finding, leftSourceOfKeyMap, keptKeys, decidedKeys) => {
+  if (decidedKeys.has(finding.findingKey)) return STORED_STATES.DECIDED;
   if (leftSourceOfKeyMap.has(finding.findingKey)) return STORED_STATES.LEFT;
 
   return keptKeys.has(finding.findingKey) ? STORED_STATES.BACK : STORED_STATES.CLOSED;
@@ -418,16 +425,17 @@ const decideTheStoredState = (finding, leftSourceOfKeyMap, keptKeys) => {
 
 const gradeTheStoredFindings = (storedKept, leftSourceOfKeyMap, review) => {
   const keptKeys = review ? readKeptKeys(review) : new Set();
+  const decidedKeys = review ? readDecidedKeys(review) : new Set();
   const judgedKeys = review ? readJudgedKeys(review.run) : null;
   const findings = storedKept.map(finding => ({
     displayName: finding.displayName,
     check: finding.check,
     scale: finding.scale,
-    state: decideTheStoredState(finding, leftSourceOfKeyMap, keptKeys),
+    state: decideTheStoredState(finding, leftSourceOfKeyMap, keptKeys, decidedKeys),
     judgedAgain: judgedKeys ? judgedKeys.has(finding.findingKey) : null,
   }));
   const counts = Object.fromEntries(Object.values(STORED_STATES).map(state => [state, findings.filter(finding => finding.state === state).length]));
-  const leftBySource = countTheLeftSources(storedKept.filter(finding => leftSourceOfKeyMap.has(finding.findingKey)).map(finding => leftSourceOfKeyMap.get(finding.findingKey)));
+  const leftBySource = countTheLeftSources(storedKept.filter((finding, index) => findings[index].state === STORED_STATES.LEFT).map(finding => leftSourceOfKeyMap.get(finding.findingKey)));
   return {
     counts,
     leftBySource,
@@ -487,7 +495,7 @@ const formatCounts = (countMap, formatTheEntry = formatCount) => {
 
 const formatTheLeftSources = countOfSourceMap => Object.values(LEFT_SOURCES).map(source => formatCount(source, countOfSourceMap[source])).join(" · ");
 
-const formatTheStoredCounts = stored => `closed ${stored.counts.closed} · left ${stored.counts.left} (${formatTheLeftSources(stored.leftBySource)}) · back ${stored.counts.back}`;
+const formatTheStoredCounts = stored => `closed ${stored.counts.closed} · left ${stored.counts.left} (${formatTheLeftSources(stored.leftBySource)}) · decided again ${stored.counts[STORED_STATES.DECIDED]} · back ${stored.counts.back}`;
 
 const formatTheApartCounts = (apart, closingLeftBySource) => {
   if (!closingLeftBySource) return formatCounts(apart);
