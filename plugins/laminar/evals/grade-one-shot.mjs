@@ -4,7 +4,7 @@
 //   node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]
 //
 // --review, --repo and --range are needed where plan 1 ended ready; a plan that ended in a question or a stop starts no writer and no review.
-// --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left, decided again or back, and --expected gives the planted keys that split the kept findings of the closing review.
+// --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left, decided again or back, and --expected gives the planted keys that split the kept findings of the closing review; the change.diff beside it gives the files the planted change touched.
 // It exits with 0 where the run is one shot, 1 where it is not, and 2 on a usage error or a missing file. It writes nothing but --json, and runs git only in --repo.
 // Node with no dependencies.
 import fs from "node:fs";
@@ -34,7 +34,8 @@ const STORED_STATES = Object.freeze({ CLOSED: "closed", LEFT: "left", DECIDED: "
 const LEFT_SOURCES = Object.freeze({ DECIDED_LIST: "by the decided list", DESIGN: "by the design" });
 
 // How a kept finding on the change of a fix-from-review run relates to the stored input review.
-const KEY_KINDS = Object.freeze({ PLANTED: "on planted keys", DECIDED_BACK: "decided, back under a new key", OTHER: "other" });
+// The middle count only points the reader of the report to a decided finding that may have the same cause; it never rules that the cause moved.
+const KEY_KINDS = Object.freeze({ PLANTED: "on planted keys", WITH_A_DECIDED_FINDING: "with a decided finding of the same check in a planted file", OTHER: "other" });
 
 const GROUP_OUTCOMES = Object.freeze({ FINISHED: "finished", STOPPED: "stopped", NOT_STARTED: "not started", NO_ANSWER: "no answer" });
 
@@ -73,9 +74,15 @@ const USAGE_FILE_NAME = /^usage-(.+)\.json$/;
 // An item of expected.md names its abstraction in its head, and its check by the lead of its first point; the planted defects end at the level 1 lines.
 const PLANTED_ITEM_HEAD = /^\d+\.\s+(?:Application|Module|Class|Method|Variable)\s+`([^`]+)`/;
 const PLANTED_CHECK_POINT = /^\s+-\s+(.+?)\s*$/;
+// A later point of an item that names more abstractions the planted line also stands on, with the check of its lead; the 2 patterns mirror AN_ACCEPTED_ON_POINT and A_NAMED_ABSTRACTION of grade.mjs.
+const ACCEPTED_ON_POINT = /^Also accepted on:?\s+(.+)$/;
+const NAMED_ABSTRACTION = /(?:Application|Module|Class|Method|Variable)\s+`([^`]+)`(?:\s+(?:used bare\s+)?in\s+`([^`]+)`)?/g;
 const LEVEL_1_HEAD = "## Level 1";
 
-const RENAME_STATUS = /^R\d*$/;
+// The head of each file of change.diff, which names the file before and after the planted change.
+const DIFF_FILE_HEAD = /^diff --git a\/(.+?) b\/(.+)$/;
+
+const PLANTED_CHANGE_FILE = "change.diff";
 
 const HUNK_HEAD = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/;
 const NEW_FILE_HEAD = /^\+\+\+ b\/(.+)$/;
@@ -138,16 +145,6 @@ const readChangeOfTheRange = (repository, range) => {
     if (hunk && spans) spans.push(readSpanOfTheHunk(hunk));
   }
   return { statusOfFileMap, changedSpansOfFileMap };
-};
-
-// The new path of each file that git reports renamed in the range, by its old path.
-const readRenamedPathOfFileMap = (repository, range) => {
-  const renamedPathOfFileMap = new Map();
-  for (const line of runGit(repository, ["diff", "--name-status", "-M", range]).split("\n").filter(Boolean)) {
-    const [status, oldPath, newPath] = line.split("\t");
-    if (RENAME_STATUS.test(status)) renamedPathOfFileMap.set(oldPath, newPath);
-  }
-  return renamedPathOfFileMap;
 };
 
 const readSpanOfTheHunk = hunk => {
@@ -365,37 +362,66 @@ const readLeftSourceOfKeyMap = (results, inputRun) => {
 
 const countTheLeftSources = sources => Object.fromEntries(Object.values(LEFT_SOURCES).map(source => [source, sources.filter(other => other === source).length]));
 
+const findTheCheckId = lead => {
+  const checkWords = findCheckWords(lead);
+  return checkWords ? checkWords.id : lead;
+};
+
+const listTheAcceptedDisplayNames = point => {
+  const accepted = ACCEPTED_ON_POINT.exec(point);
+  if (!accepted) return [];
+
+  return [...accepted[1].matchAll(NAMED_ABSTRACTION)].map(named => (named[2] ? `${named[2]}#${named[1]}` : named[1]));
+};
+
+// The planted key of each item, by the abstraction of its head and the check of its first point, and 1 more for each abstraction its point "Also accepted on" names.
 const readThePlantedKeys = expectedFile => {
   if (!fs.existsSync(expectedFile)) throw new UsageStop(`expected: ${expectedFile} is missing`);
 
   const plantedKeys = new Set();
-  let displayName = "";
+  let planted = null;
   for (const line of fs.readFileSync(expectedFile, "utf8").split("\n")) {
     if (line.startsWith(LEVEL_1_HEAD)) break;
     const head = PLANTED_ITEM_HEAD.exec(line);
     if (head) {
-      displayName = head[1];
+      planted = { displayName: head[1], checkId: "" };
       continue;
     }
     const point = PLANTED_CHECK_POINT.exec(line);
-    if (point && displayName) {
-      const checkWords = findCheckWords(point[1]);
-      plantedKeys.add(createFindingKey(displayName, checkWords ? checkWords.id : point[1]));
-      displayName = "";
+    if (!point || !planted) continue;
+    if (!planted.checkId) {
+      planted.checkId = findTheCheckId(point[1]);
+      plantedKeys.add(createFindingKey(planted.displayName, planted.checkId));
+      continue;
     }
+    for (const displayName of listTheAcceptedDisplayNames(point[1])) plantedKeys.add(createFindingKey(displayName, planted.checkId));
   }
   return plantedKeys;
 };
 
-const findTheDecidedFinding = (finding, backSearch) => backSearch.decidedFindings.find(decided => decided.check === finding.check
-  && (decided.file === finding.file || backSearch.renamedPathOfFileMap.get(decided.file) === finding.file));
+// The files the planted change touched, by their paths before and after it, read from the change.diff of the case folder beside expected.md.
+const readThePlantedFiles = expectedFile => {
+  const changeFile = path.join(path.dirname(expectedFile), PLANTED_CHANGE_FILE);
+  if (!fs.existsSync(changeFile)) throw new UsageStop(`planted change: ${changeFile} is missing`);
 
-// A kept finding on the change is decided, back under a new key, where its key is no planted key and it has the check and the file, or the renamed file, of a stored finding the decided list left.
+  const plantedFiles = new Set();
+  for (const line of fs.readFileSync(changeFile, "utf8").split("\n")) {
+    const head = DIFF_FILE_HEAD.exec(line);
+    if (head) {
+      plantedFiles.add(head[1]);
+      plantedFiles.add(head[2]);
+    }
+  }
+  return plantedFiles;
+};
+
+const hasADecidedFindingOfTheCheck = (finding, backSearch) => backSearch.decidedFindings.some(decided => decided.check === finding.check && backSearch.plantedFiles.has(decided.file));
+
+// A kept finding on the change that stands on no planted key counts with a decided finding of the same check in a planted file where a stored finding the decided list left has its check in a file the planted change touched.
 const markTheKeyKind = (finding, backSearch) => {
   if (backSearch.plantedKeys.has(finding.findingKey)) return { ...finding, keyKind: KEY_KINDS.PLANTED };
 
-  const decidedFinding = findTheDecidedFinding(finding, backSearch);
-  return decidedFinding ? { ...finding, keyKind: KEY_KINDS.DECIDED_BACK, decidedFinding } : { ...finding, keyKind: KEY_KINDS.OTHER };
+  return { ...finding, keyKind: hasADecidedFindingOfTheCheck(finding, backSearch) ? KEY_KINDS.WITH_A_DECIDED_FINDING : KEY_KINDS.OTHER };
 };
 
 const markTheKeyKinds = (review, backSearch) => ({ ...review, keptOnTheChange: review.keptOnTheChange.map(finding => markTheKeyKind(finding, backSearch)) });
@@ -448,7 +474,7 @@ const gradeTheStoredFindings = (storedKept, leftSourceOfKeyMap, review) => {
 const readTheBackSearch = (options, storedKept, leftSourceOfKeyMap) => ({
   plantedKeys: readThePlantedKeys(options.expected),
   decidedFindings: storedKept.filter(finding => leftSourceOfKeyMap.get(finding.findingKey) === LEFT_SOURCES.DECIDED_LIST),
-  renamedPathOfFileMap: readRenamedPathOfFileMap(options.repo, options.range),
+  plantedFiles: readThePlantedFiles(options.expected),
 });
 
 const decideNothingOpen = grade => grade.planOutcome === PLAN_READY
@@ -528,8 +554,6 @@ const writeTheWriterLines = writers => {
   return lines;
 };
 
-const describeTheDecidedFinding = finding => (finding.decidedFinding ? ` (${KEY_KINDS.DECIDED_BACK}; stored key ${finding.decidedFinding.check} ${finding.decidedFinding.displayName})` : "");
-
 const writeTheReviewLines = (review, stored) => {
   if (!review) return ["review: not run"];
 
@@ -538,7 +562,7 @@ const writeTheReviewLines = (review, stored) => {
     `  by track: ${formatCounts(review.kept.byTrack)}`,
   ];
   if (stored) lines.push(`  by key: ${Object.values(KEY_KINDS).map(keyKind => formatCount(keyKind, stored.keptByKey[keyKind])).join(" · ")}`);
-  for (const finding of review.keptOnTheChange) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}${describeTheDecidedFinding(finding)}`);
+  for (const finding of review.keptOnTheChange) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}`);
   lines.push(`to consider on the change: ${review.toConsiderOnTheChange}`);
   lines.push(`apart, not graded: ${formatTheApartCounts(review.apart, stored && stored.closingLeftBySource)}`);
   return lines;
