@@ -72,6 +72,7 @@ export const DEFECT_CODES = Object.freeze({
   OPTION_WITHOUT_CODE: "option-without-code",
   OWNER_WITHOUT_ITS_VALUES: "owner-without-its-values",
   REPEATED_TABLE: "repeated-table",
+  COPIES_AN_UNCHANGED_METHOD: "copies-an-unchanged-method",
 });
 
 export const createDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false });
