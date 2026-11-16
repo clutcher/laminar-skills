@@ -58,6 +58,7 @@ export const DEFECT_CODES = Object.freeze({
   HANDLER_TAKES_OTHER_TYPE: "handler-takes-other-type",
   FRAMEWORK_RESPONSE_UNLISTED: "framework-response-unlisted",
   EXIT_FAILURE_UNNAMED: "exit-failure-unnamed",
+  EXIT_ABSENT_UNSTATED: "exit-absent-unstated",
   FRAMEWORK_AS_RESPONSE_TYPE: "framework-as-response-type",
   FRAMEWORK_HANDLER_RESPONSE_UNLISTED: "framework-handler-response-unlisted",
   GROUP_ON_UNCHANGED_CLASS: "group-on-unchanged-class",

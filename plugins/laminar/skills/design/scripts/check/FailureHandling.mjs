@@ -95,8 +95,51 @@ export const findExitFailureResult = model => {
   return { defects, headLine: describeTheUncheckedExits(uncheckedNames) };
 };
 
+// The first word of a method that reads or parses outside data, in camelCase and in snake_case; a method that writes, sends or charges gets no empty or missing reply, so it is not checked for an absent result. Each verb starts a reading method in Java, TypeScript, Python and Kotlin alike:
+// find: a lookup by key or by query in repositories and clients of every stack.
+// get: the most common reading verb of clients, maps and stores in every stack.
+// read: a read of a file, a stream or a store.
+// load: a read of a stored record or file, in data layers and caches.
+// fetch: a read of a remote resource, in HTTP clients and data layers.
+// list: a read of a collection, in repositories and cloud SDKs.
+// query: a read through a query language or a filter.
+// search: a read through an index or a full-text query.
+// select: a read in SQL mappers and query builders.
+// look, lookup: a read of 1 entry by key, in directories, registries and caches.
+// open: a read that starts at a file, a stream or a stored object that can be missing.
+// parse: a read of outside data from text or bytes, which can be empty.
+// count: a read of the number of stored items.
+// has, exists, contains, is: a read that answers yes or no about stored data.
+// retrieve: a read of a stored or remote item, in SDKs and data layers.
+// download: a read of a remote file or object.
+// receive: a read of a message from a queue or a channel, which can be empty.
+// poll: a read of the next item of a queue, which can be empty.
+const READING_VERBS = new Set(["find", "get", "read", "load", "fetch", "list", "query", "search", "select", "look", "lookup", "open", "parse", "count", "has", "exists", "contains", "is", "retrieve", "download", "receive", "poll"]);
+
+// A return type that carries no reply in the languages the scripts read.
+const NO_REPLY_TYPE = /^(?:void|None|Unit)$|<\s*[Vv]oid\s*>$/;
+
+// A boolean or a number has no absent reply to state; the type text of the model cannot tell a boxed type from a primitive one, so both count here.
+const YES_NO_OR_NUMBER_TYPES = new Set(["boolean", "Boolean", "bool", "int", "Integer", "Int", "long", "Long", "short", "Short", "byte", "Byte", "float", "Float", "double", "Double", "number", "Number"]);
+
+const hasNoAbsentReply = returnType => NO_REPLY_TYPE.test(returnType) || YES_NO_OR_NUMBER_TYPES.has(returnType);
+
+const readFirstWord = methodName => methodName.split(/(?=[A-Z])|_/)[0].toLowerCase();
+
+const readsAReply = method => isAText(method.name) && isAText(method.returns) && !hasNoAbsentReply(method.returns.trim()) && READING_VERBS.has(readFirstWord(method.name));
+
+// An execution that reads a reply can get an empty or missing one, so its failure line states the normal result for it, or the word none where absent has no normal result.
+const findAbsentResultDefect = (model, exit, at) => {
+  if (isAText(exit.failure.absent) || !isAText(exit.exit)) return null;
+
+  const exitMethod = model.findMethod(exit.exit);
+  if (!exitMethod || !readsAReply(exitMethod)) return null;
+  return createDefect(DEFECT_CODES.EXIT_ABSENT_UNSTATED, `decisions.exits[${at}].failure.absent`, `the exit ${exit.exit} reads a reply that can be empty or missing, and its failure states no absent; write the normal result for an empty or missing reply, or the word none where that reply has no normal result`);
+};
+
 export const findFailureHandlingDefects = model => {
   const exits = readList(model.decisions.exits);
   const handlerDefects = exits.map((exit, at) => (exit.failure ? findHandlerTypeDefect(model, exit, at) : null)).filter(Boolean);
-  return [...handlerDefects, ...findFrameworkResponseDefects(model, exits), ...findFrameworkHandlerDefects(model)];
+  const absentDefects = exits.map((exit, at) => (exit.failure ? findAbsentResultDefect(model, exit, at) : null)).filter(Boolean);
+  return [...handlerDefects, ...findFrameworkResponseDefects(model, exits), ...findFrameworkHandlerDefects(model), ...absentDefects];
 };
