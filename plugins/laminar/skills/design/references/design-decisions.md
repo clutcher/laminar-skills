@@ -42,7 +42,7 @@ The design check reads `overrides` at no agent cost. It reports `override-on-a-b
 | Key | Type | Required | Read by |
 |---|---|---|---|
 | `decision` | text, in the words of the business | yes | design check, render |
-| `owner` | display name of the class or method that owns it | yes | design check, which reports 2 owners of 1 decision and an owner the model does not hold, and a new owner method whose values no input gives as a recheck case (`owner-without-its-values`, `design-checks.md`, section 4); render |
+| `owner` | display name of the class or method that makes the decision, never a type that only holds a value, a key, a table or functions that the callers decide with | yes | design check, which reports 2 owners of 1 decision and an owner the model does not hold, and a new owner method whose values no input gives as a recheck case (`owner-without-its-values`, `design-checks.md`, section 4); render |
 | `placement` | text: 1 sentence on why the owner stands where it stands, which names the input or the reader that decides its place, such as the callers that reach it or the folder whose part it is | yes, written in pass 2 for every owner | design check, which reports an owner with no `placement` (`owner-placement-missing`); render, which prints it beside the owner |
 | `callers` | list of display names, or the word `framework` for a method that the host framework calls, such as an exception handler or a scheduled method | yes; empty only for an entry | design check, which resolves each display name and accepts `framework`; render |
 | `forecast` | object, written by the change forecaster | yes, before depth is decided | design check, render |
