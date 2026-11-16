@@ -1,5 +1,6 @@
 import { ANSWER_GIVERS, DOES, FRAMEWORK, KINDS, OVERRIDE_KINDS, getFileOfTheChild, isAText, isATestFileOfTheModel, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readFolderOfTheFile, readList } from "../model/DesignModel.mjs";
 import { DEFECT_CODES, createDefect, createRecheckDefect } from "./DesignDefect.mjs";
+import { joinNameOfTheTwoKeys } from "./DefectNames.mjs";
 import { createTestNameForm } from "./TestNameForm.mjs";
 import { isAStopOnItsGroup } from "../plan/StopList.mjs";
 
@@ -419,12 +420,13 @@ const checkExistingDefects = check => {
     if (check.requireKey("existingDefect.class", existingDefect, "class", path)) check.requireName(existingDefect.class, `${path}.class`);
     for (const key of ["member", "defect"]) check.requireKey(`existingDefect.${key}`, existingDefect, key, path);
     const isFixed = isAText(existingDefect.fix) || Number.isFinite(existingDefect.group);
+    const name = joinNameOfTheTwoKeys(existingDefect.class, existingDefect.member) ?? path;
     if (isFixed && isLeftUnfixed(existingDefect)) {
-      check.addDefect(DEFECT_CODES.EXISTING_DEFECT_FIXED_AND_NOT_FIXED, path, `the existing defect of ${existingDefect.class}#${existingDefect.member} holds notFixed beside fix or group, and a defect left unfixed has neither`);
+      check.addDefect(DEFECT_CODES.EXISTING_DEFECT_FIXED_AND_NOT_FIXED, path, `the existing defect of ${name} holds notFixed beside fix or group, and a defect left unfixed has neither`);
       return;
     }
     if (!isFixed && !isLeftUnfixed(existingDefect)) {
-      check.addDefect(DEFECT_CODES.EXISTING_DEFECT_NEITHER_FIXED_NOR_NOT_FIXED, path, `the existing defect of ${existingDefect.class}#${existingDefect.member} holds neither fix and group nor notFixed, and holds 1 of them`);
+      check.addDefect(DEFECT_CODES.EXISTING_DEFECT_NEITHER_FIXED_NOR_NOT_FIXED, path, `the existing defect of ${name} holds neither fix and group nor notFixed, and holds 1 of them`);
       return;
     }
     if (!isFixed) return;

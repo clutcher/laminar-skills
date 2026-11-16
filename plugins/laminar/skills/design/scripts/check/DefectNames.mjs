@@ -1,10 +1,13 @@
-import { getFileOfTheChild, getFolderPath, readList } from "../model/DesignModel.mjs";
+import { getFileOfTheChild, getFolderPath, isAText, readList } from "../model/DesignModel.mjs";
 
 const CLASS_PATH = /^classes\[(\d+)\](?:\.methods\[(\d+)\])?/;
 
 const FOLDER_PATH = /^folders\[(\d+)\](?:\.children\[(\d+)\])?/;
 
 const DECISION_PATH = /^decisions\.([\w.]+)\[(\d+)\]/;
+
+// An item named by 2 keys, such as a removed test or an existing defect, has no name while either key is missing, so a defect on it is named by its path, as an item of another list without its name key is.
+export const joinNameOfTheTwoKeys = (first, second) => (isAText(first) && isAText(second) ? `${first}#${second}` : undefined);
 
 const describeFinding = finding => (Number.isFinite(finding.run) ? `shape run ${finding.run} item ${finding.number}` : `item ${finding.number}`);
 
@@ -14,12 +17,12 @@ const NAME_OF_DECISION_MAP = new Map([
   ["exits", exit => exit.exit],
   ["tests.integration", integration => integration.entry],
   ["tests.unit", unitTest => unitTest.class],
-  ["tests.removed", removedTest => `${removedTest.file}#${removedTest.test}`],
+  ["tests.removed", removedTest => joinNameOfTheTwoKeys(removedTest.file, removedTest.test)],
   ["questions", question => question.id],
   ["stops", stop => stop.at],
   ["findings", describeFinding],
   ["scriptCases", scriptCase => scriptCase.name],
-  ["existingDefects", existingDefect => `${existingDefect.class}#${existingDefect.member}`],
+  ["existingDefects", existingDefect => joinNameOfTheTwoKeys(existingDefect.class, existingDefect.member)],
   ["conventions.overrides", override => override.project || override.codeStyle],
 ]);
 
