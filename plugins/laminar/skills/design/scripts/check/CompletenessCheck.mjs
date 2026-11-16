@@ -110,6 +110,21 @@ const checkFolders = check => {
   });
 };
 
+// The migration step that removes a folder deletes every file under it, so a child that the model keeps there contradicts the removal.
+const checkChildrenUnderRemovedFolders = check => {
+  const removedFolderPaths = check.model.listRemovedFolderPaths();
+  check.model.folders.forEach((folder, folderAt) => {
+    readList(folder.children).forEach((child, childAt) => {
+      if (child.kind === KINDS.REMOVED) return;
+
+      const childFile = getFileOfTheChild(folder, child).replace(/\/+$/, "");
+      const removedFolderPath = removedFolderPaths.find(folderPath => childFile.startsWith(folderPath));
+      if (!removedFolderPath) return;
+      check.addDefect(DEFECT_CODES.CHILD_UNDER_REMOVED_FOLDER, `folders[${folderAt}].children[${childAt}]`, `the model removes the folder ${removedFolderPath} and lists ${childFile} under it as a ${child.kind} child, so the step that removes the folder also deletes that child; remove the child too, or keep the folder`);
+    });
+  });
+};
+
 const needsADoesValue = theClass => !isAnInterface(theClass) && readList(theClass.methods).length > 0;
 
 const needsABody = (model, theClass, method, exitNames) => {
@@ -446,6 +461,7 @@ const checkScriptCases = check => {
 export const findCompletenessDefects = (model, zoneOrder) => {
   const check = new CompletenessCheck(model, zoneOrder);
   checkFolders(check);
+  checkChildrenUnderRemovedFolders(check);
   checkClasses(check);
   checkClassNamesOnce(check);
   checkConventions(check);
