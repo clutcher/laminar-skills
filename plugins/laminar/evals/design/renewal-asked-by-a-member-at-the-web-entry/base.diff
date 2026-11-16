@@ -1,0 +1,629 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,2 @@
++build/
++.gradle/
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,18 @@
++# Lending library
++
++A small web service of a lending library. A member reads the loans they hold and the fines they owe at `GET /members/{memberId}/loans`.
++
++- Java 17, Spring Boot 3.3.5 with Spring Web, and JUnit 5 with Spring Boot Test.
++- The application lives under `org.example.library`. The module `loan` follows the hexagonal layout: `app/api` holds what the module offers, `app/spi` what it needs, `app/domain` the business rules, `in/web` the web entry, `out/memory` the stores, and `config` the wiring.
++- The stores keep their data in memory, so the service needs no database.
++- The mail library Postbox is vendored under `vendor/postbox/`, at the version and the edition that its README names. The build compiles it as a second main source folder.
++
++## Build
++
++Gradle 9.8.1 builds the service with the default JDK, with no network:
++
++```bash
++gradle --offline test
++```
++
++The integration tests start the application and call its web entry through `MockMvc`.
+diff --git a/build.gradle b/build.gradle
+new file mode 100644
+--- /dev/null
++++ b/build.gradle
+@@ -0,0 +1,37 @@
++plugins {
++    id 'java'
++}
++
++group = 'org.example'
++version = '1.0.0'
++
++repositories {
++    mavenCentral()
++}
++
++sourceSets {
++    main {
++        java {
++            srcDir 'vendor/postbox/src/main/java'
++        }
++    }
++}
++
++dependencies {
++    implementation platform('org.springframework.boot:spring-boot-dependencies:3.3.5')
++    implementation 'org.springframework.boot:spring-boot-starter-web'
++
++    testImplementation platform('org.springframework.boot:spring-boot-dependencies:3.3.5')
++    testImplementation 'org.springframework.boot:spring-boot-starter-test'
++    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
++}
++
++tasks.withType(JavaCompile).configureEach {
++    options.release = 17
++    options.compilerArgs << '-parameters'
++}
++
++tasks.named('test') {
++    useJUnitPlatform()
++    systemProperty 'net.bytebuddy.experimental', 'true'
++}
+diff --git a/settings.gradle b/settings.gradle
+new file mode 100644
+--- /dev/null
++++ b/settings.gradle
+@@ -0,0 +1 @@
++rootProject.name = 'lending-library'
+diff --git a/src/main/java/org/example/library/LibraryApplication.java b/src/main/java/org/example/library/LibraryApplication.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/LibraryApplication.java
+@@ -0,0 +1,12 @@
++package org.example.library;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class LibraryApplication {
++
++    public static void main(String[] arguments) {
++        SpringApplication.run(LibraryApplication.class, arguments);
++    }
++}
+diff --git a/src/main/java/org/example/library/LibraryMailConfiguration.java b/src/main/java/org/example/library/LibraryMailConfiguration.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/LibraryMailConfiguration.java
+@@ -0,0 +1,21 @@
++package org.example.library;
++
++import org.example.postbox.PostboxClient;
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++
++@Configuration
++public class LibraryMailConfiguration {
++
++    private final String senderAddress;
++
++    public LibraryMailConfiguration(@Value("${library.mail.sender-address}") String senderAddress) {
++        this.senderAddress = senderAddress;
++    }
++
++    @Bean("postboxClient")
++    public PostboxClient createPostboxClient() {
++        return new PostboxClient(senderAddress);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/api/ApiForMemberLoans.java b/src/main/java/org/example/library/loan/app/api/ApiForMemberLoans.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/api/ApiForMemberLoans.java
+@@ -0,0 +1,6 @@
++package org.example.library.loan.app.api;
++
++public interface ApiForMemberLoans {
++
++    MemberLoans searchLoansOfMember(String memberId);
++}
+diff --git a/src/main/java/org/example/library/loan/app/api/MemberLoans.java b/src/main/java/org/example/library/loan/app/api/MemberLoans.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/api/MemberLoans.java
+@@ -0,0 +1,9 @@
++package org.example.library.loan.app.api;
++
++import org.example.library.loan.app.domain.model.Loan;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++public record MemberLoans(String memberId, List<Loan> loans, BigDecimal owedFines) {
++}
+diff --git a/src/main/java/org/example/library/loan/app/api/MemberNotFoundException.java b/src/main/java/org/example/library/loan/app/api/MemberNotFoundException.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/api/MemberNotFoundException.java
+@@ -0,0 +1,8 @@
++package org.example.library.loan.app.api;
++
++public class MemberNotFoundException extends RuntimeException {
++
++    public MemberNotFoundException(String memberId) {
++        super("no member has the id " + memberId);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
+@@ -0,0 +1,47 @@
++package org.example.library.loan.app.domain;
++
++import org.example.library.loan.app.api.ApiForMemberLoans;
++import org.example.library.loan.app.api.MemberLoans;
++import org.example.library.loan.app.api.MemberNotFoundException;
++import org.example.library.loan.app.domain.model.Loan;
++import org.example.library.loan.app.domain.model.LoanOnHoldException;
++import org.example.library.loan.app.domain.model.Member;
++import org.example.library.loan.app.spi.LoanRepository;
++import org.example.library.loan.app.spi.MemberRepository;
++
++import java.util.List;
++
++public class LoanDesk implements ApiForMemberLoans {
++
++    private static final int RENEWAL_DAYS = 14;
++
++    private final LoanRepository loanRepository;
++
++    private final MemberRepository memberRepository;
++
++    public LoanDesk(LoanRepository loanRepository, MemberRepository memberRepository) {
++        this.loanRepository = loanRepository;
++        this.memberRepository = memberRepository;
++    }
++
++    @Override
++    public MemberLoans searchLoansOfMember(String memberId) {
++        Member member = memberRepository.findMember(memberId);
++        if (member == null) {
++            throw new MemberNotFoundException(memberId);
++        }
++
++        List<Loan> loans = loanRepository.findLoansOfMember(memberId);
++        return new MemberLoans(memberId, loans, member.fineStatement().sumOwedAmount());
++    }
++
++    public Loan renew(Loan loan) {
++        if (loan.onHold()) {
++            throw new LoanOnHoldException(loan.loanId());
++        }
++
++        Loan renewed = loan.withDueDate(loan.dueDate().plusDays(RENEWAL_DAYS));
++        loanRepository.save(renewed);
++        return renewed;
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/model/FineStatement.java b/src/main/java/org/example/library/loan/app/domain/model/FineStatement.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/model/FineStatement.java
+@@ -0,0 +1,19 @@
++package org.example.library.loan.app.domain.model;
++
++import java.math.BigDecimal;
++import java.time.LocalDate;
++import java.util.List;
++
++public record FineStatement(List<Fine> fines) {
++
++    public BigDecimal sumOwedAmount() {
++        BigDecimal owedAmount = BigDecimal.ZERO;
++        for (Fine fine : fines) {
++            owedAmount = owedAmount.add(fine.amount());
++        }
++        return owedAmount;
++    }
++
++    public record Fine(String itemTitle, LocalDate issuedOn, BigDecimal amount) {
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/model/Loan.java b/src/main/java/org/example/library/loan/app/domain/model/Loan.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/model/Loan.java
+@@ -0,0 +1,10 @@
++package org.example.library.loan.app.domain.model;
++
++import java.time.LocalDate;
++
++public record Loan(String loanId, String memberId, String itemTitle, LocalDate dueDate, boolean onHold) {
++
++    public Loan withDueDate(LocalDate newDueDate) {
++        return new Loan(loanId, memberId, itemTitle, newDueDate, onHold);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/model/LoanOnHoldException.java b/src/main/java/org/example/library/loan/app/domain/model/LoanOnHoldException.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/model/LoanOnHoldException.java
+@@ -0,0 +1,8 @@
++package org.example.library.loan.app.domain.model;
++
++public class LoanOnHoldException extends RuntimeException {
++
++    public LoanOnHoldException(String loanId) {
++        super("loan " + loanId + " is on hold for another member");
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/model/Member.java b/src/main/java/org/example/library/loan/app/domain/model/Member.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/model/Member.java
+@@ -0,0 +1,4 @@
++package org.example.library.loan.app.domain.model;
++
++public record Member(String memberId, String email, FineStatement fineStatement) {
++}
+diff --git a/src/main/java/org/example/library/loan/app/spi/LoanRepository.java b/src/main/java/org/example/library/loan/app/spi/LoanRepository.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/spi/LoanRepository.java
+@@ -0,0 +1,12 @@
++package org.example.library.loan.app.spi;
++
++import org.example.library.loan.app.domain.model.Loan;
++
++import java.util.List;
++
++public interface LoanRepository {
++
++    List<Loan> findLoansOfMember(String memberId);
++
++    void save(Loan loan);
++}
+diff --git a/src/main/java/org/example/library/loan/app/spi/MemberRepository.java b/src/main/java/org/example/library/loan/app/spi/MemberRepository.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/spi/MemberRepository.java
+@@ -0,0 +1,12 @@
++package org.example.library.loan.app.spi;
++
++import org.example.library.loan.app.domain.model.Member;
++import org.springframework.lang.Nullable;
++
++public interface MemberRepository {
++
++    @Nullable
++    Member findMember(String memberId);
++
++    void save(Member member);
++}
+diff --git a/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java b/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java
+@@ -0,0 +1,16 @@
++package org.example.library.loan.config;
++
++import org.example.library.loan.app.domain.LoanDesk;
++import org.example.library.loan.app.spi.LoanRepository;
++import org.example.library.loan.app.spi.MemberRepository;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++
++@Configuration
++public class LoanModuleConfiguration {
++
++    @Bean("loanDesk")
++    public LoanDesk createLoanDesk(LoanRepository loanRepository, MemberRepository memberRepository) {
++        return new LoanDesk(loanRepository, memberRepository);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/in/web/LoanExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/LoanExceptionHandler.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/in/web/LoanExceptionHandler.java
+@@ -0,0 +1,16 @@
++package org.example.library.loan.in.web;
++
++import org.example.library.loan.app.api.MemberNotFoundException;
++import org.springframework.http.HttpStatus;
++import org.springframework.http.ProblemDetail;
++import org.springframework.web.bind.annotation.ExceptionHandler;
++import org.springframework.web.bind.annotation.RestControllerAdvice;
++
++@RestControllerAdvice
++public class LoanExceptionHandler {
++
++    @ExceptionHandler(MemberNotFoundException.class)
++    public ProblemDetail answerMemberNotFound(MemberNotFoundException exception) {
++        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansController.java b/src/main/java/org/example/library/loan/in/web/MemberLoansController.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/in/web/MemberLoansController.java
+@@ -0,0 +1,21 @@
++package org.example.library.loan.in.web;
++
++import org.example.library.loan.app.api.ApiForMemberLoans;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class MemberLoansController {
++
++    private final ApiForMemberLoans apiForMemberLoans;
++
++    public MemberLoansController(ApiForMemberLoans apiForMemberLoans) {
++        this.apiForMemberLoans = apiForMemberLoans;
++    }
++
++    @GetMapping("/members/{memberId}/loans")
++    public MemberLoansResponse searchLoansOfMember(@PathVariable String memberId) {
++        return MemberLoansResponse.mapMemberLoans(apiForMemberLoans.searchLoansOfMember(memberId));
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansResponse.java b/src/main/java/org/example/library/loan/in/web/MemberLoansResponse.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/in/web/MemberLoansResponse.java
+@@ -0,0 +1,23 @@
++package org.example.library.loan.in.web;
++
++import org.example.library.loan.app.api.MemberLoans;
++import org.example.library.loan.app.domain.model.Loan;
++
++import java.math.BigDecimal;
++import java.time.LocalDate;
++import java.util.List;
++
++public record MemberLoansResponse(String memberId, List<Item> loans, BigDecimal owedFines) {
++
++    public static MemberLoansResponse mapMemberLoans(MemberLoans memberLoans) {
++        List<Item> items = memberLoans.loans().stream().map(Item::mapLoan).toList();
++        return new MemberLoansResponse(memberLoans.memberId(), items, memberLoans.owedFines());
++    }
++
++    public record Item(String loanId, String itemTitle, LocalDate dueDate) {
++
++        static Item mapLoan(Loan loan) {
++            return new Item(loan.loanId(), loan.itemTitle(), loan.dueDate());
++        }
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java b/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java
+@@ -0,0 +1,27 @@
++package org.example.library.loan.out.memory;
++
++import org.example.library.loan.app.domain.model.Loan;
++import org.example.library.loan.app.spi.LoanRepository;
++import org.springframework.stereotype.Repository;
++
++import java.util.List;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++@Repository
++public class LoanRepositoryUsingMemory implements LoanRepository {
++
++    private final Map<String, Loan> loanByIdMap = new ConcurrentHashMap<>();
++
++    @Override
++    public List<Loan> findLoansOfMember(String memberId) {
++        return loanByIdMap.values().stream()
++                .filter(loan -> loan.memberId().equals(memberId))
++                .toList();
++    }
++
++    @Override
++    public void save(Loan loan) {
++        loanByIdMap.put(loan.loanId(), loan);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/out/memory/MemberRepositoryUsingMemory.java b/src/main/java/org/example/library/loan/out/memory/MemberRepositoryUsingMemory.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/out/memory/MemberRepositoryUsingMemory.java
+@@ -0,0 +1,26 @@
++package org.example.library.loan.out.memory;
++
++import org.example.library.loan.app.domain.model.Member;
++import org.example.library.loan.app.spi.MemberRepository;
++import org.springframework.lang.Nullable;
++import org.springframework.stereotype.Repository;
++
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++@Repository
++public class MemberRepositoryUsingMemory implements MemberRepository {
++
++    private final Map<String, Member> memberByIdMap = new ConcurrentHashMap<>();
++
++    @Override
++    @Nullable
++    public Member findMember(String memberId) {
++        return memberByIdMap.get(memberId);
++    }
++
++    @Override
++    public void save(Member member) {
++        memberByIdMap.put(member.memberId(), member);
++    }
++}
+diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
+new file mode 100644
+--- /dev/null
++++ b/src/main/resources/application.properties
+@@ -0,0 +1,2 @@
++spring.application.name=lending-library
++library.mail.sender-address=loans@library.example
+diff --git a/src/test/java/org/example/library/loan/in/web/MemberLoansControllerTest.java b/src/test/java/org/example/library/loan/in/web/MemberLoansControllerTest.java
+new file mode 100644
+--- /dev/null
++++ b/src/test/java/org/example/library/loan/in/web/MemberLoansControllerTest.java
+@@ -0,0 +1,82 @@
++package org.example.library.loan.in.web;
++
++import org.example.library.loan.app.domain.model.FineStatement;
++import org.example.library.loan.app.domain.model.Loan;
++import org.example.library.loan.app.domain.model.Member;
++import org.example.library.loan.app.spi.LoanRepository;
++import org.example.library.loan.app.spi.MemberRepository;
++import org.junit.jupiter.api.Test;
++import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.test.web.servlet.MockMvc;
++import org.springframework.test.web.servlet.ResultActions;
++import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
++import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
++
++import java.math.BigDecimal;
++import java.time.LocalDate;
++import java.util.List;
++
++@SpringBootTest
++@AutoConfigureMockMvc
++class MemberLoansControllerTest {
++
++    private final MockMvc mockMvc;
++
++    private final LoanRepository loanRepository;
++
++    private final MemberRepository memberRepository;
++
++    MemberLoansControllerTest(MockMvc mockMvc, LoanRepository loanRepository, MemberRepository memberRepository) {
++        this.mockMvc = mockMvc;
++        this.loanRepository = loanRepository;
++        this.memberRepository = memberRepository;
++    }
++
++    @Test
++    void shouldAnswerTheLoansAndTheOwedFinesWhenTheMemberHoldsLoans() throws Exception {
++        // given
++        FineStatement.Fine lateReturnFine = new FineStatement.Fine("The Left Hand of Darkness", LocalDate.of(2026, 9, 2), new BigDecimal("2.50"));
++        FineStatement.Fine damagedCoverFine = new FineStatement.Fine("Middlemarch", LocalDate.of(2026, 10, 14), new BigDecimal("4.00"));
++        memberRepository.save(new Member("M-1001", "ada.byron@mail.example", new FineStatement(List.of(lateReturnFine, damagedCoverFine))));
++        loanRepository.save(new Loan("L-5001", "M-1001", "Dune", LocalDate.of(2026, 11, 30), false));
++
++        // when
++        ResultActions answer = mockMvc.perform(MockMvcRequestBuilders.get("/members/M-1001/loans"));
++
++        // then
++        answer.andExpect(MockMvcResultMatchers.status().isOk())
++                .andExpect(MockMvcResultMatchers.jsonPath("$.memberId").value("M-1001"))
++                .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].loanId").value("L-5001"))
++                .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].itemTitle").value("Dune"))
++                .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].dueDate").value("2026-11-30"))
++                .andExpect(MockMvcResultMatchers.jsonPath("$.owedFines").value(6.50));
++    }
++
++    @Test
++    void shouldAnswerNoLoansWhenTheMemberHoldsNone() throws Exception {
++        // given
++        memberRepository.save(new Member("M-1002", "grace.hopper@mail.example", new FineStatement(List.of())));
++
++        // when
++        ResultActions answer = mockMvc.perform(MockMvcRequestBuilders.get("/members/M-1002/loans"));
++
++        // then
++        answer.andExpect(MockMvcResultMatchers.status().isOk())
++                .andExpect(MockMvcResultMatchers.jsonPath("$.loans").isEmpty())
++                .andExpect(MockMvcResultMatchers.jsonPath("$.owedFines").value(0));
++    }
++
++    @Test
++    void shouldAnswerNotFoundWhenNoMemberHasTheId() throws Exception {
++        // given
++        String unknownMemberId = "M-9999";
++
++        // when
++        ResultActions answer = mockMvc.perform(MockMvcRequestBuilders.get("/members/" + unknownMemberId + "/loans"));
++
++        // then
++        answer.andExpect(MockMvcResultMatchers.status().isNotFound())
++                .andExpect(MockMvcResultMatchers.jsonPath("$.detail").value("no member has the id M-9999"));
++    }
++}
+diff --git a/src/test/resources/junit-platform.properties b/src/test/resources/junit-platform.properties
+new file mode 100644
+--- /dev/null
++++ b/src/test/resources/junit-platform.properties
+@@ -0,0 +1 @@
++spring.test.constructor.autowire.mode=all
+diff --git a/vendor/postbox/README.md b/vendor/postbox/README.md
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/README.md
+@@ -0,0 +1,11 @@
++# Postbox 3.2.0, free edition
++
++A small client for the Postbox mail service. This copy is the free edition.
++
++## Sending
++
++`PostboxClient#send(recipients, subject, body)` sends 1 message to every address of `recipients` from the sender address the client was created with, and returns 1 `DeliveryReceipt`.
++
++When the service does not accept the message, `send` throws `PostboxUnavailable` and sends nothing. The call does not retry.
++
++`DeliveryReceipt#sentAt()` returns the time the service accepted the message, in seconds since the epoch, in UTC.
+diff --git a/vendor/postbox/src/main/java/org/example/postbox/DeliveryReceipt.java b/vendor/postbox/src/main/java/org/example/postbox/DeliveryReceipt.java
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/src/main/java/org/example/postbox/DeliveryReceipt.java
+@@ -0,0 +1,4 @@
++package org.example.postbox;
++
++public record DeliveryReceipt(long sentAt) {
++}
+diff --git a/vendor/postbox/src/main/java/org/example/postbox/PostboxClient.java b/vendor/postbox/src/main/java/org/example/postbox/PostboxClient.java
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/src/main/java/org/example/postbox/PostboxClient.java
+@@ -0,0 +1,21 @@
++package org.example.postbox;
++
++import java.time.Instant;
++import java.util.List;
++
++public class PostboxClient {
++
++    private final String senderAddress;
++
++    public PostboxClient(String senderAddress) {
++        this.senderAddress = senderAddress;
++    }
++
++    public DeliveryReceipt send(List<String> recipients, String subject, String body) {
++        if (recipients.isEmpty()) {
++            throw new PostboxUnavailable("a message from " + senderAddress + " needs at least 1 recipient");
++        }
++
++        return new DeliveryReceipt(Instant.now().getEpochSecond());
++    }
++}
+diff --git a/vendor/postbox/src/main/java/org/example/postbox/PostboxUnavailable.java b/vendor/postbox/src/main/java/org/example/postbox/PostboxUnavailable.java
+new file mode 100644
+--- /dev/null
++++ b/vendor/postbox/src/main/java/org/example/postbox/PostboxUnavailable.java
+@@ -0,0 +1,8 @@
++package org.example.postbox;
++
++public class PostboxUnavailable extends RuntimeException {
++
++    public PostboxUnavailable(String reason) {
++        super("Postbox did not accept the message: " + reason);
++    }
++}
