@@ -200,6 +200,21 @@ export class DesignModel {
     return CHANGED_KINDS.has(this.getKindOfClass(theClass));
   }
 
+  isRemovedClass(theClass) {
+    return this.getKindOfClass(theClass) === KINDS.REMOVED;
+  }
+
+  // The file whose child lists the class under removedClasses, where the model often holds no class for it; null where no child lists it.
+  findFileThatRemovesTheClass(displayName) {
+    if (!isAText(displayName)) return null;
+
+    const { file, className } = readNamePieces(displayName);
+    for (const [childFile, child] of this.childOfFileMap) {
+      if ((!file || childFile === file) && readList(child.removedClasses).includes(className)) return childFile;
+    }
+    return null;
+  }
+
   // The classes whose file a folder of the model lists as modified, which the review judges whole, so the model lists every member the current file declares for them.
   listClassesOfModifiedFiles() {
     return this.classes.filter(theClass => isAText(theClass.file) && this.findChildOfTheFile(theClass.file)?.kind === KINDS.MODIFIED);

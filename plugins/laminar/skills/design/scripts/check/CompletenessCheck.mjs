@@ -1,4 +1,4 @@
-import { ANSWER_GIVERS, DOES, FRAMEWORK, KINDS, OVERRIDE_KINDS, isAText, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readFolderOfTheFile, readList } from "../model/DesignModel.mjs";
+import { ANSWER_GIVERS, DOES, FRAMEWORK, KINDS, OVERRIDE_KINDS, getFileOfTheChild, isAText, isATestFileOfTheModel, isAnInterface, isLeftUnfixed, isMarkedUnchanged, readFolderOfTheFile, readList } from "../model/DesignModel.mjs";
 import { DEFECT_CODES, createDefect, createRecheckDefect } from "./DesignDefect.mjs";
 import { createTestNameForm } from "./TestNameForm.mjs";
 import { isAStopOnItsGroup } from "../plan/StopList.mjs";
@@ -82,6 +82,16 @@ const checkOldFile = (check, child, childPath) => {
   check.addDefect(DEFECT_CODES.OLD_FILE_UNLISTED, `${childPath}.oldPath`, `the code of ${child.name} comes from ${child.oldPath}, and no folder of the model lists that file as a removed or modified child`);
 };
 
+// The migration places the step that creates a file, or removes classes from it, in the group of the classes of the model in that file, and a test file often holds none, so its step would fall to group 1 with no class to say so.
+const checkGroupOfTheTestFile = (check, file, child, childPath) => {
+  const { model } = check;
+  const isPlacedByItsClasses = child.kind === KINDS.CREATED || readList(child.removedClasses).length > 0;
+  if (!isPlacedByItsClasses || !isATestFileOfTheModel(model, file)) return;
+  if (model.classes.some(theClass => theClass.file === file)) return;
+
+  check.addDefect(DEFECT_CODES.TEST_WITHOUT_GROUP, childPath, `the test file ${file} holds no class of the model, so no migration group takes its step; name its tests under decisions.tests, or list the class it holds`);
+};
+
 const checkFolders = check => {
   check.model.folders.forEach((folder, folderAt) => {
     const path = `folders[${folderAt}]`;
@@ -93,6 +103,7 @@ const checkFolders = check => {
       check.requireKey("child.kind", child, "kind", childPath);
       if (child.kind === KINDS.MOVED) check.requireKey("child.oldPath", child, "oldPath", childPath);
       checkOldFile(check, child, childPath);
+      checkGroupOfTheTestFile(check, getFileOfTheChild(folder, child), child, childPath);
     });
   });
 };
@@ -313,10 +324,21 @@ const checkUnitTests = (check, unitTests) => {
   });
 };
 
+// The step of a removed test goes to the group of its class, and only a class the change changes or removes has a group: a class of a removed file, or a name under removedClasses, which the model often holds no class for.
+const checkClassOfTheRemovedTest = (check, className, path) => {
+  const { model } = check;
+  if (model.findFileThatRemovesTheClass(className)) return;
+
+  check.requireName(className, path);
+  const theClass = model.findClass(className);
+  if (!theClass || model.isChangedClass(theClass) || model.isRemovedClass(theClass)) return;
+  check.addDefect(DEFECT_CODES.TEST_WITHOUT_GROUP, path, `${className} is a class the change neither changes nor removes, so no migration group removes the test`);
+};
+
 const checkRemovedTests = (check, removedTests) => {
   removedTests.forEach((removedTest, at) => {
     const path = `decisions.tests.removed[${at}]`;
-    if (check.requireKey("removed.class", removedTest, "class", path)) check.requireName(removedTest.class, `${path}.class`);
+    if (check.requireKey("removed.class", removedTest, "class", path)) checkClassOfTheRemovedTest(check, removedTest.class, `${path}.class`);
     for (const key of ["file", "test", "why"]) check.requireKey(`removed.${key}`, removedTest, key, path);
   });
 };

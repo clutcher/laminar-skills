@@ -444,6 +444,15 @@ class MigrationPlan {
     return theClass ? getGroupOfTheClass(theClass) : FIRST_GROUP;
   }
 
+  // A removed class takes its check away in the group that removes it, as in the steps that update the tests of a removed class.
+  getGroupOfTheRemovedTest(className) {
+    const removingFile = this.model.findFileThatRemovesTheClass(className);
+    if (removingFile) return this.getGroupOfTheFile(removingFile);
+
+    const theClass = this.model.findClass(className);
+    return theClass && this.model.isRemovedClass(theClass) ? this.getGroupOfTheRemoval(theClass.file) : this.getGroupOfTheName(className);
+  }
+
   listNamesOnThePath(startName) {
     const seenNames = new Set([this.model.normalizeName(startName)]);
     const namesToVisit = [...seenNames];
@@ -605,7 +614,7 @@ class MigrationPlan {
 
   // A test of a check that the change removes or moves goes in the group of the class that removes the check, and it belongs to that class in a cut plan.
   createRemovedTestStep(removedTest) {
-    const step = this.createStep(MIGRATION_STAGES.TESTS, this.getGroupOfTheName(removedTest.class), `removes the test ${removedTest.test} of ${removedTest.file}: ${removedTest.why}`, [removedTest.file]);
+    const step = this.createStep(MIGRATION_STAGES.TESTS, this.getGroupOfTheRemovedTest(removedTest.class), `removes the test ${removedTest.test} of ${removedTest.file}: ${removedTest.why}`, [removedTest.file]);
     const theClass = this.model.findClass(removedTest.class);
     return theClass && isAText(theClass.file) ? { ...step, testedFiles: [theClass.file] } : step;
   }
