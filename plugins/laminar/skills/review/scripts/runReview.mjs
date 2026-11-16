@@ -19,7 +19,7 @@ import { RunFileStop } from "./files/runFile.mjs";
 
 const SUBCOMMANDS = ["extract", "prepare", "merge", "render"];
 
-const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --repo <path> --uncommitted <file,...> | --diff <patch>] [prepare --repo <path> --shape <shape model>] [--kind-base <revision>] [--whole-files <path ...>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]]";
+const USAGE = "usage: runReview.mjs <extract|prepare|merge|render> --run <folder> [--repo <path> --range <a>..<b> | --repo <path> --files <list> | --repo <path> --uncommitted <file,...> | --diff <patch>] [prepare --repo <path> --shape <shape model>] [--kind-base <revision>] [--whole-files <path ...>] [--exclude <list>] [--judges <type,...>] [--paths <prefix,...>] [--scales <scale,...>] [--findings <file>[,<file>...]] [--verdicts <file>[,<file>...]] [render --decided-review <file> [--repo <path> --range <a>..<b>]]";
 
 const PREPARE_RETURN_FILE = "prepare-return.json";
 
@@ -51,6 +51,7 @@ function parseArguments(argv) {
     else if (name === "--shape") parsed.shape = argv[++index];
     else if (name === "--findings") parsed.findings.push(...splitList(argv[++index]));
     else if (name === "--verdicts") parsed.verdicts.push(...splitList(argv[++index]));
+    else if (name === "--decided-review") parsed.decidedReview = argv[++index];
     else if (name === "--exclude") parsed.exclude = splitList(argv[++index]);
     else if (name === "--judges") parsed.judges = splitList(argv[++index]);
     else if (name === "--paths") parsed.paths = splitList(argv[++index]);
@@ -255,7 +256,8 @@ function merge(parsed) {
 
 function render(parsed) {
   if (!parsed.verdicts.length) { console.error(USAGE); process.exit(2); }
-  const written = new RenderStep(parsed.run, parsed.verdicts).run().writeTo();
+  const reviewedRevisions = parsed.decidedReview && parsed.repo && parsed.revisions ? { repository: resolveAbsolutePath(parsed.repo), revisions: parsed.revisions } : null;
+  const written = new RenderStep(parsed.run, parsed.verdicts, parsed.decidedReview || "", reviewedRevisions).run().writeTo();
   console.log(written.banner);
   console.log(`render: review.md, review-evidence.md and review.sarif written to ${resolveAbsolutePath(parsed.run)}`);
   printResult({ step: "render", runFolder: resolveAbsolutePath(parsed.run), banner: written.banner, counts: written.counts, review: written.review, reviewEvidence: written.reviewEvidence, reviewSarif: written.reviewSarif });

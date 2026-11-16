@@ -3,6 +3,7 @@ import { convertToText } from "../sections/ReturnedValueText.mjs";
 import { formatLeadWords, formatDisplayNameText, formatDirectionText, formatDirectionsWithTheirLeads } from "../sections/ItemText.mjs";
 import { selectScopeProperties } from "../sections/ScopeLine.mjs";
 import { ChangeKindsOfTheReport } from "./ChangeKindsOfTheReport.mjs";
+import { isAConsideration } from "../../merge/filing/Considerations.mjs";
 
 const SCHEMA_URL = "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json";
 const INFORMATION_URI = "https://github.com/clutcher/laminar-skills";
@@ -165,6 +166,21 @@ const buildConsiderationResult = (finding, changeKinds) => {
   return { ...result, level: LEVELS.CONSIDERATION, message: { text: formatQuestion(finding) }, properties: buildConsiderationProperties(finding, changeKinds) };
 };
 
+// SARIF states a decision in suppressions and never in level, so a reader that ignores suppressions sees the result as the review raised it.
+const SUPPRESSION = Object.freeze({ KIND: "external", STATUS: "accepted" });
+
+const buildSuppression = ({ decision, matchedBy }) => ({
+  kind: SUPPRESSION.KIND,
+  status: SUPPRESSION.STATUS,
+  justification: `${decision.reason}: ${decision.says}`,
+  properties: { reason: decision.reason, decidedBy: decision.decidedBy, plan: decision.plan, source: decision.source, matchedBy },
+});
+
+const buildDecidedResult = (mark, changeKinds) => {
+  const result = isAConsideration(mark.finding) ? buildConsiderationResult(mark.finding, changeKinds) : buildResult(mark.finding, changeKinds);
+  return { ...result, suppressions: [buildSuppression(mark)] };
+};
+
 const listTheScalesOfTheRun = scope => scope && scope.scales.length ? scope.scales : SCALE_ORDER;
 
 const buildScopeProperties = scope => selectScopeProperties({ ...(scope || {}), scales: listTheScalesOfTheRun(scope) });
@@ -174,13 +190,13 @@ const runPropertiesOf = (scope, acrossApplications) => ({
   ...(acrossApplications ? { entryBoundaries: { ...acrossApplications } } : {}),
 });
 
-export function buildSarifReport(kept, version, scope = null, acrossApplications = null, considered = [], changeKinds = new ChangeKindsOfTheReport()) {
+export function buildSarifReport(kept, version, scope = null, acrossApplications = null, considered = [], changeKinds = new ChangeKindsOfTheReport(), decided = []) {
   return JSON.stringify({
     $schema: SCHEMA_URL,
     version: "2.1.0",
     runs: [{
       tool: { driver: { name: DRIVER_NAME, version, informationUri: INFORMATION_URI, rules: sarifRules } },
-      results: [...kept.map(finding => buildResult(finding, changeKinds)), ...considered.map(finding => buildConsiderationResult(finding, changeKinds))],
+      results: [...kept.map(finding => buildResult(finding, changeKinds)), ...considered.map(finding => buildConsiderationResult(finding, changeKinds)), ...decided.map(mark => buildDecidedResult(mark, changeKinds))],
       properties: runPropertiesOf(scope, acrossApplications),
     }],
   }, null, 2) + "\n";

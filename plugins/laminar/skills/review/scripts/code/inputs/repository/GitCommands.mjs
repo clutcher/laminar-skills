@@ -23,6 +23,8 @@ export const readTrimmedGitOutput = (args, cwd) => {
 
 export const runGitIn = (folder, args, environment = {}) => runGitProcess(["-C", folder, ...args], undefined, environment);
 
+export const isAncestorCommitIn = (folder, ancestor, descendant) => hasSucceeded(runGitIn(folder, ["merge-base", "--is-ancestor", ancestor, descendant]));
+
 export const readGitOutputIn = (folder, args) => readTrimmedGitOutput(["-C", folder, ...args]);
 
 export const readTopFolderOf = folder => readGitOutputIn(folder, ["rev-parse", "--show-toplevel"]);

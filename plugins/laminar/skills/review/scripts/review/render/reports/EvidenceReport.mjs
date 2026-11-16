@@ -3,6 +3,8 @@ import { formatAcrossApplications, formatDeclaredBySchema, formatDirectionOfTheF
 import { readCheckName, readLead, TRACK_WORDS } from "../../../checks/CheckWords.mjs";
 import { formatSweepWords } from "../../merge/draft/Sweep.mjs";
 import { buildIoEndsSection } from "../sections/IoEndsSection.mjs";
+import { MATCHED_BY } from "../verdicts/DecidedResults.mjs";
+import { DECIDED_BY_THE_DESIGN, RAISED_AT_CLASS_SCALE } from "./ReaderReport.mjs";
 import { isAConsideration } from "../../merge/filing/Considerations.mjs";
 import { LEFT_OUT_REASONS } from "../../../code/index.mjs";
 import { NOT_VERIFIED_STAGES } from "../verdicts/SettledFindings.mjs";
@@ -215,6 +217,49 @@ const formatRejectedSection = (settled, rejectedCoveredPaths) => {
   return `## Rejected\n\n${blocks.join("\n\n") || "The verifier rejected no item."}`;
 };
 
+const formatSourceWord = decision => [decision.plan === null ? "" : `plan ${decision.plan}`, decision.source].filter(Boolean).join(", ");
+
+const MATCHED_BY_WORDS = Object.freeze({
+  [MATCHED_BY.DISPLAY_NAME]: "its display name",
+  [MATCHED_BY.FORMER_NAME]: "its former name",
+  [MATCHED_BY.CLASS_OF_THE_METHOD]: "the class of its method",
+});
+
+const formatRaisedWord = (decision, matchedBy) => (matchedBy === MATCHED_BY.CLASS_OF_THE_METHOD ? `, ${RAISED_AT_CLASS_SCALE} on \`${decision.displayName}\`` : "");
+
+const formatDecisionLine = (decision, matchedBy) => `${SUB_POINT_INDENT}- Decided by the design: ${decision.reason}, decided by ${decision.decidedBy}: ${decision.says} · source: ${formatSourceWord(decision) || "not stated"} · matched by ${MATCHED_BY_WORDS[matchedBy]}${formatRaisedWord(decision, matchedBy)}`;
+
+const formatAlsoDecidedLine = decision => `${SUB_POINT_INDENT}- Also decided by: ${decision.reason}, ${formatSourceWord(decision) || "not stated"}`;
+
+const formatDecidedResult = mark => [
+  formatFinding(mark.finding),
+  formatDecisionLine(mark.decision, mark.matchedBy),
+  ...mark.alsoDecidedBy.map(formatAlsoDecidedLine),
+].join("\n");
+
+const formatDecisionKey = decision => `\`${decision.displayName}\`, ${decision.scale}, ${decision.check}`;
+
+const formatNotMetLine = decision => `- ${formatDecisionKey(decision)}: ${decision.reason}, ${formatSourceWord(decision) || "not stated"}`;
+
+const formatAmbiguousLine = ({ decision, files }) => `- ${formatDecisionKey(decision)}: ${files.length} files hold the key, ${files.map(file => `\`${file}\``).join(" and ")}, and the decision names ${decision.file ? `\`${decision.file}\`` : "no file"}`;
+
+const formatExpiredLine = ({ decision, finding, expiry }) => `- ${formatDecisionKey(decision)} at \`${finding.file}:${finding.line}\`: ${expiry}`;
+
+const formatOverrideLine = override => `- ${override.project || "a project convention"} over ${override.codeStyle || "a code-style rule"}: ${override.says || "not stated"}`;
+
+const formatDecisionList = (title, lines, none) => `${title}\n\n${lines.join("\n") || none}`;
+
+const formatDecidedSection = decided => [
+  `## ${DECIDED_BY_THE_DESIGN}`,
+  `Decided by the design: ${decided.filePath}, ${decided.decisionCount} decision(s), ${decided.decided.length} result(s) marked`,
+  ...(decided.notAppliedReason ? [`Not applied: ${decided.notAppliedReason}, so every result stays where the review put it.`] : []),
+  ...(decided.overrides.length ? [formatDecisionList("Project conventions the design follows over code-style:", decided.overrides.map(formatOverrideLine), "")] : []),
+  ...decided.decided.map(formatDecidedResult),
+  formatDecisionList("Not met:", decided.notMet.map(formatNotMetLine), "Every decision met a result."),
+  formatDecisionList("Not applied, ambiguous:", decided.ambiguous.map(formatAmbiguousLine), "No decision was ambiguous."),
+  formatDecisionList("Not applied, expired:", decided.expired.map(formatExpiredLine), "No decision expired."),
+].join("\n\n");
+
 const formatCoveredPathNotVerifiedLine = covered => `- ${formatNamedPlace(covered.abstractionPlace || {})} by ${formatNamedPlace(covered.test || {})}: ${readNotVerifiedReason(covered)}, so it stays covered as its judge wrote it`;
 
 const formatNotSentLine = finding => `- \`${finding.file}:${finding.line}\`, ${finding.check}: ${NOT_SENT_TO_THE_REFUTER}`;
@@ -251,7 +296,7 @@ const formatNotCheckedSection = (excluded, leftOutFiles) => [
   ...(leftOutFiles.length ? [formatLeftOutFilesList(leftOutFiles)] : []),
 ].join("\n\n");
 
-export function buildEvidenceReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, rejectedCoveredPaths, sweep, notAnswered, dropped, droppedWithNoCodeUnderReview, excluded, leftOutFiles, io }) {
+export function buildEvidenceReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, rejectedCoveredPaths, sweep, notAnswered, dropped, droppedWithNoCodeUnderReview, excluded, leftOutFiles, io, decided = null }) {
   const unmatched = settled.unmatchedVerdicts.map(verdict => `- ${verdict.itemId}${verdict.check ? `, ${verdict.check}` : ""}: ${verdict.reason}`);
   const droppedLines = [
     ...(dropped || []).map(finding => `- \`${finding.file}:${finding.line}\`, ${finding.check}: no line it names is in the code\n${quoteText((finding.quotes || []).map(named => `${named.file}:${named.line}`))}`),
@@ -266,6 +311,7 @@ export function buildEvidenceReport({ banner, scopeLine, acrossApplicationsLine,
     ...TRACK_WORDS.map(word => formatTrackSection(word, settled.kept, covered || [])),
     formatConsiderationSection(settled.considered || []),
     formatRejectedSection(settled, rejectedCoveredPaths || []),
+    ...(decided ? [formatDecidedSection(decided)] : []),
     formatNotVerifiedSection(settled, covered || []),
     `## Verdicts with no item\n\n${unmatched.join("\n") || "Every verdict names an item and a check it holds."}`,
     `## Dropped\n\n${droppedLines.join("\n") || "The line check dropped no possible finding."}`,

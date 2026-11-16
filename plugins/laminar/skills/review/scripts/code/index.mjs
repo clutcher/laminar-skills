@@ -6,7 +6,7 @@ export { ASSIGNING_EQUALS_SIGN_PATTERN_SOURCE, escapeForAPattern, buildWholeWord
 export { splitAtTopLevelCommas } from "./inputs/source/text/TopLevelText.mjs";
 export { isACodeLine, numberFileLines } from "./inputs/source/SourceText.mjs";
 export { CHANGE_MODES, ChangeReader, chooseRepositoryToRead, findRepositoryToRead } from "./inputs/change/ChangeReader.mjs";
-export { readTopFolderOf } from "./inputs/repository/GitCommands.mjs";
+export { isAncestorCommitIn, readTopFolderOf } from "./inputs/repository/GitCommands.mjs";
 export { findAddedLinesOfTheFile, countChangedBranches, ChangedLines, holdsAnAddedLine, groupIntoSpans } from "./inputs/change/ChangedLines.mjs";
 export { FILE_STATUS, holdsANonBlankLine } from "./inputs/change/Hunk.mjs";
 export { CONTROL_WORD_PATTERN_SOURCE } from "./inputs/source/forms/FunctionNamePatterns.mjs";

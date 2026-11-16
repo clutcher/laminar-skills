@@ -157,6 +157,8 @@ Where step 4 ran in more than 1 wave, every verdicts file is already written, so
 node "<skill>/scripts/runReview.mjs" render --run "<run>" --verdicts "<run>/returns/verdicts-1.json,<run>/returns/verdicts-2.json"
 ```
 
+Where the user or the calling session gives the input `decided-review: <file>`, the file `plans/<n>/decided-review.json` of a ready plan of the skill `design`, add `--decided-review "<file>"` to the render command, and for a review of a range also the `--repo` and `--range` of the extract. The file applies whenever the commit that `baseCommit` of the file names is an ancestor of the head of the reviewed range and lies inside that range, so a closing review that starts at an older base, such as the release base, applies it too. Given the range, the render checks this and, where it does not hold, applies no decision and says why. The render then moves each result that a decision of the file holds out of the items into the section `## Decided by the design` of `review.md`, beside the decision, and `review.sarif` gives the result an accepted suppression. These results are decided, not findings, so do not pass them on as findings.
+
 Where the render stops with an error, show its error line to the user and stop.
 
 **Then read `<run>/review.md` and show it in the conversation.** Name `review-evidence.md` beside it as the evidence, and do not repeat it. The considerations under `## To consider` are questions to the author and not findings, so pass them on as questions. `review.sarif` sits beside both for a tool that wants it. Where you pass the report on, into a pull request comment or anywhere else, carry the check name, the name of the abstraction and the fixed direction word for word, because a paraphrase drops what the finding names.

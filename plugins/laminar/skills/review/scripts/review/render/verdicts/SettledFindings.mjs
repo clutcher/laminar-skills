@@ -363,6 +363,22 @@ export class SettledFindings {
     if (considered.length) this.considerations.push({ ...group, findings: considered, lead: considered[0] });
   }
 
+  // A result the design decided leaves the kept and the considered findings and their items; the render keeps it in its own list, never drops it.
+  moveOutTheDecided(decidedFindings) {
+    const decided = new Set(decidedFindings);
+    if (!decided.size) return;
+
+    const isUndecided = finding => !decided.has(finding);
+    const keepTheUndecidedOfTheItem = item => {
+      const findings = item.findings.filter(isUndecided);
+      return findings.length ? { ...item, findings, lead: findings[0] } : null;
+    };
+    this.kept = this.kept.filter(isUndecided);
+    this.considered = this.considered.filter(isUndecided);
+    this.items = this.items.map(keepTheUndecidedOfTheItem).filter(Boolean);
+    this.considerations = this.considerations.map(keepTheUndecidedOfTheItem).filter(Boolean);
+  }
+
   isAtAScaleAskedFor(finding) {
     const scale = String(finding.scale || "");
     return !this.scalesAskedFor.length || !SCALES_A_FILTER_CAN_LEAVE_OUT.includes(scale) || this.scalesAskedFor.includes(scale);

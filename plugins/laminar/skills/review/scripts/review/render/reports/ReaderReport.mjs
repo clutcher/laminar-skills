@@ -1,4 +1,6 @@
-import { formatItem, findLinesOfSharedHeads, formatPlaceName, formatSentence } from "../sections/ItemText.mjs";
+import { formatItem, findLinesOfSharedHeads, formatLeadWords, formatPlaceName, formatSentence, SUB_POINT_INDENT } from "../sections/ItemText.mjs";
+import { convertToText } from "../sections/ReturnedValueText.mjs";
+import { MATCHED_BY, readDisplayNameOfTheFinding } from "../verdicts/DecidedResults.mjs";
 import { readTrackRank } from "../../../checks/CheckWords.mjs";
 import { LEFT_OUT_REASONS } from "../../../code/index.mjs";
 
@@ -76,7 +78,40 @@ const buildConsiderationSection = (considerations, firstNumber, sharedHeadLines)
   ? [`## ${TO_CONSIDER}`, ...considerations.map((item, order) => formatItem(item.findings, firstNumber + order, { sharedHeadLine: sharedHeadLines[order] }))]
   : [];
 
-export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, leftOutFiles = [] }) {
+export const DECIDED_BY_THE_DESIGN = "Decided by the design";
+
+const NO_DECIDED_RESULT = "No result matched a decision of the design.";
+
+const formatScaleWord = finding => {
+  const scale = String(finding.scale || (finding.abstraction || {}).scale || "").toLowerCase();
+  return scale.charAt(0).toUpperCase() + scale.slice(1);
+};
+
+export const RAISED_AT_CLASS_SCALE = "decided at method scale, raised at class scale";
+
+const formatMatchedByWord = mark => {
+  if (mark.matchedBy === MATCHED_BY.FORMER_NAME) return ` · matched by its former name \`${readDisplayNameOfTheFinding(mark.finding)}\``;
+  return mark.matchedBy === MATCHED_BY.CLASS_OF_THE_METHOD ? ` · ${RAISED_AT_CLASS_SCALE} on \`${mark.decision.displayName}\`` : "";
+};
+
+const formatPlanWord = decision => (decision.plan === null ? "" : ` in plan ${decision.plan}`);
+
+// The decision of the design stands beside what the judge said this run, so a result that names another defect under the same check shows.
+export const formatDecidedLine = mark => {
+  const { finding, decision } = mark;
+  const head = `- ${formatLeadWords(finding)} · ${formatScaleWord(finding)} \`${readDisplayNameOfTheFinding(finding)}\` (${decision.check}) · ${decision.reason}, decided by ${decision.decidedBy}${formatPlanWord(decision)}: ${decision.says}${formatMatchedByWord(mark)}`;
+  const summary = formatSentence(convertToText(finding.summary || finding.sentence || finding.consider));
+  return summary ? `${head}\n${SUB_POINT_INDENT}- ${summary}` : head;
+};
+
+const formatDecidedBody = decided => {
+  if (decided.notAppliedReason) return `No decision of the design applied: ${decided.notAppliedReason}.`;
+  return decided.decided.length ? decided.decided.map(formatDecidedLine).join("\n") : NO_DECIDED_RESULT;
+};
+
+const buildDecidedSection = decided => (decided ? [`## ${DECIDED_BY_THE_DESIGN}`, formatDecidedBody(decided)] : []);
+
+export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, leftOutFiles = [], decided = null }) {
   const considerations = settled.considerations || [];
   const sharedHeadLines = findLinesOfSharedHeads([...settled.items, ...considerations].map(item => item.findings));
   return [
@@ -87,6 +122,7 @@ export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, c
     formatChangeLine(changeSummary),
     ...buildFindingSections(settled.items, covered || [], sharedHeadLines),
     ...buildConsiderationSection(considerations, settled.items.length + 1, sharedHeadLines.slice(settled.items.length)),
+    ...buildDecidedSection(decided),
     "## Limits",
     LIMITS.join("\n"),
   ].join("\n\n") + "\n";
