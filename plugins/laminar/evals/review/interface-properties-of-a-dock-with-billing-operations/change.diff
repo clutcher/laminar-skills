@@ -1,0 +1,53 @@
+diff --git a/bike-rental-shop/src/docks/BikeDock.ts b/bike-rental-shop/src/docks/BikeDock.ts
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/docks/BikeDock.ts
+@@ -0,0 +1,7 @@
++export interface BikeDock {
++  readonly dockCode: string;
++  readonly slotCount: number;
++
++  chargeMember(memberId: string, amountInCents: number): Promise<void>;
++  sendOverdueNotice(memberId: string): Promise<void>;
++}
+diff --git a/bike-rental-shop/src/docks/KerbsideBikeDock.ts b/bike-rental-shop/src/docks/KerbsideBikeDock.ts
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/docks/KerbsideBikeDock.ts
+@@ -0,0 +1,20 @@
++import { BikeDock } from "./BikeDock";
++import { OverdueNoticeSender } from "./OverdueNoticeSender";
++import { PaymentGateway } from "./PaymentGateway";
++
++export class KerbsideBikeDock implements BikeDock {
++  constructor(
++    readonly dockCode: string,
++    readonly slotCount: number,
++    private readonly paymentGateway: PaymentGateway,
++    private readonly overdueNoticeSender: OverdueNoticeSender,
++  ) {}
++
++  async chargeMember(memberId: string, amountInCents: number): Promise<void> {
++    await this.paymentGateway.charge(memberId, amountInCents);
++  }
++
++  async sendOverdueNotice(memberId: string): Promise<void> {
++    await this.overdueNoticeSender.send(memberId, this.dockCode);
++  }
++}
+diff --git a/bike-rental-shop/src/docks/PaymentGateway.ts b/bike-rental-shop/src/docks/PaymentGateway.ts
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/docks/PaymentGateway.ts
+@@ -0,0 +1,3 @@
++export interface PaymentGateway {
++  charge(memberId: string, amountInCents: number): Promise<void>;
++}
+diff --git a/bike-rental-shop/src/docks/OverdueNoticeSender.ts b/bike-rental-shop/src/docks/OverdueNoticeSender.ts
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/docks/OverdueNoticeSender.ts
+@@ -0,0 +1,3 @@
++export interface OverdueNoticeSender {
++  send(memberId: string, dockCode: string): Promise<void>;
++}

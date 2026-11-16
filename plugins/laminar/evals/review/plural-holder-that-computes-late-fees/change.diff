@@ -1,0 +1,48 @@
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/latefees/Rentals.java b/bike-rental-shop/src/main/java/com/example/bikerental/latefees/Rentals.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/latefees/Rentals.java
+@@ -0,0 +1,32 @@
++package com.example.bikerental.latefees;
++
++import java.math.BigDecimal;
++import java.time.LocalDate;
++import java.time.temporal.ChronoUnit;
++import java.util.ArrayList;
++import java.util.List;
++
++public class Rentals {
++
++    private static final BigDecimal LATE_FEE_DAILY_RATE = new BigDecimal("4.00");
++
++    private final List<Rental> rentals = new ArrayList<>();
++
++    public void add(Rental rental) {
++        rentals.add(rental);
++    }
++
++    public List<Rental> getRentals() {
++        return List.copyOf(rentals);
++    }
++
++    public BigDecimal calculateLateFeeTotal(LocalDate today) {
++        BigDecimal lateFeeTotal = BigDecimal.ZERO;
++        for (Rental rental : rentals) {
++            long daysLate = Math.max(0, ChronoUnit.DAYS.between(rental.dueOn(), today));
++            BigDecimal lateFee = LATE_FEE_DAILY_RATE.multiply(BigDecimal.valueOf(daysLate));
++            lateFeeTotal = lateFeeTotal.add(lateFee);
++        }
++        return lateFeeTotal;
++    }
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/latefees/Rental.java b/bike-rental-shop/src/main/java/com/example/bikerental/latefees/Rental.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/latefees/Rental.java
+@@ -0,0 +1,6 @@
++package com.example.bikerental.latefees;
++
++import java.time.LocalDate;
++
++public record Rental(String rentalId, String frameNumber, LocalDate dueOn) {
++}

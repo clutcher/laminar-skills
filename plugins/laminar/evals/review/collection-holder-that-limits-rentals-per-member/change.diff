@@ -1,0 +1,72 @@
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/membership/MemberRentals.java b/bike-rental-shop/src/main/java/com/example/bikerental/membership/MemberRentals.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/membership/MemberRentals.java
+@@ -0,0 +1,30 @@
++package com.example.bikerental.membership;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class MemberRentals {
++
++    private static final int OPEN_RENTALS_PER_MEMBER_LIMIT = 2;
++
++    private final List<Rental> rentals = new ArrayList<>();
++
++    public void add(Rental rental) {
++        List<Rental> openRentalsOfMember = getOpenRentalsOfMember(rental.memberId());
++        if (openRentalsOfMember.size() >= OPEN_RENTALS_PER_MEMBER_LIMIT) {
++            throw new RentalLimitReachedException(rental.memberId(), OPEN_RENTALS_PER_MEMBER_LIMIT);
++        }
++
++        rentals.add(rental);
++    }
++
++    public List<Rental> getOpenRentalsOfMember(String memberId) {
++        List<Rental> openRentalsOfMember = new ArrayList<>();
++        for (Rental rental : rentals) {
++            if (rental.isOpen() && rental.memberId().equals(memberId)) {
++                openRentalsOfMember.add(rental);
++            }
++        }
++        return openRentalsOfMember;
++    }
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/membership/Rental.java b/bike-rental-shop/src/main/java/com/example/bikerental/membership/Rental.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/membership/Rental.java
+@@ -0,0 +1,8 @@
++package com.example.bikerental.membership;
++
++public record Rental(String rentalId, String memberId, String frameNumber, RentalStatus status) {
++
++    public boolean isOpen() {
++        return status == RentalStatus.OPEN;
++    }
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/membership/RentalStatus.java b/bike-rental-shop/src/main/java/com/example/bikerental/membership/RentalStatus.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/membership/RentalStatus.java
+@@ -0,0 +1,6 @@
++package com.example.bikerental.membership;
++
++public enum RentalStatus {
++    OPEN,
++    RETURNED
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/membership/RentalLimitReachedException.java b/bike-rental-shop/src/main/java/com/example/bikerental/membership/RentalLimitReachedException.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/membership/RentalLimitReachedException.java
+@@ -0,0 +1,8 @@
++package com.example.bikerental.membership;
++
++public class RentalLimitReachedException extends RuntimeException {
++
++    public RentalLimitReachedException(String memberId, int openRentalsLimit) {
++        super("Member " + memberId + " already holds " + openRentalsLimit + " open rentals");
++    }
++}

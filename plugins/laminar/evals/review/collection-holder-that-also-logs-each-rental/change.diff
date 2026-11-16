@@ -1,0 +1,91 @@
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/hire/RentalBikes.java b/bike-rental-shop/src/main/java/com/example/bikerental/hire/RentalBikes.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/hire/RentalBikes.java
+@@ -0,0 +1,36 @@
++package com.example.bikerental.hire;
++
++import java.time.Instant;
++import java.util.ArrayList;
++import java.util.List;
++
++public class RentalBikes {
++
++    private final List<Bike> bikes = new ArrayList<>();
++    private final RentalLogStore rentalLogStore;
++
++    public RentalBikes(RentalLogStore rentalLogStore) {
++        this.rentalLogStore = rentalLogStore;
++    }
++
++    public void add(Bike bike) {
++        if (bike.isDueForService()) {
++            throw new BikeDueForServiceException(bike.frameNumber());
++        }
++
++        bikes.add(bike);
++        rentalLogStore.saveEntry(new RentalLogEntry(bike.frameNumber(), Instant.now()));
++    }
++
++    public void remove(Bike bike) {
++        bikes.remove(bike);
++    }
++
++    public List<Bike> getBikes() {
++        return List.copyOf(bikes);
++    }
++
++    public int size() {
++        return bikes.size();
++    }
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/hire/Bike.java b/bike-rental-shop/src/main/java/com/example/bikerental/hire/Bike.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/hire/Bike.java
+@@ -0,0 +1,10 @@
++package com.example.bikerental.hire;
++
++public record Bike(String frameNumber, int ridesSinceService) {
++
++    private static final int SERVICE_INTERVAL_RIDES = 200;
++
++    public boolean isDueForService() {
++        return ridesSinceService >= SERVICE_INTERVAL_RIDES;
++    }
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/hire/RentalLogStore.java b/bike-rental-shop/src/main/java/com/example/bikerental/hire/RentalLogStore.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/hire/RentalLogStore.java
+@@ -0,0 +1,6 @@
++package com.example.bikerental.hire;
++
++public interface RentalLogStore {
++
++    void saveEntry(RentalLogEntry entry);
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/hire/RentalLogEntry.java b/bike-rental-shop/src/main/java/com/example/bikerental/hire/RentalLogEntry.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/hire/RentalLogEntry.java
+@@ -0,0 +1,6 @@
++package com.example.bikerental.hire;
++
++import java.time.Instant;
++
++public record RentalLogEntry(String frameNumber, Instant rentedAt) {
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/hire/BikeDueForServiceException.java b/bike-rental-shop/src/main/java/com/example/bikerental/hire/BikeDueForServiceException.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/hire/BikeDueForServiceException.java
+@@ -0,0 +1,8 @@
++package com.example.bikerental.hire;
++
++public class BikeDueForServiceException extends RuntimeException {
++
++    public BikeDueForServiceException(String frameNumber) {
++        super("Bike " + frameNumber + " is due for service and cannot be rented");
++    }
++}

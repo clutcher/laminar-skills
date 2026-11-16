@@ -1,0 +1,118 @@
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/fleet/RentalBikes.java b/bike-rental-shop/src/main/java/com/example/bikerental/fleet/RentalBikes.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/fleet/RentalBikes.java
+@@ -0,0 +1,25 @@
++package com.example.bikerental.fleet;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class RentalBikes {
++
++    private final List<Bike> bikes = new ArrayList<>();
++
++    public void add(Bike bike) {
++        bikes.add(bike);
++    }
++
++    public void remove(Bike bike) {
++        bikes.remove(bike);
++    }
++
++    public List<Bike> getBikes() {
++        return List.copyOf(bikes);
++    }
++
++    public int size() {
++        return bikes.size();
++    }
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/fleet/BikesByFrame.java b/bike-rental-shop/src/main/java/com/example/bikerental/fleet/BikesByFrame.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/fleet/BikesByFrame.java
+@@ -0,0 +1,21 @@
++package com.example.bikerental.fleet;
++
++import java.util.HashMap;
++import java.util.Map;
++
++public class BikesByFrame {
++
++    private final Map<String, Bike> bikeByFrameNumberMap = new HashMap<>();
++
++    public Bike get(String frameNumber) {
++        return bikeByFrameNumberMap.get(frameNumber);
++    }
++
++    public void put(String frameNumber, Bike bike) {
++        bikeByFrameNumberMap.put(frameNumber, bike);
++    }
++
++    public boolean containsKey(String frameNumber) {
++        return bikeByFrameNumberMap.containsKey(frameNumber);
++    }
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/fleet/RentalDesk.java b/bike-rental-shop/src/main/java/com/example/bikerental/fleet/RentalDesk.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/fleet/RentalDesk.java
+@@ -0,0 +1,35 @@
++package com.example.bikerental.fleet;
++
++public class RentalDesk {
++
++    private final BikesByFrame fleet;
++    private final RentalBikes bikesOnRental;
++
++    public RentalDesk(BikesByFrame fleet, RentalBikes bikesOnRental) {
++        this.fleet = fleet;
++        this.bikesOnRental = bikesOnRental;
++    }
++
++    public Bike handOutBike(String frameNumber) {
++        Bike bike = findBike(frameNumber);
++        bikesOnRental.add(bike);
++        return bike;
++    }
++
++    public void takeBackBike(String frameNumber) {
++        Bike bike = findBike(frameNumber);
++        bikesOnRental.remove(bike);
++    }
++
++    public int countBikesOnRental() {
++        return bikesOnRental.size();
++    }
++
++    private Bike findBike(String frameNumber) {
++        if (!fleet.containsKey(frameNumber)) {
++            throw new UnknownBikeException(frameNumber);
++        }
++
++        return fleet.get(frameNumber);
++    }
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/fleet/Bike.java b/bike-rental-shop/src/main/java/com/example/bikerental/fleet/Bike.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/fleet/Bike.java
+@@ -0,0 +1,4 @@
++package com.example.bikerental.fleet;
++
++public record Bike(String frameNumber, String model) {
++}
+diff --git a/bike-rental-shop/src/main/java/com/example/bikerental/fleet/UnknownBikeException.java b/bike-rental-shop/src/main/java/com/example/bikerental/fleet/UnknownBikeException.java
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/main/java/com/example/bikerental/fleet/UnknownBikeException.java
+@@ -0,0 +1,8 @@
++package com.example.bikerental.fleet;
++
++public class UnknownBikeException extends RuntimeException {
++
++    public UnknownBikeException(String frameNumber) {
++        super("No bike of the fleet has the frame number " + frameNumber);
++    }
++}

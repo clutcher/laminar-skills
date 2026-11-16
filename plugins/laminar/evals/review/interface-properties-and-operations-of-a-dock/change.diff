@@ -1,0 +1,50 @@
+diff --git a/bike-rental-shop/src/docks/BikeDock.ts b/bike-rental-shop/src/docks/BikeDock.ts
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/docks/BikeDock.ts
+@@ -0,0 +1,8 @@
++export interface BikeDock {
++  readonly dockCode: string;
++  readonly slotCount: number;
++
++  lockBike(slot: number): void;
++  releaseBike(slot: number): void;
++  listFreeSlots(): number[];
++}
+diff --git a/bike-rental-shop/src/docks/KerbsideBikeDock.ts b/bike-rental-shop/src/docks/KerbsideBikeDock.ts
+new file mode 100644
+--- /dev/null
++++ b/bike-rental-shop/src/docks/KerbsideBikeDock.ts
+@@ -0,0 +1,32 @@
++import { BikeDock } from "./BikeDock";
++
++export class KerbsideBikeDock implements BikeDock {
++  private readonly occupiedSlots = new Set<number>();
++
++  constructor(
++    readonly dockCode: string,
++    readonly slotCount: number,
++  ) {}
++
++  lockBike(slot: number): void {
++    if (this.occupiedSlots.has(slot)) {
++      throw new Error(`Slot ${slot} of dock ${this.dockCode} already holds a bike`);
++    }
++
++    this.occupiedSlots.add(slot);
++  }
++
++  releaseBike(slot: number): void {
++    this.occupiedSlots.delete(slot);
++  }
++
++  listFreeSlots(): number[] {
++    const freeSlots: number[] = [];
++    for (let slot = 1; slot <= this.slotCount; slot++) {
++      if (!this.occupiedSlots.has(slot)) {
++        freeSlots.push(slot);
++      }
++    }
++    return freeSlots;
++  }
++}
