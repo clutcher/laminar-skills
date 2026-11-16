@@ -69,6 +69,7 @@ export const DEFECT_CODES = Object.freeze({
   RENAMED_CLASS_RAISED_AGAIN: "renamed-class-raised-again",
   TYPE_HOLDS_ONLY_A_COLLECTION: "type-holds-only-a-collection",
   INTERFACE_WITH_ONE_IMPLEMENTATION: "interface-with-one-implementation",
+  TYPE_NOT_OF_THE_DOMAIN: "type-not-of-the-domain",
   RENAMED_WITHOUT_FINDING: "renamed-without-finding",
   OPTION_WITHOUT_CODE: "option-without-code",
   OWNER_WITHOUT_ITS_VALUES: "owner-without-its-values",

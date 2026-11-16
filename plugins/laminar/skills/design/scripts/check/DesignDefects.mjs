@@ -20,6 +20,7 @@ import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
 import { findRepeatedDecisionDefects } from "./RepeatedDecisions.mjs";
 import { findSimplestFormDefects } from "./SimplestForm.mjs";
 import { findTriedNameDefects } from "./TriedNames.mjs";
+import { findTypeNotOfTheDomainDefects } from "./TypesNotOfTheDomain.mjs";
 import { findUnchangedCopyDefects } from "./UnchangedCopies.mjs";
 import { readZoneOrder } from "./ZoneOrder.mjs";
 
@@ -95,6 +96,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
     ...findTriedNameDefects(model, shapeReviews, roundModels),
     ...findSimplestFormDefects(model),
+    ...findTypeNotOfTheDomainDefects(model),
     ...findOwnerValueDefects(model, currentTree),
     ...findRepeatedDecisionDefects(model, currentTree),
     ...findUnchangedCopyDefects(model, currentTree),
