@@ -385,11 +385,11 @@ async function reviewedSelfCheckOf(group, written) {
   const verified = ((merged.counts || {}).refuterCalls || 0) > 0 ? await wavesOf(VERIFY_WORKFLOW, { merged }, ((merged.verify || {}).waves || []).length) : [NO_VERDICTS]
   const verdictsFiles = verified.map((returned, at) => [numberedFile(run, 'verdicts', verified.length, at + 1), returned])
   const itemsLine = await helperResultOf(group, 'render', verdictsFiles, [
-    reviewCommand('render', `--run ${quoted(run)} --verdicts ${quoted(verdictsFiles.map(([file]) => file).join(','))}`),
+    reviewCommand('render', `--run ${quoted(run)} --verdicts ${quoted(verdictsFiles.map(([file]) => file).join(','))}${planned.decidedReview ? ` --decided-review ${quoted(planned.decidedReview)}` : ''}`),
     `node ${quoted(`${planned.designScripts}/${SELF_CHECK_ITEMS_SCRIPT}`)} --run ${quoted(run)}`,
   ])
   const items = JSON.parse(itemsLine.startsWith(RESULT_MARK) ? itemsLine.slice(RESULT_MARK.length) : itemsLine)
-  return { run, judgeCalls, kept: items.kept || [], toConsider: items.toConsider || [] }
+  return { run, judgeCalls, kept: items.kept || [], toConsider: items.toConsider || [], ...(items.decided ? { decided: items.decided } : {}) }
 }
 
 function countRecordedByReason(answers) {
@@ -407,6 +407,7 @@ function selfCheckOf(reviewed, answers, answered) {
     judgeCalls: reviewed.judgeCalls,
     kept: reviewed.kept,
     toConsider: reviewed.toConsider,
+    ...(reviewed.decided ? { decided: reviewed.decided } : {}),
     answered,
     answers: answersOfTheKept,
     fixed: answersOfTheKept.filter(answer => answer.answer === ANSWERS.FIXED).length,

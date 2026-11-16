@@ -4,6 +4,7 @@ import { isAText, readList } from "../model/DesignModel.mjs";
 import { writeWorkflowReturnFile } from "../../../review/scripts/files/workflowReturnFile.mjs";
 import { listMigrationGroups } from "./MigrationGroups.mjs";
 import { SELF_CHECK_JUDGES, estimateSelfCheckCost } from "./SelfCheckCost.mjs";
+import { DECIDED_REVIEW_FILE, getPlanFolder } from "../plan/PlanFolder.mjs";
 
 export const MIGRATION_WORKFLOW_FILE = "migration.workflow.js";
 
@@ -34,6 +35,7 @@ export const writeMigrationWorkflowFile = (model, steps, { migrationPath, reposi
     openQuestions: listOpenQuestionIds(model),
     defects: defectCount,
     plan,
+    ...(Number.isInteger(plan) ? { decidedReview: path.join(getPlanFolder(resultsFolder, plan), DECIDED_REVIEW_FILE) } : {}),
     reviewScripts: REVIEW_SCRIPTS_FOLDER,
     designScripts: DESIGN_SCRIPTS_FOLDER,
     selfCheckJudges: SELF_CHECK_JUDGES,

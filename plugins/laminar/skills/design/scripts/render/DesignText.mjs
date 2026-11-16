@@ -340,6 +340,7 @@ const writeSelfCheckLine = (plan, selfCheck) => {
     ...formatRecordedReasons(selfCheck.recorded),
     ...(unanswered ? [`unanswered ${unanswered}`] : []),
     `to consider ${(selfCheck.toConsider || []).length}`,
+    ...((selfCheck.decided || []).length ? [`${selfCheck.decided.length} decided`] : []),
   ].join(" · ")}`;
 };
 

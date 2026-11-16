@@ -67,7 +67,18 @@ const readFinding = (result, index) => {
   };
 };
 
-const readFindingsOfTheSarif = sarif => (sarif.runs || []).flatMap(run => run.results || []).map(readFinding);
+const readResultsOfTheSarif = sarif => (sarif.runs || []).flatMap(run => run.results || []);
+
+// A result that the decided review file of the design marked carries an accepted suppression; it joins no item and enters no count.
+const isDecidedByTheDesign = result => (result.suppressions || []).some(suppression => suppression.status === "accepted");
+
+const readFindingsOfTheSarif = results => results.map(readFinding).filter((finding, index) => !isDecidedByTheDesign(results[index]));
+
+const readReasonOfTheDecision = result => String((((result.suppressions || []).find(suppression => suppression.status === "accepted") || {}).properties || {}).reason || "");
+
+const readDecidedFindingsOfTheSarif = results => results
+  .map((result, index) => ({ ...readFinding(result, index), reason: readReasonOfTheDecision(result) }))
+  .filter((finding, index) => isDecidedByTheDesign(results[index]));
 
 // The head of an item as the review prints it: the name, and the enclosing abstraction where the display name holds one.
 const readHeadOfTheFinding = finding => {
@@ -110,12 +121,13 @@ export const readRunFolder = (runFolder, hasNoFindings) => {
 
   const sarifPath = path.join(runFolder, SARIF_FILE);
   const reviewPath = path.join(runFolder, REVIEW_FILE);
-  if (hasNoFindings) return { runFolder, judgedAbstractions, judgedKeys, scales, findings: [], items: [], copiedFiles: [] };
+  if (hasNoFindings) return { runFolder, judgedAbstractions, judgedKeys, scales, findings: [], decidedFindings: [], items: [], copiedFiles: [] };
   if (!fs.existsSync(sarifPath)) throw new RoundStop(`run folder: ${runFolder} holds no ${SARIF_FILE}; pass --no-findings where the run kept nothing`);
 
-  const findings = readFindingsOfTheSarif(readJsonOrStop(sarifPath, "run folder"));
+  const results = readResultsOfTheSarif(readJsonOrStop(sarifPath, "run folder"));
+  const findings = readFindingsOfTheSarif(results);
   const reviewText = fs.existsSync(reviewPath) ? fs.readFileSync(reviewPath, "utf8") : "";
   const items = joinFindingsToItems(readNamedReviewItems(reviewText), findings);
   const copiedFiles = [sarifPath, ...(reviewText ? [reviewPath] : [])];
-  return { runFolder, judgedAbstractions, judgedKeys, scales, findings, items, copiedFiles };
+  return { runFolder, judgedAbstractions, judgedKeys, scales, findings, decidedFindings: readDecidedFindingsOfTheSarif(results), items, copiedFiles };
 };

@@ -17,6 +17,8 @@ export const OUTCOME_FILE = "outcome.json";
 
 export const SELF_CHECK_FILE = "self-check.json";
 
+export const DECIDED_REVIEW_FILE = "decided-review.json";
+
 const PLANS_FOLDER = "plans";
 
 const PLAN_FOLDER_NAME = /^[1-9]\d*$/;

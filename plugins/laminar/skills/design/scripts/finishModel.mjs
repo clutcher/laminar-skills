@@ -4,12 +4,13 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { listConsiderations } from "./check/AutonomousReasons.mjs";
 import { readNamedReviewItems } from "./check/ReviewItems.mjs";
-import { isAText } from "./model/DesignModel.mjs";
+import { isAText, readDesignModel } from "./model/DesignModel.mjs";
 import { readDesignModelOrExit, readOptionsOrExit } from "./command/CommandLine.mjs";
 import { carryTheFixedFindings, listUnfinishedGroupsOfThePlanBefore } from "./plan/FixedFindings.mjs";
 import { DecidedListStop, checkDecidedListForm, resolveDecidedList } from "./plan/DecidedList.mjs";
 import { listFindingEntries } from "./plan/FindingList.mjs";
-import { BASE_COMMIT_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, formatPlanLine, getPlanFolder, listQuestionsThatStopThePlan, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
+import { buildDecidedReview, readCommitOfThePlan } from "./plan/DecidedReview.mjs";
+import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, formatPlanLine, getPlanFolder, listQuestionsThatStopThePlan, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { listRoundDispositions } from "./plan/RoundDispositions.mjs";
 import { RoundStop, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
 
@@ -116,6 +117,56 @@ const readNoStepKeys = migrationLines => new Set(migrationLines
   .map(line => line.split("\t"))
   .map(columns => `${columns[1]}\t${columns[2]}`));
 
+const SHAPE_RUNS_FOLDER = "shape-runs";
+
+// A shape run that cannot be read gives no decision, and the finish command names it.
+const createShapeRunReader = resultsFolder => {
+  const runOfNumberMap = new Map();
+  return run => {
+    if (!runOfNumberMap.has(run)) {
+      try {
+        runOfNumberMap.set(run, readRunFolder(path.join(resultsFolder, SHAPE_RUNS_FOLDER, String(run)), false));
+      } catch (error) {
+        if (!(error instanceof RoundStop)) throw error;
+        console.log(`not exported: shape run ${run}: ${error.message}`);
+        runOfNumberMap.set(run, null);
+      }
+    }
+    return runOfNumberMap.get(run);
+  };
+};
+
+const readModelOfThePlanIfPresent = (resultsFolder, plan) => {
+  const modelPath = path.join(getPlanFolder(resultsFolder, plan), MODEL_FILE);
+  return plan >= 1 && fs.existsSync(modelPath) ? readDesignModel(modelPath) : null;
+};
+
+// The export is cumulative, so the latest earlier ready plan with a decided review file holds every earlier decision.
+const findTheEarlierExport = (resultsFolder, plan) => {
+  for (let earlierPlan = plan - 1; earlierPlan >= 1; earlierPlan -= 1) {
+    const exportPath = path.join(getPlanFolder(resultsFolder, earlierPlan), DECIDED_REVIEW_FILE);
+    if (fs.existsSync(exportPath)) return { model: readModelOfThePlanIfPresent(resultsFolder, earlierPlan), decided: readJsonOrStop(exportPath, "decided review").decided || [] };
+  }
+  return null;
+};
+
+const writeTheDecidedReview = (resultsFolder, plan, model, roundInput) => {
+  const planFolder = getPlanFolder(resultsFolder, plan);
+  const { decidedReview, droppedLines } = buildDecidedReview({
+    model,
+    modelBefore: readModelOfThePlanIfPresent(resultsFolder, plan - 1),
+    plan,
+    inputRun: roundInput ? roundInput.run : null,
+    entries: roundInput ? roundInput.entries : [],
+    readShapeRun: createShapeRunReader(resultsFolder),
+    baseCommit: readCommitOfThePlan(planFolder, BASE_COMMIT_FILE),
+    planCommit: readCommitOfThePlan(planFolder, PLAN_COMMIT_FILE),
+    earlier: findTheEarlierExport(resultsFolder, plan),
+  });
+  writeJson(path.join(planFolder, DECIDED_REVIEW_FILE), decidedReview);
+  for (const line of droppedLines) console.log(line);
+};
+
 // The plan folder keeps the model, the findings and the commits of the plan, the dispositions of the round of its run folder and its outcome, so 2 plans compare by their files.
 const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput) => {
   const planFolder = getPlanFolder(resultsFolder, plan);
@@ -128,6 +179,7 @@ const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput) => {
   const questions = listQuestionsThatStopThePlan(model);
   const outcomeWord = questions.length ? PLAN_OUTCOMES.QUESTION : PLAN_OUTCOMES.READY;
   writeOutcome(resultsFolder, plan, { word: outcomeWord, questions, considerations: paths.considerations });
+  if (outcomeWord === PLAN_OUTCOMES.READY) writeTheDecidedReview(resultsFolder, plan, model, roundInput);
   return outcomeWord;
 };
 
