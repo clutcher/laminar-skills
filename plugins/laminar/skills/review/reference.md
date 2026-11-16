@@ -65,7 +65,7 @@ The merge and the render commands are code, so **no agent rewrites a finding on 
 ```markdown
 1. Method `isBarredFromSailing` in `Vessel`
    - Incomplete Mental Model: Vessel decides a failed spot check bars sailing, and the console badge decides the same again from the raw flag.
-   - Direction: Encapsulate: give the decision 1 owner that every place uses, or drop a copy that no place needs.
+   - Direction: Encapsulate: give the decision to the abstraction that makes it, or drop a copy that no place needs.
    - Also in `VesselStatusBadgeComponent#labelFor`.
    - Confidence: Moderate. To confirm: Confirm that the console's VesselSummary is built from the ferry's Vessel data and that the badge label must match isBarredFromSailing; that join sits outside the code under review.
 ```
@@ -88,7 +88,7 @@ No second read is sent for a consideration, a finding of the test plan judge or 
 3. Method `isHeldAtCustoms` in `ReleasePlanner`
    - Incomplete Mental Model: Must applications `dispatch` and `tracking` always give the same answer for the system to stay correct, or is the copy kept on purpose, such as to save a remote call or to check the same input on both sides?
    - Found: The customs hold rule is decided in dispatch and again in tracking.
-   - Direction, if this is a defect: Encapsulate: give the decision 1 owner that every place uses, or drop a copy that no place needs.
+   - Direction, if this is a defect: Encapsulate: give the decision to the abstraction that makes it, or drop a copy that no place needs.
    - Also in `CustomsHoldPolicy#isHeldAtCustoms`.
 ```
 
