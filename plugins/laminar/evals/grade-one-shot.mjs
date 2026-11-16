@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 // Grades 1 run of a one-shot case of the design evals: what stays open on the change after 1 design, 1 writing pass with its self-check and 1 full review.
 //
-//   node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]
+//   node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]
 //
 // --review, --repo and --range are needed where plan 1 ended ready; a plan that ended in a question or a stop starts no writer and no review.
-// --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left or back.
+// --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left or back, and --expected gives the planted keys that split the kept findings of the closing review.
 // It exits with 0 where the run is one shot, 1 where it is not, and 2 on a usage error or a missing file. It writes nothing but --json, and runs git only in --repo.
 // Node with no dependencies.
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { CHECKS_BY_ID_MAP } from "../skills/review/scripts/checks/CheckCatalog.mjs";
+import { findCheckWords } from "../skills/review/scripts/checks/CheckWords.mjs";
 import { createFindingKey, readRunFolder, RoundStop } from "../skills/design/scripts/round/RunFolder.mjs";
 
-const USAGE = "usage: node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]";
+const USAGE = "usage: node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]";
 
 const EXIT_CODES = Object.freeze({ ONE_SHOT: 0, NOT_ONE_SHOT: 1, USAGE: 2 });
 
@@ -28,6 +29,12 @@ const PLACEMENTS = Object.freeze({
 });
 
 const STORED_STATES = Object.freeze({ CLOSED: "closed", LEFT: "left", BACK: "back" });
+
+// Who left a finding key: the decided list of the calling session, where the object or the entry has decidedBy, or the design by its own reason class.
+const LEFT_SOURCES = Object.freeze({ DECIDED_LIST: "by the decided list", DESIGN: "by the design" });
+
+// How a kept finding on the change of a fix-from-review run relates to the stored input review.
+const KEY_KINDS = Object.freeze({ PLANTED: "on planted keys", DECIDED_BACK: "decided, back under a new key", OTHER: "other" });
 
 const GROUP_OUTCOMES = Object.freeze({ FINISHED: "finished", STOPPED: "stopped", NOT_STARTED: "not started", NO_ANSWER: "no answer" });
 
@@ -60,6 +67,13 @@ const TESTS_LINE = /^tests:\s*(\d+)\s+run,\s*(\d+)\s+failed\s*$/m;
 
 const USAGE_FILE_NAME = /^usage-(.+)\.json$/;
 
+// An item of expected.md names its abstraction in its head, and its check by the lead of its first point; the planted defects end at the level 1 lines.
+const PLANTED_ITEM_HEAD = /^\d+\.\s+(?:Application|Module|Class|Method|Variable)\s+`([^`]+)`/;
+const PLANTED_CHECK_POINT = /^\s+-\s+(.+?)\s*$/;
+const LEVEL_1_HEAD = "## Level 1";
+
+const RENAME_STATUS = /^R\d*$/;
+
 const HUNK_HEAD = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/;
 const NEW_FILE_HEAD = /^\+\+\+ b\/(.+)$/;
 
@@ -67,7 +81,7 @@ class UsageStop extends Error {}
 
 const readOptions = argv => {
   const options = { usage: [] };
-  const valueKeys = new Map([["--results", "results"], ["--review", "review"], ["--repo", "repo"], ["--range", "range"], ["--input-review", "inputReview"], ["--build", "build"], ["--json", "json"]]);
+  const valueKeys = new Map([["--results", "results"], ["--review", "review"], ["--repo", "repo"], ["--range", "range"], ["--input-review", "inputReview"], ["--expected", "expected"], ["--build", "build"], ["--json", "json"]]);
   for (let at = 0; at < argv.length; at++) {
     const name = argv[at];
     const value = argv[at + 1];
@@ -78,6 +92,7 @@ const readOptions = argv => {
     at++;
   }
   if (!options.results) throw new UsageStop("--results is needed");
+  if (options.inputReview && !options.expected) throw new UsageStop("--input-review needs --expected, the expected.md of the planted change");
 
   return options;
 };
@@ -120,6 +135,16 @@ const readChangeOfTheRange = (repository, range) => {
     if (hunk && spans) spans.push(readSpanOfTheHunk(hunk));
   }
   return { statusOfFileMap, changedSpansOfFileMap };
+};
+
+// The new path of each file that git reports renamed in the range, by its old path.
+const readRenamedPathOfFileMap = (repository, range) => {
+  const renamedPathOfFileMap = new Map();
+  for (const line of runGit(repository, ["diff", "--name-status", "-M", range]).split("\n").filter(Boolean)) {
+    const [status, oldPath, newPath] = line.split("\t");
+    if (RENAME_STATUS.test(status)) renamedPathOfFileMap.set(oldPath, newPath);
+  }
+  return renamedPathOfFileMap;
 };
 
 const readSpanOfTheHunk = hunk => {
@@ -169,10 +194,10 @@ const isOnTheChange = (finding, change) => {
   return finding.line !== null && isInAChangedSpan(finding, change);
 };
 
-const placeTheFinding = (finding, change, leftKeys) => {
+const placeTheFinding = (finding, change, leftSourceOfKeyMap) => {
   if (finding.decided) return PLACEMENTS.DECIDED;
   if (finding.baselineState !== NEW_BASELINE_STATE) return PLACEMENTS.NOT_NEW;
-  if (leftKeys.has(finding.findingKey)) return PLACEMENTS.LEFT;
+  if (leftSourceOfKeyMap.has(finding.findingKey)) return PLACEMENTS.LEFT;
 
   return isOnTheChange(finding, change) ? PLACEMENTS.ON_THE_CHANGE : PLACEMENTS.NOT_ON_THE_CHANGE;
 };
@@ -197,9 +222,9 @@ const countThePlacements = findings => {
   return countOfPlacementMap;
 };
 
-const gradeTheReview = (options, leftKeys) => {
+const gradeTheReview = (options, leftSourceOfKeyMap) => {
   const change = readChangeOfTheRange(options.repo, options.range);
-  const findings = readFindingsOfTheSarif(path.join(options.review, SARIF_FILE)).map(finding => ({ ...finding, placement: placeTheFinding(finding, change, leftKeys) }));
+  const findings = readFindingsOfTheSarif(path.join(options.review, SARIF_FILE)).map(finding => ({ ...finding, placement: placeTheFinding(finding, change, leftSourceOfKeyMap) }));
   const onTheChange = findings.filter(finding => finding.placement === PLACEMENTS.ON_THE_CHANGE);
   const keptOnTheChange = onTheChange.filter(finding => finding.kept);
   return {
@@ -310,21 +335,71 @@ const readTheCost = usageFiles => {
   };
 };
 
-// The finding keys of the stored input review that the design leaves on purpose: an object of decisions.findings with a reason class, or an entry of findings.json with one.
-const readLeftKeys = (results, inputRun) => {
-  const leftKeys = new Set();
+const readLeftSource = left => (left.decidedBy ? LEFT_SOURCES.DECIDED_LIST : LEFT_SOURCES.DESIGN);
+
+// A key that both the decided list and the design leave counts as left by the decided list.
+const addTheLeftKey = (leftSourceOfKeyMap, findingKey, source) => {
+  if (leftSourceOfKeyMap.get(findingKey) === LEFT_SOURCES.DECIDED_LIST) return;
+
+  leftSourceOfKeyMap.set(findingKey, source);
+};
+
+// The finding keys of the stored input review that the design leaves on purpose, each with who left it: an object of decisions.findings with a reason class, or an entry of findings.json with one.
+const readLeftSourceOfKeyMap = (results, inputRun) => {
+  const leftSourceOfKeyMap = new Map();
   const model = readJsonIfPresent(path.join(results, RESULTS_FILES.DESIGN_MODEL));
   const leftObjects = ((model && model.decisions && model.decisions.findings) || []).filter(object => object.run === undefined && object.reason);
   for (const item of inputRun.items) {
     for (const object of leftObjects.filter(left => left.number === item.number)) {
-      for (const finding of item.findings.filter(other => object.check === undefined || other.check === object.check)) leftKeys.add(finding.findingKey);
+      for (const finding of item.findings.filter(other => object.check === undefined || other.check === object.check)) addTheLeftKey(leftSourceOfKeyMap, finding.findingKey, readLeftSource(object));
     }
   }
 
   const entries = readJsonIfPresent(path.join(results, RESULTS_FILES.FINDINGS)) || [];
-  for (const entry of entries.filter(other => other.reason)) leftKeys.add(createFindingKey(entry.displayName, entry.check));
-  return leftKeys;
+  for (const entry of entries.filter(other => other.reason)) addTheLeftKey(leftSourceOfKeyMap, createFindingKey(entry.displayName, entry.check), readLeftSource(entry));
+  return leftSourceOfKeyMap;
 };
+
+const countTheLeftSources = sources => Object.fromEntries(Object.values(LEFT_SOURCES).map(source => [source, sources.filter(other => other === source).length]));
+
+const readThePlantedKeys = expectedFile => {
+  if (!fs.existsSync(expectedFile)) throw new UsageStop(`expected: ${expectedFile} is missing`);
+
+  const plantedKeys = new Set();
+  let displayName = "";
+  for (const line of fs.readFileSync(expectedFile, "utf8").split("\n")) {
+    if (line.startsWith(LEVEL_1_HEAD)) break;
+    const head = PLANTED_ITEM_HEAD.exec(line);
+    if (head) {
+      displayName = head[1];
+      continue;
+    }
+    const point = PLANTED_CHECK_POINT.exec(line);
+    if (point && displayName) {
+      const checkWords = findCheckWords(point[1]);
+      plantedKeys.add(createFindingKey(displayName, checkWords ? checkWords.id : point[1]));
+      displayName = "";
+    }
+  }
+  return plantedKeys;
+};
+
+const findTheDecidedFinding = (finding, backSearch) => backSearch.decidedFindings.find(decided => decided.check === finding.check
+  && (decided.file === finding.file || backSearch.renamedPathOfFileMap.get(decided.file) === finding.file));
+
+// A kept finding on the change is decided, back under a new key, where its key is no planted key and it has the check and the file, or the renamed file, of a stored finding the decided list left.
+const markTheKeyKind = (finding, backSearch) => {
+  if (backSearch.plantedKeys.has(finding.findingKey)) return { ...finding, keyKind: KEY_KINDS.PLANTED };
+
+  const decidedFinding = findTheDecidedFinding(finding, backSearch);
+  return decidedFinding ? { ...finding, keyKind: KEY_KINDS.DECIDED_BACK, decidedFinding } : { ...finding, keyKind: KEY_KINDS.OTHER };
+};
+
+const markTheKeyKinds = (review, backSearch) => ({ ...review, keptOnTheChange: review.keptOnTheChange.map(finding => markTheKeyKind(finding, backSearch)) });
+
+const countTheKeyKinds = keptOnTheChange => Object.fromEntries(Object.values(KEY_KINDS).map(keyKind => [keyKind, keptOnTheChange.filter(finding => finding.keyKind === keyKind).length]));
+
+const readStoredKeptFindings = inputRun => readFindingsOfTheSarif(path.join(inputRun.runFolder, SARIF_FILE)).filter(finding => finding.kept);
 
 const readKeptKeys = review => new Set(review.findings.filter(finding => finding.kept && !finding.decided).map(finding => finding.findingKey));
 
@@ -335,26 +410,38 @@ const readJudgedKeys = reviewFolder => {
   return new Set((prepare.codeUnderReview || []).flatMap(code => (code.checks || []).map(check => createFindingKey(String(code.displayName || ""), String(check.id)))));
 };
 
-const decideTheStoredState = (finding, leftKeys, keptKeys) => {
-  if (leftKeys.has(finding.findingKey)) return STORED_STATES.LEFT;
+const decideTheStoredState = (finding, leftSourceOfKeyMap, keptKeys) => {
+  if (leftSourceOfKeyMap.has(finding.findingKey)) return STORED_STATES.LEFT;
 
   return keptKeys.has(finding.findingKey) ? STORED_STATES.BACK : STORED_STATES.CLOSED;
 };
 
-const gradeTheStoredFindings = (inputRun, leftKeys, review) => {
+const gradeTheStoredFindings = (storedKept, leftSourceOfKeyMap, review) => {
   const keptKeys = review ? readKeptKeys(review) : new Set();
   const judgedKeys = review ? readJudgedKeys(review.run) : null;
-  const storedKept = readFindingsOfTheSarif(path.join(inputRun.runFolder, SARIF_FILE)).filter(finding => finding.kept);
   const findings = storedKept.map(finding => ({
     displayName: finding.displayName,
     check: finding.check,
     scale: finding.scale,
-    state: decideTheStoredState(finding, leftKeys, keptKeys),
+    state: decideTheStoredState(finding, leftSourceOfKeyMap, keptKeys),
     judgedAgain: judgedKeys ? judgedKeys.has(finding.findingKey) : null,
   }));
   const counts = Object.fromEntries(Object.values(STORED_STATES).map(state => [state, findings.filter(finding => finding.state === state).length]));
-  return { counts, findings };
+  const leftBySource = countTheLeftSources(storedKept.filter(finding => leftSourceOfKeyMap.has(finding.findingKey)).map(finding => leftSourceOfKeyMap.get(finding.findingKey)));
+  return {
+    counts,
+    leftBySource,
+    closingLeftBySource: review ? countTheLeftSources(review.findings.filter(finding => finding.placement === PLACEMENTS.LEFT).map(finding => leftSourceOfKeyMap.get(finding.findingKey))) : null,
+    keptByKey: review ? countTheKeyKinds(review.keptOnTheChange) : null,
+    findings,
+  };
 };
+
+const readTheBackSearch = (options, storedKept, leftSourceOfKeyMap) => ({
+  plantedKeys: readThePlantedKeys(options.expected),
+  decidedFindings: storedKept.filter(finding => leftSourceOfKeyMap.get(finding.findingKey) === LEFT_SOURCES.DECIDED_LIST),
+  renamedPathOfFileMap: readRenamedPathOfFileMap(options.repo, options.range),
+});
 
 const decideNothingOpen = grade => grade.planOutcome === PLAN_READY
   && grade.writers.ran && grade.writers.groups.length > 0 && grade.writers.stops === 0
@@ -369,8 +456,10 @@ const gradeTheRun = options => {
   if (needsTheReview && (!options.review || !options.repo || !options.range)) throw new UsageStop("plan 1 ended ready, so --review, --repo and --range are needed");
 
   const inputRun = options.inputReview ? readRunFolder(path.resolve(options.inputReview), false) : null;
-  const leftKeys = inputRun ? readLeftKeys(options.results, inputRun) : new Set();
-  const review = options.review ? gradeTheReview(options, leftKeys) : null;
+  const leftSourceOfKeyMap = inputRun ? readLeftSourceOfKeyMap(options.results, inputRun) : new Map();
+  const storedKept = inputRun ? readStoredKeptFindings(inputRun) : [];
+  const closingReview = options.review ? gradeTheReview(options, leftSourceOfKeyMap) : null;
+  const review = closingReview && inputRun ? markTheKeyKinds(closingReview, readTheBackSearch(options, storedKept, leftSourceOfKeyMap)) : closingReview;
   const grade = {
     input: inputRun ? "fix-from-review" : "feature",
     planOutcome,
@@ -378,7 +467,7 @@ const gradeTheRun = options => {
     writers: gradeTheWriters(options.results),
     build: gradeTheBuild(options.build),
     review,
-    stored: inputRun ? gradeTheStoredFindings(inputRun, leftKeys, review) : null,
+    stored: inputRun ? gradeTheStoredFindings(storedKept, leftSourceOfKeyMap, review) : null,
     olderRule: readTheRoundLine(options.results),
     cost: readTheCost(options.usage),
   };
@@ -389,9 +478,21 @@ const gradeTheRun = options => {
 
 const formatDollars = dollars => `$${dollars.toFixed(2)}`;
 
-const formatCounts = countMap => {
+const formatCount = (name, count) => `${name} ${count}`;
+
+const formatCounts = (countMap, formatTheEntry = formatCount) => {
   const entries = Object.entries(countMap).filter(([, count]) => count > 0);
-  return entries.length ? entries.map(([name, count]) => `${name} ${count}`).join(" · ") : "none";
+  return entries.length ? entries.map(([name, count]) => formatTheEntry(name, count)).join(" · ") : "none";
+};
+
+const formatTheLeftSources = countOfSourceMap => Object.values(LEFT_SOURCES).map(source => formatCount(source, countOfSourceMap[source])).join(" · ");
+
+const formatTheStoredCounts = stored => `closed ${stored.counts.closed} · left ${stored.counts.left} (${formatTheLeftSources(stored.leftBySource)}) · back ${stored.counts.back}`;
+
+const formatTheApartCounts = (apart, closingLeftBySource) => {
+  if (!closingLeftBySource) return formatCounts(apart);
+
+  return formatCounts(apart, (name, count) => (name === PLACEMENTS.LEFT ? `${formatCount(name, count)} (${formatTheLeftSources(closingLeftBySource)})` : formatCount(name, count)));
 };
 
 const formatTheBuildWord = build => (build.result === "not run" ? "not run" : (isAPassingBuild(build) ? "passed" : "failed"));
@@ -399,7 +500,7 @@ const formatTheBuildWord = build => (build.result === "not run" ? "not run" : (i
 const writeTheGradeLine = grade => {
   const kept = grade.review ? grade.review.kept : { total: 0, byScale: createScaleCounts(), testCode: 0 };
   const scales = SCALES.map(scale => `${scale} ${kept.byScale[scale] || 0}`).join(" · ");
-  const stored = grade.stored ? ` · stored findings: closed ${grade.stored.counts.closed} · left ${grade.stored.counts.left} · back ${grade.stored.counts.back}` : "";
+  const stored = grade.stored ? ` · stored findings: ${formatTheStoredCounts(grade.stored)}` : "";
   const toConsider = grade.review ? grade.review.toConsiderOnTheChange : 0;
   return `one shot: ${grade.oneShot ? "yes" : "no"} · kept on the change ${kept.total} (${scales}; test code ${kept.testCode}) · to consider ${toConsider} · stops ${grade.writers.stops} · build ${formatTheBuildWord(grade.build)} · rounds ${grade.roundsNeeded} · ${formatDollars(grade.cost.dollars)}${stored}`;
 };
@@ -419,23 +520,26 @@ const writeTheWriterLines = writers => {
   return lines;
 };
 
-const writeTheReviewLines = review => {
+const describeTheDecidedFinding = finding => (finding.decidedFinding ? ` (${KEY_KINDS.DECIDED_BACK}; stored key ${finding.decidedFinding.check} ${finding.decidedFinding.displayName})` : "");
+
+const writeTheReviewLines = (review, stored) => {
   if (!review) return ["review: not run"];
 
   const lines = [
     `kept on the change: ${SCALES.map(scale => `${scale} ${review.kept.byScale[scale] || 0}`).join(" · ")}; test code ${review.kept.testCode}`,
     `  by track: ${formatCounts(review.kept.byTrack)}`,
   ];
-  for (const finding of review.keptOnTheChange) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}`);
+  if (stored) lines.push(`  by key: ${Object.values(KEY_KINDS).map(keyKind => formatCount(keyKind, stored.keptByKey[keyKind])).join(" · ")}`);
+  for (const finding of review.keptOnTheChange) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}${describeTheDecidedFinding(finding)}`);
   lines.push(`to consider on the change: ${review.toConsiderOnTheChange}`);
-  lines.push(`apart, not graded: ${formatCounts(review.apart)}`);
+  lines.push(`apart, not graded: ${formatTheApartCounts(review.apart, stored && stored.closingLeftBySource)}`);
   return lines;
 };
 
 const writeTheStoredLines = stored => {
   if (!stored) return [];
 
-  const lines = [`stored findings: closed ${stored.counts.closed} · left ${stored.counts.left} · back ${stored.counts.back}`];
+  const lines = [`stored findings: ${formatTheStoredCounts(stored)}`];
   for (const finding of stored.findings) lines.push(`  ${finding.state} ${finding.scale} ${finding.check} ${finding.displayName}${finding.judgedAgain === false ? " (its key was not judged again)" : ""}`);
   return lines;
 };
@@ -452,7 +556,7 @@ const writeTheGradeBlock = grade => [
   `plan 1: ${grade.planOutcome} · shape runs ${grade.shapeRuns}`,
   ...writeTheWriterLines(grade.writers),
   `build: ${grade.build.result} · tests run ${grade.build.testsRun} · failed ${grade.build.testsFailed}`,
-  ...writeTheReviewLines(grade.review),
+  ...writeTheReviewLines(grade.review, grade.stored),
   ...writeTheStoredLines(grade.stored),
   `older rule: ${grade.olderRule ? `round 1 open ${grade.olderRule.open} · loop ${grade.olderRule.loop}` : "no round recorded"}`,
   `rounds needed: ${grade.roundsNeeded}`,
