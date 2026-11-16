@@ -25,8 +25,8 @@ Level 1 grades `design-model.json` of the results folder at no model cost. `desi
 | `Model path absent: <path>` | none of those 4 things ends with `<path>`; a folder or a child of kind `removed`, and the classes of its files, do not count, because the model lists a removed file |
 | `New files: at most <n>` | at most `<n>` children of kind `created` with no `oldPath` |
 | `Closed in 1 class: <numbers>` | 1 or more objects of `decisions.findings` with no `run` hold 1 of the numbers, each of them holds `closedBy`, and every such `closedBy` names the same class, alone or as `Class#member` |
-| `No file moves` | no child of kind `moved` and no child with `oldPath` |
-| `No file moves except: <path>` | no child of kind `moved` and no child with `oldPath`, other than a child whose path or `oldPath` ends with `<path>`, compared as `Model path absent` compares its path |
+| `No file moves` | no child of kind `moved` and no child with `oldPath`, other than a child whose `oldPath` names a file that stays in the model, such as a created part carved out of a class that stays |
+| `No file moves except: <path>` | no child of kind `moved` and no child with `oldPath`, other than a child whose `oldPath` names a file that stays in the model, and a child whose path or `oldPath` ends with `<path>`, compared as `Model path absent` compares its path |
 | `No name holds: <word>` | no folder segment, child, class, field or method name of the tree after the change holds `<word>` or its plural as a whole word, read by its camel case and compared with no regard to case |
 | `Class text absent: <text>` | no text of a class of the tree after the change, its fields and its method bodies included, holds `<text>`; a text of `decisions`, such as a question that quotes the input, does not count |
 | `Convention override: <project id>; <code-style id>` | 1 object of `decisions.conventions.overrides` of the kind `override` holds the 2 ids as `project` and `codeStyle`, compared with no backticks; where 2 or more code-style ids stand, joined by ` or `, either one matches |

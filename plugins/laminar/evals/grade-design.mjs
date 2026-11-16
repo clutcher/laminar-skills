@@ -145,8 +145,19 @@ const gradeTheFindingsClosedInOneClass = (graded, numbersText) => {
   return createResult(closingClasses.length === 1, `the objects of ${closedNumbers} are closed by ${closingClasses.join(", ")}`);
 };
 
-const readMovingChildren = model => readChildrenWithTheirPaths(model)
-  .filter(({ child }) => child.kind === KINDS.MOVED || child.oldPath !== undefined);
+// The files that stand in the tree after the change: each child that is not removed, in a folder that is not removed, and the file of each class on the tree.
+const readStandingFilePaths = model => new Set([
+  ...readList(model.folders).filter(folder => !isRemoved(folder)).flatMap(folder => readList(folder.children).filter(child => !isRemoved(child)).map(child => joinChildPath(folder, child))),
+  ...readClassesOnTheTree(model).map(theClass => String(theClass.file)),
+]);
+
+// A child moves where it is moved or holds an oldPath whose file the model removes or no longer holds; a created child carved out of a file that stays is a created file.
+const readMovingChildren = model => {
+  const standingFilePaths = readStandingFilePaths(model);
+  return readChildrenWithTheirPaths(model)
+    .filter(({ child }) => child.kind === KINDS.MOVED || child.oldPath !== undefined)
+    .filter(({ child }) => child.oldPath === undefined || !standingFilePaths.has(child.oldPath));
+};
 
 const gradeNoFileMove = graded => {
   const moving = readMovingChildren(graded.model).map(({ childPath }) => childPath);
