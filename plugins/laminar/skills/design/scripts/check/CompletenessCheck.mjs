@@ -88,6 +88,7 @@ const checkGroupOfTheTestFile = (check, file, child, childPath) => {
   const { model } = check;
   const isPlacedByItsClasses = child.kind === KINDS.CREATED || readList(child.removedClasses).length > 0;
   if (!isPlacedByItsClasses || !isATestFileOfTheModel(model, file)) return;
+  if (model.isAFolderChild(file)) return;
   if (model.classes.some(theClass => theClass.file === file)) return;
 
   check.addDefect(DEFECT_CODES.TEST_WITHOUT_GROUP, childPath, `the test file ${file} holds no class of the model, so no migration group takes its step; name its tests under decisions.tests, or list the class it holds`);

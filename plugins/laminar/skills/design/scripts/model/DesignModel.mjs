@@ -225,6 +225,13 @@ export class DesignModel {
     return [...new Set(folderPaths.filter(isAText))];
   }
 
+  // A child names a folder, such as a created test folder, where its name has no extension, or the model lists it as a folder or holds a folder or a class file under it.
+  isAFolderChild(childFile) {
+    if (path.posix.extname(childFile) === "") return true;
+
+    return this.listScopeFolderPaths().some(folderPath => folderPath === childFile || folderPath.startsWith(`${childFile}/`));
+  }
+
   getExitNames() {
     return new Set(readList(this.decisions.exits).map(exit => exit.exit).filter(isAText).map(exitName => this.normalizeName(exitName)));
   }

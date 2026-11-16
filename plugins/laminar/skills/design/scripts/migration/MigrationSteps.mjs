@@ -43,16 +43,21 @@ const readsTheMember = (method, memberName) => isAText(method.body) && new RegEx
 
 const getGroupOfTheClass = theClass => (Number.isFinite(theClass.group) ? theClass.group : FIRST_GROUP);
 
+const readPathOfTheChild = file => file.replace(/\/+$/, "");
+
 const namesTheRenamedMember = (existingDefect, member) => existingDefect.member === member.oldName || existingDefect.member === member.name;
 
 class MigrationPlan {
   constructor(model, currentTree) {
     this.model = model;
     this.currentTree = currentTree;
-    const folderPaths = new Set(model.folders.map(getFolderPath));
-    this.children = model.folders
-      .flatMap(folder => readList(folder.children).map(child => ({ folder, child, file: getFileOfTheChild(folder, child) })))
-      .filter(({ file }) => !folderPaths.has(file.replace(/\/+$/, "")));
+    const allChildren = model.folders.flatMap(folder => readList(folder.children).map(child => ({ folder, child, file: getFileOfTheChild(folder, child) })));
+    this.children = allChildren.filter(({ file }) => !model.isAFolderChild(readPathOfTheChild(file)));
+    // A folder child that no folder of the model lists takes its step from its own kind, because no folder step names it.
+    const listedFolderPaths = new Set(model.folders.map(getFolderPath));
+    this.unlistedFolderChildren = allChildren
+      .filter(({ file }) => model.isAFolderChild(readPathOfTheChild(file)) && !listedFolderPaths.has(readPathOfTheChild(file)))
+      .map(folderChild => ({ ...folderChild, folderPath: `${readPathOfTheChild(folderChild.file)}/` }));
     this.createdFiles = new Set(this.children.filter(({ child }) => child.kind === KINDS.CREATED).map(({ file }) => file));
     this.newFileOfOldPathMap = new Map(this.children.filter(({ child }) => child.kind === KINDS.MOVED && isAText(child.oldPath)).map(({ child, file }) => [child.oldPath, file]));
     this.removedFiles = new Set(this.children.filter(({ child }) => child.kind === KINDS.REMOVED).map(({ file }) => file));
