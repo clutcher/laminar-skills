@@ -12,6 +12,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { CHECKS_BY_ID_MAP } from "../skills/review/scripts/checks/CheckCatalog.mjs";
 import { findCheckWords } from "../skills/review/scripts/checks/CheckWords.mjs";
+import { Scale } from "../skills/review/scripts/code/graph/abstractions/Scale.mjs";
 import { createFindingKey, readRunFolder, RoundStop } from "../skills/design/scripts/round/RunFolder.mjs";
 
 const USAGE = "usage: node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]";
@@ -432,12 +433,20 @@ const readStoredKeptFindings = inputRun => readFindingsOfTheSarif(path.join(inpu
 
 const readKeptKeys = review => new Set(review.findings.filter(finding => finding.kept && !finding.decided).map(finding => finding.findingKey));
 
+// A check judged on an application unit judges every key of the application, because its judge returns its findings on the methods and classes of that application, not on the unit itself.
 const readJudgedKeys = reviewFolder => {
   const prepare = readJsonIfPresent(path.join(reviewFolder, PREPARE_FILE));
   if (!prepare) return null;
 
-  return new Set((prepare.codeUnderReview || []).flatMap(code => (code.checks || []).map(check => createFindingKey(String(code.displayName || ""), String(check.id)))));
+  const codeUnderReview = prepare.codeUnderReview || [];
+  const applicationUnits = codeUnderReview.filter(code => code.scale === Scale.APPLICATION.name);
+  return {
+    keys: new Set(codeUnderReview.flatMap(code => (code.checks || []).map(check => createFindingKey(String(code.displayName || ""), String(check.id))))),
+    applicationChecks: new Set(applicationUnits.flatMap(code => (code.checks || []).map(check => String(check.id)))),
+  };
 };
+
+const isJudgedAgain = (finding, judgedKeys) => judgedKeys.keys.has(finding.findingKey) || judgedKeys.applicationChecks.has(finding.check);
 
 const readDecidedKeys = review => new Set(review.findings.filter(finding => finding.decided).map(finding => finding.findingKey));
 
@@ -458,7 +467,7 @@ const gradeTheStoredFindings = (storedKept, leftSourceOfKeyMap, review) => {
     check: finding.check,
     scale: finding.scale,
     state: decideTheStoredState(finding, leftSourceOfKeyMap, keptKeys, decidedKeys),
-    judgedAgain: judgedKeys ? judgedKeys.has(finding.findingKey) : null,
+    judgedAgain: judgedKeys ? isJudgedAgain(finding, judgedKeys) : null,
   }));
   const counts = Object.fromEntries(Object.values(STORED_STATES).map(state => [state, findings.filter(finding => finding.state === state).length]));
   const leftBySource = countTheLeftSources(storedKept.filter((finding, index) => findings[index].state === STORED_STATES.LEFT).map(finding => leftSourceOfKeyMap.get(finding.findingKey)));
