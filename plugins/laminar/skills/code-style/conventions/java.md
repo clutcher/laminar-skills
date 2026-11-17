@@ -24,7 +24,7 @@ Use a stream only where it is clearly easier to understand than the plain loop; 
 
 ## 4. A closed switch over a sealed type or an enum
 
-Where a value is 1 of a closed set of cases, use a sealed interface with a record per case, or an enum, and a switch with pattern matching that names every case and has no default branch. The compiler then breaks the build where a new case is not handled (correctness, section 2); a default branch turns that check off.
+Where a value is 1 of a closed set of cases, use a sealed interface with a record per case, or an enum, and a switch with pattern matching that names every case and has no default branch. The compiler then breaks the build where a new case is not handled (correctness, section 2); a default branch turns that check off. The answer of a find is no such set: it returns the item or null (section 2).
 
 - Book (*What Correctness Means*, *Exclude Illegal States*): "they also let the compiler check that every variant is handled"
 
