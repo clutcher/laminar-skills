@@ -173,7 +173,7 @@ const buildSuppression = ({ decision, matchedBy }) => ({
   kind: SUPPRESSION.KIND,
   status: SUPPRESSION.STATUS,
   justification: `${decision.reason}: ${decision.says}`,
-  properties: { reason: decision.reason, decidedBy: decision.decidedBy, plan: decision.plan, source: decision.source, matchedBy },
+  properties: { check: decision.check, displayName: decision.displayName, reason: decision.reason, decidedBy: decision.decidedBy, plan: decision.plan, source: decision.source, matchedBy },
 });
 
 const buildDecidedResult = (mark, changeKinds) => {

@@ -74,10 +74,16 @@ const isDecidedByTheDesign = result => (result.suppressions || []).some(suppress
 
 const readFindingsOfTheSarif = results => results.map(readFinding).filter((finding, index) => !isDecidedByTheDesign(results[index]));
 
-const readReasonOfTheDecision = result => String((((result.suppressions || []).find(suppression => suppression.status === "accepted") || {}).properties || {}).reason || "");
+const readPropertiesOfTheDecision = result => ((result.suppressions || []).find(suppression => suppression.status === "accepted") || {}).properties || {};
+
+// The check of the decision tells which check of a combined result the design decided; a render before it carried that check gives none.
+const readDecidedFinding = (result, index) => {
+  const decision = readPropertiesOfTheDecision(result);
+  return { ...readFinding(result, index), reason: String(decision.reason || ""), checkOfTheDecision: String(decision.check || "") };
+};
 
 const readDecidedFindingsOfTheSarif = results => results
-  .map((result, index) => ({ ...readFinding(result, index), reason: readReasonOfTheDecision(result) }))
+  .map(readDecidedFinding)
   .filter((finding, index) => isDecidedByTheDesign(results[index]));
 
 // The head of an item as the review prints it: the name, and the enclosing abstraction where the display name holds one.

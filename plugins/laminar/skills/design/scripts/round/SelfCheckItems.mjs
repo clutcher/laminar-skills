@@ -1,6 +1,6 @@
 const describeItemFinding = (number, finding) => ({ number, check: finding.check, displayName: finding.displayName });
 
-const describeDecidedFinding = finding => ({ check: finding.check, displayName: finding.displayName, reason: finding.reason });
+const describeDecidedFinding = finding => ({ check: finding.checkOfTheDecision || finding.check, displayName: finding.displayName, reason: finding.reason });
 
 // The kept findings and the items to consider of 1 self-check, each with the item number of its review.md, and the results the design decided, which ask the writer nothing.
 export function listSelfCheckItems(run) {
