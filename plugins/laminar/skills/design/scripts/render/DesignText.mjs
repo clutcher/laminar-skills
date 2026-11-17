@@ -94,6 +94,16 @@ const writeUsedByLine = (model, theClass, userNamesOfClassMap, indent) => {
   return [`${indent}  used by ${userNames.length ? userNames.join(", ") : "no class of the model"}${throughParents}`];
 };
 
+// The kind of a class, with the classes a support serves or the event or the whole of a domain object, so the reader sees what the class stands for.
+const writeKindLine = (theClass, indent) => {
+  if (!isAText(theClass.represents)) return [];
+  const details = [];
+  if (readList(theClass.for).length) details.push(`for ${readList(theClass.for).join(", ")}`);
+  if (isAText(theClass.madeWhen)) details.push(`made when ${theClass.madeWhen}`);
+  if (isAText(theClass.partOf)) details.push(`part of ${theClass.partOf}`);
+  return [`${indent}  represents ${[theClass.represents, ...details].join(", ")}`];
+};
+
 // A class that the model holds only because a finding of the run folder names it, so the reader sees why a class with no change of the design stands in the tree.
 const writeAddedForFindingsLine = (theClass, indent) => {
   const numbers = readList(theClass.addedForFindings);
@@ -108,7 +118,7 @@ const writeImplementedByLine = (model, theClass, indent, currentTree) => {
 };
 
 const writeClassLines = (model, theClass, userNamesOfClassMap, indent, currentTree = null) => {
-  const lines = [`${indent}${writeClassMarks(theClass)}`, ...writeUsedByLine(model, theClass, userNamesOfClassMap, indent), ...writeImplementedByLine(model, theClass, indent, currentTree), ...writeAddedForFindingsLine(theClass, indent)];
+  const lines = [`${indent}${writeClassMarks(theClass)}`, ...writeUsedByLine(model, theClass, userNamesOfClassMap, indent), ...writeImplementedByLine(model, theClass, indent, currentTree), ...writeKindLine(theClass, indent), ...writeAddedForFindingsLine(theClass, indent)];
   for (const field of readList(theClass.fields)) lines.push(`${indent}  ${field.name}${field.type ? `: ${field.type}` : ""}${isAText(field.oldName) ? ` (renamed from ${field.oldName})` : ""}`);
   for (const method of readList(theClass.methods)) lines.push(...writeMethodLines(method, `${indent}  `));
   if (readList(theClass.removed).length) lines.push(`${indent}  removes ${readList(theClass.removed).join(", ")}`);
