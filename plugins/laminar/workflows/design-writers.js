@@ -4,14 +4,29 @@ export const meta = {
   phases: [
     { title: 'Write', detail: 'one writer agent of the type laminar:design-writer per migration group reads design.md and the steps of its group, writes the code and the tests, builds and runs the tests, and returns its files and its commit message, or a stop; a group starts as soon as every earlier group it touches has finished, and a group whose earlier group stopped or gave no answer does not start' },
     { title: 'Self-check', detail: 'after a group finished with a build that passed or no build step, and with tests that passed, the helper laminar:design-self-check prepares a review of its files with the decision, method, variable and test-method judges, the judge workflow and the verify workflow run on it, and the writer answers each kept finding once: fixed, or recorded with a record reason' },
+    { title: 'Build', detail: 'only where the call gives build: after-the-last-group: after every group and every self-check finished, the helper laminar:design-build compiles the production code and the test code once and runs the test files of the groups, each failure goes back to the group whose files hold it, each such group gets 1 fix call of its writer per fix pass, and the helper builds again' },
   ],
 }
 
-const PHASES = { WRITE: 'Write', SELF_CHECK: 'Self-check' }
+const PHASES = { WRITE: 'Write', SELF_CHECK: 'Self-check', BUILD: 'Build' }
 
 const WRITER_AGENT_TYPE = 'laminar:design-writer'
 
 const SELF_CHECK_AGENT_TYPE = 'laminar:design-self-check'
+
+const BUILD_AGENT_TYPE = 'laminar:design-build'
+
+// per-group: each writer builds and runs the tests of its own group, as before; after-the-last-group: the writers build nothing, and 1 build of the round follows the last group.
+const BUILD_MODES = { PER_GROUP: 'per-group', AFTER_THE_LAST_GROUP: 'after-the-last-group' }
+
+const BUILD_OF_THE_ROUND_LINE = 'after the last group'
+
+const DEFAULT_BUILD_FIX_PASSES = 1
+
+// Each fix pass costs 1 writer call per failing group and 1 build more, so a call allows at most 3.
+const MAX_BUILD_FIX_PASSES = 3
+
+const BUILD_FOLDER = 'build'
 
 const JUDGE_WORKFLOW = 'laminar:laminar-review-judge'
 
@@ -58,6 +73,9 @@ const BUILD_RESULTS = ['passed', 'failed', 'not run']
 
 const TEST_RESULTS = ['passed', 'failed']
 
+// none: a language with no compile step, such as plain JavaScript, compiles nothing.
+const COMPILE_RESULTS = ['passed', 'failed', 'none']
+
 const LABELS = {
   DESIGN: 'Design:',
   MIGRATION: 'Migration:',
@@ -67,10 +85,22 @@ const LABELS = {
   LEFT_FILES: 'Files left by the writer before:',
   ROUND_REVIEW: 'Review of the round:',
   SELF_CHECK: 'Self-check:',
+  BUILD: 'Build:',
+  BUILD_FAILURES: 'Build failures:',
   COMMIT: 'Commit:',
 }
 
 const HELPER_LABELS = { WRITE: 'Write:', CONTENT: 'Content:', COMMAND: 'Command:' }
+
+const BUILD_HELPER_LABELS = { REPOSITORY: 'Repository:', BUILD_COMMANDS: 'Build commands:', TEST_FILES: 'Test files:', FAILURES_FILE: 'Failures file:' }
+
+// The stop of a group whose build of the round failed only because an earlier group of the call it builds on failed.
+const SAYS_WAITS_ON = 'waits on group'
+
+// The stop of a group with no failure of its own where the compile of the build of the round failed, because then no test of the group ran.
+const SAYS_COMPILE_FAILED_IN = 'the compile of the round failed in group'
+
+const A_CHARACTER_TO_ESCAPE = /[.*+?^${}()|[\]\\]/g
 
 const COMMIT_BY_THE_SESSION = 'by the session'
 
@@ -143,6 +173,27 @@ const SELF_CHECK_HELPER_SCHEMA = {
   required: ['ran'],
 }
 
+const BUILD_HELPER_SCHEMA = {
+  type: 'object',
+  properties: {
+    ran: { type: 'boolean' },
+    command: { type: 'string' },
+    compile: { type: 'string', enum: COMPILE_RESULTS },
+    result: { type: 'string', enum: TEST_RESULTS },
+    tests: WRITER_PROPERTIES.tests,
+    failures: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { file: { type: 'string' }, test: { type: 'string' }, says: { type: 'string' } },
+        required: ['says'],
+      },
+    },
+    error: { type: 'string' },
+  },
+  required: ['ran'],
+}
+
 const forward = given => String(given == null ? '' : given).replace(/\\/g, '/')
 
 const joinedOrNone = texts => (texts && texts.length ? texts.join(', ') : NONE)
@@ -152,6 +203,8 @@ const toGroupNumbers = given => (Array.isArray(given) ? given.map(Number).filter
 const folderOf = given => forward(given).replace(/\/[^/]*$/, '')
 
 const quoted = given => `"${forward(given)}"`
+
+const toFixPasses = given => (given === undefined || given === null ? DEFAULT_BUILD_FIX_PASSES : given)
 
 class WorkflowArguments {
   constructor(given) {
@@ -165,6 +218,21 @@ class WorkflowArguments {
     this.effort = fields.effort || null
     this.runsTheSelfCheck = fields.selfCheck !== false
     this.agentTypes = fields.agentTypes || {}
+    this.buildMode = fields.build || BUILD_MODES.PER_GROUP
+    this.buildCommands = fields.buildCommands || null
+    this.buildFixPasses = toFixPasses(fields.buildFixPasses)
+  }
+
+  get buildsAfterTheLastGroup() {
+    return this.buildMode === BUILD_MODES.AFTER_THE_LAST_GROUP
+  }
+
+  get hasAKnownBuildMode() {
+    return Object.values(BUILD_MODES).includes(this.buildMode)
+  }
+
+  get hasAllowedFixPasses() {
+    return Number.isInteger(this.buildFixPasses) && this.buildFixPasses >= 0 && this.buildFixPasses <= MAX_BUILD_FIX_PASSES
   }
 
   get groups() {
@@ -203,6 +271,16 @@ class WorkflowArguments {
   selfCheckRunOf(group) {
     return `${this.resultsFolder}/plans/${this.planned.plan}/self-check/group-${group.group}`
   }
+
+  buildHelperOptionsFor(build) {
+    return { phase: PHASES.BUILD, agentType: this.agentTypes.build || BUILD_AGENT_TYPE, label: `build ${build}`, schema: BUILD_HELPER_SCHEMA }
+  }
+
+  // The file names the groups of the call, so a later call on other groups of the same plan keeps the output of this one.
+  failuresFileOf(build, groupNumbers) {
+    const planFolder = this.planned.plan == null ? this.resultsFolder : `${this.resultsFolder}/plans/${this.planned.plan}`
+    return `${planFolder}/${BUILD_FOLDER}/build-groups-${groupNumbers.join('-')}-${build}.txt`
+  }
 }
 
 const NOTHING_WRITTEN = { groups: [] }
@@ -234,6 +312,10 @@ if (theArguments.planned.defects > 0) return stoppedWith(`the call did not run: 
 
 if (theArguments.unknownGroupNumbers.length) return stoppedWith(`the call did not run: the migration plans no group ${theArguments.unknownGroupNumbers.join(', ')}`)
 
+if (!theArguments.hasAKnownBuildMode) return stoppedWith(`the call did not run: build takes ${Object.values(BUILD_MODES).join(' or ')}, not ${theArguments.buildMode}`)
+
+if (!theArguments.hasAllowedFixPasses) return stoppedWith(`the call did not run: buildFixPasses takes a whole number from 0 to ${MAX_BUILD_FIX_PASSES}, not ${theArguments.buildFixPasses}`)
+
 const groups = theArguments.groups
 
 if (!groups.length) {
@@ -248,11 +330,16 @@ phase(PHASES.WRITE)
 const writtenOfGroupMap = new Map()
 for (const group of groups) writtenOfGroupMap.set(group.group, writtenAfterItsEarlierGroups(group))
 
-return { groups: await Promise.all(groups.map(group => writtenOfGroupMap.get(group.group))) }
+const writtenGroups = await Promise.all(groups.map(group => writtenOfGroupMap.get(group.group)))
 
-function writerMessageOf(group, answerRound) {
+if (!theArguments.buildsAfterTheLastGroup) return { groups: writtenGroups }
+
+return await builtAfterTheLastGroup(writtenGroups)
+
+// followUp is the answer round, with review, or the fix call, with buildFailures; each goes on from the files the first call of the group changed.
+function writerMessageOf(group, followUp) {
   const planned = theArguments.planned
-  const leftFiles = answerRound ? answerRound.leftFiles : theArguments.leftFilesOf(group)
+  const leftFiles = followUp ? followUp.leftFiles : theArguments.leftFilesOf(group)
   return [
     `${LABELS.DESIGN} ${forward(planned.design)}`,
     `${LABELS.MIGRATION} ${forward(planned.migration)}`,
@@ -261,7 +348,9 @@ function writerMessageOf(group, answerRound) {
     `${LABELS.OPEN_QUESTIONS} ${joinedOrNone(planned.openQuestions)}`,
     `${LABELS.LEFT_FILES} ${joinedOrNone(leftFiles)}`,
     ...(theArguments.roundReview ? [`${LABELS.ROUND_REVIEW} ${theArguments.roundReview}`] : []),
-    ...(answerRound ? [`${LABELS.SELF_CHECK} ${answerRound.review}`] : []),
+    ...(followUp && followUp.review ? [`${LABELS.SELF_CHECK} ${followUp.review}`] : []),
+    ...(theArguments.buildsAfterTheLastGroup ? [`${LABELS.BUILD} ${BUILD_OF_THE_ROUND_LINE}`] : []),
+    ...(followUp && followUp.buildFailures ? [`${LABELS.BUILD_FAILURES} ${forward(followUp.buildFailures)}`] : []),
     `${LABELS.COMMIT} ${COMMIT_BY_THE_SESSION}`,
   ].join('\n')
 }
@@ -353,10 +442,10 @@ async function writtenAfterItsEarlierGroups(group) {
   return writtenGroup(group)
 }
 
-// A build that did not run is no reason, because a project with no build step, such as plain JavaScript, builds nothing.
+// A build that did not run is no reason, because a project with no build step, such as plain JavaScript, builds nothing; where the call builds after the last group, the writer runs no test, and the self-check reads source text that needs no build.
 function findWhyNotReadyForTheSelfCheck(written) {
   if (!written.build) return 'the writer gave no build result'
-  if (!written.tests.length) return 'the writer ran no test'
+  if (!written.tests.length && !theArguments.buildsAfterTheLastGroup) return 'the writer ran no test'
   return ''
 }
 
@@ -475,4 +564,196 @@ async function answeredSelfCheckOf(group, written, reviewed) {
     filled: [...new Set([...written.filled, ...answeredGroup.filled])],
     selfCheck: selfCheckOf(reviewed, returned.answers || [], true),
   }
+}
+
+function isFinished(written) {
+  return written.outcome === OUTCOMES.FINISHED
+}
+
+function plannedGroupOf(written) {
+  return groups.find(group => group.group === written.group)
+}
+
+// The writers built nothing, so 1 build of the round follows the last group and its self-check: each failure that maps to a finished group goes back to it for 1 fix call per fix pass, and the build runs again after each pass that changed a group.
+async function builtAfterTheLastGroup(writtenGroups) {
+  if (!writtenGroups.some(isFinished)) {
+    log('no group of the call finished, so the build of the round did not run')
+    return { groups: writtenGroups, roundBuild: { mode: theArguments.buildMode, fixPasses: 0, notRun: 'no group of the call finished' } }
+  }
+  phase(PHASES.BUILD)
+  let currentGroups = writtenGroups
+  let built = await roundBuildOf(1, currentGroups)
+  let fixPasses = 0
+  while (fixPasses < theArguments.buildFixPasses && isFixable(built, currentGroups)) {
+    fixPasses += 1
+    const fixed = await fixedGroupsOf(currentGroups, mapFailuresToGroups(built.failures, currentGroups).failuresOfGroupMap, built.failuresFile)
+    currentGroups = fixed.groups
+    if (!fixed.changed) {
+      log(`no fix call of pass ${fixPasses} returned an answer, so the build of the round does not run again`)
+      break
+    }
+    built = await roundBuildOf(fixPasses + 1, currentGroups)
+  }
+  return { groups: groupsWithTheRoundBuild(currentGroups, built), roundBuild: roundBuildReturnOf(built, currentGroups, fixPasses) }
+}
+
+function listTestFilesOfTheCall(writtenGroups) {
+  return [...new Set(writtenGroups.filter(isFinished).flatMap(written => (plannedGroupOf(written).testFiles || []).map(forward)))]
+}
+
+// A missing testsRun is unknown, so only a run whose every test command gives 0 counts as a run of no test.
+function ranNoTestOf(tests) {
+  return !tests.length || tests.every(ranNoTest)
+}
+
+// A failed build that names no failure still fails, with 1 failure of no file; a compile that passed with test files to run and no test that ran fails too, because no group can then be shown to pass its tests.
+async function roundBuildOf(build, writtenGroups) {
+  const planned = theArguments.planned
+  const failuresFile = theArguments.failuresFileOf(build, groups.map(group => group.group))
+  const testFiles = listTestFilesOfTheCall(writtenGroups)
+  const message = [
+    `${BUILD_HELPER_LABELS.REPOSITORY} ${planned.repository ? forward(planned.repository) : NONE}`,
+    `${BUILD_HELPER_LABELS.BUILD_COMMANDS} ${theArguments.buildCommands ? JSON.stringify(theArguments.buildCommands) : NONE}`,
+    `${BUILD_HELPER_LABELS.TEST_FILES} ${joinedOrNone(testFiles)}`,
+    `${BUILD_HELPER_LABELS.FAILURES_FILE} ${failuresFile}`,
+  ].join('\n')
+  const returned = await agent(message, theArguments.buildHelperOptionsFor(build)).catch(() => null)
+  if (!returned) return { failuresFile, notRun: 'the build helper gave no answer' }
+  if (!returned.ran) return { failuresFile, notRun: `the build did not run${returned.error ? `: ${returned.error}` : ''}` }
+  const command = returned.command || ''
+  const tests = returned.tests || []
+  const named = returned.failures || []
+  const compile = returned.compile || (named.some(failure => !failure.test) ? 'failed' : 'passed')
+  const failedWithNoFailure = returned.result !== 'passed' && !named.length ? [{ says: `the build failed: ${command}` }] : []
+  const ranNoTestFailure = compile !== 'failed' && testFiles.length && ranNoTestOf(tests) ? [{ says: SAYS_NO_TEST_RAN }] : []
+  const failures = [...named, ...failedWithNoFailure, ...ranNoTestFailure]
+  const result = failures.length ? 'failed' : 'passed'
+  log(`build ${build} of the round ${result}: ${command}`)
+  return { failuresFile, command, compile, result, tests, failures }
+}
+
+// The files of a writer and of a step may stand relative to the repository or as absolute paths, so both are read relative to it.
+function relativeToTheRepository(file) {
+  const repository = forward(theArguments.planned.repository || '').replace(/\/$/, '')
+  const given = forward(file).replace(/^\.\//, '')
+  return repository && given.startsWith(`${repository}/`) ? given.slice(repository.length + 1) : given
+}
+
+function holdsTheFile(files, file) {
+  return files.map(relativeToTheRepository).some(listed => listed === file || (listed.endsWith('/') && file.startsWith(listed)))
+}
+
+// A test tool often names a failing test by its class or its test name, not by its file, so the base name of a test file, as a whole word, finds its group.
+function namesTheTestFile(failure, testFile) {
+  const baseName = forward(testFile).replace(/\/$/, '').split('/').pop().replace(/\.[^.]*$/, '')
+  if (!baseName) return false
+  const wholeWord = new RegExp(`(^|[^A-Za-z0-9_])${baseName.replace(A_CHARACTER_TO_ESCAPE, '\\$&')}([^A-Za-z0-9_]|$)`)
+  return wholeWord.test(`${failure.file || ''} ${failure.test || ''}`)
+}
+
+// A failure goes to each group of the call whose writer returned its file, else to each group whose step lists it, else to each group whose test file it names; a failure of no group is a gap of the plan.
+function findGroupNumbersOfTheFailure(failure, writtenGroups) {
+  const file = failure.file ? relativeToTheRepository(failure.file) : ''
+  const returnedBy = file ? writtenGroups.filter(written => holdsTheFile(written.files || [], file)) : []
+  if (returnedBy.length) return returnedBy.map(written => written.group)
+  const listedBy = file ? writtenGroups.filter(written => holdsTheFile(plannedGroupOf(written).files || [], file)) : []
+  if (listedBy.length) return listedBy.map(written => written.group)
+  return writtenGroups.filter(written => (plannedGroupOf(written).testFiles || []).some(testFile => namesTheTestFile(failure, testFile))).map(written => written.group)
+}
+
+// unmapped: the failures of no group; failingEveryGroup: those and the failures of no finished group, which no fix call can reach and which fail every finished group.
+function mapFailuresToGroups(failures, writtenGroups) {
+  const failuresOfGroupMap = new Map()
+  const unmapped = []
+  const failingEveryGroup = []
+  for (const failure of failures) {
+    const numbers = findGroupNumbersOfTheFailure(failure, writtenGroups)
+    if (!numbers.length) unmapped.push(failure)
+    if (!writtenGroups.some(written => isFinished(written) && numbers.includes(written.group))) failingEveryGroup.push(failure)
+    for (const number of numbers) failuresOfGroupMap.set(number, [...(failuresOfGroupMap.get(number) || []), failure])
+  }
+  return { failuresOfGroupMap, unmapped, failingEveryGroup }
+}
+
+// A fix pass runs where 1 finished group has a failure of its own; a failure of no finished group gets no fix call, because no writer may fix a gap of the plan alone, and it still fails every group at the end.
+function isFixable(built, writtenGroups) {
+  if (built.notRun || built.result === 'passed') return false
+  const { failuresOfGroupMap } = mapFailuresToGroups(built.failures, writtenGroups)
+  return writtenGroups.some(written => isFinished(written) && failuresOfGroupMap.has(written.group))
+}
+
+// The fix calls run 1 after the other in group order, because 2 groups that share a failing file touch, and every writer writes into 1 working tree.
+async function fixedGroupsOf(writtenGroups, failuresOfGroupMap, failuresFile) {
+  const fixedOfGroupMap = new Map()
+  for (const written of writtenGroups) {
+    if (!isFinished(written) || !failuresOfGroupMap.has(written.group)) continue
+    const fixed = await fixedGroupOf(written, failuresFile)
+    if (fixed) fixedOfGroupMap.set(written.group, fixed)
+  }
+  return { groups: writtenGroups.map(written => fixedOfGroupMap.get(written.group) || written), changed: fixedOfGroupMap.size > 0 }
+}
+
+// A fix call with no usable answer gives null, so its group stays as it was and its failures stand.
+async function fixedGroupOf(written, failuresFile) {
+  const group = plannedGroupOf(written)
+  const options = theArguments.writerOptionsFor(group, WRITER_SCHEMA, `writer fixes group ${group.group}`, PHASES.BUILD)
+  const returned = await agent(writerMessageOf(group, { leftFiles: written.files, buildFailures: failuresFile }), options).catch(() => null)
+  if (!isAWriterAnswer(returned)) {
+    log(`the ${options.label} call returned nothing usable, so the failures of group ${group.group} stand`)
+    return null
+  }
+  const fixed = { ...written, files: [...new Set([...written.files, ...(returned.files || [])])], filled: [...new Set([...written.filled, ...(returned.filled || [])])] }
+  if (returned.outcome === OUTCOMES.STOPPED) return stoppedGroupOf(group, fixed, returned.stop || stopWithoutAReasonOf(group))
+  return fixed
+}
+
+function describeFailure(failure) {
+  return [failure.file, failure.test, failure.says].filter(Boolean).join(': ')
+}
+
+function isATestFailure(failure) {
+  return Boolean(failure.test) || failure.says === SAYS_NO_TEST_RAN
+}
+
+// A group passes only where the compile of the last build did not fail, no failure of its own or of every group stands, and no earlier group of the call it builds on failed; its own failures come first in its stop. A group stopped only because the compile failed elsewhere is waited on by no group, so each later group names the group that failed.
+function groupsWithTheRoundBuild(writtenGroups, built) {
+  if (built.notRun) {
+    log(`the build of the round did not run: ${built.notRun}`)
+    return writtenGroups
+  }
+  const { failuresOfGroupMap, failingEveryGroup } = mapFailuresToGroups(built.failures, writtenGroups)
+  const failedReasonOfGroupMap = new Map(writtenGroups.filter(written => !isFinished(written)).map(written => [written.group, BUILD_FAILED]))
+  const compileFailedNumbers = [...failuresOfGroupMap.entries()].filter(([, failures]) => failures.some(failure => !isATestFailure(failure))).map(([number]) => number)
+  return writtenGroups.map(written => {
+    if (!isFinished(written)) return written
+    const group = plannedGroupOf(written)
+    const failures = [...(failuresOfGroupMap.get(written.group) || []), ...failingEveryGroup]
+    if (failures.length) {
+      const failed = failedByTheRoundBuild(group, written, built, failures)
+      failedReasonOfGroupMap.set(written.group, failed.stop.reason)
+      return failed
+    }
+    const waitedOn = (written.dependsOn || []).filter(number => failedReasonOfGroupMap.has(number))
+    if (waitedOn.length) {
+      const reason = waitedOn.every(number => failedReasonOfGroupMap.get(number) === TESTS_FAILED) ? TESTS_FAILED : BUILD_FAILED
+      failedReasonOfGroupMap.set(written.group, reason)
+      return stoppedGroupOf(group, { ...written, build: { command: built.command, result: reason === TESTS_FAILED ? 'passed' : 'failed' }, waitedOn }, stopAtTheGroupOf(group, reason, `${SAYS_WAITS_ON} ${waitedOn.join(', ')}`))
+    }
+    if (built.compile === 'failed') {
+      return stoppedGroupOf(group, { ...written, build: { command: built.command, result: 'failed' } }, stopAtTheGroupOf(group, BUILD_FAILED, `${SAYS_COMPILE_FAILED_IN} ${compileFailedNumbers.join(', ')}`))
+    }
+    return { ...written, build: { command: built.command, result: 'passed' }, tests: built.tests.filter(test => test.result === 'passed') }
+  })
+}
+
+function failedByTheRoundBuild(group, written, built, failures) {
+  const stop = stopAtTheGroupOf(group, isATestFailure(failures[0]) ? TESTS_FAILED : BUILD_FAILED, describeFailure(failures[0]))
+  const result = failures.every(isATestFailure) && built.compile !== 'failed' ? 'passed' : 'failed'
+  return stoppedGroupOf(group, { ...written, build: { command: built.command, result }, buildFailures: failures }, stop)
+}
+
+function roundBuildReturnOf(built, writtenGroups, fixPasses) {
+  if (built.notRun) return { mode: theArguments.buildMode, fixPasses, notRun: built.notRun }
+  const { unmapped } = mapFailuresToGroups(built.failures, writtenGroups)
+  return { mode: theArguments.buildMode, command: built.command, compile: built.compile, result: built.result, tests: built.tests, failures: built.failures, unmapped, fixPasses, failuresFile: built.failuresFile }
 }

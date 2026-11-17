@@ -9,6 +9,7 @@
     "name": "Igor Zarvanskyi"
   },
   "agents": [
+    "./agents/design/design-build.md",
     "./agents/design/design-forecaster.md",
     "./agents/design/design-self-check.md",
     "./agents/design/design-writer.md",

@@ -21,6 +21,8 @@ Your message holds only data, 1 input per line, under these labels:
 - `Files left by the writer before:` the files that a writer of the same migration group changed and left uncommitted, or `none`. You go on from them.
 - `Review of the round:` the path of `review.md` of the run folder of the plan, only where the plan came from a run folder. The finding steps of your group name its findings.
 - `Self-check:` the path of `review.md` of the self-check of your migration group, only in the answer round, after a writer of your group finished it. You answer its kept findings by the section *The answer round*, and you write no step again.
+- `Build:` `after the last group`, only where the writer workflow builds once after the last migration group of its call. You then work by the section *Build after the last group*.
+- `Build failures:` the path of the output of the build after the last group, only in a fix call, after that build failed. You fix its failures by the section *Build after the last group*, and you write no step again.
 - `Commit:` `by the session` where the session commits your files.
 
 ## How to work
@@ -48,6 +50,14 @@ Where your message holds `Self-check:`, the steps of your group are already writ
   - `fix-breaks-the-build`: the fix made the build or a test fail; undo it before you record it.
 
 Then build and run the tests of your group again. You never stop in the answer round, and you never answer an item to consider, because it waits for the author.
+
+## Build after the last group
+
+This section holds only where your message holds `Build: after the last group`. Without that line, steps 3, 8 and 9 and the answer round hold as they stand.
+
+With that line, the writer workflow compiles the code and runs the tests once, after the last migration group, so your writing ends at the end of your group. You build nothing and run no test, in steps 3, 8 and 9 and in the answer round. This holds also where the skill `code-style` says to build and run once the tests are written, because with that line the build is the one after the last group, and a fix call brings you what it shows. Return `build` with the command `none: after the last group` and the result `not run`, and `tests` as an empty list. In the answer round, the record reason `fix-breaks-the-build` does not apply.
+
+Where your message also holds `Build failures:`, this call is a fix call. Read that file, and fix each failure that stands in a file of the steps of your migration group or in a file of `Files left by the writer before:`, inside the bodies or the tests, by step 8. Read each such file as it stands now before you change it, because a writer of another group may have fixed the same failure in the call before yours; a failure that no longer stands needs no change. Leave each other failure as it is. Where a test fails because the design changed the behavior it expects and no step names that test, stop with `behavior-the-design-did-not-decide`. You build nothing in a fix call either.
 
 ## When to stop
 

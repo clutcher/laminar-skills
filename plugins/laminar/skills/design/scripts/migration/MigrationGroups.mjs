@@ -30,13 +30,21 @@ const findFirstClassOfTheGroup = (model, number) => {
 };
 
 // A group waits for each earlier group it touches, because it builds on the code that group writes; groups that touch no earlier group can be written side by side.
+// The files of a group and of its test steps let the build after the last group give each failing file back to the group whose step lists it.
 export const listMigrationGroups = (model, steps) => {
   const numbers = [...new Set(steps.map(step => step.group))].sort((first, second) => first - second);
   const groups = numbers.map(number => {
     const groupSteps = steps.filter(step => step.group === number);
     const files = listFilesOfTheSteps(groupSteps);
-    const testSteps = groupSteps.filter(step => step.stage === MIGRATION_STAGES.TESTS).map(step => step.number);
-    return { number, steps: groupSteps.map(step => step.number), testSteps, files, namedFiles: listFilesOfTheNamedClasses(model, files) };
+    const testGroupSteps = groupSteps.filter(step => step.stage === MIGRATION_STAGES.TESTS);
+    return {
+      number,
+      steps: groupSteps.map(step => step.number),
+      testSteps: testGroupSteps.map(step => step.number),
+      files,
+      testFiles: listFilesOfTheSteps(testGroupSteps),
+      namedFiles: listFilesOfTheNamedClasses(model, files),
+    };
   });
   return groups.map((group, at) => ({
     group: group.number,
@@ -44,5 +52,7 @@ export const listMigrationGroups = (model, steps) => {
     steps: group.steps,
     testSteps: group.testSteps,
     dependsOn: groups.slice(0, at).filter(earlierGroup => isTouching(group, earlierGroup)).map(earlierGroup => earlierGroup.number),
+    files: [...group.files],
+    testFiles: [...group.testFiles],
   }));
 };
