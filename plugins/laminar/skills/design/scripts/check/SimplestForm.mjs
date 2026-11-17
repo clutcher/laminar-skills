@@ -78,7 +78,7 @@ const readSimpleName = theClass => String(theClass.name || "").split(".").pop();
 
 export const isAConstructor = (theClass, method) => method.name === readSimpleName(theClass) || CONSTRUCTOR_NAMES.has(method.name);
 
-const isAFactoryOfItsClass = (theClass, method) => readHeadTypeName(method.returns || "") === readSimpleName(theClass);
+export const isAFactoryOfItsClass = (theClass, method) => readHeadTypeName(method.returns || "") === readSimpleName(theClass);
 
 const namesTheMethod = (text, method) => isAText(method.name) && text.split(/[^\w$]+/).includes(method.name);
 
@@ -611,7 +611,7 @@ const findTheCollectionTypeDefect = (model, theClass, collections) => createRech
     : `${theClass.name} is a created type ${describeTheCollections(collections)}, and its methods only fill them at creation or read them; hold each collection as a field of the service that uses it and make each lookup a method of that service; keep the type only where it decides something the services could not`,
 );
 
-const listReasonWords = reason => String(reason || "").split(/[\s,;:()`'"]+/).map(word => word.replace(/\.+$/, ""));
+export const listReasonWords = reason => String(reason || "").split(/[\s,;:()`'"]+/).map(word => word.replace(/\.+$/, ""));
 
 // An answer under scriptCases closes the collection case only where it names a method of the type whose body holds a rule outside construction, because a new name or a reason that restates the field shows no decision that the service could not make.
 export const namesAMethodWithARule = (model, theClass, reason) => {
@@ -631,7 +631,7 @@ export const isAnAnswerOfTheCollectionCase = (model, theClass, reason) => (theCl
   ? namesAPublicMethodOfTheType(model, theClass, reason)
   : namesAMethodWithARule(model, theClass, reason));
 
-const isInALayoutSplit = theClass => ZONES_OF_A_LAYOUT_SPLIT.has(theClass.zone) || String(theClass.file || "").split("/").some(segment => ZONES_OF_A_LAYOUT_SPLIT.has(segment));
+export const isInALayoutSplit = theClass => ZONES_OF_A_LAYOUT_SPLIT.has(theClass.zone) || String(theClass.file || "").split("/").some(segment => ZONES_OF_A_LAYOUT_SPLIT.has(segment));
 
 const listImplementations = (model, theInterface) => model.classes.filter(theClass => readList(theClass.implements).includes(theInterface.name));
 

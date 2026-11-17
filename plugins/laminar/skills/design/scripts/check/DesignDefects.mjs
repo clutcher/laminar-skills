@@ -19,6 +19,7 @@ import { findMethodListResult } from "./MethodListCheck.mjs";
 import { listMigrationSteps } from "../migration/MigrationSteps.mjs";
 import { findGroupOrderDefects } from "../migration/GroupOrder.mjs";
 import { findOwnerValueDefects } from "./OwnerValues.mjs";
+import { findPassedOnCallDefects } from "./PassedOnCalls.mjs";
 import { findFindingsDefects } from "./FindingsCheck.mjs";
 import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
 import { findRemovedBodilessMethodDefects } from "./RemovedBodilessMethods.mjs";
@@ -58,22 +59,23 @@ const findWhyTheCycleIsNotOutside = (defect, currentTree) => {
   return folderPair ? `no relation of the base commit makes its edge ${folderPair.fromFolder} -> ${folderPair.toFolder}` : "";
 };
 
-// A collection case is answered by a reason that names a public method of a type marked work, or a method with a rule outside construction on every other mark; a class of only constants and a domain object of 1 collection are answered only by a reason that names a method of the type with a rule outside construction; every other recheck takes any reason.
-const isAnAnswerTheCaseTakes = (model, defect, name, scriptCase) => {
-  if (defect.code !== DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION && !defect.closedOnlyByARule) return true;
+// A collection case is answered by a reason that names a public method of a type marked work, or a method with a rule outside construction on every other mark; a class of only constants and a domain object of 1 collection are answered only by a reason that names a method of the type with a rule outside construction; a case whose check gives it its own answerTest, such as a class that only passes the call on, is answered by the reasons that test takes; every other recheck takes any reason.
+const isAnAnswerTheCaseTakes = (model, defect, answerTest, name, scriptCase) => {
+  if (!answerTest && defect.code !== DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION && !defect.closedOnlyByARule) return true;
 
   const theClass = model.findClass(name);
   if (theClass === null) return false;
+  if (answerTest) return answerTest(model, theClass, scriptCase.reason);
   return defect.code === DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION ? isAnAnswerOfTheCollectionCase(model, theClass, scriptCase.reason) : namesAMethodWithARule(model, theClass, scriptCase.reason);
 };
 
 const markTheScriptCases = (model, defects, currentTree) => {
   const scriptCaseOfKeyMap = new Map(readList(model.decisions.scriptCases).map(scriptCase => [joinScriptCaseKey(scriptCase.code, scriptCase.name, scriptCase.text), scriptCase]));
   const outsideDefects = [];
-  const markedDefects = defects.map(({ folderPairs, ...defect }) => {
+  const markedDefects = defects.map(({ folderPairs, answerTest, ...defect }) => {
     const name = findNameOfThePath(model, defect.path) || defect.path;
     const scriptCase = defect.recheck ? scriptCaseOfKeyMap.get(joinScriptCaseKey(defect.code, name, defect.sentence)) : undefined;
-    if (!scriptCase || !isAnAnswerTheCaseTakes(model, defect, name, scriptCase)) return { ...defect, name, foundWrong: false, matched: false };
+    if (!scriptCase || !isAnAnswerTheCaseTakes(model, defect, answerTest, name, scriptCase)) return { ...defect, name, foundWrong: false, matched: false };
     if (defect.code !== DEFECT_CODES.FOLDER_CYCLE || scriptCase.reason !== OUTSIDE_THE_CHANGE) return { ...defect, name, foundWrong: true, matched: true };
 
     const why = findWhyTheCycleIsNotOutside({ ...defect, folderPairs }, currentTree);
@@ -114,6 +116,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
     ...findTriedNameDefects(model, shapeReviews, roundModels),
     ...findSimplestFormDefects(model),
+    ...findPassedOnCallDefects(model),
     ...findCollectionNameDefects(model, currentTree),
     ...findRepresentedKindDefects(model, zoneOrder),
     ...findDomainObjectCopyDefects(model),
