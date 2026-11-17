@@ -34,13 +34,13 @@ export const checkDecidedListForm = given => {
   return given;
 };
 
-// A finding key also names a result that the render set apart as decided by the design, because the run still holds it outside its findings.
+// A finding key also names a result that the render set apart as decided by the design or as decided but changed since the decision, because the run still holds it outside its findings.
 const listFindingsOfTheDecided = (decided, run) => {
   if (Number.isInteger(decided.number)) {
     const item = run.items.find(other => other.number === decided.number);
     return item ? item.findings.filter(finding => decided.check === undefined || finding.check === decided.check) : [];
   }
-  return [...run.findings, ...run.decidedFindings].filter(finding => finding.displayName === decided.displayName && finding.check === decided.check);
+  return [...run.findings, ...run.decidedFindings, ...(run.changedSinceFindings || [])].filter(finding => finding.displayName === decided.displayName && finding.check === decided.check);
 };
 
 const describeTheKey = decided => (Number.isInteger(decided.number)

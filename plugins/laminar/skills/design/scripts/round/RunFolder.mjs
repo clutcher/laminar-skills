@@ -69,12 +69,18 @@ const readFinding = (result, index) => {
 
 const readResultsOfTheSarif = sarif => (sarif.runs || []).flatMap(run => run.results || []);
 
-// A result that the decided review file of the design marked carries an accepted suppression; it joins no item and enters no count.
-const isDecidedByTheDesign = result => (result.suppressions || []).some(suppression => suppression.status === "accepted");
+const SUPPRESSION_STATUSES = Object.freeze({ DECIDED: "accepted", CHANGED_SINCE: "underReview" });
 
-const readFindingsOfTheSarif = results => results.map(readFinding).filter((finding, index) => !isDecidedByTheDesign(results[index]));
+const holdsASuppressionOfTheStatus = (result, status) => (result.suppressions || []).some(suppression => suppression.status === status);
 
-const readPropertiesOfTheDecision = result => ((result.suppressions || []).find(suppression => suppression.status === "accepted") || {}).properties || {};
+// A result that the decided review file of the design marked carries an accepted suppression, and 1 decided but changed since the decision an underReview one; neither joins an item or enters a count.
+const isDecidedByTheDesign = result => holdsASuppressionOfTheStatus(result, SUPPRESSION_STATUSES.DECIDED);
+
+const isDecidedButChangedSince = result => holdsASuppressionOfTheStatus(result, SUPPRESSION_STATUSES.CHANGED_SINCE);
+
+const readFindingsOfTheSarif = results => results.map(readFinding).filter((finding, index) => !isDecidedByTheDesign(results[index]) && !isDecidedButChangedSince(results[index]));
+
+const readPropertiesOfTheDecision = result => ((result.suppressions || []).find(suppression => Object.values(SUPPRESSION_STATUSES).includes(suppression.status)) || {}).properties || {};
 
 // The check of the decision tells which check of a combined result the design decided; a render before it carried that check gives none.
 const readDecidedFinding = (result, index) => {
@@ -82,9 +88,9 @@ const readDecidedFinding = (result, index) => {
   return { ...readFinding(result, index), reason: String(decision.reason || ""), checkOfTheDecision: String(decision.check || "") };
 };
 
-const readDecidedFindingsOfTheSarif = results => results
+const readDecidedFindingsOfTheSarif = (results, isOfTheGroup) => results
   .map(readDecidedFinding)
-  .filter((finding, index) => isDecidedByTheDesign(results[index]));
+  .filter((finding, index) => isOfTheGroup(results[index]));
 
 // The head of an item as the review prints it: the name, and the enclosing abstraction where the display name holds one.
 const readHeadOfTheFinding = finding => {
@@ -127,7 +133,7 @@ export const readRunFolder = (runFolder, hasNoFindings) => {
 
   const sarifPath = path.join(runFolder, SARIF_FILE);
   const reviewPath = path.join(runFolder, REVIEW_FILE);
-  if (hasNoFindings) return { runFolder, judgedAbstractions, judgedKeys, scales, findings: [], decidedFindings: [], items: [], copiedFiles: [] };
+  if (hasNoFindings) return { runFolder, judgedAbstractions, judgedKeys, scales, findings: [], decidedFindings: [], changedSinceFindings: [], items: [], copiedFiles: [] };
   if (!fs.existsSync(sarifPath)) throw new RoundStop(`run folder: ${runFolder} holds no ${SARIF_FILE}; pass --no-findings where the run kept nothing`);
 
   const results = readResultsOfTheSarif(readJsonOrStop(sarifPath, "run folder"));
@@ -135,5 +141,10 @@ export const readRunFolder = (runFolder, hasNoFindings) => {
   const reviewText = fs.existsSync(reviewPath) ? fs.readFileSync(reviewPath, "utf8") : "";
   const items = joinFindingsToItems(readNamedReviewItems(reviewText), findings);
   const copiedFiles = [sarifPath, ...(reviewText ? [reviewPath] : [])];
-  return { runFolder, judgedAbstractions, judgedKeys, scales, findings, decidedFindings: readDecidedFindingsOfTheSarif(results), items, copiedFiles };
+  return {
+    runFolder, judgedAbstractions, judgedKeys, scales, findings,
+    decidedFindings: readDecidedFindingsOfTheSarif(results, isDecidedByTheDesign),
+    changedSinceFindings: readDecidedFindingsOfTheSarif(results, isDecidedButChangedSince),
+    items, copiedFiles,
+  };
 };

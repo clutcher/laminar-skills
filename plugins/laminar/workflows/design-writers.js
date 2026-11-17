@@ -428,7 +428,7 @@ async function reviewedSelfCheckOf(group, written) {
     `node ${quoted(`${planned.designScripts}/${SELF_CHECK_ITEMS_SCRIPT}`)} --run ${quoted(run)}`,
   ])
   const items = JSON.parse(itemsLine.startsWith(RESULT_MARK) ? itemsLine.slice(RESULT_MARK.length) : itemsLine)
-  return { run, judgeCalls, kept: items.kept || [], toConsider: items.toConsider || [], ...(items.decided ? { decided: items.decided } : {}) }
+  return { run, judgeCalls, kept: items.kept || [], toConsider: items.toConsider || [], ...(items.decided ? { decided: items.decided } : {}), ...(items.changedSince ? { changedSince: items.changedSince } : {}) }
 }
 
 function countRecordedByReason(answers) {
@@ -447,6 +447,7 @@ function selfCheckOf(reviewed, answers, answered) {
     kept: reviewed.kept,
     toConsider: reviewed.toConsider,
     ...(reviewed.decided ? { decided: reviewed.decided } : {}),
+    ...(reviewed.changedSince ? { changedSince: reviewed.changedSince } : {}),
     answered,
     answers: answersOfTheKept,
     fixed: answersOfTheKept.filter(answer => answer.answer === ANSWERS.FIXED).length,

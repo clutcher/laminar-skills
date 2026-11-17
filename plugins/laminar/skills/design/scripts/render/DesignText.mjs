@@ -341,6 +341,7 @@ const writeSelfCheckLine = (plan, selfCheck) => {
     ...(unanswered ? [`unanswered ${unanswered}`] : []),
     `to consider ${(selfCheck.toConsider || []).length}`,
     ...((selfCheck.decided || []).length ? [`${selfCheck.decided.length} decided`] : []),
+    ...((selfCheck.changedSince || []).length ? [`${selfCheck.changedSince.length} decided but changed since`] : []),
   ].join(" · ")}`;
 };
 
