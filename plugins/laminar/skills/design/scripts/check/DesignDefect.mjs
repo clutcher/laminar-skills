@@ -87,6 +87,7 @@ export const DEFECT_CODES = Object.freeze({
   REGISTRY_NAME_WITHOUT_ADD: "registry-name-without-add",
   TEST_FILE_OF_SEVERAL_BEHAVIORS: "test-file-of-several-behaviors",
   KIND_DOES_NOT_FIT: "kind-does-not-fit",
+  EVENT_WITH_ONE_LISTENER: "event-with-one-listener",
 });
 
 export const createDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false });

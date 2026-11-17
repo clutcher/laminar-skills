@@ -12,6 +12,7 @@ import { findConfigApiCallDefects } from "./ConfigApiCalls.mjs";
 import { findConstantInstanceDefects } from "./ConstantInstances.mjs";
 import { findDataFlowDefects } from "./DataFlowCheck.mjs";
 import { findNameOfThePath } from "./DefectNames.mjs";
+import { findEventListenerDefects } from "./EventListeners.mjs";
 import { findExitListResult } from "./ExitList.mjs";
 import { findExitReachDefects } from "./ExitReach.mjs";
 import { findAbsentResult, findExitFailureResult, findFailureHandlingDefects } from "./FailureHandling.mjs";
@@ -123,6 +124,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findRegistryNameDefects(model),
     ...findRepresentedKindDefects(model, zoneOrder),
     ...findDomainObjectCopyDefects(model),
+    ...findEventListenerDefects(model),
     ...findChangingCollectionDefects(model),
     ...findConfigApiCallDefects(model, zoneOrder),
     ...findConstantInstanceDefects(model),
