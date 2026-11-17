@@ -47,6 +47,7 @@ The stop reasons that the writer workflow or the calling session gives:
 
 - `stopped-without-a-reason`, which the writer workflow gives a writer that stopped with no stop or gave no answer.
 - `build-failed`, which the calling session gives a finished group whose build failed, with the failing command as `says`.
+- `tests-failed`, which the writer workflow gives a group whose writer finished with a build that did not fail and a test command that failed, or that ran no test where the migration gives the group test steps, with each such command as `says`.
 
 A stop sends the abstraction it names back to the designer. The designer changes the model and runs the checks again, and the cut migration plans the group of the stop whole. A second stop on the same abstraction becomes a question in the mode with a user. In autonomous mode, it ends the plan with the outcome `stop` (`SKILL.md`, section 4, step 1).
 

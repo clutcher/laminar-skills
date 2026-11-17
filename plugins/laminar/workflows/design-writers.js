@@ -46,6 +46,11 @@ const STOPPED_WITHOUT_A_REASON = 'stopped-without-a-reason'
 
 const SAYS_WITHOUT_A_REASON = 'the writer stopped without a reason'
 
+// The stop of a finished group with a test command that failed or ran no test and a build that did not fail; the calling session gives build-failed where the build failed.
+const TESTS_FAILED = 'tests-failed'
+
+const SAYS_NO_TEST_RAN = 'no test ran'
+
 const BUILD_RESULTS = ['passed', 'failed', 'not run']
 
 const TEST_RESULTS = ['passed', 'failed']
@@ -92,7 +97,7 @@ const WRITER_PROPERTIES = {
     type: 'array',
     items: {
       type: 'object',
-      properties: { command: { type: 'string' }, result: { type: 'string', enum: TEST_RESULTS } },
+      properties: { command: { type: 'string' }, result: { type: 'string', enum: TEST_RESULTS }, testsRun: { type: 'integer', minimum: 0 } },
       required: ['command', 'result'],
     },
   },
@@ -258,8 +263,36 @@ function writerMessageOf(group, answerRound) {
   ].join('\n')
 }
 
+function stopAtTheGroupOf(group, reason, says) {
+  return { reason, at: group.firstClass || `migration group ${group.group}`, says }
+}
+
 function stopWithoutAReasonOf(group) {
-  return { reason: STOPPED_WITHOUT_A_REASON, at: group.firstClass || `migration group ${group.group}`, says: SAYS_WITHOUT_A_REASON }
+  return stopAtTheGroupOf(group, STOPPED_WITHOUT_A_REASON, SAYS_WITHOUT_A_REASON)
+}
+
+// A missing testsRun is unknown, as from a writer body that does not give it, so it never counts as 0.
+function ranNoTest(test) {
+  return test.testsRun === 0
+}
+
+// A group that the migration gives no test step may run a command that finds no test; a group given test steps must run 1, or its command did not pass.
+function hasNotPassedIn(group) {
+  const writesTests = Array.isArray(group.testSteps) && group.testSteps.length > 0
+  return test => test.result !== 'passed' || (writesTests && ranNoTest(test))
+}
+
+function describeNotPassed(test) {
+  return ranNoTest(test) ? `${test.command}: ${SAYS_NO_TEST_RAN}` : test.command
+}
+
+// A finished group whose build failed keeps its outcome, because the calling session stops it with build-failed.
+function withAFailedTestStopped(group, finished) {
+  if (finished.outcome !== OUTCOMES.FINISHED || (finished.build && finished.build.result === 'failed')) return finished
+  const notPassed = finished.tests.filter(hasNotPassedIn(group))
+  if (!notPassed.length) return finished
+  log(`migration group ${group.group} stopped with ${TESTS_FAILED}, because a test command of its writer did not pass`)
+  return { ...finished, outcome: OUTCOMES.STOPPED, stop: stopAtTheGroupOf(group, TESTS_FAILED, notPassed.map(describeNotPassed).join(', ')) }
 }
 
 function isAWriterAnswer(returned) {
@@ -292,11 +325,11 @@ async function writtenGroup(group) {
     log(`the ${options.label} call returned nothing usable, so its group is not written and no later group it touches starts`)
     return notWrittenOf(group, OUTCOMES.NO_ANSWER, { stop: stopWithoutAReasonOf(group) })
   }
-  const written = writtenOf(group, returned)
+  const written = withAFailedTestStopped(group, writtenOf(group, returned))
   if (written.outcome !== OUTCOMES.FINISHED) return written
   const notReadyReason = findWhyNotReadyForTheSelfCheck(written)
   if (notReadyReason) return withTheSelfCheckNotRun(group, written, notReadyReason)
-  return selfCheckedGroup(group, written)
+  return withAFailedTestStopped(group, await selfCheckedGroup(group, written))
 }
 
 // An earlier group that this call does not write is taken as written and committed.
@@ -317,7 +350,6 @@ function findWhyNotReadyForTheSelfCheck(written) {
   if (!written.build) return 'the writer gave no build result'
   if (written.build.result === 'failed') return 'the build of the group failed'
   if (!written.tests.length) return 'the writer ran no test'
-  if (written.tests.some(test => test.result !== 'passed')) return 'a test of the group failed'
   return ''
 }
 

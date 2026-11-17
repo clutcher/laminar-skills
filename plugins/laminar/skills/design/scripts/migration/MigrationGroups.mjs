@@ -1,5 +1,6 @@
 import { isAText } from "../model/DesignModel.mjs";
 import { listNamedClasses } from "./GroupOrder.mjs";
+import { MIGRATION_STAGES } from "./MigrationSteps.mjs";
 
 const FOLDER_END = "/";
 
@@ -34,12 +35,14 @@ export const listMigrationGroups = (model, steps) => {
   const groups = numbers.map(number => {
     const groupSteps = steps.filter(step => step.group === number);
     const files = listFilesOfTheSteps(groupSteps);
-    return { number, steps: groupSteps.map(step => step.number), files, namedFiles: listFilesOfTheNamedClasses(model, files) };
+    const testSteps = groupSteps.filter(step => step.stage === MIGRATION_STAGES.TESTS).map(step => step.number);
+    return { number, steps: groupSteps.map(step => step.number), testSteps, files, namedFiles: listFilesOfTheNamedClasses(model, files) };
   });
   return groups.map((group, at) => ({
     group: group.number,
     firstClass: findFirstClassOfTheGroup(model, group.number),
     steps: group.steps,
+    testSteps: group.testSteps,
     dependsOn: groups.slice(0, at).filter(earlierGroup => isTouching(group, earlierGroup)).map(earlierGroup => earlierGroup.number),
   }));
 };
