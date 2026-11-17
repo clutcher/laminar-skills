@@ -1,5 +1,6 @@
 export const DEFECT_CODES = Object.freeze({
   KEY_MISSING: "key-missing",
+  KEY_UNKNOWN: "key-unknown",
   NAME_UNRESOLVED: "name-unresolved",
   NAME_AMBIGUOUS: "name-ambiguous",
   USE_UNRESOLVED: "use-unresolved",

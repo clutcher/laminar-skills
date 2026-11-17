@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { KINDS, findDesignModelFormProblems } from "./DesignModelForm.mjs";
+import { KINDS, findDesignModelFormProblems, findUnknownDesignModelKeys } from "./DesignModelForm.mjs";
 import { isAReadExtension, isATestFile } from "./SourceLanguages.mjs";
 
 export { ANSWER_GIVERS, DOES, KINDS, OVERRIDE_KINDS } from "./DesignModelForm.mjs";
@@ -101,6 +101,7 @@ export class DesignModel {
     this.decisions = given.decisions || {};
     this.childOfFileMap = buildChildOfFileMap(this.folders);
     this.classesOfNameMap = buildClassesOfNameMap(this.classes);
+    this.unknownKeys = findUnknownDesignModelKeys(given);
   }
 
   getClassPath(theClass) {

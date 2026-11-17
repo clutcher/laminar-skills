@@ -48,7 +48,7 @@ const METHOD_FORM = createObjectOf({
 const CLASS_FORM = createObjectOf({
   file: TEXT, kindWord: TEXT, name: TEXT, zone: TEXT, does: createTextOf(Object.values(DOES)), exposed: TRUE_OR_FALSE, oldName: TEXT, group: NUMBER,
   extends: TEXTS, implements: TEXTS, removed: TEXTS, addedForFindings: createListOf(NUMBER),
-  represents: TEXT, for: TEXTS, madeWhen: TEXT, partOf: TEXT,
+  represents: TEXT, for: TEXTS, madeWhen: TEXT, partOf: TEXT, typeParameters: TEXTS,
   fields: createListOf(createObjectOf({ name: TEXT, type: TEXT, oldName: TEXT })),
   methods: createListOf(METHOD_FORM),
 });
@@ -145,4 +145,21 @@ export const findDesignModelFormProblems = given => {
   const problems = [];
   collectFormProblems(given, DESIGN_MODEL_FORM, "", problems);
   return problems;
+};
+
+const collectUnknownKeys = (value, form, path, unknownKeys) => {
+  if (form.form === "list" && Array.isArray(value)) value.forEach((item, at) => collectUnknownKeys(item, form.item, `${path}[${at}]`, unknownKeys));
+  if (form.form !== "object" || !isAnObject(value)) return;
+
+  for (const key of Object.keys(value)) {
+    if (!Object.hasOwn(form.keys, key)) unknownKeys.push({ objectPath: path, key });
+  }
+  for (const [key, keyForm] of Object.entries(form.keys)) collectUnknownKeys(value[key], keyForm, joinKeyPath(path, key), unknownKeys);
+};
+
+// Each key that the form of its object does not know, with the path of that object, which is empty for the top level; no script reads such a key.
+export const findUnknownDesignModelKeys = given => {
+  const unknownKeys = [];
+  collectUnknownKeys(given, DESIGN_MODEL_FORM, "", unknownKeys);
+  return unknownKeys;
 };

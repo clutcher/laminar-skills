@@ -28,6 +28,7 @@ import { findSimplestFormDefects, namesAMethodWithARule } from "./SimplestForm.m
 import { findTestFileBehaviorDefects } from "./TestFileBehaviors.mjs";
 import { findTriedNameDefects } from "./TriedNames.mjs";
 import { findUnchangedCopyDefects } from "./UnchangedCopies.mjs";
+import { findUnknownKeyDefects } from "./UnknownKeys.mjs";
 import { readZoneOrder } from "./ZoneOrder.mjs";
 
 const describeCurrentTree = currentTree => (currentTree
@@ -106,6 +107,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
   const exitFailure = findExitFailureResult(model);
   const exitAbsent = findAbsentResult(model);
   const defects = [
+    ...findUnknownKeyDefects(model),
     ...completeness.defects,
     ...findTestFileBehaviorDefects(model),
     ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
