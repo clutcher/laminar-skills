@@ -69,7 +69,6 @@ export const DEFECT_CODES = Object.freeze({
   RENAMED_CLASS_RAISED_AGAIN: "renamed-class-raised-again",
   TYPE_HOLDS_ONLY_A_COLLECTION: "type-holds-only-a-collection",
   INTERFACE_WITH_ONE_IMPLEMENTATION: "interface-with-one-implementation",
-  TYPE_NOT_OF_THE_DOMAIN: "type-not-of-the-domain",
   COPIES_A_DOMAIN_OBJECT: "copies-a-domain-object",
   COMPUTATION_HOLDS_A_CHANGING_COLLECTION: "computation-holds-a-changing-collection",
   RECORD_ONLY_IN_CONSTANTS: "record-only-in-constants",
@@ -81,6 +80,7 @@ export const DEFECT_CODES = Object.freeze({
   REMOVED_BODILESS_METHOD: "removed-bodiless-method",
   MAP_NAME_WITHOUT_MAP_ENDING: "map-name-without-map-ending",
   TEST_FILE_OF_SEVERAL_BEHAVIORS: "test-file-of-several-behaviors",
+  KIND_DOES_NOT_FIT: "kind-does-not-fit",
 });
 
 export const createDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false });

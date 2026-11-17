@@ -101,6 +101,7 @@
       "file": "src/catalogue/CachedCatalogue.js",
       "kindWord": "class",
       "name": "CachedCatalogue",
+      "represents": "work",
       "does": "coordinates",
       "exposed": true,
       "fields": [
@@ -155,6 +156,7 @@
       "file": "src/holds/HoldDesk.js",
       "kindWord": "class",
       "name": "HoldDesk",
+      "represents": "work",
       "does": "coordinates",
       "exposed": true,
       "fields": [
@@ -209,6 +211,8 @@
       "file": "src/holds/Hold.js",
       "kindWord": "class",
       "name": "Hold",
+      "represents": "domain object",
+      "madeWhen": "a member places a hold on a title",
       "exposed": true,
       "fields": [
         {
@@ -282,6 +286,7 @@
       "file": "src/cli/HoldCommand.js",
       "kindWord": "class",
       "name": "HoldCommand",
+      "represents": "translator",
       "does": "coordinates",
       "exposed": true,
       "fields": [
@@ -354,6 +359,7 @@
       "file": "src/cli/CommandAnswer.js",
       "kindWord": "class",
       "name": "CommandAnswer",
+      "represents": "carrier",
       "does": "computes",
       "exposed": true,
       "fields": [
@@ -417,6 +423,7 @@
       "file": "src/cli/CommandAnswer.js",
       "kindWord": "enum",
       "name": "ExitCode",
+      "represents": "carrier",
       "exposed": false,
       "fields": [
         {

@@ -63,7 +63,7 @@ const DEPTH_TAKERS_OF_A_SECOND_ANSWER = new Set(["forecast", "user"]);
 
 const isACreatedClass = (model, theClass) => model.getKindOfClass(theClass) === KINDS.CREATED;
 
-const isALanguageCollection = type => LANGUAGE_COLLECTION.test(String(type || "").trim());
+export const isALanguageCollection = type => LANGUAGE_COLLECTION.test(String(type || "").trim());
 
 const isAConstant = field => CONSTANT_NAME.test(String(field.name || ""));
 

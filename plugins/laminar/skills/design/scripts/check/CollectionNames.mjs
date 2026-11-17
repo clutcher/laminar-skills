@@ -31,7 +31,7 @@ const KINDS_THAT_WRITE_EVERY_NAME = new Set([KINDS.CREATED, KINDS.MOVED]);
 
 const NAME_STATES = Object.freeze({ WRITTEN: "written", KEPT: "kept", UNKNOWN: "unknown" });
 
-const isAMapType = type => {
+export const isAMapType = type => {
   const text = String(type || "").trim();
   const head = TYPE_HEAD.exec(text);
   return INDEX_SIGNATURE.test(text) || (head !== null && MAP_TYPE_NAMES.has(head[1]));

@@ -23,10 +23,10 @@ import { findFindingsDefects } from "./FindingsCheck.mjs";
 import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
 import { findRemovedBodilessMethodDefects } from "./RemovedBodilessMethods.mjs";
 import { findRepeatedDecisionDefects } from "./RepeatedDecisions.mjs";
+import { findRepresentedKindDefects } from "./RepresentedKinds.mjs";
 import { findSimplestFormDefects, namesAMethodWithARule } from "./SimplestForm.mjs";
 import { findTestFileBehaviorDefects } from "./TestFileBehaviors.mjs";
 import { findTriedNameDefects } from "./TriedNames.mjs";
-import { findTypeNotOfTheDomainDefects } from "./TypesNotOfTheDomain.mjs";
 import { findUnchangedCopyDefects } from "./UnchangedCopies.mjs";
 import { readZoneOrder } from "./ZoneOrder.mjs";
 
@@ -57,9 +57,9 @@ const findWhyTheCycleIsNotOutside = (defect, currentTree) => {
   return folderPair ? `no relation of the base commit makes its edge ${folderPair.fromFolder} -> ${folderPair.toFolder}` : "";
 };
 
-// A collection case is answered only by a reason that names a method of the type with a rule outside construction; every other recheck takes any reason.
+// A collection case, and a domain object of only constants or 1 collection, is answered only by a reason that names a method of the type with a rule outside construction; every other recheck takes any reason.
 const isAnAnswerTheCaseTakes = (model, defect, name, scriptCase) => {
-  if (defect.code !== DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION) return true;
+  if (defect.code !== DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION && !defect.closedOnlyByARule) return true;
 
   const theClass = model.findClass(name);
   return theClass !== null && namesAMethodWithARule(model, theClass, scriptCase.reason);
@@ -112,7 +112,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findTriedNameDefects(model, shapeReviews, roundModels),
     ...findSimplestFormDefects(model),
     ...findCollectionNameDefects(model, currentTree),
-    ...findTypeNotOfTheDomainDefects(model),
+    ...findRepresentedKindDefects(model, zoneOrder),
     ...findDomainObjectCopyDefects(model),
     ...findChangingCollectionDefects(model),
     ...findConstantInstanceDefects(model),
