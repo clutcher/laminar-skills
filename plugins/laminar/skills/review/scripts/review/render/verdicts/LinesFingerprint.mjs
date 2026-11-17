@@ -107,6 +107,16 @@ export class LinesFingerprintsOfTheRun {
     return new LinesFingerprintsOfTheRun(readJsonFileIfPresent(path.join(runFolder, PREPARE_FILE), null), readJsonFileIfPresent(path.join(runFolder, REVIEW_ABSTRACTIONS_FILE), null));
   }
 
+  // Whether the run holds an abstraction of 1 of the names at the scale, in the file where one is given.
+  holdsTheAbstraction(displayNames, scale, file) {
+    return this.abstractions.some(given => isTheAbstraction(given, displayNames, scale, file));
+  }
+
+  // The files that hold an abstraction of 1 of the names at the scale, each once, in the order of the run.
+  listFilesOfTheAbstraction(displayNames, scale) {
+    return [...new Set(this.abstractions.filter(given => isTheAbstraction(given, displayNames, scale, "")).map(given => String(given.path || "")))];
+  }
+
   findLinesFingerprint(displayNames, scale, file, renameMask = []) {
     for (const abstraction of this.abstractions.filter(given => isTheAbstraction(given, displayNames, scale, file))) {
       const linesFingerprint = computeLinesFingerprint(abstraction, renameMask);

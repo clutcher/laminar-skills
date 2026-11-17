@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { isAText, readList, readOldTypeName } from "../model/DesignModel.mjs";
 import { findClassOfTheFinding, readFindingNamePieces } from "./FindingList.mjs";
-import { NOT_REFRESHED_REASONS, formatNotRefreshedLine, readChecksOfTheFinding } from "./DecidedList.mjs";
+import { NOT_REFRESHED_REASONS, createFindingCheckKey, formatNotRefreshedLine, readChecksOfTheFinding } from "./DecidedList.mjs";
 import { listFormerNames } from "../round/FormerNames.mjs";
 import { listRenamesBetweenRounds } from "../round/RoundRenames.mjs";
 import { STANDINGS, findStandingInTheModel } from "../round/AbstractionStanding.mjs";
@@ -25,6 +25,8 @@ const formatInputRunSource = number => `input run item ${number}`;
 const formatShapeRunSource = (run, number) => `shape run ${run} item ${number}`;
 
 const formatDecidedListSource = round => `decided list round ${round}`;
+
+const formatReachSource = decision => `reach of ${decision.check} ${decision.displayName}`;
 
 const createDecisionKey = decision => `${decision.check}\t${decision.scale}\t${decision.displayName}`;
 
@@ -129,6 +131,35 @@ const createDecision = (model, modelBefore, finding, decided, linesFingerprints)
   };
 };
 
+const readReachList = given => (Array.isArray(given) ? given : []);
+
+// The file of a reach key: its own, else the 1 file of the run that holds the name; none where 2 files hold it, which the design check refuses.
+const readFileOfTheReachKey = (key, scale, linesFingerprints) => {
+  if (key.file) return key.file;
+  const files = linesFingerprints.listFilesOfTheAbstraction([key.displayName], scale);
+  return files.length === 1 ? files[0] : "";
+};
+
+// A reach decision decides only the key the person named, so it carries no class of its method, and never decides a class result by the class-of-the-method match.
+const withoutTheClassOfTheMethod = ({ classDisplayName, classFormerNames, ...decision }) => decision;
+
+// 1 decision per key the person named in the reach of a ruling, each with the lines fingerprint of its own lines in the input run folder, so each holds only while its own lines stand as they were; a key whose file is not 1 or whose lines give no fingerprint is left out, because the design check refuses it.
+const listDecisionsOfTheReach = ({ model, modelBefore, linesFingerprints }, decision, reach) => (linesFingerprints ? readReachList(reach) : [])
+  .map(key => ({ key, scale: String(key.scale).toLowerCase() }))
+  .map(({ key, scale }) => ({ key, scale, file: readFileOfTheReachKey(key, scale, linesFingerprints) }))
+  .filter(({ file }) => file)
+  .map(({ key, scale, file }) => createDecision(model, modelBefore, { displayName: key.displayName, scale, check: key.check || decision.check, file }, { reason: decision.reason, says: decision.says, decidedBy: decision.decidedBy, plan: decision.plan, source: formatReachSource(decision) }, linesFingerprints))
+  .filter(reachDecision => reachDecision.linesFingerprint)
+  .map(reachDecision => ({ ...withoutTheClassOfTheMethod(reachDecision), reachOf: decision.displayName }));
+
+const createDecisionWithItsReach = (context, finding, decided, reach) => {
+  const decision = createDecision(context.model, context.modelBefore, finding, decided, context.linesFingerprints);
+  return [decision, ...listDecisionsOfTheReach(context, decision, reach)];
+};
+
+// The reach the decided list gave the check of a finding the designer closes with a reason class, read from the list and never from the model.
+const readReachOfTheFinding = (decisionOfFindingCheckMap, finding) => (decisionOfFindingCheckMap.get(createFindingCheckKey(finding, finding.check)) || {}).reach;
+
 // An object that asks for a change of the code is no decision, so only an object with a reason and no closing enters.
 const isADecidingObject = object => isAText(object.reason) && !isAText(object.closedBy) && !isAText(object.openAfterCeiling);
 
@@ -139,24 +170,50 @@ const listFindingsOfTheItem = (run, number, check) => {
   return item.findings.flatMap(finding => readChecksOfTheFinding(finding).filter(other => !isAText(check) || other === check).map(other => ({ ...finding, check: other })));
 };
 
-const listDecisionsOfTheObjects = ({ model, modelBefore, plan, inputRun, readShapeRun, linesFingerprints }) => readList(model.decisions.findings)
+const listDecisionsOfTheObjects = context => readList(context.model.decisions.findings)
   .filter(isADecidingObject)
   .flatMap(object => {
     const isOfAShapeRun = Number.isFinite(object.run);
-    const run = isOfAShapeRun ? readShapeRun(object.run) : inputRun;
+    const run = isOfAShapeRun ? context.readShapeRun(object.run) : context.inputRun;
     const source = isOfAShapeRun ? formatShapeRunSource(object.run, object.number) : formatInputRunSource(object.number);
-    return listFindingsOfTheItem(run, object.number, object.check).map(finding => createDecision(model, modelBefore, finding, { ...object, plan, source }, linesFingerprints));
+    const readReach = finding => (isOfAShapeRun ? [] : readReachOfTheFinding(context.decisionOfFindingCheckMap, finding));
+    return listFindingsOfTheItem(run, object.number, object.check).flatMap(finding => createDecisionWithItsReach(context, finding, { ...object, plan: context.plan, source }, readReach(finding)));
   });
 
-const listDecisionsOfTheEntries = ({ model, modelBefore, plan, entries, linesFingerprints }) => readList(entries)
+const listDecisionsOfTheEntries = context => readList(context.entries)
   .filter(entry => isAText(entry.reason))
   .map(entry => ({ ...entry, scale: String(entry.scale).toLowerCase(), file: entry.file || "" }))
-  .map(finding => createDecision(model, modelBefore, finding, { ...finding, plan, source: SOURCES.FINDINGS_FILE }, linesFingerprints));
+  .flatMap(finding => createDecisionWithItsReach(context, finding, { ...finding, plan: context.plan, source: SOURCES.FINDINGS_FILE }, finding.reach));
 
 // A result the input run set apart as decided but changed since, ruled on again by an entry of the round of the run with the lines fingerprint of this run, is a decision of this plan with the lines fingerprint of this run. Where this run gives its abstraction no lines fingerprint, the decision the results folder holds stays, because a decision of this plan with no fingerprint would hold whatever its code becomes or expire on the kind of this plan.
-const listDecisionsOfTheRefreshed = ({ model, modelBefore, plan, refreshed, linesFingerprints }) => refreshed
-  .map(({ finding, decision, round }) => ({ decision: createDecision(model, modelBefore, finding, { ...decision, plan, source: formatDecidedListSource(round) }, linesFingerprints), replacedKey: createCheckAndNameKey(finding.check, finding.displayNameOfTheDecision || finding.displayName) }))
+const listDecisionsOfTheRefreshed = context => context.refreshed
+  .map(({ finding, decision, round }) => {
+    const [refreshedDecision, ...reachDecisions] = createDecisionWithItsReach(context, finding, { ...decision, plan: context.plan, source: formatDecidedListSource(round) }, decision.reach);
+    return { decision: refreshedDecision, reachDecisions, replacedKey: createCheckAndNameKey(finding.check, finding.displayNameOfTheDecision || finding.displayName) };
+  })
   .filter(({ decision }) => decision.linesFingerprint);
+
+const listKeysOfTheDecision = decision => [decision.displayName, ...readList(decision.formerNames)].map(displayName => createDecisionKey({ ...decision, displayName }));
+
+const isSentToAFix = entry => !isAText(entry.reason) && !entry.toConsider;
+
+const isADirectDecision = decision => !decision.reachOf;
+
+// A reach never replaces a ruling, in any order of the list: a decision this plan made on its key by an entry or an object, a decision of an earlier plan the export carries, and a key the same round sends to a fix each keep the key, and of 2 reaches on 1 key the first stands.
+const keepTheReachOffTheRulings = (decisions, carried, entries) => {
+  const ruledKeys = new Set([
+    ...decisions.filter(isADirectDecision).flatMap(listKeysOfTheDecision),
+    ...carried.flatMap(listKeysOfTheDecision),
+    ...readList(entries).filter(isSentToAFix).map(entry => createDecisionKey({ ...entry, scale: String(entry.scale).toLowerCase() })),
+  ]);
+  return decisions.filter(decision => {
+    if (isADirectDecision(decision)) return true;
+    const keys = listKeysOfTheDecision(decision);
+    if (keys.some(key => ruledKeys.has(key))) return false;
+    for (const key of keys) ruledKeys.add(key);
+    return true;
+  });
+};
 
 // The key of an earlier decision on 1 check by its display name, which the suppression of a set-apart result names as the key of the decision that marked it.
 const createCheckAndNameKey = (check, displayName) => `${check}\t${displayName}`;
@@ -200,16 +257,18 @@ const listExistingDefectsLeftUnfixed = model => readList(model.decisions.existin
 const listOverrides = model => readList(model.decisions.conventions?.overrides).filter(override => override.kind === "override");
 
 // The decided review file of 1 ready plan: every decision of this plan, also of a result the input run set apart and the decided list rules on again in the round of the run, and of the earlier ready plans of the results folder, each with the lines fingerprint of the input run folder where it gives one, and as context the answered questions and the existing defects left unfixed, which match no result.
-export const buildDecidedReview = ({ model, modelBefore, plan, inputRun, entries, readShapeRun, baseCommit, planCommit, earlier, linesFingerprints = null, refreshed = [] }) => {
+export const buildDecidedReview = ({ model, modelBefore, plan, inputRun, entries, readShapeRun, baseCommit, planCommit, earlier, linesFingerprints = null, refreshed = [], decisionOfFindingCheckMap = new Map() }) => {
+  const context = { model, modelBefore, plan, inputRun, entries, readShapeRun, linesFingerprints, refreshed, decisionOfFindingCheckMap };
   const decisionOfKeyMap = new Map();
-  const refreshedDecisions = listDecisionsOfTheRefreshed({ model, modelBefore, plan, refreshed, linesFingerprints });
-  for (const decision of [...listDecisionsOfTheObjects({ model, modelBefore, plan, inputRun, readShapeRun, linesFingerprints }), ...listDecisionsOfTheEntries({ model, modelBefore, plan, entries, linesFingerprints }), ...refreshedDecisions.map(refresh => refresh.decision)]) {
+  const refreshedDecisions = listDecisionsOfTheRefreshed(context);
+  for (const decision of [...listDecisionsOfTheObjects(context), ...listDecisionsOfTheEntries(context), ...refreshedDecisions.flatMap(refresh => [refresh.decision, ...refresh.reachDecisions])]) {
     const key = `${createDecisionKey(decision)}\t${decision.source}`;
     if (!decisionOfKeyMap.has(key)) decisionOfKeyMap.set(key, decision);
   }
-  const decisions = [...decisionOfKeyMap.values()];
+  const decisionsOfThePlan = [...decisionOfKeyMap.values()];
   const replacedKeys = new Set(refreshedDecisions.map(refresh => refresh.replacedKey));
-  const { carried, dropped } = carryTheEarlierDecisions(earlier, model, new Set(decisions.map(createDecisionKey)), replacedKeys);
+  const { carried, dropped } = carryTheEarlierDecisions(earlier, model, new Set(decisionsOfThePlan.filter(isADirectDecision).map(createDecisionKey)), replacedKeys);
+  const decisions = keepTheReachOffTheRulings(decisionsOfThePlan, carried, entries);
   return {
     decidedReview: {
       plan,

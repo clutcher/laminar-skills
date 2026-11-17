@@ -27,9 +27,14 @@ const readTexts = given => (Array.isArray(given) ? given.filter(isAText) : []);
 // The renames of the plan the decision's lines use, each [old name, new name]; a malformed pair is left out, which can only read as changed since.
 const readRenameMask = given => (Array.isArray(given) ? given.filter(names => Array.isArray(names) && names.length === 2 && names.every(isAText)) : []);
 
+const isAnObject = given => typeof given === "object" && given !== null && !Array.isArray(given);
+
+// A decision that is no object, that lacks a field of its key, or whose reachOf is present and no text, stops the render with its number, never with an error of the language, because a reach read as a direct decision would take the class of its method.
 const createDecision = (given, order) => {
+  if (!isAnObject(given)) throw new RunFileStop(`decided review file: decision ${order + 1} is no object`);
   const missing = KEY_FIELDS.filter(field => !isAText(given[field]));
   if (missing.length) throw new RunFileStop(`decided review file: decision ${order + 1} has no ${missing.join(", ")}`);
+  if (given.reachOf !== undefined && !isAText(given.reachOf)) throw new RunFileStop(`decided review file: decision ${order + 1} (${given.check} ${given.displayName}) has a reachOf that is no text`);
   return {
     check: given.check,
     scale: given.scale.toLowerCase(),
@@ -46,6 +51,7 @@ const createDecision = (given, order) => {
     classFormerNames: readTexts(given.classFormerNames),
     linesFingerprint: isAText(given.linesFingerprint) ? given.linesFingerprint : "",
     renameMask: readRenameMask(given.renameMask),
+    reachOf: isAText(given.reachOf) ? given.reachOf : "",
   };
 };
 
@@ -72,9 +78,9 @@ export const readDecidedReviewFile = filePath => {
   };
 };
 
-const readCheckIds = finding => (finding.combined ? [...finding.combined.checks] : [finding.check]);
+export const readCheckIds = finding => (finding.combined ? [...finding.combined.checks] : [finding.check]);
 
-const readScale = finding => String(finding.scale || (finding.abstraction || {}).scale || "").toLowerCase();
+export const readScale = finding => String(finding.scale || (finding.abstraction || {}).scale || "").toLowerCase();
 
 export const readDisplayNameOfTheFinding = finding => formatDisplayNameText(finding) || String((finding.abstraction || {}).displayName || "");
 
@@ -87,8 +93,9 @@ const namesTheOwnMethod = (text, methodName) => new RegExp(`(?<![A-Za-z0-9_$])(?
 
 const listEvidenceTexts = finding => [...(finding.evidence || []), ...(finding.quotes || [])].map(line => (line && typeof line === "object" ? line.text : ""));
 
-// 1 step up only: a method-scale decision reaches a class-scale result on the class the model gives the method, and only where the judge's evidence names the method.
+// 1 step up only: a method-scale decision reaches a class-scale result on the class the model gives the method, and only where the judge's evidence names the method. A reach decision decides only the key the person named, so it never takes the class of its method.
 const isOnTheClassOfTheMethod = (decision, finding, displayName) => decision.scale === METHOD_SCALE
+  && !decision.reachOf
   && readScale(finding) === CLASS_SCALE
   && isAText(decision.classDisplayName)
   && (displayName === decision.classDisplayName || decision.classFormerNames.includes(displayName))
@@ -177,6 +184,9 @@ const createTheMarkOfTheFinding = (finding, marks, linesFingerprints) => {
 
 const NO_LINES_FINGERPRINTS = new LinesFingerprintsOfTheRun(null, null);
 
+// A decision the reach of a ruling gave holds only while the lines of its own key stand as they were, so one without a lines fingerprint, as a file written by hand can hold, is never applied.
+const isAReachWithoutAFingerprint = decision => Boolean(decision.reachOf) && !decision.linesFingerprint;
+
 export class DecidedResults {
   // A file whose plan base the reviewed range does not hold applies no decision, and the reports say why.
   constructor(decidedReview, settledFindings, changeKinds, { notAppliedReason = "", linesFingerprints = NO_LINES_FINGERPRINTS, written = NO_WRITTEN_LINES } = {}) {
@@ -189,8 +199,10 @@ export class DecidedResults {
     this.ambiguous = [];
     this.expired = [];
     const marksOfFindingMap = new Map();
-    const appliedDecisions = notAppliedReason ? [] : decidedReview.decisions;
-    for (const decision of appliedDecisions) this.matchTheDecision(decision, settledFindings, changeKinds, marksOfFindingMap);
+    const decisionsOfTheFile = notAppliedReason ? [] : decidedReview.decisions;
+    this.reachWithoutAFingerprint = decisionsOfTheFile.filter(isAReachWithoutAFingerprint);
+    this.appliedDecisions = decisionsOfTheFile.filter(decision => !isAReachWithoutAFingerprint(decision));
+    for (const decision of this.appliedDecisions) this.matchTheDecision(decision, settledFindings, changeKinds, marksOfFindingMap);
     this.combinedLeftOpen = settledFindings.filter(finding => marksOfFindingMap.has(finding) && listChecksLeftOpen(finding, marksOfFindingMap.get(finding)).length)
       .map(finding => ({ finding, decisions: marksOfFindingMap.get(finding).map(mark => mark.decision), openChecks: listChecksLeftOpen(finding, marksOfFindingMap.get(finding)) }));
     for (const { finding } of this.combinedLeftOpen) marksOfFindingMap.delete(finding);

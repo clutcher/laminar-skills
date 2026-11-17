@@ -7,7 +7,7 @@ import { readNamedReviewItems } from "./check/ReviewItems.mjs";
 import { isAText, readDesignModel } from "./model/DesignModel.mjs";
 import { readDesignModelOrExit, readOptionsOrExit } from "./command/CommandLine.mjs";
 import { carryTheFixedFindings, listUnfinishedGroupsOfThePlanBefore } from "./plan/FixedFindings.mjs";
-import { DecidedListStop, checkDecidedListForm, resolveDecidedList } from "./plan/DecidedList.mjs";
+import { DecidedListStop, checkDecidedListForm, findReachDefects, resolveDecidedList } from "./plan/DecidedList.mjs";
 import { listFindingEntries } from "./plan/FindingList.mjs";
 import { buildDecidedReview, readCommitOfThePlan } from "./plan/DecidedReview.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
@@ -80,16 +80,16 @@ const NO_DECIDED_LIST = Object.freeze({ round: null, decided: [] });
 
 const ROUNDS_FOLDER = "rounds";
 
-// A decided list that names a key no finding of the run holds, or a round that is not the round of the run, was written for another run, so the finish stops before it writes findings.json or a plan folder.
-const stopOnTheDecidedDefects = defects => {
+// A decided list that names a key no finding of the run holds, a round that is not the round of the run, or a reach key the run cannot guard, was written for another run or cannot be applied, so the finish stops before it writes findings.json or a plan folder; a list whose form is refused stops with exit 2.
+const stopOnTheDecidedDefects = (defects, exitCode = DEFECT_EXIT_CODE) => {
   for (const defect of defects) console.log(`${DEFECT_PREFIX}${defect.code}\t${defect.name}\t${defect.sentence}`);
   console.log(`stopped\tdecided\tthe decided list holds ${defects.length} defect(s)`);
-  console.log(`${RESULT_PREFIX}${JSON.stringify({ stopped: "decided", exit: DEFECT_EXIT_CODE })}`);
-  process.exit(DEFECT_EXIT_CODE);
+  console.log(`${RESULT_PREFIX}${JSON.stringify({ stopped: "decided", exit: exitCode })}`);
+  process.exit(exitCode);
 };
 
 // The run folder of --review with the decisions of the decided list, read once before the 3 scripts, because findings.json and the dispositions of the round both rest on them.
-const readTheRunOrExit = options => {
+const readTheRunOrExit = (options, model) => {
   if (!options.review) {
     if (options.decided) exitWith(`--decided needs --review, the review.md of the run folder whose findings it decides\n${USAGE}`);
     return null;
@@ -100,10 +100,12 @@ const readTheRunOrExit = options => {
     const decidedList = options.decided ? checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided")) : NO_DECIDED_LIST;
     const roundOfTheRun = findTheRoundOfTheRun(path.join(path.resolve(options.results), ROUNDS_FOLDER), runFolder);
     const { decisionOfFindingMap, decisionOfFindingCheckMap, refreshed, notRefreshedLines, defects } = resolveDecidedList(decidedList, run, createFinderOfTheRunHoldingTheKey(runFolder), roundOfTheRun);
-    if (defects.length) stopOnTheDecidedDefects(defects);
+    const allDefects = [...defects, ...findReachDefects(decidedList, LinesFingerprintsOfTheRun.readFrom(runFolder), { run, decisionOfFindingCheckMap, model })];
+    if (allDefects.length) stopOnTheDecidedDefects(allDefects);
     return { run, decisionOfFindingMap, decisionOfFindingCheckMap, refreshed, notRefreshedLines };
   } catch (error) {
-    if (!(error instanceof DecidedListStop || error instanceof RoundStop)) throw error;
+    if (error instanceof DecidedListStop) return stopOnTheDecidedDefects(error.defects, STOP_EXIT_CODE);
+    if (!(error instanceof RoundStop)) throw error;
     return exitWith(error.message);
   }
 };
@@ -181,6 +183,7 @@ const writeTheDecidedReview = (resultsFolder, plan, model, roundInput) => {
     earlier: findTheEarlierExport(resultsFolder, plan),
     linesFingerprints: roundInput ? LinesFingerprintsOfTheRun.readFrom(roundInput.run.runFolder) : null,
     refreshed: roundInput ? roundInput.refreshed : [],
+    decisionOfFindingCheckMap: roundInput ? roundInput.decisionOfFindingCheckMap : new Map(),
   });
   writeJson(path.join(planFolder, DECIDED_REVIEW_FILE), decidedReview);
   for (const line of droppedLines) console.log(line);
@@ -207,7 +210,7 @@ function finishModel() {
   const resultsFolder = path.resolve(options.results);
   const model = readDesignModelOrExit(options.model);
   const plan = Math.max(findLastPlan(resultsFolder), 1);
-  const runInput = readTheRunOrExit(options);
+  const runInput = readTheRunOrExit(options, model);
   // The groups that waited on a stopped group are planned again also with no run folder, because the writer workflow plans only the groups of the migration.
   const unfinishedGroups = listUnfinishedGroupsOfThePlanBefore(model, resultsFolder, plan);
   const entries = runInput ? carryTheFixedFindings(model, resultsFolder, plan, listFindingEntries(model, runInput.run, runInput.decisionOfFindingMap, runInput.decisionOfFindingCheckMap)) : [];

@@ -6,8 +6,9 @@ import { findDecidedDefects } from "./check/DecidedCheck.mjs";
 import { findNameOfThePath } from "./check/DefectNames.mjs";
 import { listClassesOfTheAbstractions } from "./check/TriedNames.mjs";
 import { readBaseCommit, readDesignModelOrExit, readOptionsOrExit, readTreeCommit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
-import { DecidedListStop, checkDecidedListForm, readDecidedEntries, resolveDecidedList } from "./plan/DecidedList.mjs";
+import { DecidedListStop, checkDecidedListForm, findReachDefects, readDecidedEntries, resolveDecidedList } from "./plan/DecidedList.mjs";
 import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
+import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
 
 const USAGE = "usage: node checkDesign.mjs --model <design-model.json> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md> [--decided <decided list>]] [--shape-review <results>/shape-runs/<n>/review.md]... [--autonomous]";
 
@@ -99,6 +100,15 @@ const readRoundModelsOrExit = modelPath => {
     .map(name => readDesignModelOrExit(path.join(roundsFolder, name, MODEL_FILE)));
 };
 
+const asAnOpenDefect = defect => ({ ...defect, recheck: false, foundWrong: false });
+
+// A list whose form is refused gives 1 defect decided-list-malformed per malformed object, for its first problem, and stops the check with exit 2, before the model is checked.
+const stopOnTheMalformedList = defects => {
+  for (const defect of defects) console.log(formatDefect(asAnOpenDefect(defect)));
+  console.log(`RESULT ${JSON.stringify({ defects: defects.length, recheck: 0, foundWrong: 0, keys: 0, stopped: "decided" })}`);
+  process.exit(STOP_EXIT_CODE);
+};
+
 // The decided list names findings of the run folder that holds review.md, so it needs --review; a list that is refused stops the check. The round of the run is read from the rounds folder beside the model, the results folder.
 const findDecidedDefectsOrExit = (model, options) => {
   if (!options.decided) return [];
@@ -106,10 +116,12 @@ const findDecidedDefectsOrExit = (model, options) => {
   try {
     const run = readRunFolder(path.dirname(path.resolve(options.review)), false);
     const roundOfTheRun = findTheRoundOfTheRun(path.join(path.dirname(path.resolve(options.model)), ROUNDS_FOLDER), run.runFolder);
-    const { decisionOfFindingCheckMap, defects } = resolveDecidedList(checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided")), run, createFinderOfTheRunHoldingTheKey(run.runFolder), roundOfTheRun);
-    return [...defects, ...findDecidedDefects(model, run, decisionOfFindingCheckMap)].map(defect => ({ ...defect, recheck: false, foundWrong: false }));
+    const decidedList = checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided"));
+    const { decisionOfFindingCheckMap, defects } = resolveDecidedList(decidedList, run, createFinderOfTheRunHoldingTheKey(run.runFolder), roundOfTheRun);
+    return [...defects, ...findReachDefects(decidedList, LinesFingerprintsOfTheRun.readFrom(run.runFolder), { run, decisionOfFindingCheckMap, model }), ...findDecidedDefects(model, run, decisionOfFindingCheckMap)].map(asAnOpenDefect);
   } catch (error) {
-    if (!(error instanceof DecidedListStop || error instanceof RoundStop)) throw error;
+    if (error instanceof DecidedListStop) return stopOnTheMalformedList(error.defects);
+    if (!(error instanceof RoundStop)) throw error;
     return exitWith(error.message);
   }
 };
