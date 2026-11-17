@@ -302,10 +302,15 @@ const checkTheResultOfOneCall = (check, theClass) => {
   check.addDefect(theClass, "represents", `${theClass.name} is marked ${theClass.represents}, and only 1 call, ${calls[0]}, returns it, while no class holds it and nothing stores it or reads it again, so it is a carrier named after that call; ${WAYS_OUT_OF_THE_RESULT_OF_ONE_CALL}`);
 };
 
-// A folder named for a type: its last name, in lower case with hyphens and underscores left out, equals the name of the type in lower case, so nightly-job, nightly_job and nightlyjob all name NightlyJob.
+// A folder named for a type: its last name, in lower case with hyphens and underscores left out, equals the name of the type in lower case, alone or with the plural ending s or es, so nightly-job, nightly_job, nightlyjob and nightlyjobs all name NightlyJob.
 const readComparableName = name => String(name || "").replace(/[-_]/g, "").toLowerCase();
 
-const isTheFolderNamedFor = (folder, theClass) => readComparableName(folder.split("/").pop()) === readComparableName(theClass.name);
+const PLURAL_ENDINGS = ["", "s", "es"];
+
+const isTheFolderNamedFor = (folder, theClass) => {
+  const folderName = readComparableName(folder.split("/").pop());
+  return PLURAL_ENDINGS.some(ending => folderName === `${readComparableName(theClass.name)}${ending}`);
+};
 
 // A part of the whole is a class whose partOf names the whole or a class nested in it, so the outermost class of the named whole is compared.
 const isAPartOfTheWhole = (model, otherClass, outermostWhole) => {
@@ -319,7 +324,7 @@ const listOtherClassesOfTheFolder = (model, folder, outermostPart, outermostWhol
   && readFolderOfTheFile(otherClass.file) === folder
   && !isAPartOfTheWhole(model, otherClass, outermostWhole));
 
-// A part stands with its whole: nested in it, in a folder named for it, or in a folder that holds only the whole and its parts; the outermost class of a nested whole stands in for it.
+// A part stands with its whole: nested in it, in a folder named for it, or in the folder of the whole where that folder holds only the whole and its parts; the outermost class of a nested whole stands in for it.
 const checkThePlaceOfThePart = (check, theClass, wholeClass) => {
   const { model } = check;
   const outermostWhole = model.findOutermostClass(wholeClass);
@@ -328,6 +333,12 @@ const checkThePlaceOfThePart = (check, theClass, wholeClass) => {
 
   const folder = readFolderOfTheFile(outermostPart.file);
   if (isTheFolderNamedFor(folder, outermostWhole)) return;
+  if (!isAText(outermostWhole.file)) return;
+  const wholeFolder = readFolderOfTheFile(outermostWhole.file);
+  if (folder !== wholeFolder) {
+    check.addDefect(theClass, "partOf", `${theClass.name} is part of ${outermostWhole.name} and stands in ${folder}, apart from ${outermostWhole.name} in ${wholeFolder}; nest it in ${outermostWhole.name}, or put ${outermostWhole.name} and its parts into a subfolder named for ${outermostWhole.name}`);
+    return;
+  }
   const otherClass = listOtherClassesOfTheFolder(model, folder, outermostPart, outermostWhole)[0];
   if (!otherClass) return;
   check.addDefect(theClass, "partOf", `${theClass.name} is part of ${outermostWhole.name} and stands loose in a folder that holds ${otherClass.name}, which is neither ${outermostWhole.name} nor a part of it; nest it in ${outermostWhole.name}, or put ${outermostWhole.name} and its parts into a subfolder named for ${outermostWhole.name}`);
