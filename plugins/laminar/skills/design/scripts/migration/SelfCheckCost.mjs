@@ -14,6 +14,15 @@ const HELPER_METHOD_CALLS_PER_TEST = 1;
 
 const NO_SCREENS = Object.freeze({ presence: [], ioRules: [] });
 
+// Measured on the self-checks of 9 groups of 4 one-shot runs: the judge, refuter and verifier calls per planned judge call, the 3 helper calls of each group, and the answer round, which runs only where a judge call keeps a finding, as a mean over the groups with planned judge calls. The constants are fixed dollars of the models of those runs, so they do not follow a change of the models in cost-plan.json.
+const DOLLARS_PER_PLANNED_JUDGE_CALL = 0.0135;
+
+const HELPER_DOLLARS = 0.1;
+
+const ANSWER_ROUND_DOLLARS = 0.23;
+
+const estimateDollars = judgeCalls => judgeCalls * DOLLARS_PER_PLANNED_JUDGE_CALL + HELPER_DOLLARS + (judgeCalls > 0 ? ANSWER_ROUND_DOLLARS : 0);
+
 const listWrittenFilesOfTheGroup = (steps, group) => new Set(steps
   .filter(step => step.group === group && step.stage !== MIGRATION_STAGES.TESTS)
   .flatMap(step => step.files));
@@ -55,7 +64,7 @@ export const estimateSelfCheckCost = (model, steps, group) => {
     "judge-simplicity-variable": namedMethods * VARIABLE_CALLS_PER_NAMED_METHOD,
     "judge-correctness-simplicity-test-method": tests,
   }), NO_SCREENS);
-  return { judgeCalls: upTo.judgeCalls, dollars: upTo.dollars };
+  return { judgeCalls: upTo.judgeCalls, dollars: Number(estimateDollars(upTo.judgeCalls).toFixed(2)) };
 };
 
 export const formatSelfCheckCostLine = cost => `Self-check: judge calls about ${cost.judgeCalls} · dollars about $${cost.dollars.toFixed(2)}`;
