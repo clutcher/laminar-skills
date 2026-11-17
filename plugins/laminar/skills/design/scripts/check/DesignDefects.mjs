@@ -24,7 +24,7 @@ import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
 import { findRemovedBodilessMethodDefects } from "./RemovedBodilessMethods.mjs";
 import { findRepeatedDecisionDefects } from "./RepeatedDecisions.mjs";
 import { findRepresentedKindDefects } from "./RepresentedKinds.mjs";
-import { findSimplestFormDefects, namesAMethodWithARule } from "./SimplestForm.mjs";
+import { findSimplestFormDefects, isAnAnswerOfTheCollectionCase, namesAMethodWithARule } from "./SimplestForm.mjs";
 import { findTestFileBehaviorDefects } from "./TestFileBehaviors.mjs";
 import { findTriedNameDefects } from "./TriedNames.mjs";
 import { findUnchangedCopyDefects } from "./UnchangedCopies.mjs";
@@ -58,12 +58,13 @@ const findWhyTheCycleIsNotOutside = (defect, currentTree) => {
   return folderPair ? `no relation of the base commit makes its edge ${folderPair.fromFolder} -> ${folderPair.toFolder}` : "";
 };
 
-// A collection case, a class of only constants and a domain object of 1 collection are answered only by a reason that names a method of the type with a rule outside construction; every other recheck takes any reason.
+// A collection case is answered by a reason that names a public method of a type marked work, or a method with a rule outside construction on every other mark; a class of only constants and a domain object of 1 collection are answered only by a reason that names a method of the type with a rule outside construction; every other recheck takes any reason.
 const isAnAnswerTheCaseTakes = (model, defect, name, scriptCase) => {
   if (defect.code !== DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION && !defect.closedOnlyByARule) return true;
 
   const theClass = model.findClass(name);
-  return theClass !== null && namesAMethodWithARule(model, theClass, scriptCase.reason);
+  if (theClass === null) return false;
+  return defect.code === DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION ? isAnAnswerOfTheCollectionCase(model, theClass, scriptCase.reason) : namesAMethodWithARule(model, theClass, scriptCase.reason);
 };
 
 const markTheScriptCases = (model, defects, currentTree) => {

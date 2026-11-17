@@ -63,6 +63,11 @@ const DEPTH_TAKERS_OF_A_SECOND_ANSWER = new Set(["forecast", "user"]);
 
 const DOMAIN_OBJECT = "domain object";
 
+const WORK = "work";
+
+// A contract with 2 or more implementations in the model is a choice with 2 answers, so a collection of it holds the implementations to pick from.
+const IMPLEMENTATIONS_OF_A_CHOICE = 2;
+
 const isACreatedClass = (model, theClass) => model.getKindOfClass(theClass) === KINDS.CREATED;
 
 export const isALanguageCollection = type => LANGUAGE_COLLECTION.test(String(type || "").trim());
@@ -591,12 +596,25 @@ const findTheCollectionTypeDefect = (model, theClass, collection) => createReche
   `${theClass.name} is a created type whose only field that is no constant is the collection ${collection.type} of the language, and its methods only fill it at creation or read it; hold the collection as a field of the service that uses it and make the lookup a method of that service; keep the type only where it decides something the service could not`,
 );
 
+const listReasonWords = reason => String(reason || "").split(/[\s,;:()`'"]+/).map(word => word.replace(/\.+$/, ""));
+
 // An answer under scriptCases closes the collection case only where it names a method of the type whose body holds a rule outside construction, because a new name or a reason that restates the field shows no decision that the service could not make.
 export const namesAMethodWithARule = (model, theClass, reason) => {
-  const words = String(reason || "").split(/[\s,;:()`'"]+/).map(word => word.replace(/\.+$/, ""));
+  const words = listReasonWords(reason);
   const constructionMethods = listConstructionMethods(theClass);
   return readList(theClass.methods).some(method => holdsARuleOutsideConstruction(constructionMethods, method) && words.includes(model.getMethodDisplayName(theClass, method)));
 };
+
+// A type marked work that only looks up among its elements has no method with a rule by its case, so its answer closes the case where it names a public method of the type, the lookup it keeps; a reason that restates the field still does not.
+const namesAPublicMethodOfTheType = (model, theClass, reason) => {
+  const words = listReasonWords(reason);
+  return readList(theClass.methods).some(method => method.visibility !== "private" && words.includes(model.getMethodDisplayName(theClass, method)));
+};
+
+// An answer under scriptCases closes the collection case of a type marked work where it names a public method of the type, and on every other mark only where it names a method with a rule outside construction.
+export const isAnAnswerOfTheCollectionCase = (model, theClass, reason) => (theClass.represents === WORK
+  ? namesAPublicMethodOfTheType(model, theClass, reason)
+  : namesAMethodWithARule(model, theClass, reason));
 
 const isInALayoutSplit = theClass => ZONES_OF_A_LAYOUT_SPLIT.has(theClass.zone) || String(theClass.file || "").split("/").some(segment => ZONES_OF_A_LAYOUT_SPLIT.has(segment));
 
@@ -613,14 +631,23 @@ const findTheSingleImplementationDefect = (model, theInterface, implementation) 
   `${theInterface.name} is a created interface that only ${implementation.name} implements in the model, outside api and spi, and no depth that the user or a forecast took names it`,
 );
 
-// A type marked domain object that only finds, filters or picks among its elements is no domain object, whatever its body, so its case is a defect; on every other mark the case is a recheck, because a rule can stand outside what the model shows.
+const findTheInterfaceOfTheName = (model, typeName) => model.classes.find(theClass => isAnInterface(theClass) && readSimpleName(theClass) === typeName);
+
+// The collection holds the implementations of 1 contract where an element type is an interface of the model that 2 or more classes of the model implement, such as the map of the readers of 1 file format each, keyed by a text.
+const holdsTheImplementationsOfAContract = (model, collection) => [...listElementTypeNames(collection)].some(typeName => {
+  const theInterface = findTheInterfaceOfTheName(model, typeName);
+  return theInterface !== undefined && listImplementations(model, theInterface).length >= IMPLEMENTATIONS_OF_A_CHOICE;
+});
+
+// A type marked domain object that only finds, filters or picks among its elements is no domain object, whatever its body, so its case is a defect. A type marked work that holds the implementations of 1 contract is the class that picks 1 of them, which is 1 of the 2 places of that class, so it has no case. On every other mark, and for a collection of values or domain objects, the case is a recheck, because a rule can stand outside what the model shows.
 const findTheCollectionDefect = (model, theClass) => {
   if (theClass.represents === DOMAIN_OBJECT) {
     const collection = findTheOnlyCollectionOfTheDomainObject(theClass);
     return collection ? findTheDomainObjectCollectionDefect(model, theClass, collection) : null;
   }
   const collection = findTheOnlyCollection(theClass);
-  return collection ? findTheCollectionTypeDefect(model, theClass, collection) : null;
+  if (collection === null) return null;
+  return theClass.represents === WORK && holdsTheImplementationsOfAContract(model, collection) ? null : findTheCollectionTypeDefect(model, theClass, collection);
 };
 
 // The 2 forms that are larger than the change needs where nothing varies: a created type that only holds a collection of the language, and a created interface with 1 implementation that no layout split and no second answer asks for. Each is a recheck case, because a rule or a second answer can stand outside what the model shows, except the collection on a type marked domain object.
