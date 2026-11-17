@@ -49,6 +49,23 @@ const findOldPathDefects = (model, currentTree) => {
   return defects;
 };
 
+const KINDS_OF_A_FILE_IN_THE_TREE = new Set([KINDS.MODIFIED, KINDS.UNCHANGED, KINDS.REMOVED]);
+
+// A child that modifies, keeps or removes a file names a file of the current tree, so a new file listed as such a child escapes every check of a created class.
+const findChildFileDefects = (model, currentTree) => {
+  const defects = [];
+  model.folders.forEach((folder, folderAt) => {
+    readList(folder.children).forEach((child, childAt) => {
+      if (!KINDS_OF_A_FILE_IN_THE_TREE.has(child.kind) || !isAText(child.name)) return;
+
+      const file = getFileOfTheChild(folder, child);
+      if (currentTree.holdsThePath(file)) return;
+      defects.push(createDefect(DEFECT_CODES.CHILD_FILE_NOT_IN_TREE, `folders[${folderAt}].children[${childAt}]`, `the current tree holds no file ${file}, which the model lists as a child of the kind ${child.kind}; list a file the change creates as a created child, or correct the path`));
+    });
+  });
+  return defects;
+};
+
 const readOldFileOfTheClass = (model, theClass) => {
   const child = model.findChildOfTheFile(theClass.file);
   return child && isAText(child.oldPath) ? child.oldPath : theClass.file;
@@ -265,6 +282,7 @@ export const findCurrentTreeDefects = (model, currentTree) => [
   ...findUnchangedEntryDefects(model, currentTree),
   ...findUnchangedMethodDefects(model, currentTree),
   ...findOldPathDefects(model, currentTree),
+  ...findChildFileDefects(model, currentTree),
   ...findOldNameDefects(model, currentTree),
   ...findUnaccountedNameDefects(model, currentTree),
   ...findConventionsFileDefects(model, currentTree),

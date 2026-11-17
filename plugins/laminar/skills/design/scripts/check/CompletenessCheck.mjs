@@ -149,13 +149,20 @@ const checkUnchangedMark = (check, theClass, method, methodPath) => {
   if (changedKey) check.addDefect(DEFECT_CODES.METHOD_CHANGED_BUT_MARKED_UNCHANGED, `${methodPath}.${changedKey}`, `${theClass.name}#${method.name} is marked unchanged and holds ${changedKey === "body" ? "a body" : "an oldName"}`);
 };
 
+// A class takes the kind of its file from the folder child of that file, so a file that no folder lists leaves the scripts to read the class as modified.
+const checkChildOfTheClassFile = (check, theClass, path) => {
+  const { model } = check;
+  if (!isAText(theClass.file) || model.findChildOfTheFile(theClass.file)) return;
+  check.addDefect(DEFECT_CODES.CLASS_FILE_UNLISTED, `${path}.file`, `${model.getClassDisplayName(theClass)} stands in ${theClass.file}, which no folder of the model lists as a child, so the scripts cannot tell whether the change creates, modifies or leaves the file; list the file as a child of its folder, as created, modified or unchanged`);
+};
+
 const checkClasses = check => {
   const { model } = check;
   const exitNames = model.getExitNames();
   for (const theClass of model.classes) {
     const path = model.getClassPath(theClass);
     const isChanged = model.isChangedClass(theClass);
-    check.requireKey("class.file", theClass, "file", path);
+    if (check.requireKey("class.file", theClass, "file", path)) checkChildOfTheClassFile(check, theClass, path);
     check.requireKey("class.name", theClass, "name", path);
     if (isChanged) {
       if (check.zoneOrder.appliesToTheFolder(readFolderOfTheFile(theClass.file))) check.requireKey("class.zone", theClass, "zone", path);
