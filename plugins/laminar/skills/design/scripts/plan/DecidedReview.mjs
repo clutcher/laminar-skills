@@ -63,16 +63,19 @@ const CLASS_SCALE = "class";
 
 const NO_HOLDING_CLASS = Object.freeze({});
 
-// The class that holds a method by the nesting of the model, never by a prefix of its name, so a method-scale decision may reach a class-scale result on that class and on no class around it.
+// The class that holds a method by the nesting of the model, never by a prefix of its name, so a method-scale decision may reach a class-scale result on that class and on no class around it. A method the class lists under removed keeps its class, so a later review relates the open siblings and the class of the gone method, with the mark methodRemoved, so the render never decides the class by it; a name that a method of the class carries as its oldName is renamed, not removed, and stands in the next code under its new name.
 const readHoldingClass = (displayName, scale, theClass, formerNames) => {
   if (scale !== METHOD_SCALE || !theClass) return NO_HOLDING_CLASS;
   const { className, methodName } = readFindingNamePieces(displayName, scale);
-  if (!readList(theClass.methods).some(method => method.name === methodName)) return NO_HOLDING_CLASS;
+  const isAMethodOfTheClass = readList(theClass.methods).some(method => method.name === methodName);
+  const isRenamed = readList(theClass.methods).some(method => method.oldName === methodName);
+  const isRemoved = !isAMethodOfTheClass && !isRenamed && readList(theClass.removed).includes(methodName);
+  if (!isAMethodOfTheClass && !isRemoved) return NO_HOLDING_CLASS;
 
   const namesOfTheReview = [className, ...formerNames.map(name => readFindingNamePieces(name, scale).className)];
   const classFormerNames = new Set([...namesOfTheReview, ...(theClass.oldName ? [readOldTypeName(theClass)] : [])]);
   classFormerNames.delete(theClass.name);
-  return { classDisplayName: theClass.name, classFormerNames: [...classFormerNames].sort() };
+  return { classDisplayName: theClass.name, classFormerNames: [...classFormerNames].sort(), ...(isRemoved ? { methodRemoved: true } : {}) };
 };
 
 const readFileOfTheFinding = finding => {
@@ -141,7 +144,7 @@ const readFileOfTheReachKey = (key, scale, linesFingerprints) => {
 };
 
 // A reach decision decides only the key the person named, so it carries no class of its method, and never decides a class result by the class-of-the-method match.
-const withoutTheClassOfTheMethod = ({ classDisplayName, classFormerNames, ...decision }) => decision;
+const withoutTheClassOfTheMethod = ({ classDisplayName, classFormerNames, methodRemoved, ...decision }) => decision;
 
 // 1 decision per key the person named in the reach of a ruling, each with the lines fingerprint of its own lines in the input run folder, so each holds only while its own lines stand as they were; a key whose file is not 1 or whose lines give no fingerprint is left out, because the design check refuses it.
 const listDecisionsOfTheReach = ({ model, modelBefore, linesFingerprints }, decision, reach) => (linesFingerprints ? readReachList(reach) : [])

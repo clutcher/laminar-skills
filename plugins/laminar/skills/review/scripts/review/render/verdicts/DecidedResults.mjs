@@ -29,12 +29,13 @@ const readRenameMask = given => (Array.isArray(given) ? given.filter(names => Ar
 
 const isAnObject = given => typeof given === "object" && given !== null && !Array.isArray(given);
 
-// A decision that is no object, that lacks a field of its key, or whose reachOf is present and no text, stops the render with its number, never with an error of the language, because a reach read as a direct decision would take the class of its method.
+// A decision that is no object, that lacks a field of its key, whose reachOf is present and no text, or whose methodRemoved is present and no boolean, stops the render with its number, never with an error of the language, because a reach read as a direct decision, or a removed method read as a method of its class, would take the class of its method.
 const createDecision = (given, order) => {
   if (!isAnObject(given)) throw new RunFileStop(`decided review file: decision ${order + 1} is no object`);
   const missing = KEY_FIELDS.filter(field => !isAText(given[field]));
   if (missing.length) throw new RunFileStop(`decided review file: decision ${order + 1} has no ${missing.join(", ")}`);
   if (given.reachOf !== undefined && !isAText(given.reachOf)) throw new RunFileStop(`decided review file: decision ${order + 1} (${given.check} ${given.displayName}) has a reachOf that is no text`);
+  if (given.methodRemoved !== undefined && typeof given.methodRemoved !== "boolean") throw new RunFileStop(`decided review file: decision ${order + 1} (${given.check} ${given.displayName}) has a methodRemoved that is no boolean`);
   return {
     check: given.check,
     scale: given.scale.toLowerCase(),
@@ -52,6 +53,7 @@ const createDecision = (given, order) => {
     linesFingerprint: isAText(given.linesFingerprint) ? given.linesFingerprint : "",
     renameMask: readRenameMask(given.renameMask),
     reachOf: isAText(given.reachOf) ? given.reachOf : "",
+    methodRemoved: given.methodRemoved === true,
   };
 };
 
@@ -93,15 +95,20 @@ const namesTheOwnMethod = (text, methodName) => new RegExp(`(?<![A-Za-z0-9_$])(?
 
 const listEvidenceTexts = finding => [...(finding.evidence || []), ...(finding.quotes || [])].map(line => (line && typeof line === "object" ? line.text : ""));
 
-// 1 step up only: a method-scale decision reaches a class-scale result on the class the model gives the method, and only where the judge's evidence names the method. A reach decision decides only the key the person named, so it never takes the class of its method.
+// 1 step up only: a method-scale decision reaches a class-scale result on the class the model gives the method, and only where the judge's evidence names the method. A reach decision decides only the key the person named, so it never takes the class of its method. A method the model removed stands in no later code, so evidence that names it names a call of another method of that name, and its class only relates the decision.
 const isOnTheClassOfTheMethod = (decision, finding, displayName) => decision.scale === METHOD_SCALE
   && !decision.reachOf
+  && !decision.methodRemoved
   && readScale(finding) === CLASS_SCALE
   && isAText(decision.classDisplayName)
   && (displayName === decision.classDisplayName || decision.classFormerNames.includes(displayName))
   && listEvidenceTexts(finding).some(text => namesTheOwnMethod(text, readMethodName(decision)));
 
+// A decision on a removed method with no lines fingerprint cannot tell a method later added under that name from the method it ruled on, so it matches no key and only relates.
+const isARemovedMethodWithoutAFingerprint = decision => decision.methodRemoved && !decision.linesFingerprint;
+
 const findMatchedBy = (decision, finding) => {
+  if (isARemovedMethodWithoutAFingerprint(decision)) return "";
   const displayName = readDisplayNameOfTheFinding(finding);
   if (readScale(finding) === decision.scale) {
     if (displayName === decision.displayName) return MATCHED_BY.DISPLAY_NAME;
