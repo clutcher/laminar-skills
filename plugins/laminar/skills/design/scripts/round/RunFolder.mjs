@@ -50,6 +50,9 @@ const readPlaces = result => (result[SARIF_PLACE_KEYS.LIST] || []).map(sarifPlac
   return { file: String((physical[SARIF_PLACE_KEYS.FILE] || {}).uri || ""), line: Number.isFinite(line) ? line : null };
 });
 
+// A result the merge combined at 1 line holds every check it combines under rule_ids, its first check under check.
+const readChecksOfTheResult = (properties, check) => (Array.isArray(properties.rule_ids) && properties.rule_ids.length ? properties.rule_ids.map(String) : [check]);
+
 const readFinding = (result, index) => {
   const properties = result.properties || {};
   const displayName = String(properties.abstraction || "");
@@ -58,6 +61,7 @@ const readFinding = (result, index) => {
     index,
     displayName,
     check,
+    checks: readChecksOfTheResult(properties, check),
     findingKey: createFindingKey(displayName, check),
     scale: String(properties.scale || "").toLowerCase(),
     places: readPlaces(result),
@@ -82,10 +86,17 @@ const readFindingsOfTheSarif = results => results.map(readFinding).filter((findi
 
 const readPropertiesOfTheDecision = result => ((result.suppressions || []).find(suppression => Object.values(SUPPRESSION_STATUSES).includes(suppression.status)) || {}).properties || {};
 
-// The check of the decision tells which check of a combined result the design decided; a render before it carried that check gives none.
+// The check of the decision tells which check of a combined result the design decided; a render before it carried that check gives none. The display name of the decision is its key, which differs from the result's own where the decision marked it by the class of its method or by a former name. Only a result decided but changed since carries the lines fingerprint of its lines as this run read them.
 const readDecidedFinding = (result, index) => {
   const decision = readPropertiesOfTheDecision(result);
-  return { ...readFinding(result, index), reason: String(decision.reason || ""), checkOfTheDecision: String(decision.check || "") };
+  return {
+    ...readFinding(result, index),
+    reason: String(decision.reason || ""),
+    checkOfTheDecision: String(decision.check || ""),
+    displayNameOfTheDecision: String(decision.displayName || ""),
+    matchedBy: String(decision.matchedBy || ""),
+    linesFingerprintNow: String(decision.linesFingerprintNow || ""),
+  };
 };
 
 const readDecidedFindingsOfTheSarif = (results, isOfTheGroup) => results
@@ -123,6 +134,54 @@ const joinFindingsToItems = (items, findings) => {
     itemAt = joinedAt;
   }
   return items.map(item => ({ number: item.number, findings: findingsOfItemMap.get(item) }));
+};
+
+// The finding keys of a run folder, also of the results it set apart; none where its review.sarif cannot be read.
+const readFindingKeysOfTheRun = runFolder => {
+  try {
+    return new Set(readResultsOfTheSarif(JSON.parse(fs.readFileSync(path.join(runFolder, SARIF_FILE), "utf8"))).map(readFinding).map(finding => finding.findingKey));
+  } catch {
+    return new Set();
+  }
+};
+
+const listTheRunsBeside = runFolder => {
+  const parentFolder = path.dirname(runFolder);
+  return fs.readdirSync(parentFolder, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => path.join(parentFolder, entry.name))
+    .filter(otherRun => otherRun !== runFolder && fs.existsSync(path.join(otherRun, SARIF_FILE)))
+    .sort();
+};
+
+const ROUND_FOLDER_NAME = /^[1-9]\d*$/;
+
+const readTextIfPresent = filePath => (fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : null);
+
+const listRecordedRounds = roundsFolder => (fs.existsSync(roundsFolder)
+  ? fs.readdirSync(roundsFolder).filter(name => ROUND_FOLDER_NAME.test(name)).map(Number).sort((first, second) => first - second)
+  : []);
+
+// The round of a run folder as the round script counts it in the rounds folder of the results folder: the round whose copy of review.sarif equals that of the run, else the round after the last, because the finish command reads a run before the round script records it; null where the folder holds no round, because then only the caller counts the rounds.
+export const findTheRoundOfTheRun = (roundsFolder, runFolder) => {
+  const rounds = listRecordedRounds(roundsFolder);
+  if (!rounds.length) return null;
+
+  const sarifText = readTextIfPresent(path.join(runFolder, SARIF_FILE));
+  const recordedRounds = rounds.filter(round => sarifText !== null && readTextIfPresent(path.join(roundsFolder, String(round), SARIF_FILE)) === sarifText);
+  return recordedRounds.length ? recordedRounds.at(-1) : rounds.at(-1) + 1;
+};
+
+// The run folder beside the given one whose review.sarif holds a finding key, so a decided list given with the wrong run names the run it belongs to; read only once a key is missing.
+export const createFinderOfTheRunHoldingTheKey = givenRunFolder => {
+  const runFolder = path.resolve(givenRunFolder);
+  let keysOfRunMap = null;
+  return (displayName, check) => {
+    keysOfRunMap ??= new Map(listTheRunsBeside(runFolder).map(otherRun => [otherRun, readFindingKeysOfTheRun(otherRun)]));
+    const findingKey = createFindingKey(displayName, check);
+    const holdingRun = [...keysOfRunMap].find(([, findingKeys]) => findingKeys.has(findingKey));
+    return holdingRun ? holdingRun[0] : "";
+  };
 };
 
 export const readRunFolder = (runFolder, hasNoFindings) => {

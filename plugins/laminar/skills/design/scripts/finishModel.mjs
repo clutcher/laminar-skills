@@ -13,7 +13,7 @@ import { buildDecidedReview, readCommitOfThePlan } from "./plan/DecidedReview.mj
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
 import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, formatPlanLine, getPlanFolder, listQuestionsThatStopThePlan, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { listRoundDispositions } from "./plan/RoundDispositions.mjs";
-import { RoundStop, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
+import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
 
 const USAGE = "usage: node finishModel.mjs --model <design-model.json> --results <results folder> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md> [--decided <decided list>]] [--shape-review <results>/shape-runs/<n>/review.md]... [--classes <display names>] [--rounds <results>/rounds] [--autonomous]";
 
@@ -76,6 +76,18 @@ const exitWith = message => {
   process.exit(STOP_EXIT_CODE);
 };
 
+const NO_DECIDED_LIST = Object.freeze({ round: null, decided: [] });
+
+const ROUNDS_FOLDER = "rounds";
+
+// A decided list that names a key no finding of the run holds, or a round that is not the round of the run, was written for another run, so the finish stops before it writes findings.json or a plan folder.
+const stopOnTheDecidedDefects = defects => {
+  for (const defect of defects) console.log(`${DEFECT_PREFIX}${defect.code}\t${defect.name}\t${defect.sentence}`);
+  console.log(`stopped\tdecided\tthe decided list holds ${defects.length} defect(s)`);
+  console.log(`${RESULT_PREFIX}${JSON.stringify({ stopped: "decided", exit: DEFECT_EXIT_CODE })}`);
+  process.exit(DEFECT_EXIT_CODE);
+};
+
 // The run folder of --review with the decisions of the decided list, read once before the 3 scripts, because findings.json and the dispositions of the round both rest on them.
 const readTheRunOrExit = options => {
   if (!options.review) {
@@ -83,9 +95,13 @@ const readTheRunOrExit = options => {
     return null;
   }
   try {
-    const run = readRunFolder(path.dirname(path.resolve(options.review)), false);
-    const decidedList = options.decided ? checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided")) : [];
-    return { run, decisionOfFindingMap: resolveDecidedList(decidedList, run).decisionOfFindingMap };
+    const runFolder = path.dirname(path.resolve(options.review));
+    const run = readRunFolder(runFolder, false);
+    const decidedList = options.decided ? checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided")) : NO_DECIDED_LIST;
+    const roundOfTheRun = findTheRoundOfTheRun(path.join(path.resolve(options.results), ROUNDS_FOLDER), runFolder);
+    const { decisionOfFindingMap, decisionOfFindingCheckMap, refreshed, notRefreshedLines, defects } = resolveDecidedList(decidedList, run, createFinderOfTheRunHoldingTheKey(runFolder), roundOfTheRun);
+    if (defects.length) stopOnTheDecidedDefects(defects);
+    return { run, decisionOfFindingMap, decisionOfFindingCheckMap, refreshed, notRefreshedLines };
   } catch (error) {
     if (!(error instanceof DecidedListStop || error instanceof RoundStop)) throw error;
     return exitWith(error.message);
@@ -164,6 +180,7 @@ const writeTheDecidedReview = (resultsFolder, plan, model, roundInput) => {
     planCommit: readCommitOfThePlan(planFolder, PLAN_COMMIT_FILE),
     earlier: findTheEarlierExport(resultsFolder, plan),
     linesFingerprints: roundInput ? LinesFingerprintsOfTheRun.readFrom(roundInput.run.runFolder) : null,
+    refreshed: roundInput ? roundInput.refreshed : [],
   });
   writeJson(path.join(planFolder, DECIDED_REVIEW_FILE), decidedReview);
   for (const line of droppedLines) console.log(line);
@@ -193,7 +210,7 @@ function finishModel() {
   const runInput = readTheRunOrExit(options);
   // The groups that waited on a stopped group are planned again also with no run folder, because the writer workflow plans only the groups of the migration.
   const unfinishedGroups = listUnfinishedGroupsOfThePlanBefore(model, resultsFolder, plan);
-  const entries = runInput ? carryTheFixedFindings(model, resultsFolder, plan, listFindingEntries(model, runInput.run, runInput.decisionOfFindingMap)) : [];
+  const entries = runInput ? carryTheFixedFindings(model, resultsFolder, plan, listFindingEntries(model, runInput.run, runInput.decisionOfFindingMap, runInput.decisionOfFindingCheckMap)) : [];
   // An item to consider left as a question to the author is passed on as a consideration, never as a question of the plan, because items to consider on existing code stand in most changes.
   const reviewText = readTextIfGiven(options.review);
   const considerations = [
@@ -212,6 +229,7 @@ function finishModel() {
     if (step.name === "migration") migrationLines = run.lines;
   }
   const roundInput = runInput ? { ...runInput, entries, noStepKeys: readNoStepKeys(migrationLines) } : null;
+  for (const line of runInput ? runInput.notRefreshedLines : []) console.log(line);
   const outcomeWord = writeThePlanFolder(resultsFolder, plan, model, paths, roundInput);
   console.log(`${RESULT_PREFIX}${JSON.stringify({ steps: steps.length, design: paths.design, migration: paths.migration, plan, outcome: outcomeWord, ...(paths.findings ? { findings: paths.findings } : {}) })}`);
   console.log(formatPlanLine(plan, outcomeWord, resultsFolder));

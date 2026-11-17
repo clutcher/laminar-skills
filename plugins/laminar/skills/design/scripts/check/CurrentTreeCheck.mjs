@@ -4,6 +4,7 @@ import { readParsedLanguage } from "../model/SourceLanguages.mjs";
 import { readDeclaredTypes, isInsideTheBody } from "./DeclaredTypes.mjs";
 import { DEFECT_CODES, createDefect, createRecheckDefect } from "./DesignDefect.mjs";
 import { describeTheChangeOfTheMember } from "./MemberChange.mjs";
+import { listUnlistedMethodNames } from "./MethodListCheck.mjs";
 
 const LINE_COMMENT_EXTENSIONS = new Set([".py", ".rb", ".sh"]);
 
@@ -145,7 +146,8 @@ const findUnaccountedNameDefects = (model, currentTree) => {
       }
       if (!classesOfTheFile.length) return;
 
-      const accountedMemberNames = new Set(listAccountedMemberNames(classesOfTheFile));
+      // A public method that method-unlisted already reports is left to it, so 1 missing method reads as 1 defect.
+      const accountedMemberNames = new Set([...listAccountedMemberNames(classesOfTheFile), ...classesOfTheFile.flatMap(theClass => listUnlistedMethodNames(model, theClass, currentText))]);
       const memberNames = new Set(readPublicMembers(codeText, file).filter(member => !testHelpers.some(helper => isInsideTheBody(helper, member.at))).map(member => member.name));
       for (const memberName of memberNames) {
         if (accountedMemberNames.has(memberName) || accountedClassNames.has(memberName)) continue;

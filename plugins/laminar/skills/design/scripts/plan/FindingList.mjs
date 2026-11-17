@@ -1,4 +1,5 @@
 import { readList, readOldTypeName } from "../model/DesignModel.mjs";
+import { createFindingCheckKey, readChecksOfTheFinding } from "./DecidedList.mjs";
 
 // The scales whose findings the model closes; a finding at the method or the variable scale becomes an entry of findings.json and a finding step.
 export const PLAN_SCALES = new Set(["application", "module", "class"]);
@@ -28,10 +29,13 @@ const isTheTypeOfTheName = (typeName, className) => typeName === className || ty
 // The review names the class by its name in the current tree, so a class the model renames by oldName is found by its old name too.
 const isTheClassOfTheName = (theClass, className) => isTheTypeOfTheName(theClass.name, className) || Boolean(theClass.oldName) && isTheTypeOfTheName(readOldTypeName(theClass), className);
 
-// The review names a nested type by its own name, so the class of the model in the file of the finding wins over a class of the same name in another file.
+// The review names a file by its path in the tree it reviewed, so a file the model moves by oldPath is found by its old path too.
+const isTheFileOfTheClass = (model, theClass, file) => theClass.file === file || (model.findChildOfTheFile(theClass.file) || {}).oldPath === file;
+
+// The review names a nested type by its own name, so the class of the model in the file of the finding wins over a class of the same name in another file; of a file the model splits, only the 1 class that keeps the name or names it as its old name.
 export const findClassOfTheFinding = (model, displayName, scale, file) => {
   const { className } = readFindingNamePieces(displayName, scale);
-  const inTheFile = model.classes.filter(theClass => theClass.file === file && isTheClassOfTheName(theClass, className));
+  const inTheFile = model.classes.filter(theClass => isTheFileOfTheClass(model, theClass, file) && isTheClassOfTheName(theClass, className));
   if (inTheFile.length === 1) return inTheFile[0];
 
   const ofTheName = model.findClass(className);
@@ -54,25 +58,35 @@ const readFileOfTheFinding = finding => {
 
 export const buildItemNumberOfFindingMap = run => new Map(run.items.flatMap(item => item.findings.map(finding => [finding.index, item.number])));
 
+// A combined result that the decided list decides on some of its checks has 1 entry per check, each with its own decision or none, so a decided check gets no finding step and the other checks still do; any other finding has 1 entry.
+const listChecksOfTheEntries = (finding, decisionOfFindingCheckMap) => {
+  const checks = readChecksOfTheFinding(finding);
+  const isDecidedOnSomeChecks = checks.length > 1 && checks.some(check => decisionOfFindingCheckMap.has(createFindingCheckKey(finding, check)));
+  return isDecidedOnSomeChecks ? checks : [finding.check];
+};
+
 // 1 entry per finding of the run at the method and variable scales, with the migration group of its class and the decision of the decided list where it holds one.
-export const listFindingEntries = (model, run, decisionOfFindingMap) => {
+export const listFindingEntries = (model, run, decisionOfFindingMap, decisionOfFindingCheckMap = new Map()) => {
   const itemNumberOfFindingMap = buildItemNumberOfFindingMap(run);
   return readList(run.findings)
     .filter(finding => !PLAN_SCALES.has(finding.scale))
-    .map(finding => {
+    .flatMap(finding => {
       const file = readFileOfTheFinding(finding);
       const theClass = findClassOfTheFinding(model, finding.displayName, finding.scale, file);
-      const decision = decisionOfFindingMap.get(finding.index);
-      return {
-        number: itemNumberOfFindingMap.get(finding.index) ?? null,
-        check: finding.check,
-        displayName: finding.displayName,
-        scale: finding.scale,
-        file,
-        testCode: finding.testCode,
-        group: findGroupOfTheFinding(model, theClass, file),
-        ...(finding.toConsider ? { toConsider: true } : {}),
-        ...(decision ? decision : {}),
-      };
+      const checks = listChecksOfTheEntries(finding, decisionOfFindingCheckMap);
+      return checks.map(check => {
+        const decision = checks.length > 1 ? decisionOfFindingCheckMap.get(createFindingCheckKey(finding, check)) : decisionOfFindingMap.get(finding.index);
+        return {
+          number: itemNumberOfFindingMap.get(finding.index) ?? null,
+          check,
+          displayName: finding.displayName,
+          scale: finding.scale,
+          file,
+          testCode: finding.testCode,
+          group: findGroupOfTheFinding(model, theClass, file),
+          ...(finding.toConsider ? { toConsider: true } : {}),
+          ...(decision ? decision : {}),
+        };
+      });
     });
 };

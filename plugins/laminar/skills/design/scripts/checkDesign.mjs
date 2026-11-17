@@ -6,8 +6,8 @@ import { findDecidedDefects } from "./check/DecidedCheck.mjs";
 import { findNameOfThePath } from "./check/DefectNames.mjs";
 import { listClassesOfTheAbstractions } from "./check/TriedNames.mjs";
 import { readBaseCommit, readDesignModelOrExit, readOptionsOrExit, readTreeCommit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
-import { DecidedListStop, checkDecidedListForm, resolveDecidedList } from "./plan/DecidedList.mjs";
-import { RoundStop, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
+import { DecidedListStop, checkDecidedListForm, readDecidedEntries, resolveDecidedList } from "./plan/DecidedList.mjs";
+import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
 
 const USAGE = "usage: node checkDesign.mjs --model <design-model.json> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md> [--decided <decided list>]] [--shape-review <results>/shape-runs/<n>/review.md]... [--autonomous]";
 
@@ -83,7 +83,7 @@ const readShapeReviewOrExit = reviewPath => {
 const readDecidedList = options => {
   if (!options.decided) return [];
   try {
-    return JSON.parse(fs.readFileSync(path.resolve(options.decided), "utf8"));
+    return readDecidedEntries(JSON.parse(fs.readFileSync(path.resolve(options.decided), "utf8")));
   } catch {
     return [];
   }
@@ -99,14 +99,15 @@ const readRoundModelsOrExit = modelPath => {
     .map(name => readDesignModelOrExit(path.join(roundsFolder, name, MODEL_FILE)));
 };
 
-// The decided list names findings of the run folder that holds review.md, so it needs --review; a list that is refused stops the check.
+// The decided list names findings of the run folder that holds review.md, so it needs --review; a list that is refused stops the check. The round of the run is read from the rounds folder beside the model, the results folder.
 const findDecidedDefectsOrExit = (model, options) => {
   if (!options.decided) return [];
   if (!options.review) exitWith(`--decided needs --review, the review.md of the run folder whose findings it decides\n${USAGE}`);
   try {
     const run = readRunFolder(path.dirname(path.resolve(options.review)), false);
-    const { decisionOfFindingMap, defects } = resolveDecidedList(checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided")), run);
-    return [...defects, ...findDecidedDefects(model, run, decisionOfFindingMap)].map(defect => ({ ...defect, recheck: false, foundWrong: false }));
+    const roundOfTheRun = findTheRoundOfTheRun(path.join(path.dirname(path.resolve(options.model)), ROUNDS_FOLDER), run.runFolder);
+    const { decisionOfFindingCheckMap, defects } = resolveDecidedList(checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided")), run, createFinderOfTheRunHoldingTheKey(run.runFolder), roundOfTheRun);
+    return [...defects, ...findDecidedDefects(model, run, decisionOfFindingCheckMap)].map(defect => ({ ...defect, recheck: false, foundWrong: false }));
   } catch (error) {
     if (!(error instanceof DecidedListStop || error instanceof RoundStop)) throw error;
     return exitWith(error.message);

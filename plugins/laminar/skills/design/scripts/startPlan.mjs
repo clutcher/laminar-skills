@@ -110,6 +110,9 @@ function startPlan() {
   if (!headCommit) exitWith(`repo: git cannot read the head of ${repositoryRoot}`);
   const hasModel = fs.existsSync(modelPath);
   const model = hasModel ? readDesignModelOrExit(modelPath) : null;
+  // The stop list is checked before the plan folder is written, so a wrong stop leaves no plan folder of a plan that never starts.
+  if (options.stop && !hasModel) exitWith(`stop: ${modelPath} holds no model, so no writer of an earlier plan can have stopped`);
+  const stopList = options.stop ? readStopListOrExit(options.stop) : [];
   keepTheFirstPlan(resultsFolder, modelPath);
   const { plan, isNew } = choosePlan(resultsFolder);
   const baseCommit = resolveTheBaseOrEnd(options, repositoryRoot, headCommit, resultsFolder, plan);
@@ -120,7 +123,6 @@ function startPlan() {
   console.log(`base commit: ${baseCommit}`);
   console.log(`plan commit: ${headCommit}`);
 
-  if (options.stop && !hasModel) exitWith(`stop: ${modelPath} holds no model, so no writer of an earlier plan can have stopped`);
   if (!hasModel) {
     console.log(`RESULT ${JSON.stringify({ plan, later: false })}`);
     return;
@@ -128,7 +130,6 @@ function startPlan() {
 
   let given = readModelTextOrExit(modelPath);
   let counts = null;
-  const stopList = options.stop ? readStopListOrExit(options.stop) : [];
   if (isNew) {
     const unfinishedGroups = listUnfinishedGroups(model, stopList.map(stopped => ({ group: stopped.group })), readPlannedGroups(getPlanFolder(resultsFolder, plan - 1)));
     const isANewChange = startsANewChange(resultsFolder, plan, options, baseCommit);

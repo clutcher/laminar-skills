@@ -33,6 +33,16 @@ const describeMethodCheck = (uncheckedFiles, unreadClasses) => {
   return `method check: reads the public methods of modified classes in Java, JavaScript and TypeScript${uncheckedLanguage}${uncheckedClass}`;
 };
 
+// The public methods the current file declares for a class of a modified file and the model does not list, which method-unlisted reports; none for a class of a test file, of a language the check does not read, or whose declaration it cannot read.
+export const listUnlistedMethodNames = (model, theClass, currentText) => {
+  if (isATestFileOfTheModel(model, theClass.file) || !readMemberLanguage(theClass.file) || currentText === null) return [];
+  const declaredNames = readDeclaredPublicMethodNames(currentText, theClass.file, readOldTypeName(theClass) || theClass.name);
+  if (!declaredNames) return [];
+
+  const listedNames = new Set(listListedMethodNames(theClass));
+  return [...declaredNames].filter(methodName => !listedNames.has(methodName));
+};
+
 // A modified class is judged whole by the review, and a writer reads a public method the model leaves out as removed, so the model lists every public method the current file declares for it. A class the check cannot read is named in the head line, never passed in silence.
 export const findMethodListResult = (model, currentTree) => {
   const defects = [];
@@ -50,8 +60,7 @@ export const findMethodListResult = (model, currentTree) => {
       unreadClasses.push(model.getClassDisplayName(theClass));
       continue;
     }
-    const listedNames = new Set(listListedMethodNames(theClass));
-    defects.push(...[...declaredNames].filter(methodName => !listedNames.has(methodName)).map(methodName => createUnlistedMethodDefect(model, theClass, methodName)));
+    defects.push(...listUnlistedMethodNames(model, theClass, currentText).map(methodName => createUnlistedMethodDefect(model, theClass, methodName)));
   }
   return { headLine: describeMethodCheck([...uncheckedFiles], unreadClasses), defects };
 };
