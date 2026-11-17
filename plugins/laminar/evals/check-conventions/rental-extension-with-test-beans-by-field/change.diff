@@ -1,0 +1,117 @@
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/app/domain/model/RentalRefusedException.java b/rental-app/src/main/java/org/riversidebikes/rental/app/domain/model/RentalRefusedException.java
+index c8a7f27..36f620a 100644
+--- a/rental-app/src/main/java/org/riversidebikes/rental/app/domain/model/RentalRefusedException.java
++++ b/rental-app/src/main/java/org/riversidebikes/rental/app/domain/model/RentalRefusedException.java
+@@ -14,6 +14,7 @@ public class RentalRefusedException extends RuntimeException {
+     }
+ 
+     public enum ErrorType {
+-        NO_SUCH_RENTAL
++        NO_SUCH_RENTAL,
++        EXTENSION_TOO_LONG
+     }
+ }
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/app/domain/services/RentalService.java b/rental-app/src/main/java/org/riversidebikes/rental/app/domain/services/RentalService.java
+index f1ce766..0e2a53c 100644
+--- a/rental-app/src/main/java/org/riversidebikes/rental/app/domain/services/RentalService.java
++++ b/rental-app/src/main/java/org/riversidebikes/rental/app/domain/services/RentalService.java
+@@ -10,6 +10,8 @@ import java.time.Duration;
+ @Service
+ public class RentalService {
+ 
++    private static final int MAXIMUM_EXTENSION_HOURS = 4;
++
+     private final RentalRepository rentalRepository;
+ 
+     public RentalService(RentalRepository rentalRepository) {
+@@ -17,6 +19,10 @@ public class RentalService {
+     }
+ 
+     public Rental extendRental(String rentalId, Duration extension) {
++        if (extension.toHours() > MAXIMUM_EXTENSION_HOURS) {
++            throw new RentalRefusedException(RentalRefusedException.ErrorType.EXTENSION_TOO_LONG, rentalId);
++        }
++
+         Rental rental = rentalRepository.findById(rentalId);
+         if (rental == null) {
+             throw new RentalRefusedException(RentalRefusedException.ErrorType.NO_SUCH_RENTAL, rentalId);
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalExceptionHandler.java b/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalExceptionHandler.java
+index 7e61359..e933057 100644
+--- a/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalExceptionHandler.java
++++ b/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalExceptionHandler.java
+@@ -13,6 +13,7 @@ public class RentalExceptionHandler {
+     public ResponseEntity<String> createRefusalResponse(RentalRefusedException exception) {
+         HttpStatus status = switch (exception.errorType()) {
+             case NO_SUCH_RENTAL -> HttpStatus.NOT_FOUND;
++            case EXTENSION_TOO_LONG -> HttpStatus.CONFLICT;
+         };
+         return ResponseEntity.status(status).body(exception.errorType().name());
+     }
+diff --git a/rental-app/src/test/java/org/riversidebikes/rental/in/web/RentalControllerTest.java b/rental-app/src/test/java/org/riversidebikes/rental/in/web/RentalControllerTest.java
+new file mode 100644
+index 0000000..8870555
+--- /dev/null
++++ b/rental-app/src/test/java/org/riversidebikes/rental/in/web/RentalControllerTest.java
+@@ -0,0 +1,62 @@
++package org.riversidebikes.rental.in.web;
++
++import org.junit.jupiter.api.Test;
++import org.riversidebikes.rental.app.domain.model.Rental;
++import org.riversidebikes.rental.app.spi.RentalRepository;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.http.MediaType;
++import org.springframework.test.web.servlet.MockMvc;
++import org.springframework.test.web.servlet.ResultActions;
++import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
++import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
++
++import java.time.LocalDateTime;
++
++@SpringBootTest
++@AutoConfigureMockMvc
++class RentalControllerTest {
++
++    @Autowired
++    private MockMvc mockMvc;
++
++    @Autowired
++    private RentalRepository rentalRepository;
++
++    @Test
++    void shouldMoveReturnTimeWhenExtensionIsWithinLimit() throws Exception {
++        // given
++        rentalRepository.save(new Rental("rental-7", "bike-12", LocalDateTime.of(2026, 6, 1, 14, 0)));
++        String extensionWithinLimitBody = """
++                {"hours": 2}
++                """;
++
++        // when
++        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.post("/rentals/rental-7/extensions")
++                .contentType(MediaType.APPLICATION_JSON)
++                .content(extensionWithinLimitBody));
++
++        // then
++        response.andExpect(MockMvcResultMatchers.status().isOk())
++                .andExpect(MockMvcResultMatchers.jsonPath("$.returnTime").value("2026-06-01T16:00:00"));
++    }
++
++    @Test
++    void shouldRefuseExtensionWhenExtensionIsLongerThanLimit() throws Exception {
++        // given
++        rentalRepository.save(new Rental("rental-8", "bike-3", LocalDateTime.of(2026, 6, 1, 14, 0)));
++        String extensionLongerThanLimitBody = """
++                {"hours": 5}
++                """;
++
++        // when
++        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.post("/rentals/rental-8/extensions")
++                .contentType(MediaType.APPLICATION_JSON)
++                .content(extensionLongerThanLimitBody));
++
++        // then
++        response.andExpect(MockMvcResultMatchers.status().isConflict())
++                .andExpect(MockMvcResultMatchers.content().string("EXTENSION_TOO_LONG"));
++    }
++}

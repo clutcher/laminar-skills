@@ -1,0 +1,306 @@
+diff --git a/.claude/rules/conventions/rentals.md b/.claude/rules/conventions/rentals.md
+new file mode 100644
+index 0000000..04943c7
+--- /dev/null
++++ b/.claude/rules/conventions/rentals.md
+@@ -0,0 +1,13 @@
++---
++paths:
++  - "rental-app/src/main/java/**/rental/**/*.java"
++---
++# Rentals
++
++Contents: 1. Rental periods as a Duration
++
++## 1. Rental periods as a Duration
++
++Hold every rental period, every extension and every limit on them as a Duration, and name it for what it limits, such as STANDARD_RENTAL_PERIOD. A bare number leaves the unit to the reader, and the shop rents by the hour in summer and by the day in winter.
++
++- Limits: a number of hours that a rider sends to the web entry arrives as a number, and the entry turns it into a Duration.
+diff --git a/.claude/rules/conventions/tests.md b/.claude/rules/conventions/tests.md
+new file mode 100644
+index 0000000..4b7098e
+--- /dev/null
++++ b/.claude/rules/conventions/tests.md
+@@ -0,0 +1,13 @@
++---
++paths:
++  - "**/src/test/java/**/*.java"
++---
++# Tests
++
++Contents: 1. Beans of a test by field injection
++
++## 1. Beans of a test by field injection
++
++Inject each bean that a test class uses into a private field with the Autowired marker, and write no constructor in a test class. Every test class of the project takes its beans the same way, so a reader finds them at the top of each class, and the framework creates each test class itself.
++
++- Limits: production code takes every dependency through its constructor.
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..1fb1c3f
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# Riverside bike rental
++
++Java 21, Spring Boot. The rental application rents bikes to riders by the hour and extends their rentals. The rental module lives under `rental-app/src/main/java/org/riversidebikes/rental`, laid out as `app` with its `spi` and `domain`, `in` for the web entry and `out` for the code at its exit boundary.
+diff --git a/pom.xml b/pom.xml
+new file mode 100644
+index 0000000..9cb01ae
+--- /dev/null
++++ b/pom.xml
+@@ -0,0 +1,26 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project xmlns="http://maven.apache.org/POM/4.0.0">
++    <modelVersion>4.0.0</modelVersion>
++    <parent>
++        <groupId>org.springframework.boot</groupId>
++        <artifactId>spring-boot-starter-parent</artifactId>
++        <version>3.4.1</version>
++    </parent>
++    <groupId>org.riversidebikes</groupId>
++    <artifactId>rental-app</artifactId>
++    <version>1.0.0</version>
++    <properties>
++        <java.version>21</java.version>
++    </properties>
++    <dependencies>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-web</artifactId>
++        </dependency>
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-test</artifactId>
++            <scope>test</scope>
++        </dependency>
++    </dependencies>
++</project>
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/RentalApplication.java b/rental-app/src/main/java/org/riversidebikes/rental/RentalApplication.java
+new file mode 100644
+index 0000000..c76e183
+--- /dev/null
++++ b/rental-app/src/main/java/org/riversidebikes/rental/RentalApplication.java
+@@ -0,0 +1,12 @@
++package org.riversidebikes.rental;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class RentalApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(RentalApplication.class, args);
++    }
++}
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/app/domain/model/Rental.java b/rental-app/src/main/java/org/riversidebikes/rental/app/domain/model/Rental.java
+new file mode 100644
+index 0000000..0ef3b4f
+--- /dev/null
++++ b/rental-app/src/main/java/org/riversidebikes/rental/app/domain/model/Rental.java
+@@ -0,0 +1,11 @@
++package org.riversidebikes.rental.app.domain.model;
++
++import java.time.Duration;
++import java.time.LocalDateTime;
++
++public record Rental(String rentalId, String bikeId, LocalDateTime returnTime) {
++
++    public Rental extendBy(Duration extension) {
++        return new Rental(rentalId, bikeId, returnTime.plus(extension));
++    }
++}
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/app/domain/model/RentalRefusedException.java b/rental-app/src/main/java/org/riversidebikes/rental/app/domain/model/RentalRefusedException.java
+new file mode 100644
+index 0000000..c8a7f27
+--- /dev/null
++++ b/rental-app/src/main/java/org/riversidebikes/rental/app/domain/model/RentalRefusedException.java
+@@ -0,0 +1,19 @@
++package org.riversidebikes.rental.app.domain.model;
++
++public class RentalRefusedException extends RuntimeException {
++
++    private final ErrorType errorType;
++
++    public RentalRefusedException(ErrorType errorType, String rentalId) {
++        super(errorType + " for rental " + rentalId);
++        this.errorType = errorType;
++    }
++
++    public ErrorType errorType() {
++        return errorType;
++    }
++
++    public enum ErrorType {
++        NO_SUCH_RENTAL
++    }
++}
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/app/domain/services/RentalService.java b/rental-app/src/main/java/org/riversidebikes/rental/app/domain/services/RentalService.java
+new file mode 100644
+index 0000000..f1ce766
+--- /dev/null
++++ b/rental-app/src/main/java/org/riversidebikes/rental/app/domain/services/RentalService.java
+@@ -0,0 +1,29 @@
++package org.riversidebikes.rental.app.domain.services;
++
++import org.riversidebikes.rental.app.domain.model.Rental;
++import org.riversidebikes.rental.app.domain.model.RentalRefusedException;
++import org.riversidebikes.rental.app.spi.RentalRepository;
++import org.springframework.stereotype.Service;
++
++import java.time.Duration;
++
++@Service
++public class RentalService {
++
++    private final RentalRepository rentalRepository;
++
++    public RentalService(RentalRepository rentalRepository) {
++        this.rentalRepository = rentalRepository;
++    }
++
++    public Rental extendRental(String rentalId, Duration extension) {
++        Rental rental = rentalRepository.findById(rentalId);
++        if (rental == null) {
++            throw new RentalRefusedException(RentalRefusedException.ErrorType.NO_SUCH_RENTAL, rentalId);
++        }
++
++        Rental extendedRental = rental.extendBy(extension);
++        rentalRepository.save(extendedRental);
++        return extendedRental;
++    }
++}
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/app/spi/RentalRepository.java b/rental-app/src/main/java/org/riversidebikes/rental/app/spi/RentalRepository.java
+new file mode 100644
+index 0000000..f5c8ff8
+--- /dev/null
++++ b/rental-app/src/main/java/org/riversidebikes/rental/app/spi/RentalRepository.java
+@@ -0,0 +1,12 @@
++package org.riversidebikes.rental.app.spi;
++
++import org.riversidebikes.rental.app.domain.model.Rental;
++import org.springframework.lang.Nullable;
++
++public interface RentalRepository {
++
++    @Nullable
++    Rental findById(String rentalId);
++
++    void save(Rental rental);
++}
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/in/web/ExtensionRequest.java b/rental-app/src/main/java/org/riversidebikes/rental/in/web/ExtensionRequest.java
+new file mode 100644
+index 0000000..2d7e4a0
+--- /dev/null
++++ b/rental-app/src/main/java/org/riversidebikes/rental/in/web/ExtensionRequest.java
+@@ -0,0 +1,6 @@
++package org.riversidebikes.rental.in.web;
++
++import jakarta.validation.constraints.Positive;
++
++public record ExtensionRequest(@Positive int hours) {
++}
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalController.java b/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalController.java
+new file mode 100644
+index 0000000..e477a14
+--- /dev/null
++++ b/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalController.java
+@@ -0,0 +1,27 @@
++package org.riversidebikes.rental.in.web;
++
++import jakarta.validation.Valid;
++import org.riversidebikes.rental.app.domain.model.Rental;
++import org.riversidebikes.rental.app.domain.services.RentalService;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.RequestBody;
++import org.springframework.web.bind.annotation.RestController;
++
++import java.time.Duration;
++
++@RestController
++public class RentalController {
++
++    private final RentalService rentalService;
++
++    public RentalController(RentalService rentalService) {
++        this.rentalService = rentalService;
++    }
++
++    @PostMapping("/rentals/{rentalId}/extensions")
++    public RentalResponse extendRental(@PathVariable String rentalId, @Valid @RequestBody ExtensionRequest request) {
++        Rental rental = rentalService.extendRental(rentalId, Duration.ofHours(request.hours()));
++        return new RentalResponse(rental.rentalId(), rental.returnTime());
++    }
++}
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalExceptionHandler.java b/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalExceptionHandler.java
+new file mode 100644
+index 0000000..7e61359
+--- /dev/null
++++ b/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalExceptionHandler.java
+@@ -0,0 +1,19 @@
++package org.riversidebikes.rental.in.web;
++
++import org.riversidebikes.rental.app.domain.model.RentalRefusedException;
++import org.springframework.http.HttpStatus;
++import org.springframework.http.ResponseEntity;
++import org.springframework.web.bind.annotation.ExceptionHandler;
++import org.springframework.web.bind.annotation.RestControllerAdvice;
++
++@RestControllerAdvice
++public class RentalExceptionHandler {
++
++    @ExceptionHandler(RentalRefusedException.class)
++    public ResponseEntity<String> createRefusalResponse(RentalRefusedException exception) {
++        HttpStatus status = switch (exception.errorType()) {
++            case NO_SUCH_RENTAL -> HttpStatus.NOT_FOUND;
++        };
++        return ResponseEntity.status(status).body(exception.errorType().name());
++    }
++}
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalResponse.java b/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalResponse.java
+new file mode 100644
+index 0000000..d866d51
+--- /dev/null
++++ b/rental-app/src/main/java/org/riversidebikes/rental/in/web/RentalResponse.java
+@@ -0,0 +1,6 @@
++package org.riversidebikes.rental.in.web;
++
++import java.time.LocalDateTime;
++
++public record RentalResponse(String rentalId, LocalDateTime returnTime) {
++}
+diff --git a/rental-app/src/main/java/org/riversidebikes/rental/out/storage/InMemoryRentalRepository.java b/rental-app/src/main/java/org/riversidebikes/rental/out/storage/InMemoryRentalRepository.java
+new file mode 100644
+index 0000000..320a35e
+--- /dev/null
++++ b/rental-app/src/main/java/org/riversidebikes/rental/out/storage/InMemoryRentalRepository.java
+@@ -0,0 +1,26 @@
++package org.riversidebikes.rental.out.storage;
++
++import org.riversidebikes.rental.app.domain.model.Rental;
++import org.riversidebikes.rental.app.spi.RentalRepository;
++import org.springframework.lang.Nullable;
++import org.springframework.stereotype.Repository;
++
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++@Repository
++public class InMemoryRentalRepository implements RentalRepository {
++
++    private final Map<String, Rental> rentalByIdMap = new ConcurrentHashMap<>();
++
++    @Override
++    @Nullable
++    public Rental findById(String rentalId) {
++        return rentalByIdMap.get(rentalId);
++    }
++
++    @Override
++    public void save(Rental rental) {
++        rentalByIdMap.put(rental.rentalId(), rental);
++    }
++}
