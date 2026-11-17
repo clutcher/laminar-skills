@@ -58,7 +58,7 @@ An object with 3 lists, `integration`, `unit` and `removed`. The book: "Integrat
 
 - `removed`: 1 object per existing test of a check that the change removes or moves, such as a validation that an entry or a method held, with `class`, the class whose code removes or moves the check, `file`, the test file of the current tree, `test`, the name of the test as the file writes it, and `why`, 1 sentence on why the test goes, all required. No script finds a check inside a body, so the designer names each existing test that asserts such a check: under `removed`, or, where the test stays with a new name or a new assertion, as a test of `integration` or `unit`. The migration writes 1 step in the migration stage tests of the group of `class`, `removes the test <test> of <file>: <why>`, so the writer removes the test by that step and does not stop on a behavior the design did not decide. With `--repo`, the design check reports an object whose test the file of the current tree does not hold (`removed-test-not-in-tree`, `design-checks.md`, section 4). This key is a format of this skill, not of the book.
 
-The test names take the forms of `conventions.testNameForms` (`design-decisions.md`). Where that key is missing, the design check reports only a name that states no behavior.
+The test names take the forms of `conventions.testNameForms` (`design-decisions.md`). Where that key is missing, the designer names each test in the form of `../code-style/references/tests.md`, section 9, and the design check reports only a name that states no behavior.
 
 ```json
 "unit": [ { "class": "InvoicePricing", "file": "src/test/java/com/example/workshop/invoicing/InvoicePricingTest.java", "tests": ["shouldBillOneQuarterHourWhenLabourIsOneMinute"] } ]
