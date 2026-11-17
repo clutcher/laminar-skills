@@ -72,6 +72,7 @@ export const DEFECT_CODES = Object.freeze({
   TYPE_NOT_OF_THE_DOMAIN: "type-not-of-the-domain",
   COPIES_A_DOMAIN_OBJECT: "copies-a-domain-object",
   COMPUTATION_HOLDS_A_CHANGING_COLLECTION: "computation-holds-a-changing-collection",
+  RECORD_ONLY_IN_CONSTANTS: "record-only-in-constants",
   RENAMED_WITHOUT_FINDING: "renamed-without-finding",
   OPTION_WITHOUT_CODE: "option-without-code",
   OWNER_WITHOUT_ITS_VALUES: "owner-without-its-values",

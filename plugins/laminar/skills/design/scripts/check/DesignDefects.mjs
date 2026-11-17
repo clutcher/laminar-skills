@@ -7,6 +7,7 @@ import { findConventionOverrideDefects } from "./ConventionOverrides.mjs";
 import { findCycleCheckDefects, findFolderPairOutsideTheBase } from "./CycleCheck.mjs";
 import { DEFECT_CODES, createDefect } from "./DesignDefect.mjs";
 import { findChangingCollectionDefects } from "./ChangingCollections.mjs";
+import { findConstantInstanceDefects } from "./ConstantInstances.mjs";
 import { findDataFlowDefects } from "./DataFlowCheck.mjs";
 import { findNameOfThePath } from "./DefectNames.mjs";
 import { findExitListResult } from "./ExitList.mjs";
@@ -109,6 +110,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findTypeNotOfTheDomainDefects(model),
     ...findDomainObjectCopyDefects(model),
     ...findChangingCollectionDefects(model),
+    ...findConstantInstanceDefects(model),
     ...findOwnerValueDefects(model, currentTree),
     ...findRepeatedDecisionDefects(model, currentTree),
     ...findUnchangedCopyDefects(model, currentTree),
