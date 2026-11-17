@@ -14,6 +14,7 @@ import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/ve
 import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, formatPlanLine, getPlanFolder, listQuestionsThatStopThePlan, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { listRoundDispositions } from "./plan/RoundDispositions.mjs";
 import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
+import { listDefectLinesOfTheRun, removeFinishStop, writeFinishStop } from "./plan/FinishStop.mjs";
 
 const USAGE = "usage: node finishModel.mjs --model <design-model.json> --results <results folder> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md> [--decided <decided list>]] [--shape-review <results>/shape-runs/<n>/review.md]... [--classes <display names>] [--rounds <results>/rounds] [--autonomous]";
 
@@ -63,10 +64,13 @@ const runFinishStep = step => {
   return { ...run, lines, exitCode: exitCode || (hasDefect ? DEFECT_EXIT_CODE : 0), resultLine: lines.find(line => line.startsWith(RESULT_PREFIX)) };
 };
 
-const stopAtTheStep = (step, run) => {
+// The finish stop keeps what the step said in the plan folder, so a calling session tells a design defect from a crash.
+const stopAtTheStep = (step, run, plan, planFolder) => {
+  const says = `${step.script} exited ${run.exitCode}`;
+  writeFinishStop(planFolder, { plan, at: step.name, says, exit: run.exitCode, lines: listDefectLinesOfTheRun(run) });
   process.stdout.write(run.stdout);
   process.stderr.write(run.stderr);
-  console.log(`stopped\t${step.name}\t${step.script} exited ${run.exitCode}`);
+  console.log(`stopped\t${step.name}\t${says}`);
   console.log(`${RESULT_PREFIX}${JSON.stringify({ stopped: step.name, exit: run.exitCode })}`);
   process.exit(run.exitCode);
 };
@@ -227,13 +231,14 @@ function finishModel() {
   let migrationLines = [];
   for (const step of steps) {
     const run = runFinishStep(step);
-    if (run.exitCode) stopAtTheStep(step, run);
+    if (run.exitCode) stopAtTheStep(step, run, plan, getPlanFolder(resultsFolder, plan));
     console.log(`${step.name}\t${run.resultLine}`);
     if (step.name === "migration") migrationLines = run.lines;
   }
   const roundInput = runInput ? { ...runInput, entries, noStepKeys: readNoStepKeys(migrationLines) } : null;
   for (const line of runInput ? runInput.notRefreshedLines : []) console.log(line);
   const outcomeWord = writeThePlanFolder(resultsFolder, plan, model, paths, roundInput);
+  removeFinishStop(getPlanFolder(resultsFolder, plan));
   console.log(`${RESULT_PREFIX}${JSON.stringify({ steps: steps.length, design: paths.design, migration: paths.migration, plan, outcome: outcomeWord, ...(paths.findings ? { findings: paths.findings } : {}) })}`);
   console.log(formatPlanLine(plan, outcomeWord, resultsFolder));
 }
