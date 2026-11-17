@@ -14,3 +14,4 @@
 
 Class `RentalDesk`, Prediction Failure
 Class `RentalDesk`, Unnamed Part Failure
+Class `RentalBikes`, Unnamed Part Failure

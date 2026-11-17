@@ -6,7 +6,3 @@
 
 1. Class `Rentals`
    - Unnamed Part Failure
-
-## Must not appear
-
-Class `Rentals`, Prediction Failure
