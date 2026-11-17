@@ -4,7 +4,7 @@
 //   node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]
 //
 // --review, --repo and --range are needed where plan 1 ended ready; a plan that ended in a question or a stop starts no writer and no review.
-// --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left, decided again or back, and --expected gives the planted keys that split the kept findings of the closing review; the change.diff beside it gives the files the planted change touched.
+// --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left, decided again, decided again with its lines changed since the decision, or back, and --expected gives the planted keys that split the kept findings of the closing review; the change.diff beside it gives the files the planted change touched.
 // It exits with 0 where the run is one shot, 1 where it is not, and 2 on a usage error or a missing file. It writes nothing but --json, and runs git only in --repo.
 // Node with no dependencies.
 import fs from "node:fs";
@@ -26,10 +26,11 @@ const PLACEMENTS = Object.freeze({
   NOT_ON_THE_CHANGE: "not on the change",
   NOT_NEW: "not new",
   DECIDED: "decided by the design",
+  DECIDED_CHANGED_SINCE: "decided, but changed since",
   LEFT: "left with a reason",
 });
 
-const STORED_STATES = Object.freeze({ CLOSED: "closed", LEFT: "left", DECIDED: "decided again", BACK: "back" });
+const STORED_STATES = Object.freeze({ CLOSED: "closed", LEFT: "left", DECIDED: "decided again", DECIDED_CHANGED_SINCE: "decided again, changed since", BACK: "back" });
 
 // Who left a finding key: the decided list of the calling session, where the object or the entry has decidedBy, or the design by its own reason class.
 const LEFT_SOURCES = Object.freeze({ DECIDED_LIST: "by the decided list", DESIGN: "by the design" });
@@ -50,6 +51,11 @@ const KEPT_LEVEL = "warning";
 
 // A result the decided review file of the design marked carries this suppression status, and the grade counts it apart, never as kept on the change.
 const ACCEPTED_SUPPRESSION = "accepted";
+
+// A result decided, but whose lines changed since the decision, carries this suppression status; it keeps its level, so the grade counts it apart by the status, neither open nor decided.
+const UNDER_REVIEW_SUPPRESSION = "underReview";
+
+const holdsASuppressionOfTheStatus = (result, status) => (result.suppressions || []).some(suppression => suppression.status === status);
 
 const NEW_BASELINE_STATE = "new";
 
@@ -172,7 +178,8 @@ const readFinding = result => {
     kept: result.level === KEPT_LEVEL && properties.to_consider !== true,
     testCode: properties.test_code === true,
     baselineState: result.baselineState || NEW_BASELINE_STATE,
-    decided: (result.suppressions || []).some(suppression => suppression.status === ACCEPTED_SUPPRESSION),
+    decided: holdsASuppressionOfTheStatus(result, ACCEPTED_SUPPRESSION),
+    changedSinceTheDecision: holdsASuppressionOfTheStatus(result, UNDER_REVIEW_SUPPRESSION),
     file: String((location.artifactLocation || {}).uri || ""),
     line: Number.isFinite((location.region || {}).startLine) ? location.region.startLine : null,
     track: CHECKS_BY_ID_MAP[check] ? CHECKS_BY_ID_MAP[check].track : "UNKNOWN",
@@ -196,6 +203,7 @@ const isOnTheChange = (finding, change) => {
 };
 
 const placeTheFinding = (finding, change, leftSourceOfKeyMap) => {
+  if (finding.changedSinceTheDecision) return PLACEMENTS.DECIDED_CHANGED_SINCE;
   if (finding.decided) return PLACEMENTS.DECIDED;
   if (finding.baselineState !== NEW_BASELINE_STATE) return PLACEMENTS.NOT_NEW;
   if (leftSourceOfKeyMap.has(finding.findingKey)) return PLACEMENTS.LEFT;
@@ -234,6 +242,7 @@ const gradeTheReview = (options, leftSourceOfKeyMap) => {
     kept: countTheKeptFindings(keptOnTheChange),
     keptOnTheChange,
     toConsiderOnTheChange: onTheChange.length - keptOnTheChange.length,
+    decidedChangedSince: findings.filter(finding => finding.placement === PLACEMENTS.DECIDED_CHANGED_SINCE),
     apart: countThePlacements(findings.filter(finding => finding.placement !== PLACEMENTS.ON_THE_CHANGE)),
   };
 };
@@ -431,7 +440,7 @@ const countTheKeyKinds = keptOnTheChange => Object.fromEntries(Object.values(KEY
 
 const readStoredKeptFindings = inputRun => readFindingsOfTheSarif(path.join(inputRun.runFolder, SARIF_FILE)).filter(finding => finding.kept);
 
-const readKeptKeys = review => new Set(review.findings.filter(finding => finding.kept && !finding.decided).map(finding => finding.findingKey));
+const readKeptKeys = review => new Set(review.findings.filter(finding => finding.kept && !finding.decided && !finding.changedSinceTheDecision).map(finding => finding.findingKey));
 
 // A check judged on an application unit judges every key of the application, because its judge returns its findings on the methods and classes of that application, not on the unit itself.
 const readJudgedKeys = reviewFolder => {
@@ -450,9 +459,12 @@ const isJudgedAgain = (finding, judgedKeys) => judgedKeys.keys.has(finding.findi
 
 const readDecidedKeys = review => new Set(review.findings.filter(finding => finding.decided).map(finding => finding.findingKey));
 
-// A stored finding the closing review marks decided again is the decision carried, before it counts as left.
-const decideTheStoredState = (finding, leftSourceOfKeyMap, keptKeys, decidedKeys) => {
+const readChangedSinceKeys = review => new Set(review.findings.filter(finding => finding.changedSinceTheDecision).map(finding => finding.findingKey));
+
+// A stored finding the closing review marks decided again is the decision carried, before it counts as left; one whose lines changed since the decision is set apart from it.
+const decideTheStoredState = (finding, leftSourceOfKeyMap, keptKeys, { decidedKeys, changedSinceKeys }) => {
   if (decidedKeys.has(finding.findingKey)) return STORED_STATES.DECIDED;
+  if (changedSinceKeys.has(finding.findingKey)) return STORED_STATES.DECIDED_CHANGED_SINCE;
   if (leftSourceOfKeyMap.has(finding.findingKey)) return STORED_STATES.LEFT;
 
   return keptKeys.has(finding.findingKey) ? STORED_STATES.BACK : STORED_STATES.CLOSED;
@@ -460,13 +472,13 @@ const decideTheStoredState = (finding, leftSourceOfKeyMap, keptKeys, decidedKeys
 
 const gradeTheStoredFindings = (storedKept, leftSourceOfKeyMap, review) => {
   const keptKeys = review ? readKeptKeys(review) : new Set();
-  const decidedKeys = review ? readDecidedKeys(review) : new Set();
+  const placedKeys = { decidedKeys: review ? readDecidedKeys(review) : new Set(), changedSinceKeys: review ? readChangedSinceKeys(review) : new Set() };
   const judgedKeys = review ? readJudgedKeys(review.run) : null;
   const findings = storedKept.map(finding => ({
     displayName: finding.displayName,
     check: finding.check,
     scale: finding.scale,
-    state: decideTheStoredState(finding, leftSourceOfKeyMap, keptKeys, decidedKeys),
+    state: decideTheStoredState(finding, leftSourceOfKeyMap, keptKeys, placedKeys),
     judgedAgain: judgedKeys ? isJudgedAgain(finding, judgedKeys) : null,
   }));
   const counts = Object.fromEntries(Object.values(STORED_STATES).map(state => [state, findings.filter(finding => finding.state === state).length]));
@@ -530,7 +542,7 @@ const formatCounts = (countMap, formatTheEntry = formatCount) => {
 
 const formatTheLeftSources = countOfSourceMap => Object.values(LEFT_SOURCES).map(source => formatCount(source, countOfSourceMap[source])).join(" · ");
 
-const formatTheStoredCounts = stored => `closed ${stored.counts.closed} · left ${stored.counts.left} (${formatTheLeftSources(stored.leftBySource)}) · decided again ${stored.counts[STORED_STATES.DECIDED]} · back ${stored.counts.back}`;
+const formatTheStoredCounts = stored => `closed ${stored.counts.closed} · left ${stored.counts.left} (${formatTheLeftSources(stored.leftBySource)}) · decided again ${stored.counts[STORED_STATES.DECIDED]} · decided again, changed since ${stored.counts[STORED_STATES.DECIDED_CHANGED_SINCE]} · back ${stored.counts.back}`;
 
 const formatTheApartCounts = (apart, closingLeftBySource) => {
   if (!closingLeftBySource) return formatCounts(apart);
@@ -545,7 +557,8 @@ const writeTheGradeLine = grade => {
   const scales = SCALES.map(scale => `${scale} ${kept.byScale[scale] || 0}`).join(" · ");
   const stored = grade.stored ? ` · stored findings: ${formatTheStoredCounts(grade.stored)}` : "";
   const toConsider = grade.review ? grade.review.toConsiderOnTheChange : 0;
-  return `one shot: ${grade.oneShot ? "yes" : "no"} · kept on the change ${kept.total} (${scales}; test code ${kept.testCode}) · to consider ${toConsider} · stops ${grade.writers.stops} · build ${formatTheBuildWord(grade.build)} · rounds ${grade.roundsNeeded} · ${formatDollars(grade.cost.dollars)}${stored}`;
+  const apart = grade.review ? grade.review.apart : {};
+  return `one shot: ${grade.oneShot ? "yes" : "no"} · kept on the change ${kept.total} (${scales}; test code ${kept.testCode}) · to consider ${toConsider} · decided ${apart[PLACEMENTS.DECIDED] || 0} · decided but changed since ${apart[PLACEMENTS.DECIDED_CHANGED_SINCE] || 0} · stops ${grade.writers.stops} · build ${formatTheBuildWord(grade.build)} · rounds ${grade.roundsNeeded} · ${formatDollars(grade.cost.dollars)}${stored}`;
 };
 
 const writeTheWriterLines = writers => {
@@ -573,6 +586,7 @@ const writeTheReviewLines = (review, stored) => {
   if (stored) lines.push(`  by key: ${Object.values(KEY_KINDS).map(keyKind => formatCount(keyKind, stored.keptByKey[keyKind])).join(" · ")}`);
   for (const finding of review.keptOnTheChange) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}`);
   lines.push(`to consider on the change: ${review.toConsiderOnTheChange}`);
+  for (const finding of review.decidedChangedSince) lines.push(`  decided but changed since: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
   lines.push(`apart, not graded: ${formatTheApartCounts(review.apart, stored && stored.closingLeftBySource)}`);
   return lines;
 };
