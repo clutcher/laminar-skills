@@ -22,6 +22,7 @@ const A_LIMITED_LINE = /^(.+?),\s*([^,]+?),\s*at most\s+(\d+)\s+at\s+(High|Moder
 const AN_ABSTRACTION_SEPARATOR = new RegExp(`\\s+or\\s+(?=(?:${A_KIND_WORD})\\s+\`)`);
 const CONFIDENCE_RANKS = Object.freeze({ low: 0, moderate: 1, high: 2 });
 const ANY_OTHER_FINDING_LINE = /^Any other finding(?:,\s*except\s+(.+?))?(?:,\s*because\s+.+?)?\.?$/;
+const AN_EXCEPTION_WITH_ITS_KIND = new RegExp(`^(?:(${A_KIND_WORD})\\s+)?(.+)$`);
 const ANY_OTHER_CONSIDERATION_LINE = /^Any other consideration(?:,\s*because\s+.+?)?\.?$/;
 const TO_CONSIDER = "To consider";
 const A_SECTION_HEAD = /^##\s+(.+?)\s*$/;
@@ -395,11 +396,14 @@ const isExpectedUnder = (raised, lead, expectedItems) => expectedItems
 const isForbiddenUnder = (raised, lead, mustNot) => mustNot
   .some(line => sameLeadWord(line.lead, lead) && forbidden([raised], line).length);
 
-const isExceptedUnder = (lead, anyOther) => anyOther.exceptLeadWords.some(excepted => sameLeadWord(excepted, lead));
+const isExceptedUnder = (raised, lead, anyOther) => anyOther.exceptLeadWords.some(excepted => {
+  const [, kind, exceptedLead] = AN_EXCEPTION_WITH_ITS_KIND.exec(excepted);
+  return (!kind || kind.toLowerCase() === raised.kind.toLowerCase()) && sameLeadWord(exceptedLead, lead);
+});
 
 const unaccountedLeadWordsOf = (raised, anyOther, expectedItems, mustNot, limitedLines) => leadWordsOf(raised)
   .filter(lead => !isExpectedUnder(raised, lead, expectedItems) && !isForbiddenUnder(raised, lead, mustNot)
-    && !isAllowedUnder(raised, lead, limitedLines) && !isExceptedUnder(lead, anyOther));
+    && !isAllowedUnder(raised, lead, limitedLines) && !isExceptedUnder(raised, lead, anyOther));
 
 function gradeAnyOtherFinding(anyOther, raisedItems, expectedItems, mustNot, limitedLines) {
   const others = raisedItems
