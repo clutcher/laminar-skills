@@ -181,7 +181,6 @@ const ABSTRACTION_KINDS = Object.freeze([
     standsInFor: JUDGE_TYPE_BY_TRACK_MAP[TRACKS.TEST_METHOD],
     listSettled: abstraction => [findTheTestNameWithNoShould(abstraction)].filter(Boolean).map(place => ({ abstraction, place })),
     listPlaces: testNameWithNoShould => [testNameWithNoShould.place],
-    listFiles: testNameWithNoShould => [testNameWithNoShould.place.path],
     buildFindingTexts: testNameWithNoShould => buildTestNameFindingTexts(testNameWithNoShould),
   },
   {
@@ -191,7 +190,6 @@ const ABSTRACTION_KINDS = Object.freeze([
     standsInFor: JUDGE_TYPE_BY_SCALE_MAP[Scale.VARIABLE.name],
     listSettled: abstraction => [findTheSingleLetterName(abstraction)].filter(Boolean).map(place => ({ abstraction, place })),
     listPlaces: singleLetterName => [singleLetterName.place],
-    listFiles: singleLetterName => [singleLetterName.place.path],
     buildFindingTexts: singleLetterName => buildSingleLetterFindingTexts(singleLetterName),
   },
   {
@@ -201,7 +199,6 @@ const ABSTRACTION_KINDS = Object.freeze([
     standsInFor: JUDGE_TYPE_BY_SCALE_MAP[Scale.METHOD.name],
     listSettled: abstraction => [findTheMethodNameWithARelatingWord(abstraction)].filter(Boolean).map(place => ({ abstraction, place })),
     listPlaces: methodNameWithARelatingWord => [methodNameWithARelatingWord.place],
-    listFiles: methodNameWithARelatingWord => [methodNameWithARelatingWord.place.path],
     buildFindingTexts: methodNameWithARelatingWord => buildRelatingWordFindingTexts(methodNameWithARelatingWord),
   },
   {
@@ -211,7 +208,6 @@ const ABSTRACTION_KINDS = Object.freeze([
     standsInFor: JUDGE_TYPE_BY_TRACK_MAP[TRACKS.COMMENT],
     listSettled: abstraction => [listPhaseCommentsInProductionCode(abstraction)].filter(places => places.length).map(places => ({ abstraction, places })),
     listPlaces: phaseComment => phaseComment.places,
-    listFiles: phaseComment => phaseComment.places.map(place => place.path),
     buildFindingTexts: phaseComment => buildPhaseCommentFindingTexts(phaseComment),
   },
   {
@@ -221,7 +217,6 @@ const ABSTRACTION_KINDS = Object.freeze([
     standsInFor: JUDGE_TYPE_BY_TRACK_MAP[TRACKS.COMMENT],
     listSettled: abstraction => listNotesOfWorkWithNoTicket(abstraction).map(place => ({ abstraction, place })),
     listPlaces: noteOfWork => [noteOfWork.place],
-    listFiles: noteOfWork => [noteOfWork.place.path],
     buildFindingTexts: noteOfWork => buildNoteOfWorkFindingTexts(noteOfWork),
   },
 ]);
@@ -313,12 +308,18 @@ const createCodeUnderReviewOfAnAbstractionTheScriptSettled =(abstraction, kind, 
   slice: { sections: [{ section: kind.section, lines: kind.listPlaces(settled).map(readPlacedSliceLineOfAPlace) }] },
 });
 
+const marksTheChangeByItsFiles = kind => Boolean(kind.listFiles);
+
+const markTheChangeByTheFiles = (kind, settled, changedLines) => (marksTheChangeByItsFiles(kind)
+  ? { inChange: kind.listFiles(settled).some(filePath => Boolean(changedLines[filePath])) }
+  : {});
+
 const createFinding = (kind, settled, id, changedLines) => ({
   codeUnderReviewId: id,
   check: (kind.check || CHECKS_BY_ID_MAP.S2).id,
   evidence: kind.buildEvidence ? kind.buildEvidence(settled) : buildEvidenceOfPlaces(kind.listPlaces(settled)),
   confidence: "high",
-  inChange: kind.listFiles(settled).some(filePath => Boolean(changedLines[filePath])),
+  ...markTheChangeByTheFiles(kind, settled, changedLines),
   scriptRaised: true,
   ...(kind.standsInFor ? { standsInFor: kind.standsInFor } : {}),
   ...kind.buildFindingTexts(settled),
