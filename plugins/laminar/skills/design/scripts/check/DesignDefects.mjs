@@ -20,7 +20,7 @@ import { findOwnerValueDefects } from "./OwnerValues.mjs";
 import { findFindingsDefects } from "./FindingsCheck.mjs";
 import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
 import { findRepeatedDecisionDefects } from "./RepeatedDecisions.mjs";
-import { findSimplestFormDefects } from "./SimplestForm.mjs";
+import { findSimplestFormDefects, namesAMethodWithARule } from "./SimplestForm.mjs";
 import { findTriedNameDefects } from "./TriedNames.mjs";
 import { findTypeNotOfTheDomainDefects } from "./TypesNotOfTheDomain.mjs";
 import { findUnchangedCopyDefects } from "./UnchangedCopies.mjs";
@@ -53,13 +53,21 @@ const findWhyTheCycleIsNotOutside = (defect, currentTree) => {
   return folderPair ? `no relation of the base commit makes its edge ${folderPair.fromFolder} -> ${folderPair.toFolder}` : "";
 };
 
+// A collection case is answered only by a reason that names a method of the type with a rule outside construction; every other recheck takes any reason.
+const isAnAnswerTheCaseTakes = (model, defect, name, scriptCase) => {
+  if (defect.code !== DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION) return true;
+
+  const theClass = model.findClass(name);
+  return theClass !== null && namesAMethodWithARule(model, theClass, scriptCase.reason);
+};
+
 const markTheScriptCases = (model, defects, currentTree) => {
   const scriptCaseOfKeyMap = new Map(readList(model.decisions.scriptCases).map(scriptCase => [joinScriptCaseKey(scriptCase.code, scriptCase.name, scriptCase.text), scriptCase]));
   const outsideDefects = [];
   const markedDefects = defects.map(({ folderPairs, ...defect }) => {
     const name = findNameOfThePath(model, defect.path) || defect.path;
     const scriptCase = defect.recheck ? scriptCaseOfKeyMap.get(joinScriptCaseKey(defect.code, name, defect.sentence)) : undefined;
-    if (!scriptCase) return { ...defect, name, foundWrong: false, matched: false };
+    if (!scriptCase || !isAnAnswerTheCaseTakes(model, defect, name, scriptCase)) return { ...defect, name, foundWrong: false, matched: false };
     if (defect.code !== DEFECT_CODES.FOLDER_CYCLE || scriptCase.reason !== OUTSIDE_THE_CHANGE) return { ...defect, name, foundWrong: true, matched: true };
 
     const why = findWhyTheCycleIsNotOutside({ ...defect, folderPairs }, currentTree);
