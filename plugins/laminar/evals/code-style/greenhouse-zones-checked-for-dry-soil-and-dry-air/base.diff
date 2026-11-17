@@ -1,0 +1,416 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,2 @@
++build/
++.gradle/
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# Greenhouse irrigation service
++
++Java 21, Gradle, JUnit 5. The domain model, the zones and the readings of their sensors, is under `com.example.greenhouse.model`. The sensor network, the valves, the fans and the grower notifier are interfaces implemented by the infrastructure module (not in this repository slice).
+diff --git a/build.gradle b/build.gradle
+new file mode 100644
+--- /dev/null
++++ b/build.gradle
+@@ -0,0 +1,16 @@
++plugins {
++    id 'java'
++}
++
++repositories {
++    mavenCentral()
++}
++
++dependencies {
++    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.5'
++    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.5'
++}
++
++test {
++    useJUnitPlatform()
++}
+diff --git a/settings.gradle b/settings.gradle
+new file mode 100644
+--- /dev/null
++++ b/settings.gradle
+@@ -0,0 +1,1 @@
++rootProject.name = 'greenhouse'
+diff --git a/src/main/java/com/example/greenhouse/climate/FanController.java b/src/main/java/com/example/greenhouse/climate/FanController.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/greenhouse/climate/FanController.java
+@@ -0,0 +1,6 @@
++package com.example.greenhouse.climate;
++
++public interface FanController {
++
++    void startMistingFans(String zoneId);
++}
+diff --git a/src/main/java/com/example/greenhouse/climate/MistingRound.java b/src/main/java/com/example/greenhouse/climate/MistingRound.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/greenhouse/climate/MistingRound.java
+@@ -0,0 +1,23 @@
++package com.example.greenhouse.climate;
++
++import com.example.greenhouse.model.AirHumidityReading;
++import com.example.greenhouse.sensor.SensorNetwork;
++
++public class MistingRound {
++
++    private final SensorNetwork sensorNetwork;
++    private final FanController fanController;
++
++    public MistingRound(SensorNetwork sensorNetwork, FanController fanController) {
++        this.sensorNetwork = sensorNetwork;
++        this.fanController = fanController;
++    }
++
++    public void startMistingFansInDryAir() {
++        for (AirHumidityReading reading : sensorNetwork.readLatestAirHumidity()) {
++            if (reading.humidityPercent() < 30) {
++                fanController.startMistingFans(reading.zone().zoneId());
++            }
++        }
++    }
++}
+diff --git a/src/main/java/com/example/greenhouse/grower/DrySoilMorningNotifier.java b/src/main/java/com/example/greenhouse/grower/DrySoilMorningNotifier.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/greenhouse/grower/DrySoilMorningNotifier.java
+@@ -0,0 +1,41 @@
++package com.example.greenhouse.grower;
++
++import com.example.greenhouse.model.SoilMoistureReading;
++import com.example.greenhouse.model.Zone;
++import com.example.greenhouse.sensor.SensorNetwork;
++import java.util.ArrayList;
++import java.util.List;
++
++public class DrySoilMorningNotifier {
++
++    private final SensorNetwork sensorNetwork;
++    private final GrowerNotifier growerNotifier;
++
++    public DrySoilMorningNotifier(SensorNetwork sensorNetwork, GrowerNotifier growerNotifier) {
++        this.sensorNetwork = sensorNetwork;
++        this.growerNotifier = growerNotifier;
++    }
++
++    public void sendDrySoilMessage() {
++        List<String> dryZoneLines = new ArrayList<>();
++        for (SoilMoistureReading reading : sensorNetwork.readLatestSoilMoisture()) {
++            Zone zone = reading.zone();
++            addLineWhenDry(dryZoneLines, zone.zoneId(), zone.cropName(), reading.moisturePercent());
++        }
++        if (dryZoneLines.isEmpty()) {
++            return;
++        }
++
++        growerNotifier.notifyGrower("Dry soil this morning:\n" + String.join("\n", dryZoneLines));
++    }
++
++    private void addLineWhenDry(List<String> dryZoneLines, String zoneId, String cropName, int moisturePercent) {
++        if (moisturePercent < 30) {
++            dryZoneLines.add(formatDryZoneLine(zoneId, cropName, moisturePercent));
++        }
++    }
++
++    private String formatDryZoneLine(String zoneId, String cropName, int moisturePercent) {
++        return zoneId + " " + cropName + ": soil moisture " + moisturePercent + " percent";
++    }
++}
+diff --git a/src/main/java/com/example/greenhouse/grower/GrowerNotifier.java b/src/main/java/com/example/greenhouse/grower/GrowerNotifier.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/greenhouse/grower/GrowerNotifier.java
+@@ -0,0 +1,6 @@
++package com.example.greenhouse.grower;
++
++public interface GrowerNotifier {
++
++    void notifyGrower(String text);
++}
+diff --git a/src/main/java/com/example/greenhouse/irrigation/ValveController.java b/src/main/java/com/example/greenhouse/irrigation/ValveController.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/greenhouse/irrigation/ValveController.java
+@@ -0,0 +1,6 @@
++package com.example.greenhouse.irrigation;
++
++public interface ValveController {
++
++    void openValve(String zoneId, int litres);
++}
+diff --git a/src/main/java/com/example/greenhouse/irrigation/WateringRound.java b/src/main/java/com/example/greenhouse/irrigation/WateringRound.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/greenhouse/irrigation/WateringRound.java
+@@ -0,0 +1,25 @@
++package com.example.greenhouse.irrigation;
++
++import com.example.greenhouse.model.SoilMoistureReading;
++import com.example.greenhouse.model.Zone;
++import com.example.greenhouse.sensor.SensorNetwork;
++
++public class WateringRound {
++
++    private final SensorNetwork sensorNetwork;
++    private final ValveController valveController;
++
++    public WateringRound(SensorNetwork sensorNetwork, ValveController valveController) {
++        this.sensorNetwork = sensorNetwork;
++        this.valveController = valveController;
++    }
++
++    public void waterDryZones() {
++        for (SoilMoistureReading reading : sensorNetwork.readLatestSoilMoisture()) {
++            if (reading.moisturePercent() < 30) {
++                Zone zone = reading.zone();
++                valveController.openValve(zone.zoneId(), zone.wateringLitres());
++            }
++        }
++    }
++}
+diff --git a/src/main/java/com/example/greenhouse/model/AirHumidityReading.java b/src/main/java/com/example/greenhouse/model/AirHumidityReading.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/greenhouse/model/AirHumidityReading.java
+@@ -0,0 +1,6 @@
++package com.example.greenhouse.model;
++
++import java.time.Instant;
++
++public record AirHumidityReading(Zone zone, int humidityPercent, Instant readAt) {
++}
+diff --git a/src/main/java/com/example/greenhouse/model/SoilMoistureReading.java b/src/main/java/com/example/greenhouse/model/SoilMoistureReading.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/greenhouse/model/SoilMoistureReading.java
+@@ -0,0 +1,6 @@
++package com.example.greenhouse.model;
++
++import java.time.Instant;
++
++public record SoilMoistureReading(Zone zone, int moisturePercent, Instant readAt) {
++}
+diff --git a/src/main/java/com/example/greenhouse/model/Zone.java b/src/main/java/com/example/greenhouse/model/Zone.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/greenhouse/model/Zone.java
+@@ -0,0 +1,4 @@
++package com.example.greenhouse.model;
++
++public record Zone(String zoneId, String cropName, int wateringLitres) {
++}
+diff --git a/src/main/java/com/example/greenhouse/sensor/SensorNetwork.java b/src/main/java/com/example/greenhouse/sensor/SensorNetwork.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/com/example/greenhouse/sensor/SensorNetwork.java
+@@ -0,0 +1,12 @@
++package com.example.greenhouse.sensor;
++
++import com.example.greenhouse.model.AirHumidityReading;
++import com.example.greenhouse.model.SoilMoistureReading;
++import java.util.List;
++
++public interface SensorNetwork {
++
++    List<SoilMoistureReading> readLatestSoilMoisture();
++
++    List<AirHumidityReading> readLatestAirHumidity();
++}
+diff --git a/src/test/java/com/example/greenhouse/climate/MistingRoundTest.java b/src/test/java/com/example/greenhouse/climate/MistingRoundTest.java
+new file mode 100644
+--- /dev/null
++++ b/src/test/java/com/example/greenhouse/climate/MistingRoundTest.java
+@@ -0,0 +1,49 @@
++package com.example.greenhouse.climate;
++
++import com.example.greenhouse.model.AirHumidityReading;
++import com.example.greenhouse.model.Zone;
++import com.example.greenhouse.sensor.FixedSensorNetwork;
++import com.example.greenhouse.sensor.SensorNetwork;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++import java.time.Instant;
++import java.util.ArrayList;
++import java.util.List;
++
++class MistingRoundTest {
++
++    private static final Instant NOON = Instant.parse("2026-05-04T12:00:00Z");
++    private static final Zone TOMATO_ZONE = new Zone("zone-1", "tomato", 12);
++
++    private final RecordingFanController fanController = new RecordingFanController();
++
++    @Test
++    void shouldStartTheMistingFansWhenTheAirIsDry() {
++        int dryAirHumidityPercent = 29;
++        SensorNetwork sensorNetwork = new FixedSensorNetwork(List.of(), List.of(new AirHumidityReading(TOMATO_ZONE, dryAirHumidityPercent, NOON)));
++
++        new MistingRound(sensorNetwork, fanController).startMistingFansInDryAir();
++
++        Assertions.assertEquals(List.of("zone-1"), fanController.startedZoneIds);
++    }
++
++    @Test
++    void shouldKeepTheMistingFansOffWhenTheAirIsHumid() {
++        int humidAirHumidityPercent = 30;
++        SensorNetwork sensorNetwork = new FixedSensorNetwork(List.of(), List.of(new AirHumidityReading(TOMATO_ZONE, humidAirHumidityPercent, NOON)));
++
++        new MistingRound(sensorNetwork, fanController).startMistingFansInDryAir();
++
++        Assertions.assertEquals(List.of(), fanController.startedZoneIds);
++    }
++
++    private static final class RecordingFanController implements FanController {
++
++        private final List<String> startedZoneIds = new ArrayList<>();
++
++        @Override
++        public void startMistingFans(String zoneId) {
++            startedZoneIds.add(zoneId);
++        }
++    }
++}
+diff --git a/src/test/java/com/example/greenhouse/grower/DrySoilMorningNotifierTest.java b/src/test/java/com/example/greenhouse/grower/DrySoilMorningNotifierTest.java
+new file mode 100644
+--- /dev/null
++++ b/src/test/java/com/example/greenhouse/grower/DrySoilMorningNotifierTest.java
+@@ -0,0 +1,53 @@
++package com.example.greenhouse.grower;
++
++import com.example.greenhouse.model.SoilMoistureReading;
++import com.example.greenhouse.model.Zone;
++import com.example.greenhouse.sensor.FixedSensorNetwork;
++import com.example.greenhouse.sensor.SensorNetwork;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++import java.time.Instant;
++import java.util.ArrayList;
++import java.util.List;
++
++class DrySoilMorningNotifierTest {
++
++    private static final Instant MORNING = Instant.parse("2026-05-04T06:00:00Z");
++    private static final Zone TOMATO_ZONE = new Zone("zone-1", "tomato", 12);
++    private static final Zone BASIL_ZONE = new Zone("zone-2", "basil", 4);
++
++    private final RecordingGrowerNotifier growerNotifier = new RecordingGrowerNotifier();
++
++    @Test
++    void shouldListOnlyTheZonesWithDrySoil() {
++        int drySoilMoisturePercent = 29;
++        int moistSoilMoisturePercent = 30;
++        SensorNetwork sensorNetwork = new FixedSensorNetwork(List.of(
++                new SoilMoistureReading(TOMATO_ZONE, drySoilMoisturePercent, MORNING),
++                new SoilMoistureReading(BASIL_ZONE, moistSoilMoisturePercent, MORNING)), List.of());
++
++        new DrySoilMorningNotifier(sensorNetwork, growerNotifier).sendDrySoilMessage();
++
++        Assertions.assertEquals(List.of("Dry soil this morning:\nzone-1 tomato: soil moisture 29 percent"), growerNotifier.sentTexts);
++    }
++
++    @Test
++    void shouldSendNoMessageWhenNoSoilIsDry() {
++        int moistSoilMoisturePercent = 30;
++        SensorNetwork sensorNetwork = new FixedSensorNetwork(List.of(new SoilMoistureReading(TOMATO_ZONE, moistSoilMoisturePercent, MORNING)), List.of());
++
++        new DrySoilMorningNotifier(sensorNetwork, growerNotifier).sendDrySoilMessage();
++
++        Assertions.assertEquals(List.of(), growerNotifier.sentTexts);
++    }
++
++    private static final class RecordingGrowerNotifier implements GrowerNotifier {
++
++        private final List<String> sentTexts = new ArrayList<>();
++
++        @Override
++        public void notifyGrower(String text) {
++            sentTexts.add(text);
++        }
++    }
++}
+diff --git a/src/test/java/com/example/greenhouse/irrigation/WateringRoundTest.java b/src/test/java/com/example/greenhouse/irrigation/WateringRoundTest.java
+new file mode 100644
+--- /dev/null
++++ b/src/test/java/com/example/greenhouse/irrigation/WateringRoundTest.java
+@@ -0,0 +1,49 @@
++package com.example.greenhouse.irrigation;
++
++import com.example.greenhouse.model.SoilMoistureReading;
++import com.example.greenhouse.model.Zone;
++import com.example.greenhouse.sensor.FixedSensorNetwork;
++import com.example.greenhouse.sensor.SensorNetwork;
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++import java.time.Instant;
++import java.util.ArrayList;
++import java.util.List;
++
++class WateringRoundTest {
++
++    private static final Instant MORNING = Instant.parse("2026-05-04T06:00:00Z");
++    private static final Zone TOMATO_ZONE = new Zone("zone-1", "tomato", 12);
++
++    private final RecordingValveController valveController = new RecordingValveController();
++
++    @Test
++    void shouldOpenTheValveWhenTheSoilIsDry() {
++        int drySoilMoisturePercent = 29;
++        SensorNetwork sensorNetwork = new FixedSensorNetwork(List.of(new SoilMoistureReading(TOMATO_ZONE, drySoilMoisturePercent, MORNING)), List.of());
++
++        new WateringRound(sensorNetwork, valveController).waterDryZones();
++
++        Assertions.assertEquals(List.of("zone-1 12"), valveController.openedValves);
++    }
++
++    @Test
++    void shouldKeepTheValveClosedWhenTheSoilIsMoist() {
++        int moistSoilMoisturePercent = 30;
++        SensorNetwork sensorNetwork = new FixedSensorNetwork(List.of(new SoilMoistureReading(TOMATO_ZONE, moistSoilMoisturePercent, MORNING)), List.of());
++
++        new WateringRound(sensorNetwork, valveController).waterDryZones();
++
++        Assertions.assertEquals(List.of(), valveController.openedValves);
++    }
++
++    private static final class RecordingValveController implements ValveController {
++
++        private final List<String> openedValves = new ArrayList<>();
++
++        @Override
++        public void openValve(String zoneId, int litres) {
++            openedValves.add(zoneId + " " + litres);
++        }
++    }
++}
+diff --git a/src/test/java/com/example/greenhouse/sensor/FixedSensorNetwork.java b/src/test/java/com/example/greenhouse/sensor/FixedSensorNetwork.java
+new file mode 100644
+--- /dev/null
++++ b/src/test/java/com/example/greenhouse/sensor/FixedSensorNetwork.java
+@@ -0,0 +1,18 @@
++package com.example.greenhouse.sensor;
++
++import com.example.greenhouse.model.AirHumidityReading;
++import com.example.greenhouse.model.SoilMoistureReading;
++import java.util.List;
++
++public record FixedSensorNetwork(List<SoilMoistureReading> soilMoistureReadings, List<AirHumidityReading> airHumidityReadings) implements SensorNetwork {
++
++    @Override
++    public List<SoilMoistureReading> readLatestSoilMoisture() {
++        return soilMoistureReadings;
++    }
++
++    @Override
++    public List<AirHumidityReading> readLatestAirHumidity() {
++        return airHumidityReadings;
++    }
++}
