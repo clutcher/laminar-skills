@@ -71,8 +71,8 @@ const readMethodName = decision => decision.displayName.slice(decision.displayNa
 
 const escapeForAPattern = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// A name stands in a line where no letter, digit, underscore or dollar sign touches it on either side.
-const namesTheMethod = (text, methodName) => new RegExp(`(^|[^A-Za-z0-9_$])${escapeForAPattern(methodName)}([^A-Za-z0-9_$]|$)`).test(String(text || ""));
+// A name stands in a line where no letter, digit, underscore or dollar sign touches it on either side, and it names the method of the class only where no member access, such as . or :: or -> or #, stands before it: in a line of the class, that is the declaring line or a call of the class on itself, while a qualified call can reach a same-named method of another class.
+const namesTheOwnMethod = (text, methodName) => new RegExp(`(?<![A-Za-z0-9_$])(?<!(?:\\.|::|->|#)\\s*)${escapeForAPattern(methodName)}(?![A-Za-z0-9_$])`).test(String(text || ""));
 
 const listEvidenceTexts = finding => [...(finding.evidence || []), ...(finding.quotes || [])].map(line => (line && typeof line === "object" ? line.text : ""));
 
@@ -81,7 +81,7 @@ const isOnTheClassOfTheMethod = (decision, finding, displayName) => decision.sca
   && readScale(finding) === CLASS_SCALE
   && isAText(decision.classDisplayName)
   && (displayName === decision.classDisplayName || decision.classFormerNames.includes(displayName))
-  && listEvidenceTexts(finding).some(text => namesTheMethod(text, readMethodName(decision)));
+  && listEvidenceTexts(finding).some(text => namesTheOwnMethod(text, readMethodName(decision)));
 
 const findMatchedBy = (decision, finding) => {
   const displayName = readDisplayNameOfTheFinding(finding);
