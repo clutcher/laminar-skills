@@ -31,7 +31,7 @@ This file holds 3 keys of `decisions`, the decisions half of the design model: `
 
 - A normal result, the first choice: absent, empty or not found is a result that the signature names, so no caller checks for it. The book: "A repository method that returns an empty collection when no rows match removes the exception its callers would otherwise have to check for." (*What Correctness Means*, *Remove Edge Cases*).
 - A check at the entry: where an input is wrong and no definition makes it normal, the entry validates it once, and nothing inside repeats the check (`entries`).
-- Fail fast: where the execution itself fails, such as a host that does not answer, the code fails fast there, and 1 handler at the entry turns the failure into a response. A failed read is never read as absent, so a signature that answers yes or no, or that returns a normal result for absent, cannot also carry a failed read. The book: "A single global exception handler makes this practical, because it gathers all failures in one place" (*What Correctness Means*, *Fail Fast*).
+- Fail fast: where the execution itself fails, such as another application that does not answer, the code fails fast there, and 1 handler at the entry turns the failure into a response. A failed read is never read as absent, so a signature that answers yes or no, or that returns a normal result for absent, cannot also carry a failed read. The book: "A single global exception handler makes this practical, because it gathers all failures in one place" (*What Correctness Means*, *Fail Fast*).
 
 The 3 choices are the book's. The rule that each I/O execution states its own choice is a format of this skill, not of the book.
 
