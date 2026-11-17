@@ -18,6 +18,9 @@ const NARROWER_MARK = "narrower than the book";
 // A citation of the book in a section of code-style: a line that starts with Book and the titles, or a sentence that starts with The book.
 const BOOK_CITATION = /(^|\n)\s*-?\s*Book \(|\bThe book: /;
 
+// A citation of the book inside 1 line of a section: the forms of a section, or the words the book says, calls, names or puts before a quote.
+const LINE_BOOK_CITATION = /(^|\n)\s*-?\s*Book \(|\bThe book: |\bthe book (?:says|calls|names|puts)\b/i;
+
 const SECTION_HEAD = /^## /;
 
 const KINDS_WITH_A_PROJECT_FILE = new Set([OVERRIDE_KINDS.OVERRIDE, OVERRIDE_KINDS.CONTRADICTION]);
@@ -52,7 +55,10 @@ const readCodeStyleFileText = file => {
   return null;
 };
 
-// Why the code-style section an object names is no rule marked narrower than the book; an empty text where it is one, and a recheck where the section mixes the mark with a citation of the book.
+// Every paragraph and bullet of a code-style file stands on 1 line, so the line that holds the quoted clause is its paragraph or its bullet; undefined where the clause crosses 2 lines.
+const findLineOfTheClause = (section, says) => section.split("\n").find(line => normalizeClause(line).includes(normalizeClause(says)));
+
+// Why the code-style section an object names is no rule marked narrower than the book; an empty text where it is one. The line that holds the quoted clause decides where it carries the mark itself, a recheck where that line also cites the book; otherwise the section decides, a recheck where it mixes the mark with a citation of the book.
 const findWhyNotAMarkedRule = override => {
   const codeStyleId = CODE_STYLE_ID.exec(String(override.codeStyle || "").trim());
   if (!codeStyleId) return { why: `${override.codeStyle} is not in the form code-style <file> §<n>`, recheck: false };
@@ -65,6 +71,11 @@ const findWhyNotAMarkedRule = override => {
   if (section === undefined) return { why: `${file} of the skill code-style holds no section ${number}`, recheck: false };
   if (!normalizeClause(section).includes(normalizeClause(String(override.says || "")))) return { why: `section ${number} of ${file} does not hold the quoted clause "${override.says}"`, recheck: false };
   if (lead.includes(NARROWER_MARK)) return { why: "", recheck: false };
+  const lineOfTheClause = findLineOfTheClause(section, String(override.says || ""));
+  if (lineOfTheClause !== undefined && lineOfTheClause.includes(NARROWER_MARK)) {
+    if (!LINE_BOOK_CITATION.test(lineOfTheClause)) return { why: "", recheck: false };
+    return { why: `the line of section ${number} of ${file} that holds the quoted clause holds the mark ${NARROWER_MARK} and also a citation of the book, so whether the mark reaches the quoted clause is a reading`, recheck: true };
+  }
   if (!section.includes(NARROWER_MARK)) return { why: `section ${number} of ${file} holds no mark ${NARROWER_MARK}, so its rule is a design direction of the book`, recheck: false };
   if (BOOK_CITATION.test(section)) return { why: `section ${number} of ${file} holds the mark ${NARROWER_MARK} and also a citation of the book, so whether the mark reaches the quoted clause is a reading`, recheck: true };
   return { why: "", recheck: false };
