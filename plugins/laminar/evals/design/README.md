@@ -85,6 +85,7 @@ The base was changed after the first runs, because a run counts a fault of the b
 
 - The base held the module Unnamed Part Failure on `in/web`, where `MemberLoansResponse` stood beside the controllers (raised in run-001 and run-004); fixed so the case measures only the change. The response is now in `in/web/response`.
 - The base held the method Unnamed Part Failure on `LoanDesk#searchLoansOfMember`, which reached through the member and its fine statement to sum the owed fines (raised in run-001 and run-003); fixed so the case measures only the change. `Member#sumOwedFines` now names that part.
+- The base held the class Unnamed Part Failure on `LoanExceptionHandler`, whose name said loan failures while it answered an unknown member (raised in run-001); fixed so the case measures only the change. The class is now `MemberLoansExceptionHandler`, named for the failures of the member loans it answers.
 
 A run goes so. The designer runs as a subagent of the calling session, as a design case with that task does, to the end of plan 1. Where plan 1 is ready, the session starts the writer workflow of the skill on the plan with its self-check, commits each finished group on the branch `change`, runs the tests, and runs 1 full review of `main...change` at every scale with no judge filter. Then it grades the run, at no model cost:
 

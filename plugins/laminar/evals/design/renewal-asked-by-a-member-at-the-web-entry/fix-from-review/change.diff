@@ -224,39 +224,6 @@ diff --git a/src/main/java/org/example/library/loan/config/LoanModuleConfigurati
 +        return new ExtensionPolicy();
      }
  }
-diff --git a/src/main/java/org/example/library/loan/in/web/LoanExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/LoanExceptionHandler.java
---- a/src/main/java/org/example/library/loan/in/web/LoanExceptionHandler.java
-+++ b/src/main/java/org/example/library/loan/in/web/LoanExceptionHandler.java
-@@ -1,6 +1,9 @@
- package org.example.library.loan.in.web;
- 
-+import org.example.library.loan.app.api.LoanNotFoundException;
- import org.example.library.loan.app.api.MemberNotFoundException;
-+import org.example.library.loan.app.api.RenewalRefusedException;
-+import org.example.library.loan.app.domain.model.LoanOnHoldException;
- import org.springframework.http.HttpStatus;
- import org.springframework.http.ProblemDetail;
- import org.springframework.web.bind.annotation.ExceptionHandler;
-@@ -13,4 +16,19 @@ public class LoanExceptionHandler {
-     public ProblemDetail answerMemberNotFound(MemberNotFoundException exception) {
-         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
-     }
-+
-+    @ExceptionHandler(LoanNotFoundException.class)
-+    public ProblemDetail answerLoanNotFound(LoanNotFoundException exception) {
-+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
-+    }
-+
-+    @ExceptionHandler(LoanOnHoldException.class)
-+    public ProblemDetail answerLoanOnHold(LoanOnHoldException exception) {
-+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
-+    }
-+
-+    @ExceptionHandler(RenewalRefusedException.class)
-+    public ProblemDetail answerRenewalRefused(RenewalRefusedException exception) {
-+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
-+    }
- }
 diff --git a/src/main/java/org/example/library/loan/in/web/LoanRenewalController.java b/src/main/java/org/example/library/loan/in/web/LoanRenewalController.java
 new file mode 100644
 --- /dev/null
@@ -321,6 +288,39 @@ diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansController
 -        return MemberLoansResponse.mapMemberLoans(apiForMemberLoans.searchLoansOfMember(memberId));
 +        return MemberLoansResponse.mapMemberLoans(apiForMemberLoans.searchLoansOfMember(memberId), extensionPolicy);
      }
+ }
+diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/MemberLoansExceptionHandler.java
+--- a/src/main/java/org/example/library/loan/in/web/MemberLoansExceptionHandler.java
++++ b/src/main/java/org/example/library/loan/in/web/MemberLoansExceptionHandler.java
+@@ -1,6 +1,9 @@
+ package org.example.library.loan.in.web;
+ 
++import org.example.library.loan.app.api.LoanNotFoundException;
+ import org.example.library.loan.app.api.MemberNotFoundException;
++import org.example.library.loan.app.api.RenewalRefusedException;
++import org.example.library.loan.app.domain.model.LoanOnHoldException;
+ import org.springframework.http.HttpStatus;
+ import org.springframework.http.ProblemDetail;
+ import org.springframework.web.bind.annotation.ExceptionHandler;
+@@ -13,4 +16,19 @@ public class MemberLoansExceptionHandler {
+     public ProblemDetail answerMemberNotFound(MemberNotFoundException exception) {
+         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
+     }
++
++    @ExceptionHandler(LoanNotFoundException.class)
++    public ProblemDetail answerLoanNotFound(LoanNotFoundException exception) {
++        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
++    }
++
++    @ExceptionHandler(LoanOnHoldException.class)
++    public ProblemDetail answerLoanOnHold(LoanOnHoldException exception) {
++        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
++    }
++
++    @ExceptionHandler(RenewalRefusedException.class)
++    public ProblemDetail answerRenewalRefused(RenewalRefusedException exception) {
++        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
++    }
  }
 diff --git a/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java b/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java
 --- a/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java

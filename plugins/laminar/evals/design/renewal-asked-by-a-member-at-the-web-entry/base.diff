@@ -331,27 +331,6 @@ new file mode 100644
 +        return new LoanDesk(loanRepository, memberRepository);
 +    }
 +}
-diff --git a/src/main/java/org/example/library/loan/in/web/LoanExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/LoanExceptionHandler.java
-new file mode 100644
---- /dev/null
-+++ b/src/main/java/org/example/library/loan/in/web/LoanExceptionHandler.java
-@@ -0,0 +1,16 @@
-+package org.example.library.loan.in.web;
-+
-+import org.example.library.loan.app.api.MemberNotFoundException;
-+import org.springframework.http.HttpStatus;
-+import org.springframework.http.ProblemDetail;
-+import org.springframework.web.bind.annotation.ExceptionHandler;
-+import org.springframework.web.bind.annotation.RestControllerAdvice;
-+
-+@RestControllerAdvice
-+public class LoanExceptionHandler {
-+
-+    @ExceptionHandler(MemberNotFoundException.class)
-+    public ProblemDetail answerMemberNotFound(MemberNotFoundException exception) {
-+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
-+    }
-+}
 diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansController.java b/src/main/java/org/example/library/loan/in/web/MemberLoansController.java
 new file mode 100644
 --- /dev/null
@@ -377,6 +356,27 @@ new file mode 100644
 +    @GetMapping("/members/{memberId}/loans")
 +    public MemberLoansResponse searchLoansOfMember(@PathVariable String memberId) {
 +        return MemberLoansResponse.mapMemberLoans(apiForMemberLoans.searchLoansOfMember(memberId));
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/MemberLoansExceptionHandler.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/in/web/MemberLoansExceptionHandler.java
+@@ -0,0 +1,16 @@
++package org.example.library.loan.in.web;
++
++import org.example.library.loan.app.api.MemberNotFoundException;
++import org.springframework.http.HttpStatus;
++import org.springframework.http.ProblemDetail;
++import org.springframework.web.bind.annotation.ExceptionHandler;
++import org.springframework.web.bind.annotation.RestControllerAdvice;
++
++@RestControllerAdvice
++public class MemberLoansExceptionHandler {
++
++    @ExceptionHandler(MemberNotFoundException.class)
++    public ProblemDetail answerMemberNotFound(MemberNotFoundException exception) {
++        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java b/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java
