@@ -69,7 +69,7 @@ const isAConstant = field => CONSTANT_NAME.test(String(field.name || ""));
 
 const readSimpleName = theClass => String(theClass.name || "").split(".").pop();
 
-const isAConstructor = (theClass, method) => method.name === readSimpleName(theClass) || CONSTRUCTOR_NAMES.has(method.name);
+export const isAConstructor = (theClass, method) => method.name === readSimpleName(theClass) || CONSTRUCTOR_NAMES.has(method.name);
 
 const isAFactoryOfItsClass = (theClass, method) => readHeadTypeName(method.returns || "") === readSimpleName(theClass);
 

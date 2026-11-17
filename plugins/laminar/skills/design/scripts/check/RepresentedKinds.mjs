@@ -1,7 +1,7 @@
 import { KINDS, isAText, isATestFileOfTheModel, readFolderOfTheFile, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
 import { isAMapType } from "./CollectionNames.mjs";
 import { DEFECT_CODES, createDefect, createRecheckDefect } from "./DesignDefect.mjs";
-import { isALanguageCollection } from "./SimplestForm.mjs";
+import { isAConstructor, isALanguageCollection } from "./SimplestForm.mjs";
 
 export const REPRESENTS = Object.freeze({ DOMAIN_OBJECT: "domain object", CARRIER: "carrier", WORK: "work", SUPPORT: "support", CONTRACT: "contract", TRANSLATOR: "translator" });
 
@@ -9,6 +9,10 @@ const REPRESENTS_VALUES = Object.values(REPRESENTS);
 
 // The config zone wires the application, so its classes take no kind.
 const CONFIG_ZONE = "config";
+
+const DOMAIN_ZONE = "domain";
+
+const CLOSED_ONLY_BY_A_RULE = "only a reason that names a method of the type, as Type#method, whose body holds a rule outside construction closes this case";
 
 // A failure type is named for its failure in every stack the skill reads, so its name or the name of the type it extends ends in Exception or Error.
 const FAILURE_TYPE_NAME = /(?:Exception|Error)$/;
@@ -88,10 +92,15 @@ const findElementClassOfTheCollection = (model, theClass, field) => {
   return elementClass === theClass ? null : elementClass;
 };
 
-const describeFieldsWithoutData = (model, theClass) => {
+const holdsOnlyConstants = theClass => {
   const fields = readList(theClass.fields);
-  const instanceFields = fields.filter(field => !isAConstant(field));
-  if (fields.length && !instanceFields.length) return `its fields are only constants: ${fields.map(field => field.name).join(", ")}`;
+  return fields.length > 0 && fields.every(isAConstant);
+};
+
+const describeTheConstants = theClass => `its fields are only constants: ${readList(theClass.fields).map(field => field.name).join(", ")}`;
+
+const describeTheOnlyCollection = (model, theClass) => {
+  const instanceFields = readList(theClass.fields).filter(field => !isAConstant(field));
   if (instanceFields.length !== 1) return "";
 
   const elementClass = findElementClassOfTheCollection(model, theClass, instanceFields[0]);
@@ -168,12 +177,35 @@ const checkThePlaceOfTheSupport = (check, theClass) => {
   }
 };
 
+// The zone of a class is known where a zone order applies to its folder and names the zone domain; where it is not known, the constants form is read only on a class marked domain object, and where it is known, only in the domain zone.
+const knowsTheDomainZone = (zoneOrder, theClass) => Boolean(zoneOrder)
+  && isAText(theClass.zone)
+  && zoneOrder.appliesToTheFolder(readFolderOfTheFile(theClass.file))
+  && zoneOrder.namesTheZone(DOMAIN_ZONE);
+
+const readsTheConstantsOfTheDomainObject = (zoneOrder, theClass) => !knowsTheDomainZone(zoneOrder, theClass) || theClass.zone === DOMAIN_ZONE;
+
+const describeFieldsWithoutData = (check, theClass) => {
+  if (!holdsOnlyConstants(theClass)) return describeTheOnlyCollection(check.model, theClass);
+  return readsTheConstantsOfTheDomainObject(check.zoneOrder, theClass) ? describeTheConstants(theClass) : "";
+};
+
 const checkTheFieldsOfTheDomainObject = (check, theClass) => {
   if (isAClosedSetOrACase(check.model, theClass)) return;
 
-  const description = describeFieldsWithoutData(check.model, theClass);
+  const description = describeFieldsWithoutData(check, theClass);
   if (!description) return;
-  check.addRecheckDefect(theClass, "", `${theClass.name} is marked domain object, and ${description}; only a reason that names a method of the type, as Type#method, whose body holds a rule outside construction closes this case`, { closedOnlyByARule: true });
+  check.addRecheckDefect(theClass, "", `${theClass.name} is marked domain object, and ${description}; ${CLOSED_ONLY_BY_A_RULE}`, { closedOnlyByARule: true });
+};
+
+const holdsOnlyConstantsAndConstructors = theClass => holdsOnlyConstants(theClass) && readList(theClass.methods).every(method => isAConstructor(theClass, method));
+
+// A class of the domain zone that holds only constants and only constructors is raised whatever its mark; a domain object takes the case from the check of its fields.
+const checkTheConstantsInTheDomainZone = (check, theClass) => {
+  if (theClass.represents === REPRESENTS.DOMAIN_OBJECT || theClass.zone !== DOMAIN_ZONE || !knowsTheDomainZone(check.zoneOrder, theClass)) return;
+  if (!holdsOnlyConstantsAndConstructors(theClass) || isAClosedSetOrACase(check.model, theClass)) return;
+
+  check.addRecheckDefect(theClass, "", `${theClass.name} stands in the domain zone, ${describeTheConstants(theClass)}, and its only methods are constructors; ${CLOSED_ONLY_BY_A_RULE}`, { closedOnlyByARule: true });
 };
 
 // A rule of where a kind always stands holds only where the zone order names the zone of the class and every zone of the rule, so a project zone order with other names asks nothing of it.
@@ -207,6 +239,7 @@ const checkTheWhole = (check, theClass) => {
 };
 
 const checkTheKindOfTheClass = (check, theClass) => {
+  checkTheConstantsInTheDomainZone(check, theClass);
   if (!checkTheKeysOfTheKind(check, theClass)) return;
 
   if (theClass.represents === REPRESENTS.SUPPORT) checkThePlaceOfTheSupport(check, theClass);

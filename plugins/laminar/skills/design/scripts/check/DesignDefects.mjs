@@ -57,7 +57,7 @@ const findWhyTheCycleIsNotOutside = (defect, currentTree) => {
   return folderPair ? `no relation of the base commit makes its edge ${folderPair.fromFolder} -> ${folderPair.toFolder}` : "";
 };
 
-// A collection case, and a domain object of only constants or 1 collection, is answered only by a reason that names a method of the type with a rule outside construction; every other recheck takes any reason.
+// A collection case, a class of only constants and a domain object of 1 collection are answered only by a reason that names a method of the type with a rule outside construction; every other recheck takes any reason.
 const isAnAnswerTheCaseTakes = (model, defect, name, scriptCase) => {
   if (defect.code !== DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION && !defect.closedOnlyByARule) return true;
 
