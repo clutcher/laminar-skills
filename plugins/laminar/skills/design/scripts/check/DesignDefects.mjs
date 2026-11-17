@@ -22,6 +22,7 @@ import { findOwnerValueDefects } from "./OwnerValues.mjs";
 import { findPassedOnCallDefects } from "./PassedOnCalls.mjs";
 import { findFindingsDefects } from "./FindingsCheck.mjs";
 import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
+import { findRegistryNameDefects } from "./RegistryNames.mjs";
 import { findRemovedBodilessMethodDefects } from "./RemovedBodilessMethods.mjs";
 import { findRepeatedDecisionDefects } from "./RepeatedDecisions.mjs";
 import { findRepresentedKindDefects } from "./RepresentedKinds.mjs";
@@ -118,6 +119,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findSimplestFormDefects(model),
     ...findPassedOnCallDefects(model),
     ...findCollectionNameDefects(model, currentTree),
+    ...findRegistryNameDefects(model),
     ...findRepresentedKindDefects(model, zoneOrder),
     ...findDomainObjectCopyDefects(model),
     ...findChangingCollectionDefects(model),

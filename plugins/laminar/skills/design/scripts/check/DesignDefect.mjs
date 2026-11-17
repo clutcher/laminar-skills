@@ -83,6 +83,7 @@ export const DEFECT_CODES = Object.freeze({
   COPIES_AN_UNCHANGED_METHOD: "copies-an-unchanged-method",
   REMOVED_BODILESS_METHOD: "removed-bodiless-method",
   MAP_NAME_WITHOUT_MAP_ENDING: "map-name-without-map-ending",
+  REGISTRY_NAME_WITHOUT_ADD: "registry-name-without-add",
   TEST_FILE_OF_SEVERAL_BEHAVIORS: "test-file-of-several-behaviors",
   KIND_DOES_NOT_FIT: "kind-does-not-fit",
 });
