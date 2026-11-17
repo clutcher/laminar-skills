@@ -4,7 +4,7 @@ import { readCheckName, readLead, TRACK_WORDS } from "../../../checks/CheckWords
 import { formatSweepWords } from "../../merge/draft/Sweep.mjs";
 import { buildIoEndsSection } from "../sections/IoEndsSection.mjs";
 import { MATCHED_BY } from "../verdicts/DecidedResults.mjs";
-import { DECIDED_BY_THE_DESIGN, RAISED_AT_CLASS_SCALE } from "./ReaderReport.mjs";
+import { DECIDED_BUT_CHANGED_SINCE, DECIDED_BY_THE_DESIGN, RAISED_AT_CLASS_SCALE } from "./ReaderReport.mjs";
 import { isAConsideration } from "../../merge/filing/Considerations.mjs";
 import { LEFT_OUT_REASONS } from "../../../code/index.mjs";
 import { NOT_VERIFIED_STAGES } from "../verdicts/SettledFindings.mjs";
@@ -237,6 +237,14 @@ const formatDecidedResult = mark => [
   ...mark.alsoDecidedBy.map(formatAlsoDecidedLine),
 ].join("\n");
 
+const formatLinesFingerprintLine = mark => `${SUB_POINT_INDENT}- Lines fingerprint at the decision ${mark.decision.linesFingerprint}, ${mark.linesFingerprintNow ? `now ${mark.linesFingerprintNow}` : "now not readable in this run"}`;
+
+const formatChangedSinceResult = mark => [formatDecidedResult(mark), formatLinesFingerprintLine(mark)].join("\n");
+
+const formatChangedSinceList = changedSince => (changedSince.length ? [`${DECIDED_BUT_CHANGED_SINCE}:`, ...changedSince.map(formatChangedSinceResult)] : []);
+
+const formatChangedSinceWord = decided => (decided.holdsALinesFingerprint ? `, ${decided.changedSince.length} changed since the decision` : "");
+
 const formatDecisionKey = decision => `\`${decision.displayName}\`, ${decision.scale}, ${decision.check}`;
 
 const formatNotMetLine = decision => `- ${formatDecisionKey(decision)}: ${decision.reason}, ${formatSourceWord(decision) || "not stated"}`;
@@ -251,10 +259,11 @@ const formatDecisionList = (title, lines, none) => `${title}\n\n${lines.join("\n
 
 const formatDecidedSection = decided => [
   `## ${DECIDED_BY_THE_DESIGN}`,
-  `Decided by the design: ${decided.filePath}, ${decided.decisionCount} decision(s), ${decided.decided.length} result(s) marked`,
+  `Decided by the design: ${decided.filePath}, ${decided.decisionCount} decision(s), ${decided.decided.length} result(s) marked${formatChangedSinceWord(decided)}`,
   ...(decided.notAppliedReason ? [`Not applied: ${decided.notAppliedReason}, so every result stays where the review put it.`] : []),
   ...(decided.overrides.length ? [formatDecisionList("Project conventions the design follows over code-style:", decided.overrides.map(formatOverrideLine), "")] : []),
   ...decided.decided.map(formatDecidedResult),
+  ...formatChangedSinceList(decided.changedSince),
   formatDecisionList("Not met:", decided.notMet.map(formatNotMetLine), "Every decision met a result."),
   formatDecisionList("Not applied, ambiguous:", decided.ambiguous.map(formatAmbiguousLine), "No decision was ambiguous."),
   formatDecisionList("Not applied, expired:", decided.expired.map(formatExpiredLine), "No decision expired."),

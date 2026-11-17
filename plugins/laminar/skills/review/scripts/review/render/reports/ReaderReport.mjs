@@ -82,6 +82,8 @@ export const DECIDED_BY_THE_DESIGN = "Decided by the design";
 
 const NO_DECIDED_RESULT = "No result matched a decision of the design.";
 
+const NO_RESULT_STAYS_DECIDED = "Every result a decision of the design matched changed since the decision.";
+
 const formatScaleWord = finding => {
   const scale = String(finding.scale || (finding.abstraction || {}).scale || "").toLowerCase();
   return scale.charAt(0).toUpperCase() + scale.slice(1);
@@ -96,20 +98,34 @@ const formatMatchedByWord = mark => {
 
 const formatPlanWord = decision => (decision.plan === null ? "" : ` in plan ${decision.plan}`);
 
-// The decision of the design stands beside what the judge said this run, so a result that names another defect under the same check shows.
-export const formatDecidedLine = mark => {
+const formatDecidedHead = mark => {
   const { finding, decision } = mark;
-  const head = `- ${formatLeadWords(finding)} · ${formatScaleWord(finding)} \`${readDisplayNameOfTheFinding(finding)}\` (${decision.check}) · ${decision.reason}, decided by ${decision.decidedBy}${formatPlanWord(decision)}: ${decision.says}${formatMatchedByWord(mark)}`;
+  return `- ${formatLeadWords(finding)} · ${formatScaleWord(finding)} \`${readDisplayNameOfTheFinding(finding)}\` (${decision.check}) · ${decision.reason}, decided by ${decision.decidedBy}${formatPlanWord(decision)}: ${decision.says}${formatMatchedByWord(mark)}`;
+};
+
+const addTheSummary = (head, finding) => {
   const summary = formatSentence(convertToText(finding.summary || finding.sentence || finding.consider));
   return summary ? `${head}\n${SUB_POINT_INDENT}- ${summary}` : head;
 };
 
+// The decision of the design stands beside what the judge said this run, so a result that names another defect under the same check shows.
+export const formatDecidedLine = mark => addTheSummary(formatDecidedHead(mark), mark.finding);
+
+export const DECIDED_BUT_CHANGED_SINCE = "Decided, but changed since the decision";
+
+export const formatChangedSinceWords = decision => `the ${decision.scale} changed since the decision`;
+
+export const formatChangedSinceLine = mark => addTheSummary(`${formatDecidedHead(mark)} · ${formatChangedSinceWords(mark.decision)}`, mark.finding);
+
 const formatDecidedBody = decided => {
   if (decided.notAppliedReason) return `No decision of the design applied: ${decided.notAppliedReason}.`;
-  return decided.decided.length ? decided.decided.map(formatDecidedLine).join("\n") : NO_DECIDED_RESULT;
+  if (decided.decided.length) return decided.decided.map(formatDecidedLine).join("\n");
+  return decided.changedSince.length ? NO_RESULT_STAYS_DECIDED : NO_DECIDED_RESULT;
 };
 
 const buildDecidedSection = decided => (decided ? [`## ${DECIDED_BY_THE_DESIGN}`, formatDecidedBody(decided)] : []);
+
+const buildChangedSinceSection = decided => (decided && decided.changedSince.length ? [`## ${DECIDED_BUT_CHANGED_SINCE}`, decided.changedSince.map(formatChangedSinceLine).join("\n")] : []);
 
 export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, leftOutFiles = [], decided = null }) {
   const considerations = settled.considerations || [];
@@ -123,6 +139,7 @@ export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, c
     ...buildFindingSections(settled.items, covered || [], sharedHeadLines),
     ...buildConsiderationSection(considerations, settled.items.length + 1, sharedHeadLines.slice(settled.items.length)),
     ...buildDecidedSection(decided),
+    ...buildChangedSinceSection(decided),
     "## Limits",
     LIMITS.join("\n"),
   ].join("\n\n") + "\n";

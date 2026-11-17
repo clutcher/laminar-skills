@@ -5,6 +5,7 @@ import { VerifyReturns } from "./verdicts/VerifyReturns.mjs";
 import { addTheFindingsToTheSweep, formatSweepWords } from "../merge/draft/Sweep.mjs";
 import { SettledFindings } from "./verdicts/SettledFindings.mjs";
 import { DecidedResults, readDecidedReviewFile } from "./verdicts/DecidedResults.mjs";
+import { LinesFingerprintsOfTheRun } from "./verdicts/LinesFingerprint.mjs";
 import { findWhyThePlanBaseLiesOutsideTheRevisions } from "./verdicts/PlanBaseOfTheRevisions.mjs";
 import { TestCoveredPaths } from "./verdicts/TestCoveredPaths.mjs";
 import { buildReaderReport } from "./reports/ReaderReport.mjs";
@@ -51,7 +52,9 @@ const formatRepairedWord = repaired => repaired.length ? `, ${repaired.length} r
 
 const formatDroppedWithNoCodeUnderReviewWord = counts => (counts || {}).droppedWithNoCodeUnderReview ? `, ${counts.droppedWithNoCodeUnderReview} dropped as their code under review is not in prepare.json` : "";
 
-const formatDecidedWord = decided => (decided ? `, ${decided.decided.length} decided by the design` : "");
+const formatChangedSinceWord = decided => (decided.holdsALinesFingerprint ? `, ${decided.changedSince.length} decided but changed since` : "");
+
+const formatDecidedWord = decided => (decided ? `, ${decided.decided.length} decided by the design${formatChangedSinceWord(decided)}` : "");
 
 const formatLinesNotInTheCodeWord = counts => (counts || {}).linesNotInTheCode ? `, ${counts.linesNotInTheCode} named line(s) not in the code` : "";
 
@@ -73,7 +76,7 @@ export class RenderStep {
   run() {
     this.covered = new TestCoveredPaths(this.merged.coveredPaths, this.returns, { mode: this.prepared.mode });
     this.settled = new SettledFindings([...numberThePossibleFindings(this.merged.groups), ...this.covered.pathsToTest], this.returns, this.covered.listNumbers(), this.prepared.codeUnderReview || [], (this.prepared.filter || {}).scales || []);
-    this.decided = this.decidedReview ? new DecidedResults(this.decidedReview, [...this.settled.kept, ...this.settled.considered], this.readTheChangeKinds(), this.decidedNotAppliedReason) : null;
+    this.decided = this.decidedReview ? new DecidedResults(this.decidedReview, [...this.settled.kept, ...this.settled.considered], this.readTheChangeKinds(), { notAppliedReason: this.decidedNotAppliedReason, linesFingerprints: new LinesFingerprintsOfTheRun(this.prepared, this.reviewed) }) : null;
     if (this.decided) this.settled.moveOutTheDecided(this.decided.listDecidedFindings());
     this.scope = buildScope(this.prepared, readJsonFileIfPresent(path.join(this.runFolder, COST_PLAN_FILE), null), readJsonFileIfPresent(path.join(this.runFolder, FULL_COST_PLAN_FILE), null), this.settled.countLeftOutByScale());
     this.sweep = addTheFindingsToTheSweep(this.merged.sweep, this.covered.pathsToTest.flatMap(group => group.possibleFindings));
@@ -121,7 +124,7 @@ export class RenderStep {
     const files = {
       "review.md": buildReaderReport({ ...shared, leftOutFiles: this.reviewed.leftOutFiles || [] }),
       "review-evidence.md": buildEvidenceReport({ ...shared, droppedWithNoCodeUnderReview: this.merged.droppedWithNoCodeUnderReview || [], sweep: this.sweep, notAnswered: this.prepared.notAnswered || [], leftOutFiles: this.reviewed.leftOutFiles || [], io: this.readIo() }),
-      "review.sarif": buildSarifReport(this.settled.kept, version, this.scope, this.acrossApplications, this.settled.considered, this.readTheChangeKinds(), this.decided ? this.decided.decided : []),
+      "review.sarif": buildSarifReport(this.settled.kept, version, this.scope, this.acrossApplications, this.settled.considered, this.readTheChangeKinds(), this.decided ? this.decided.listMarks() : []),
     };
     for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(this.runFolder, name), text);
     return {
@@ -139,6 +142,7 @@ export class RenderStep {
         notVerified: this.settled.notVerified.length,
         unmatchedVerdicts: this.settled.unmatchedVerdicts.length,
         ...(this.decided ? { decided: this.decided.decided.length } : {}),
+        ...(this.decided && this.decided.holdsALinesFingerprint ? { decidedChangedSince: this.decided.changedSince.length } : {}),
       },
     };
   }

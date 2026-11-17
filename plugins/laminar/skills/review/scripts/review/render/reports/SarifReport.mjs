@@ -4,6 +4,7 @@ import { formatLeadWords, formatDisplayNameText, formatDirectionText, formatDire
 import { selectScopeProperties } from "../sections/ScopeLine.mjs";
 import { ChangeKindsOfTheReport } from "./ChangeKindsOfTheReport.mjs";
 import { isAConsideration } from "../../merge/filing/Considerations.mjs";
+import { formatChangedSinceWords } from "./ReaderReport.mjs";
 
 const SCHEMA_URL = "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json";
 const INFORMATION_URI = "https://github.com/clutcher/laminar-skills";
@@ -167,14 +168,26 @@ const buildConsiderationResult = (finding, changeKinds) => {
 };
 
 // SARIF states a decision in suppressions and never in level, so a reader that ignores suppressions sees the result as the review raised it.
-const SUPPRESSION = Object.freeze({ KIND: "external", STATUS: "accepted" });
+// A suppression under review is pending, so a generic reader keeps a result decided but changed since visible, and only an accepted one counts as decided.
+const SUPPRESSION = Object.freeze({ KIND: "external", STATUS: "accepted", STATUS_OF_THE_CHANGED_SINCE: "underReview" });
 
-const buildSuppression = ({ decision, matchedBy }) => ({
+const buildDecisionProperties = ({ decision, matchedBy }) => ({ check: decision.check, displayName: decision.displayName, reason: decision.reason, decidedBy: decision.decidedBy, plan: decision.plan, source: decision.source, matchedBy });
+
+const buildAcceptedSuppression = mark => ({
   kind: SUPPRESSION.KIND,
   status: SUPPRESSION.STATUS,
-  justification: `${decision.reason}: ${decision.says}`,
-  properties: { check: decision.check, displayName: decision.displayName, reason: decision.reason, decidedBy: decision.decidedBy, plan: decision.plan, source: decision.source, matchedBy },
+  justification: `${mark.decision.reason}: ${mark.decision.says}`,
+  properties: buildDecisionProperties(mark),
 });
+
+const buildChangedSinceSuppression = mark => ({
+  kind: SUPPRESSION.KIND,
+  status: SUPPRESSION.STATUS_OF_THE_CHANGED_SINCE,
+  justification: `${mark.decision.reason}: ${mark.decision.says}; ${formatChangedSinceWords(mark.decision)}`,
+  properties: { ...buildDecisionProperties(mark), linesFingerprint: mark.decision.linesFingerprint, linesFingerprintNow: mark.linesFingerprintNow },
+});
+
+const buildSuppression = mark => (mark.changedSince ? buildChangedSinceSuppression(mark) : buildAcceptedSuppression(mark));
 
 const buildDecidedResult = (mark, changeKinds) => {
   const result = isAConsideration(mark.finding) ? buildConsiderationResult(mark.finding, changeKinds) : buildResult(mark.finding, changeKinds);

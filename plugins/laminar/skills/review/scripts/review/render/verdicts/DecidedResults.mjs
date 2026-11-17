@@ -1,6 +1,7 @@
 import { readRunFileText, RunFileStop } from "../../../files/runFile.mjs";
 import { formatDisplayNameText } from "../sections/ItemText.mjs";
 import { PUBLIC_CHANGE_KINDS } from "../../../code/index.mjs";
+import { LinesFingerprintsOfTheRun } from "./LinesFingerprint.mjs";
 
 export const MATCHED_BY = Object.freeze({ DISPLAY_NAME: "displayName", FORMER_NAME: "formerName", CLASS_OF_THE_METHOD: "classOfTheMethod" });
 
@@ -38,6 +39,7 @@ const createDecision = (given, order) => {
     plannedKind: String(given.plannedKind || ""),
     classDisplayName: isAText(given.classDisplayName) ? given.classDisplayName : "",
     classFormerNames: readTexts(given.classFormerNames),
+    linesFingerprint: isAText(given.linesFingerprint) ? given.linesFingerprint : "",
   };
 };
 
@@ -115,25 +117,39 @@ const compareTheMarks = (left, right) => {
   return byName || (right.decision.plan ?? 0) - (left.decision.plan ?? 0);
 };
 
+// A method decision that marked a class-scale result compares the lines of its method, and every other mark the lines of the result's own abstraction.
+const readLinesFingerprintNow = (mark, linesFingerprints) => (mark.matchedBy === MATCHED_BY.CLASS_OF_THE_METHOD
+  ? linesFingerprints.findLinesFingerprint([mark.decision.displayName, ...mark.decision.formerNames], METHOD_SCALE, mark.finding.file)
+  : linesFingerprints.findLinesFingerprint([readDisplayNameOfTheFinding(mark.finding)], readScale(mark.finding), mark.finding.file));
+
+// A decision holds while the lines it was made on stand as they were; lines the run cannot read count as changed, so a decision never hides a result it cannot confirm.
+const isChangedSince = mark => Boolean(mark.decision.linesFingerprint) && mark.linesFingerprintNow !== mark.decision.linesFingerprint;
+
+const NO_LINES_FINGERPRINTS = new LinesFingerprintsOfTheRun(null, null);
+
 export class DecidedResults {
   // A file whose plan base the reviewed range does not hold applies no decision, and the reports say why.
-  constructor(decidedReview, settledFindings, changeKinds, notAppliedReason = "") {
+  constructor(decidedReview, settledFindings, changeKinds, { notAppliedReason = "", linesFingerprints = NO_LINES_FINGERPRINTS } = {}) {
     this.filePath = decidedReview.filePath;
     this.decisionCount = decidedReview.decisions.length;
     this.overrides = decidedReview.overrides;
     this.notAppliedReason = notAppliedReason;
+    this.holdsALinesFingerprint = decidedReview.decisions.some(decision => decision.linesFingerprint);
     this.notMet = [];
     this.ambiguous = [];
     this.expired = [];
     const marksOfFindingMap = new Map();
     const appliedDecisions = notAppliedReason ? [] : decidedReview.decisions;
     for (const decision of appliedDecisions) this.matchTheDecision(decision, settledFindings, changeKinds, marksOfFindingMap);
-    this.decided = settledFindings
+    const marks = settledFindings
       .filter(finding => marksOfFindingMap.has(finding))
       .map(finding => {
         const [mark, ...others] = marksOfFindingMap.get(finding).sort(compareTheMarks);
-        return { finding, ...mark, alsoDecidedBy: others.map(other => other.decision) };
+        const primary = { finding, ...mark, alsoDecidedBy: others.map(other => other.decision) };
+        return mark.decision.linesFingerprint ? { ...primary, linesFingerprintNow: readLinesFingerprintNow(primary, linesFingerprints) } : primary;
       });
+    this.decided = marks.filter(mark => !isChangedSince(mark));
+    this.changedSince = marks.filter(isChangedSince).map(mark => ({ ...mark, changedSince: true }));
   }
 
   matchTheDecision(decision, settledFindings, changeKinds, marksOfFindingMap) {
@@ -161,7 +177,12 @@ export class DecidedResults {
     }
   }
 
+  // The results decided and those decided but changed since both leave the items: neither is kept, and neither is decided alone.
   listDecidedFindings() {
-    return this.decided.map(mark => mark.finding);
+    return [...this.decided, ...this.changedSince].map(mark => mark.finding);
+  }
+
+  listMarks() {
+    return [...this.decided, ...this.changedSince];
   }
 }
