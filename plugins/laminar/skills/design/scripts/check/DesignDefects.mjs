@@ -20,6 +20,7 @@ import { findGroupOrderDefects } from "../migration/GroupOrder.mjs";
 import { findOwnerValueDefects } from "./OwnerValues.mjs";
 import { findFindingsDefects } from "./FindingsCheck.mjs";
 import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
+import { findRemovedBodilessMethodDefects } from "./RemovedBodilessMethods.mjs";
 import { findRepeatedDecisionDefects } from "./RepeatedDecisions.mjs";
 import { findSimplestFormDefects, namesAMethodWithARule } from "./SimplestForm.mjs";
 import { findTriedNameDefects } from "./TriedNames.mjs";
@@ -116,6 +117,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findUnchangedCopyDefects(model, currentTree),
     ...findRenamesWithoutFindingDefects(model, { shapeRuns: shapeReviews, roundModels, reviewText, decidedList }),
     ...(currentTree ? findCurrentTreeDefects(model, currentTree) : []),
+    ...(currentTree ? findRemovedBodilessMethodDefects(model, currentTree) : []),
     ...findConventionOverrideDefects(model, currentTree),
     ...(fieldList ? fieldList.defects : []),
     ...(methodList ? methodList.defects : []),

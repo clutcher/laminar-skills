@@ -24,10 +24,11 @@ const JAVA_ENUM = "enum";
 // The name right before the parameters of a head, after an optional list of type parameters and the mark of an optional method.
 const NAME_BEFORE_THE_PARAMETERS = /([A-Za-z_$#][\w$]*)\s*(?:<[^()]*>)?\s*\??\s*$/;
 
-// The heads of a class body at its own depth: the text before each block it opens, and each piece that ends at a semicolon or, in a script, at a line end, where no parenthesis is open.
+// The heads of a class body at its own depth: the text before each block it opens, with the text of that block, and each piece that ends at a semicolon or, in a script, at a line end, where no parenthesis is open, with no block.
 const listTopLevelHeads = (bodyText, endsAtLine) => {
   const heads = [];
-  let head = "";
+  let head = null;
+  let text = "";
   let depth = 0;
   let openParentheses = 0;
   for (const character of bodyText) {
@@ -35,23 +36,26 @@ const listTopLevelHeads = (bodyText, endsAtLine) => {
     else if (depth === 0 && character === ")") openParentheses = Math.max(0, openParentheses - 1);
     else if (openParentheses === 0 && character === "{") {
       if (depth === 0) {
-        heads.push(head.trim());
-        head = "";
-      }
+        head = { text: text.trim(), blockText: "" };
+        heads.push(head);
+        text = "";
+      } else head.blockText += character;
       depth += 1;
       continue;
     } else if (openParentheses === 0 && character === "}") {
       depth = Math.max(0, depth - 1);
+      if (depth > 0) head.blockText += character;
       continue;
     } else if (depth === 0 && openParentheses === 0 && (character === ";" || (endsAtLine && character === "\n"))) {
-      heads.push(head.trim());
-      head = "";
+      heads.push({ text: text.trim(), blockText: null });
+      text = "";
       continue;
     }
-    if (depth === 0) head += character;
+    if (depth === 0) text += character;
+    else head.blockText += character;
   }
-  heads.push(head.trim());
-  return heads.filter(Boolean);
+  heads.push({ text: text.trim(), blockText: null });
+  return heads.filter(head => head.text);
 };
 
 // The name of the method a head declares and the words before that name; null where the head declares no method, such as a field with a value, a nested type or a block.
@@ -97,9 +101,26 @@ export const readDeclaredPublicMethodNames = (text, file, className) => {
   if (!declaration) return null;
   const simpleName = className.split(".").pop();
   const methodNames = listTopLevelHeads(readMethodBodyText(declaration, language), language === MEMBER_LANGUAGES.SCRIPT)
-    .map(readMethodHead)
+    .map(head => readMethodHead(head.text))
     .filter(Boolean)
     .map(methodHead => (language === MEMBER_LANGUAGES.JAVA ? readJavaPublicMethodName(methodHead, declaration, simpleName) : readScriptPublicMethodName(methodHead)))
     .filter(Boolean);
   return new Set(methodNames);
+};
+
+// A head with no block declares a method with no body only in an interface or with the word abstract; elsewhere it can be a native method, an overload signature or a script head whose brace stands on the next line.
+const isBodilessHead = (methodHead, head, declaration) => head.blockText === null && (declaration.kindWord === JAVA_INTERFACE || methodHead.words.includes("abstract"));
+
+// Each method a Java, JavaScript or TypeScript file declares for 1 class at its own depth, with whether its declaration has no body and the text of its body, the methods of its nested types left out; null where the file is in another language or declares no such class.
+export const listDeclaredMethods = (text, file, className) => {
+  const language = readMemberLanguage(file);
+  if (!language) return null;
+
+  const declaration = readClassDeclaration(text, className);
+  if (!declaration) return null;
+  return listTopLevelHeads(readMethodBodyText(declaration, language), language === MEMBER_LANGUAGES.SCRIPT).flatMap(head => {
+    const methodHead = readMethodHead(head.text);
+    if (!methodHead) return [];
+    return [{ name: methodHead.name, isBodiless: isBodilessHead(methodHead, head, declaration), bodyText: head.blockText || "" }];
+  });
 };
