@@ -32,7 +32,7 @@ End a class name with a word for what the class does where one exists, after a b
 
 ## 6. Strategies collected into a map
 
-Where cases keep arriving and each has its own class (classes, section 8), inject the strategies into the class that picks 1, which is work, as a list, or as a map that the bean method of that class builds from that list. That class asks each strategy whether it takes the input, or it reads the map by the key that each strategy states. Build that map in the constructor of that class or in its bean method, and fail at start where 2 strategies claim 1 key. Give a fallback strategy where one is right for every other input. Never choose a strategy by a naming convention of the beans.
+Where cases keep arriving and each has its own class (classes, section 8), inject the strategies into the class that picks 1, which is work, as a list, or as a map that the bean method of that class builds from that list or names case by case. That class asks each strategy whether it takes the input, or it reads the map by the key that each strategy states. Build that map in the constructor of that class or in its bean method, and fail at start where 2 strategies claim 1 key. Give a fallback strategy where one is right for every other input. Never choose a strategy by a naming convention of the beans.
 
 ## 7. Validation markers at the entry
 
