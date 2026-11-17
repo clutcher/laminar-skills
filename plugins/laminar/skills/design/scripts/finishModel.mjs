@@ -10,6 +10,7 @@ import { carryTheFixedFindings, listUnfinishedGroupsOfThePlanBefore } from "./pl
 import { DecidedListStop, checkDecidedListForm, resolveDecidedList } from "./plan/DecidedList.mjs";
 import { listFindingEntries } from "./plan/FindingList.mjs";
 import { buildDecidedReview, readCommitOfThePlan } from "./plan/DecidedReview.mjs";
+import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
 import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, formatPlanLine, getPlanFolder, listQuestionsThatStopThePlan, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { listRoundDispositions } from "./plan/RoundDispositions.mjs";
 import { RoundStop, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
@@ -162,6 +163,7 @@ const writeTheDecidedReview = (resultsFolder, plan, model, roundInput) => {
     baseCommit: readCommitOfThePlan(planFolder, BASE_COMMIT_FILE),
     planCommit: readCommitOfThePlan(planFolder, PLAN_COMMIT_FILE),
     earlier: findTheEarlierExport(resultsFolder, plan),
+    linesFingerprints: roundInput ? LinesFingerprintsOfTheRun.readFrom(roundInput.run.runFolder) : null,
   });
   writeJson(path.join(planFolder, DECIDED_REVIEW_FILE), decidedReview);
   for (const line of droppedLines) console.log(line);

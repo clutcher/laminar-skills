@@ -70,6 +70,14 @@ const readFileOfTheFinding = finding => {
   return place ? place.file : "";
 };
 
+// The lines fingerprint of the abstraction as the input run folder gives it under the name of the base, so the render can tell whether its lines changed since the decision.
+const readLinesFingerprintField = (linesFingerprints, finding) => {
+  if (!linesFingerprints || FOLDER_SCALES.has(finding.scale)) return {};
+
+  const linesFingerprint = linesFingerprints.findLinesFingerprint([finding.displayName], finding.scale, finding.file ?? readFileOfTheFinding(finding));
+  return linesFingerprint ? { linesFingerprint } : {};
+};
+
 const createDecision = (model, modelBefore, finding, decided) => {
   const isAFolder = FOLDER_SCALES.has(finding.scale);
   const file = isAFolder ? "" : (finding.file ?? readFileOfTheFinding(finding));
@@ -102,18 +110,19 @@ const listFindingsOfTheItem = (run, number, check) => {
   return item ? item.findings.filter(finding => !isAText(check) || finding.check === check) : [];
 };
 
-const listDecisionsOfTheObjects = ({ model, modelBefore, plan, inputRun, readShapeRun }) => readList(model.decisions.findings)
+const listDecisionsOfTheObjects = ({ model, modelBefore, plan, inputRun, readShapeRun, linesFingerprints }) => readList(model.decisions.findings)
   .filter(isADecidingObject)
   .flatMap(object => {
     const isOfAShapeRun = Number.isFinite(object.run);
     const run = isOfAShapeRun ? readShapeRun(object.run) : inputRun;
     const source = isOfAShapeRun ? formatShapeRunSource(object.run, object.number) : formatInputRunSource(object.number);
-    return listFindingsOfTheItem(run, object.number, object.check).map(finding => createDecision(model, modelBefore, finding, { ...object, plan, source }));
+    return listFindingsOfTheItem(run, object.number, object.check).map(finding => ({ ...createDecision(model, modelBefore, finding, { ...object, plan, source }), ...readLinesFingerprintField(linesFingerprints, finding) }));
   });
 
-const listDecisionsOfTheEntries = ({ model, modelBefore, plan, entries }) => readList(entries)
+const listDecisionsOfTheEntries = ({ model, modelBefore, plan, entries, linesFingerprints }) => readList(entries)
   .filter(entry => isAText(entry.reason))
-  .map(entry => createDecision(model, modelBefore, { ...entry, scale: String(entry.scale).toLowerCase(), file: entry.file || "" }, { ...entry, plan, source: SOURCES.FINDINGS_FILE }));
+  .map(entry => ({ ...entry, scale: String(entry.scale).toLowerCase(), file: entry.file || "" }))
+  .map(finding => ({ ...createDecision(model, modelBefore, finding, { ...finding, plan, source: SOURCES.FINDINGS_FILE }), ...readLinesFingerprintField(linesFingerprints, finding) }));
 
 // An earlier decision follows the renames of the designer and leaves the export where the model removes its abstraction.
 const carryTheEarlierDecisions = (earlier, model, decisionKeys) => {
@@ -146,10 +155,10 @@ const listExistingDefectsLeftUnfixed = model => readList(model.decisions.existin
 
 const listOverrides = model => readList(model.decisions.conventions?.overrides).filter(override => override.kind === "override");
 
-// The decided review file of 1 ready plan: every decision of this plan and of the earlier ready plans of the results folder, and as context the answered questions and the existing defects left unfixed, which match no result.
-export const buildDecidedReview = ({ model, modelBefore, plan, inputRun, entries, readShapeRun, baseCommit, planCommit, earlier }) => {
+// The decided review file of 1 ready plan: every decision of this plan and of the earlier ready plans of the results folder, each with the lines fingerprint of the input run folder where it gives one, and as context the answered questions and the existing defects left unfixed, which match no result.
+export const buildDecidedReview = ({ model, modelBefore, plan, inputRun, entries, readShapeRun, baseCommit, planCommit, earlier, linesFingerprints = null }) => {
   const decisionOfKeyMap = new Map();
-  for (const decision of [...listDecisionsOfTheObjects({ model, modelBefore, plan, inputRun, readShapeRun }), ...listDecisionsOfTheEntries({ model, modelBefore, plan, entries })]) {
+  for (const decision of [...listDecisionsOfTheObjects({ model, modelBefore, plan, inputRun, readShapeRun, linesFingerprints }), ...listDecisionsOfTheEntries({ model, modelBefore, plan, entries, linesFingerprints })]) {
     const key = `${createDecisionKey(decision)}\t${decision.source}`;
     if (!decisionOfKeyMap.has(key)) decisionOfKeyMap.set(key, decision);
   }
