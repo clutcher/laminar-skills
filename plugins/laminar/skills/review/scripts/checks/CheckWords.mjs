@@ -84,6 +84,7 @@ export const DIRECTION_BY_JUDGE_TYPE_MAP = Object.freeze({
     D3: createDirection(PRINCIPLES.ENCAPSULATION, "Have a Single Owner", "let the serving application decide the business rule and return the answer for the caller to read", "one abstraction owns the decision, and every caller reaches it through that boundary"),
   }),
   [JUDGE_TYPE_BY_SCALE_MAP[Scale.CLASS.name]]: Object.freeze({
+    S2: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "move other work to its owner; remove a wrapper of 1 value, callers use it; else rename", "when naming an abstraction feels difficult, check what the abstraction contains before searching for a better name", "A naming problem needs a more precise name, while an abstraction problem needs the behavior redistributed across different abstractions."),
     S5: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the methods and fields of another part up to their caller, or into a new class", "they belong elsewhere: above as a coordinator, or below as a detail", "Methods that use a completely different set of objects to do their work belong behind different boundaries."),
   }),
   [JUDGE_TYPE_BY_SCALE_MAP[Scale.MODULE.name]]: Object.freeze({
