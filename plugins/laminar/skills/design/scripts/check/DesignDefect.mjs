@@ -80,6 +80,7 @@ export const DEFECT_CODES = Object.freeze({
   COPIES_AN_UNCHANGED_METHOD: "copies-an-unchanged-method",
   REMOVED_BODILESS_METHOD: "removed-bodiless-method",
   MAP_NAME_WITHOUT_MAP_ENDING: "map-name-without-map-ending",
+  TEST_FILE_OF_SEVERAL_BEHAVIORS: "test-file-of-several-behaviors",
 });
 
 export const createDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false });

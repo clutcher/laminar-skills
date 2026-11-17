@@ -24,6 +24,7 @@ import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
 import { findRemovedBodilessMethodDefects } from "./RemovedBodilessMethods.mjs";
 import { findRepeatedDecisionDefects } from "./RepeatedDecisions.mjs";
 import { findSimplestFormDefects, namesAMethodWithARule } from "./SimplestForm.mjs";
+import { findTestFileBehaviorDefects } from "./TestFileBehaviors.mjs";
 import { findTriedNameDefects } from "./TriedNames.mjs";
 import { findTypeNotOfTheDomainDefects } from "./TypesNotOfTheDomain.mjs";
 import { findUnchangedCopyDefects } from "./UnchangedCopies.mjs";
@@ -106,6 +107,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
   const exitAbsent = findAbsentResult(model);
   const defects = [
     ...completeness.defects,
+    ...findTestFileBehaviorDefects(model),
     ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
     ...findTriedNameDefects(model, shapeReviews, roundModels),
     ...findSimplestFormDefects(model),
