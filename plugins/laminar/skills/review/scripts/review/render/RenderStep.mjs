@@ -21,6 +21,7 @@ import { COST_PLAN_FILE, FULL_COST_PLAN_FILE } from "../prepare/agents/CostPlan.
 import { REVIEW_ABSTRACTIONS_FILE } from "../prepare/PrepareStep.mjs";
 import { IO_UNKNOWN_FILE } from "../prepare/io/IoReachText.mjs";
 import { readJsonFile, readJsonFileIfPresent } from "../../files/jsonFile.mjs";
+import { isSettledByTheScript } from "../merge/filing/ScriptSettled.mjs";
 
 const PLUGIN_MANIFEST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "..", ".claude-plugin", "plugin.json");
 
@@ -31,7 +32,7 @@ const readVersionOfThePlugin = () => {
 
 const numberThePossibleFindings = groups => {
   let number = 0;
-  return (groups || []).map(group => ({
+  return (groups || []).map(group => isSettledByTheScript(group) ? group : ({
     ...group,
     possibleFindings: group.possibleFindings.map(finding => {
       number += 1;
