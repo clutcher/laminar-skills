@@ -37,6 +37,7 @@ export const DEFECT_CODES = Object.freeze({
   OVERRIDE_FILE_UNLISTED: "override-file-unlisted",
   ZONE_OUTSIDE_THE_ORDER: "zone-outside-the-order",
   ZONE_ORDER_BROKEN: "zone-order-broken",
+  CONFIG_CLASS_CALLS_THE_API: "config-class-calls-the-api",
   CALL_INTO_THE_IMPLEMENTED_ZONE: "call-into-the-implemented-zone",
   CYCLE: "cycle",
   FOLDER_CYCLE: "folder-cycle",
