@@ -97,7 +97,7 @@ export const DIRECTION_BY_DESIGN_RELATION_MAP = Object.freeze({
     D3: createDirection(PRINCIPLES.ENCAPSULATION, NO_PRACTICE, "move this method onto the value type", "belong on the new class and tend to move there"),
   }),
   [DESIGN_RELATION_KINDS.IN_OUT_OPERATION]: Object.freeze({
-    D3: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the business rule into the domain layer, so this method only translates", "the domain holds only business logic with no infrastructure to keep in mind, and the classes in `in/` and `out/` only translate, never decide"),
+    D3: createDirection(PRINCIPLES.SINGLE_LEVEL_OF_ABSTRACTION, NO_PRACTICE, "move the business rule to the domain class that owns it, so this method only translates", "the domain holds only business logic with no infrastructure to keep in mind, and the classes in `in/` and `out/` only translate, never decide"),
   }),
 });
 
