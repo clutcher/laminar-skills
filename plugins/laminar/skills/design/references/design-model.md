@@ -17,7 +17,7 @@ The scope follows the book: "every part is named before any detail is written" (
 
 The file has 2 halves:
 
-- The shape half is the shape model of `shape-model.md` of the skill `review`, unchanged, plus keys that the prepare command ignores: `zone`, `does`, `exposed`, `oldName`, `removed`, `group` and `addedForFindings` on a class, `calls`, `oldName` and `unchanged` on a method, `oldName` on a field, and `oldPath` on a `created` child and `removedClasses` on a `modified` child (section 4).
+- The shape half is the shape model of `shape-model.md` of the skill `review`, unchanged, plus keys that the prepare command ignores: `zone`, `does`, `exposed`, `oldName`, `removed`, `group`, `addedForFindings`, `represents`, `for`, `madeWhen` and `partOf` on a class, `calls`, `oldName` and `unchanged` on a method, `oldName` on a field, and `oldPath` on a `created` child and `removedClasses` on a `modified` child (section 4).
 - The decisions half is the 1 top-level key `decisions`, whose keys `design-decisions.md`, `design-boundaries.md` and `design-findings.md` hold. The prepare command ignores it, so no judge of the shape check reads a decision.
 
 The designer writes the 2 halves in this order:
@@ -49,6 +49,10 @@ The keys below stand beside them. The prepare command ignores each of them, so t
 | `group` | class | number: the migration group of the class, from 1 | no; only on a class that the change creates, moves, renames, modifies or removes; a class with no `group` is in group 1; never on a class of an `unchanged` file | migration script; design check, which reports a `group` on a class of an `unchanged` file (`group-on-unchanged-class`) | `"group": 2` |
 | `unchanged` | method | true | no; only on a method of a class of a `modified` file that the change leaves as it is | design check, migration script | `"unchanged": true` |
 | `addedForFindings` | class | list of numbers: the item numbers of the findings of the input run folder for which the designer added the class | only on a class that the model holds because a finding at the method or variable scale names it, as `modified` with its whole listing | render, which prints `added to the model for the findings <numbers> of the run folder` | `"addedForFindings": [4]` |
+| `represents` | class | `domain object`, `carrier`, `work`, `support`, `contract` or `translator`; `contract` for an interface of `api` or `spi`, `translator` for edge code of `in` or `out` | yes, for each class of a `created` file outside a test file, except a failure type and a class of the `config` zone | design check, render | `"represents": "support"` |
+| `for` | class | list of display names (section 5): the classes that need the support | only with `support`, and then with 1 or more names | design check, render | `"for": ["LoanDesk"]` |
+| `madeWhen` | class | text: the event that makes a new one, in which a person who uses or asks for the application, or someone they deal with, acts, or work they set up runs | exactly 1 of `madeWhen` and `partOf` on a class marked `domain object` | design check, which reads only its presence; render | `"madeWhen": "a member borrows a copy"` |
+| `partOf` | class | display name of the domain object it is a part of | as `madeWhen` | design check, render | `"partOf": "Loan"` |
 
 - `zone`: the name of 1 group of folders in the zone order, which states which zone may call or implement which (`design-checks.md`, section 2). The zone order covers only the field types, `calls`, `implements` and `extends`, and no parameter type or return type. A zone is given per class, so a repository whose folders have other names still gets the order of calls checked. Where `decisions.conventions` names no file with a zone order, the zone order is the default zone order of the design skill (`design-checks.md`, section 2), and its zones are the folders of the backend layout of the book, where `app` holds `api`, `domain` and `spi`, so a class takes `api`, `domain` or `spi`, never `app`. This default zone order applies only under a folder that holds an `api`, `spi`, `in` or `out` folder; for a class outside such a folder the design check prints `zone order: not applied to <folder>`, and where no folder of the scope has the layout it prints `zone order: not applied, no conventions file, and no folder of the scope has the backend layout of an api, spi, in or out folder`. The book: "The `api/` folder declares what callers can ask for, and the `spi/` folder declares what the application needs." (*The Principles at Every Scale*, *Hexagonal Architecture*)
 - `does`: `computes` where the methods of the class decide from their parameters and fields alone and reach no exit; `coordinates` where the methods call parts in order, exits among them; `translates` where the class is concrete and every method of it is an exit, such as an implementation in `out` of an interface in `spi`. The test kind follows from it (`design-boundaries.md`, `tests`).
@@ -86,6 +90,7 @@ Every key of the model that names an abstraction holds a display name: `Class#me
 | the keys of `shape-model.md` | yes | yes | yes | yes |
 | `zone`, `does`, `exposed`, `calls` | no | yes | `does`, `exposed` and `calls` | no |
 | `addedForFindings` | no | no | yes | no |
+| `represents`, `for`, `madeWhen`, `partOf` | no | yes | yes | no |
 | `oldName`, `removed`, `removedClasses`, `oldPath` on a `created` child | no | yes | yes | yes |
 | `group` | no | yes | no | yes |
 | `unchanged` on a method | no | yes | no | yes |
