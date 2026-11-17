@@ -17,7 +17,7 @@ The scope follows the book: "every part is named before any detail is written" (
 
 The file has 2 halves:
 
-- The shape half is the shape model of `shape-model.md` of the skill `review`, unchanged, plus keys that the prepare command ignores: `zone`, `does`, `exposed`, `oldName`, `removed`, `group`, `addedForFindings`, `represents`, `for`, `madeWhen`, `partOf` and `typeParameters` on a class, `calls`, `oldName` and `unchanged` on a method, `oldName` on a field, and `oldPath` on a `created` child and `removedClasses` on a `modified` child (section 4).
+- The shape half is the shape model of `shape-model.md` of the skill `review`, unchanged, plus keys that the prepare command ignores: `zone`, `does`, `exposed`, `oldName`, `removed`, `group`, `addedForFindings`, `represents`, `for`, `madeWhen`, `partOf` and `typeParameters` on a class, `calls`, `oldName`, `unchanged` and `static` on a method, `oldName` on a field, and `oldPath` on a `created` child and `removedClasses` on a `modified` child (section 4).
 - The decisions half is the 1 top-level key `decisions`, whose keys `design-decisions.md`, `design-boundaries.md` and `design-findings.md` hold. The prepare command ignores it, so no judge of the shape check reads a decision.
 
 The designer writes the 2 halves in this order:
@@ -54,6 +54,7 @@ The keys below stand beside them. The prepare command ignores each of them, so t
 | `madeWhen` | class | text: the event that makes a new one, in which a person who uses or asks for the application, or someone they deal with, acts, or work they set up runs | exactly 1 of `madeWhen` and `partOf` on a class marked `domain object` | design check, which reads only its presence; render | `"madeWhen": "a member borrows a copy"` |
 | `partOf` | class | display name of the domain object it is a part of | as `madeWhen` | design check, render | `"partOf": "Loan"` |
 | `typeParameters` | class | list of texts: the type parameters of a generic class, in the order of its declaration | no; only on a generic class | no script; the design check only knows the key | `"typeParameters": ["E"]` |
+| `static` | method | true or false: whether the method is static | no | no script; the design check only knows the key | `"static": true` |
 
 - `zone`: the name of 1 group of folders in the zone order, which states which zone may call or implement which (`design-checks.md`, section 2). The zone order covers only the field types, `calls`, `implements` and `extends`, and no parameter type or return type. A zone is given per class, so a repository whose folders have other names still gets the order of calls checked. Where `decisions.conventions` names no file with a zone order, the zone order is the default zone order of the design skill (`design-checks.md`, section 2), and its zones are the folders of the backend layout of the book, where `app` holds `api`, `domain` and `spi`, so a class takes `api`, `domain` or `spi`, never `app`. This default zone order applies only under a folder that holds an `api`, `spi`, `in` or `out` folder; for a class outside such a folder the design check prints `zone order: not applied to <folder>`, and where no folder of the scope has the layout it prints `zone order: not applied, no conventions file, and no folder of the scope has the backend layout of an api, spi, in or out folder`. The book: "The `api/` folder declares what callers can ask for, and the `spi/` folder declares what the application needs." (*The Principles at Every Scale*, *Hexagonal Architecture*)
 - `does`: `computes` where the methods of the class decide from their parameters and fields alone and reach no exit; `coordinates` where the methods call parts in order, exits among them; `translates` where the class is concrete and every method of it is an exit, such as an implementation in `out` of an interface in `spi`. The test kind follows from it (`design-boundaries.md`, `tests`).
@@ -93,8 +94,7 @@ Every key of the model that names an abstraction holds a display name: `Class#me
 | `addedForFindings` | no | no | yes | no |
 | `represents`, `for`, `madeWhen`, `partOf` | no | yes | yes | no |
 | `oldName`, `removed`, `removedClasses`, `oldPath` on a `created` child | no | yes | yes | yes |
-| `group` | no | yes | no | yes |
-| `unchanged` on a method | no | yes | no | yes |
+| `group`, `unchanged` on a method | no | yes | no | yes |
 | `decisions` (`design-decisions.md`, `design-boundaries.md`, `design-findings.md`) | no | yes | yes | `tests`, `existingDefects` and `stops` only |
 
 Each object of the model has a closed form: the keys that this file, `shape-model.md` of the skill `review`, `design-decisions.md`, `design-boundaries.md` and `design-findings.md` name for it. The design check reports each other key as a defect, with the key and its object (`key-unknown`), because no script reads such a key, so the fact it holds is lost. The designer writes that fact under the key that holds it, such as the kind of a file as the `kind` of its child, and never as a key of the class. This rule is a format of this skill, not of the book. `design-checks.md` holds what the design check reports and how the migration script orders its steps.
