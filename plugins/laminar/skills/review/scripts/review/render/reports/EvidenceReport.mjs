@@ -4,7 +4,8 @@ import { readCheckName, readLead, TRACK_WORDS } from "../../../checks/CheckWords
 import { formatSweepWords } from "../../merge/draft/Sweep.mjs";
 import { buildIoEndsSection } from "../sections/IoEndsSection.mjs";
 import { MATCHED_BY } from "../verdicts/DecidedResults.mjs";
-import { DECIDED_BUT_CHANGED_SINCE, DECIDED_BY_THE_DESIGN, RAISED_AT_CLASS_SCALE } from "./ReaderReport.mjs";
+import { RELATION } from "../verdicts/RelatedDecisions.mjs";
+import { DECIDED_BUT_CHANGED_SINCE, DECIDED_BY_THE_DESIGN, RAISED_AT_CLASS_SCALE, RELATED_TO_A_DECISION } from "./ReaderReport.mjs";
 import { isAConsideration } from "../../merge/filing/Considerations.mjs";
 import { LEFT_OUT_REASONS } from "../../../code/index.mjs";
 import { NOT_VERIFIED_STAGES } from "../verdicts/SettledFindings.mjs";
@@ -145,6 +146,20 @@ const formatCombinedFinding = finding => [
 
 const formatFinding = finding => finding.combined ? formatCombinedFinding(finding) : formatSingleFinding(finding);
 
+const RELATION_WORDS = Object.freeze({
+  [RELATION.SIBLING]: "the same check on a sibling",
+  [RELATION.MEMBER_AND_CLASS]: "the same check on a member and its declaring class",
+});
+
+const formatSourceOfTheDecision = decision => [decision.plan === null ? "" : `plan ${decision.plan}`, decision.source].filter(Boolean).join(", ");
+
+const formatRelatedDecisionLine = ({ decision, relation }) => `${RELATED_TO_A_DECISION}, by ${RELATION_WORDS[relation]}: ${decision.check} on ${decision.scale} \`${decision.displayName}\`, ${decision.reason}, decided by ${decision.decidedBy}, source: ${formatSourceOfTheDecision(decision) || "not stated"}: ${decision.says}`;
+
+const NO_RELATED_DECISIONS = Object.freeze({ listRelatedOfTheFinding: () => [] });
+
+// An open result keeps its place and its status; 1 line per related decision names the rule that relates it.
+const formatOpenFinding = (finding, related) => [formatFinding(finding), ...related.listRelatedOfTheFinding(finding).map(formatRelatedDecisionLine)].join("\n");
+
 const DETECTION = "Correctness · Detection";
 
 const isTheTestLine = (quote, test) => quote.file === test.file && Number(quote.line) === Number(test.line) && Boolean(quote.text);
@@ -176,13 +191,13 @@ const formatCoveredPath = covered => {
 
 const formatCoveredPaths = covered => covered.length ? [["Covered paths:", ...covered.map(formatCoveredPath)].join("\n")] : [];
 
-const formatTrackSection = (word, kept, covered) => {
+const formatTrackSection = (word, kept, covered, related) => {
   const findingsOfTheTrack = kept.filter(finding => finding.group === word);
   const coveredHere = word === DETECTION ? formatCoveredPaths(covered) : [];
-  return [`## ${word}`, findingsOfTheTrack.length ? findingsOfTheTrack.map(formatFinding).join("\n\n") : `Nothing was found under ${word}.`, ...coveredHere].join("\n\n");
+  return [`## ${word}`, findingsOfTheTrack.length ? findingsOfTheTrack.map(finding => formatOpenFinding(finding, related)).join("\n\n") : `Nothing was found under ${word}.`, ...coveredHere].join("\n\n");
 };
 
-const formatConsiderationSection = considered => `## To consider\n\n${considered.length ? considered.map(formatFinding).join("\n\n") : "Nothing was left to consider."}`;
+const formatConsiderationSection = (considered, related) => `## To consider\n\n${considered.length ? considered.map(finding => formatOpenFinding(finding, related)).join("\n\n") : "Nothing was left to consider."}`;
 
 const formatClosedLines = closed => (closed || [])
   .map(closedCheck => `- ${closedCheck.displayName || closedCheck.codeUnderReviewId}, ${closedCheck.check}: ${convertToText(closedCheck.reason) || "not stated"}`);
@@ -217,8 +232,6 @@ const formatRejectedSection = (settled, rejectedCoveredPaths) => {
   return `## Rejected\n\n${blocks.join("\n\n") || "The verifier rejected no item."}`;
 };
 
-const formatSourceWord = decision => [decision.plan === null ? "" : `plan ${decision.plan}`, decision.source].filter(Boolean).join(", ");
-
 const MATCHED_BY_WORDS = Object.freeze({
   [MATCHED_BY.DISPLAY_NAME]: "its display name",
   [MATCHED_BY.FORMER_NAME]: "its former name",
@@ -227,9 +240,11 @@ const MATCHED_BY_WORDS = Object.freeze({
 
 const formatRaisedWord = (decision, matchedBy) => (matchedBy === MATCHED_BY.CLASS_OF_THE_METHOD ? `, ${RAISED_AT_CLASS_SCALE} on \`${decision.displayName}\`` : "");
 
-const formatDecisionLine = (decision, matchedBy) => `${SUB_POINT_INDENT}- Decided by the design: ${decision.reason}, decided by ${decision.decidedBy}: ${decision.says} · source: ${formatSourceWord(decision) || "not stated"} · matched by ${MATCHED_BY_WORDS[matchedBy]}${formatRaisedWord(decision, matchedBy)}`;
+const formatReachWord = decision => (decision.reachOf ? `, decided by the reach of \`${decision.reachOf}\`` : "");
 
-const formatAlsoDecidedLine = decision => `${SUB_POINT_INDENT}- Also decided by: ${decision.reason}, ${formatSourceWord(decision) || "not stated"}`;
+const formatDecisionLine = (decision, matchedBy) => `${SUB_POINT_INDENT}- Decided by the design: ${decision.reason}, decided by ${decision.decidedBy}: ${decision.says} · source: ${formatSourceOfTheDecision(decision) || "not stated"} · matched by ${MATCHED_BY_WORDS[matchedBy]}${formatRaisedWord(decision, matchedBy)}${formatReachWord(decision)}`;
+
+const formatAlsoDecidedLine = decision => `${SUB_POINT_INDENT}- Also decided by: ${decision.reason}, ${formatSourceOfTheDecision(decision) || "not stated"}`;
 
 const formatDecidedResult = mark => [
   formatFinding(mark.finding),
@@ -247,13 +262,15 @@ const formatChangedSinceWord = decided => (decided.holdsALinesFingerprint ? `, $
 
 const formatDecisionKey = decision => `\`${decision.displayName}\`, ${decision.scale}, ${decision.check}`;
 
-const formatNotMetLine = decision => `- ${formatDecisionKey(decision)}: ${decision.reason}, ${formatSourceWord(decision) || "not stated"}`;
+const formatNotMetLine = decision => `- ${formatDecisionKey(decision)}: ${decision.reason}, ${formatSourceOfTheDecision(decision) || "not stated"}`;
 
 const formatAmbiguousLine = ({ decision, files }) => `- ${formatDecisionKey(decision)}: ${files.length} files hold the key, ${files.map(file => `\`${file}\``).join(" and ")}, and the decision names ${decision.file ? `\`${decision.file}\`` : "no file"}`;
 
 const formatExpiredLine = ({ decision, finding, expiry }) => `- ${formatDecisionKey(decision)} at \`${finding.file}:${finding.line}\`: ${expiry}`;
 
 const formatCombinedLeftOpenLine = ({ finding, decisions, openChecks }) => `- \`${decisions[0].displayName}\` at \`${finding.file}:${finding.line}\`: decided on ${decisions.map(decision => decision.check).join(" and ")}, not on ${openChecks.join(" and ")}, so the result stays in the items`;
+
+const formatReachWithoutAFingerprintLine = decision => `- ${formatDecisionKey(decision)}: the reach of \`${decision.reachOf}\` gives this key no lines fingerprint, so nothing guards it`;
 
 const formatOverrideLine = override => `- ${override.project || "a project convention"} over ${override.codeStyle || "a code-style rule"}: ${override.says || "not stated"}`;
 
@@ -270,6 +287,7 @@ const formatDecidedSection = decided => [
   formatDecisionList("Not applied, ambiguous:", decided.ambiguous.map(formatAmbiguousLine), "No decision was ambiguous."),
   formatDecisionList("Not applied, expired:", decided.expired.map(formatExpiredLine), "No decision expired."),
   ...(decided.combinedLeftOpen.length ? [formatDecisionList("Not applied, combined with a check no decision names:", decided.combinedLeftOpen.map(formatCombinedLeftOpenLine), "")] : []),
+  ...(decided.reachWithoutAFingerprint.length ? [formatDecisionList("Not applied, reach without a fingerprint:", decided.reachWithoutAFingerprint.map(formatReachWithoutAFingerprintLine), "")] : []),
 ].join("\n\n");
 
 const formatCoveredPathNotVerifiedLine = covered => `- ${formatNamedPlace(covered.abstractionPlace || {})} by ${formatNamedPlace(covered.test || {})}: ${readNotVerifiedReason(covered)}, so it stays covered as its judge wrote it`;
@@ -308,7 +326,7 @@ const formatNotCheckedSection = (excluded, leftOutFiles) => [
   ...(leftOutFiles.length ? [formatLeftOutFilesList(leftOutFiles)] : []),
 ].join("\n\n");
 
-export function buildEvidenceReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, rejectedCoveredPaths, sweep, notAnswered, dropped, droppedWithNoCodeUnderReview, excluded, leftOutFiles, io, decided = null }) {
+export function buildEvidenceReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, rejectedCoveredPaths, sweep, notAnswered, dropped, droppedWithNoCodeUnderReview, excluded, leftOutFiles, io, decided = null, related = null }) {
   const unmatched = settled.unmatchedVerdicts.map(verdict => `- ${verdict.itemId}${verdict.check ? `, ${verdict.check}` : ""}: ${verdict.reason}`);
   const droppedLines = [
     ...(dropped || []).map(finding => `- \`${finding.file}:${finding.line}\`, ${finding.check}: no line it names is in the code\n${quoteText((finding.quotes || []).map(named => `${named.file}:${named.line}`))}`),
@@ -320,8 +338,8 @@ export function buildEvidenceReport({ banner, scopeLine, acrossApplicationsLine,
     ...(acrossApplicationsLine ? [acrossApplicationsLine] : []),
     `## The change\n\n${formatSentence(changeSummary)}`,
     "## Reasoning\n\nEvery kept finding with its check, the cognitive failure or the prevention decision behind it, its full evidence, and the confidence the verifier settled, then every item to consider with its evidence and its question.",
-    ...TRACK_WORDS.map(word => formatTrackSection(word, settled.kept, covered || [])),
-    formatConsiderationSection(settled.considered || []),
+    ...TRACK_WORDS.map(word => formatTrackSection(word, settled.kept, covered || [], related || NO_RELATED_DECISIONS)),
+    formatConsiderationSection(settled.considered || [], related || NO_RELATED_DECISIONS),
     formatRejectedSection(settled, rejectedCoveredPaths || []),
     ...(decided ? [formatDecidedSection(decided)] : []),
     formatNotVerifiedSection(settled, covered || []),

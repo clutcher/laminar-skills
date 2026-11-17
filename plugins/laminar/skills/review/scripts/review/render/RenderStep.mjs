@@ -6,6 +6,7 @@ import { addTheFindingsToTheSweep, formatSweepWords } from "../merge/draft/Sweep
 import { SettledFindings } from "./verdicts/SettledFindings.mjs";
 import { DecidedResults, readDecidedReviewFile, readTheLinesOfTheWriters } from "./verdicts/DecidedResults.mjs";
 import { LinesFingerprintsOfTheRun } from "./verdicts/LinesFingerprint.mjs";
+import { RelatedDecisions, readClassOfTreeKeyMap } from "./verdicts/RelatedDecisions.mjs";
 import { findWhyThePlanBaseLiesOutsideTheRevisions } from "./verdicts/PlanBaseOfTheRevisions.mjs";
 import { TestCoveredPaths } from "./verdicts/TestCoveredPaths.mjs";
 import { buildReaderReport } from "./reports/ReaderReport.mjs";
@@ -79,6 +80,7 @@ export class RenderStep {
     this.settled = new SettledFindings([...numberThePossibleFindings(this.merged.groups), ...this.covered.pathsToTest], this.returns, this.covered.listNumbers(), this.prepared.codeUnderReview || [], (this.prepared.filter || {}).scales || []);
     this.decided = this.decidedReview ? new DecidedResults(this.decidedReview, [...this.settled.kept, ...this.settled.considered], this.readTheChangeKinds(), { notAppliedReason: this.decidedNotAppliedReason, linesFingerprints: new LinesFingerprintsOfTheRun(this.prepared, this.reviewed), written: readTheLinesOfTheWriters(this.decidedReview) }) : null;
     if (this.decided) this.settled.moveOutTheDecided(this.decided.listDecidedFindings());
+    this.related = this.decided ? new RelatedDecisions(this.decided.appliedDecisions, [...this.settled.kept, ...this.settled.considered], readClassOfTreeKeyMap(this.reviewed.abstractions)) : null;
     this.scope = buildScope(this.prepared, readJsonFileIfPresent(path.join(this.runFolder, COST_PLAN_FILE), null), readJsonFileIfPresent(path.join(this.runFolder, FULL_COST_PLAN_FILE), null), this.settled.countLeftOutByScale());
     this.sweep = addTheFindingsToTheSweep(this.merged.sweep, this.covered.pathsToTest.flatMap(group => group.possibleFindings));
     this.changeSummary = formatChangeSummary(this.reviewed);
@@ -121,11 +123,12 @@ export class RenderStep {
       dropped: this.merged.dropped || [],
       excluded: this.reviewed.excluded || [],
       decided: this.decided,
+      related: this.related,
     };
     const files = {
       "review.md": buildReaderReport({ ...shared, leftOutFiles: this.reviewed.leftOutFiles || [] }),
       "review-evidence.md": buildEvidenceReport({ ...shared, droppedWithNoCodeUnderReview: this.merged.droppedWithNoCodeUnderReview || [], sweep: this.sweep, notAnswered: this.prepared.notAnswered || [], leftOutFiles: this.reviewed.leftOutFiles || [], io: this.readIo() }),
-      "review.sarif": buildSarifReport(this.settled.kept, version, this.scope, this.acrossApplications, this.settled.considered, this.readTheChangeKinds(), this.decided ? this.decided.listMarks() : []),
+      "review.sarif": buildSarifReport(this.settled.kept, version, this.scope, this.acrossApplications, this.settled.considered, this.readTheChangeKinds(), this.decided ? this.decided.listMarks() : [], this.related),
     };
     for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(this.runFolder, name), text);
     return {

@@ -44,7 +44,27 @@ const formatCoveredSection = covered => [ALREADY_COVERED, covered.map(formatCove
 
 const comesAfterDetection = track => readTrackRank(track) > readTrackRank(DETECTION);
 
-const buildTrackSections = (items, sharedHeadLines) => {
+export const RELATED_TO_A_DECISION = "Related to a decision";
+
+const TRAILING_STOP = /[.!?]+$/;
+
+const formatMoreRelatedWord = count => (count ? ` (and ${count} more related decision(s) in review-evidence.md)` : "");
+
+// The item stays open with its status; the line names the first related decision and asks for a ruling, never for a set-apart.
+const formatRelatedLine = related => {
+  const { decision } = related[0];
+  return `${SUB_POINT_INDENT}- ${RELATED_TO_A_DECISION}: ${decision.check} on ${decision.scale} \`${decision.displayName}\`, ${decision.reason}: ${String(decision.says).trim().replace(TRAILING_STOP, "")}${formatMoreRelatedWord(related.length - 1)}. This item is open; add its key to the reach of that decision, or rule on it apart.`;
+};
+
+const NO_RELATED_DECISIONS = Object.freeze({ listRelatedOfTheFindings: () => [] });
+
+const formatOpenItem = (findings, number, options, related) => {
+  const relatedOfTheItem = related.listRelatedOfTheFindings(findings);
+  const item = formatItem(findings, number, options);
+  return relatedOfTheItem.length ? `${item}\n${formatRelatedLine(relatedOfTheItem)}` : item;
+};
+
+const buildTrackSections = (items, sharedHeadLines, related) => {
   const sections = [];
   items.forEach((item, order) => {
     const track = item.lead.group;
@@ -52,7 +72,7 @@ const buildTrackSections = (items, sharedHeadLines) => {
     let section = sections[sections.length - 1];
     if (!section || section.track !== track) { section = { track, kind: "", lines: [`## ${track}`] }; sections.push(section); }
     if (kind !== section.kind) { section.lines.push(`### ${kind}`); section.kind = kind; }
-    section.lines.push(formatItem(item.findings, order + 1, { sharedHeadLine: sharedHeadLines[order] }));
+    section.lines.push(formatOpenItem(item.findings, order + 1, { sharedHeadLine: sharedHeadLines[order] }, related));
   });
   return sections;
 };
@@ -66,16 +86,16 @@ const addCoveredPaths = (sections, covered) => {
   return after < 0 ? [...sections, own] : [...sections.slice(0, after), own, ...sections.slice(after)];
 };
 
-const listUnderHeaders = (items, covered, sharedHeadLines) => addCoveredPaths(buildTrackSections(items, sharedHeadLines), covered).flatMap(section => section.lines);
+const listUnderHeaders = (items, covered, sharedHeadLines, related) => addCoveredPaths(buildTrackSections(items, sharedHeadLines, related), covered).flatMap(section => section.lines);
 
-const buildFindingSections = (items, covered, sharedHeadLines) => items.length
-  ? listUnderHeaders(items, covered, sharedHeadLines)
-  : ["## Findings", NOTHING_WAS_FOUND, ...listUnderHeaders([], covered, sharedHeadLines)];
+const buildFindingSections = (items, covered, sharedHeadLines, related) => items.length
+  ? listUnderHeaders(items, covered, sharedHeadLines, related)
+  : ["## Findings", NOTHING_WAS_FOUND, ...listUnderHeaders([], covered, sharedHeadLines, related)];
 
 export const TO_CONSIDER = "To consider";
 
-const buildConsiderationSection = (considerations, firstNumber, sharedHeadLines) => considerations.length
-  ? [`## ${TO_CONSIDER}`, ...considerations.map((item, order) => formatItem(item.findings, firstNumber + order, { sharedHeadLine: sharedHeadLines[order] }))]
+const buildConsiderationSection = (considerations, firstNumber, sharedHeadLines, related) => considerations.length
+  ? [`## ${TO_CONSIDER}`, ...considerations.map((item, order) => formatOpenItem(item.findings, firstNumber + order, { sharedHeadLine: sharedHeadLines[order] }, related))]
   : [];
 
 export const DECIDED_BY_THE_DESIGN = "Decided by the design";
@@ -91,6 +111,9 @@ const formatScaleWord = finding => {
 
 export const RAISED_AT_CLASS_SCALE = "decided at method scale, raised at class scale";
 
+// A decision the reach of a ruling gave names the key of that ruling, so the reader sees that nobody raised this key when the person ruled.
+const formatReachWord = decision => (decision.reachOf ? ` · decided by the reach of \`${decision.reachOf}\`` : "");
+
 const formatMatchedByWord = mark => {
   if (mark.matchedBy === MATCHED_BY.FORMER_NAME) return ` · matched by its former name \`${readDisplayNameOfTheFinding(mark.finding)}\``;
   return mark.matchedBy === MATCHED_BY.CLASS_OF_THE_METHOD ? ` · ${RAISED_AT_CLASS_SCALE} on \`${mark.decision.displayName}\`` : "";
@@ -100,7 +123,7 @@ const formatPlanWord = decision => (decision.plan === null ? "" : ` in plan ${de
 
 const formatDecidedHead = mark => {
   const { finding, decision } = mark;
-  return `- ${formatLeadWords(finding)} · ${formatScaleWord(finding)} \`${readDisplayNameOfTheFinding(finding)}\` (${decision.check}) · ${decision.reason}, decided by ${decision.decidedBy}${formatPlanWord(decision)}: ${decision.says}${formatMatchedByWord(mark)}`;
+  return `- ${formatLeadWords(finding)} · ${formatScaleWord(finding)} \`${readDisplayNameOfTheFinding(finding)}\` (${decision.check}) · ${decision.reason}, decided by ${decision.decidedBy}${formatPlanWord(decision)}: ${decision.says}${formatMatchedByWord(mark)}${formatReachWord(decision)}`;
 };
 
 const addTheSummary = (head, finding) => {
@@ -130,7 +153,7 @@ const buildDecidedSection = decided => (decided ? [`## ${DECIDED_BY_THE_DESIGN}`
 
 const buildChangedSinceSection = decided => (decided && decided.changedSince.length ? [`## ${DECIDED_BUT_CHANGED_SINCE}`, decided.changedSince.map(formatChangedSinceLine).join("\n")] : []);
 
-export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, leftOutFiles = [], decided = null }) {
+export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, changeSummary, settled, covered, leftOutFiles = [], decided = null, related = null }) {
   const considerations = settled.considerations || [];
   const sharedHeadLines = findLinesOfSharedHeads([...settled.items, ...considerations].map(item => item.findings));
   return [
@@ -139,8 +162,8 @@ export function buildReaderReport({ banner, scopeLine, acrossApplicationsLine, c
     ...buildNotReadLines(leftOutFiles),
     ...(acrossApplicationsLine ? [acrossApplicationsLine] : []),
     formatChangeLine(changeSummary),
-    ...buildFindingSections(settled.items, covered || [], sharedHeadLines),
-    ...buildConsiderationSection(considerations, settled.items.length + 1, sharedHeadLines.slice(settled.items.length)),
+    ...buildFindingSections(settled.items, covered || [], sharedHeadLines, related || NO_RELATED_DECISIONS),
+    ...buildConsiderationSection(considerations, settled.items.length + 1, sharedHeadLines.slice(settled.items.length), related || NO_RELATED_DECISIONS),
     ...buildDecidedSection(decided),
     ...buildChangedSinceSection(decided),
     "## Limits",

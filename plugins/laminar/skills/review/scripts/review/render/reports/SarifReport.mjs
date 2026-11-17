@@ -179,7 +179,9 @@ const buildCheckProperties = ({ finding, decision, alsoDecidedBy = [] }) => {
   return { checks: [...finding.combined.checks].filter(check => decidedChecks.has(check)) };
 };
 
-const buildDecisionProperties = mark => ({ check: mark.decision.check, ...buildCheckProperties(mark), displayName: mark.decision.displayName, reason: mark.decision.reason, decidedBy: mark.decision.decidedBy, plan: mark.decision.plan, source: mark.decision.source, matchedBy: mark.matchedBy });
+const buildReachProperties = decision => (decision.reachOf ? { reachOf: decision.reachOf } : {});
+
+const buildDecisionProperties = mark => ({ check: mark.decision.check, ...buildCheckProperties(mark), displayName: mark.decision.displayName, reason: mark.decision.reason, decidedBy: mark.decision.decidedBy, plan: mark.decision.plan, source: mark.decision.source, matchedBy: mark.matchedBy, ...buildReachProperties(mark.decision) });
 
 const buildAcceptedSuppression = mark => ({
   kind: SUPPRESSION.KIND,
@@ -211,13 +213,21 @@ const runPropertiesOf = (scope, acrossApplications) => ({
   ...(acrossApplications ? { entryBoundaries: { ...acrossApplications } } : {}),
 });
 
-export function buildSarifReport(kept, version, scope = null, acrossApplications = null, considered = [], changeKinds = new ChangeKindsOfTheReport(), decided = []) {
+const buildRelatedDecision = ({ decision, relation }) => ({ relation, check: decision.check, scale: decision.scale, displayName: decision.displayName, reason: decision.reason, plan: decision.plan });
+
+// A related decision is a property of an open result and never a suppression, so the result keeps its level, its rank and its status.
+const addTheRelatedDecisions = (result, finding, related) => {
+  const relatedOfTheFinding = related ? related.listRelatedOfTheFinding(finding) : [];
+  return relatedOfTheFinding.length ? { ...result, properties: { ...result.properties, related_decisions: relatedOfTheFinding.map(buildRelatedDecision) } } : result;
+};
+
+export function buildSarifReport(kept, version, scope = null, acrossApplications = null, considered = [], changeKinds = new ChangeKindsOfTheReport(), decided = [], related = null) {
   return JSON.stringify({
     $schema: SCHEMA_URL,
     version: "2.1.0",
     runs: [{
       tool: { driver: { name: DRIVER_NAME, version, informationUri: INFORMATION_URI, rules: sarifRules } },
-      results: [...kept.map(finding => buildResult(finding, changeKinds)), ...considered.map(finding => buildConsiderationResult(finding, changeKinds)), ...decided.map(mark => buildDecidedResult(mark, changeKinds))],
+      results: [...kept.map(finding => addTheRelatedDecisions(buildResult(finding, changeKinds), finding, related)), ...considered.map(finding => addTheRelatedDecisions(buildConsiderationResult(finding, changeKinds), finding, related)), ...decided.map(mark => buildDecidedResult(mark, changeKinds))],
       properties: runPropertiesOf(scope, acrossApplications),
     }],
   }, null, 2) + "\n";
