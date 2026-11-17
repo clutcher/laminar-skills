@@ -350,10 +350,11 @@ diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansController
 new file mode 100644
 --- /dev/null
 +++ b/src/main/java/org/example/library/loan/in/web/MemberLoansController.java
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,22 @@
 +package org.example.library.loan.in.web;
 +
 +import org.example.library.loan.app.api.ApiForMemberLoans;
++import org.example.library.loan.in.web.response.MemberLoansResponse;
 +import org.springframework.web.bind.annotation.GetMapping;
 +import org.springframework.web.bind.annotation.PathVariable;
 +import org.springframework.web.bind.annotation.RestController;
@@ -372,12 +373,12 @@ new file mode 100644
 +        return MemberLoansResponse.mapMemberLoans(apiForMemberLoans.searchLoansOfMember(memberId));
 +    }
 +}
-diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansResponse.java b/src/main/java/org/example/library/loan/in/web/MemberLoansResponse.java
+diff --git a/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java b/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java
 new file mode 100644
 --- /dev/null
-+++ b/src/main/java/org/example/library/loan/in/web/MemberLoansResponse.java
++++ b/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java
 @@ -0,0 +1,23 @@
-+package org.example.library.loan.in.web;
++package org.example.library.loan.in.web.response;
 +
 +import org.example.library.loan.app.api.MemberLoans;
 +import org.example.library.loan.app.domain.model.Loan;

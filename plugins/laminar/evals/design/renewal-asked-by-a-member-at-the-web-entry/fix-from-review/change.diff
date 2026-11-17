@@ -301,10 +301,10 @@ diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansController
  
  import org.example.library.loan.app.api.ApiForMemberLoans;
 +import org.example.library.loan.app.domain.ExtensionPolicy;
+ import org.example.library.loan.in.web.response.MemberLoansResponse;
  import org.springframework.web.bind.annotation.GetMapping;
  import org.springframework.web.bind.annotation.PathVariable;
- import org.springframework.web.bind.annotation.RestController;
-@@ -10,12 +11,15 @@ public class MemberLoansController {
+@@ -11,12 +12,15 @@ public class MemberLoansController {
  
      private final ApiForMemberLoans apiForMemberLoans;
  
@@ -322,11 +322,11 @@ diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansController
 +        return MemberLoansResponse.mapMemberLoans(apiForMemberLoans.searchLoansOfMember(memberId), extensionPolicy);
      }
  }
-diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansResponse.java b/src/main/java/org/example/library/loan/in/web/MemberLoansResponse.java
---- a/src/main/java/org/example/library/loan/in/web/MemberLoansResponse.java
-+++ b/src/main/java/org/example/library/loan/in/web/MemberLoansResponse.java
+diff --git a/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java b/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java
+--- a/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java
++++ b/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java
 @@ -1,23 +1,28 @@
- package org.example.library.loan.in.web;
+ package org.example.library.loan.in.web.response;
  
  import org.example.library.loan.app.api.MemberLoans;
 +import org.example.library.loan.app.domain.ExtensionPolicy;
