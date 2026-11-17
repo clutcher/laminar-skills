@@ -28,5 +28,5 @@ Your message holds only data, 1 input per line, under these labels, in this orde
 Return only the structured object your call asks for:
 
 - `ran`: true where every command exited with 0, else false.
-- `result`: the last line of the output of the last command that starts with `RESULT `, copied whole, or an empty text where it printed none.
+- `result`: the last line that starts with `RESULT ` in the output of the last command, copied whole, or an empty text where it printed none.
 - `error`: only where `ran` is false, the command that failed and the last lines of its error output.
