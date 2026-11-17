@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { readRunFileText, RunFileStop } from "../../../files/runFile.mjs";
 import { formatDisplayNameText } from "../sections/ItemText.mjs";
 import { PUBLIC_CHANGE_KINDS } from "../../../code/index.mjs";
@@ -22,6 +24,9 @@ const isAText = given => typeof given === "string" && given.trim().length > 0;
 
 const readTexts = given => (Array.isArray(given) ? given.filter(isAText) : []);
 
+// The renames of the plan the decision's lines use, each [old name, new name]; a malformed pair is left out, which can only read as changed since.
+const readRenameMask = given => (Array.isArray(given) ? given.filter(names => Array.isArray(names) && names.length === 2 && names.every(isAText)) : []);
+
 const createDecision = (given, order) => {
   const missing = KEY_FIELDS.filter(field => !isAText(given[field]));
   if (missing.length) throw new RunFileStop(`decided review file: decision ${order + 1} has no ${missing.join(", ")}`);
@@ -40,8 +45,12 @@ const createDecision = (given, order) => {
     classDisplayName: isAText(given.classDisplayName) ? given.classDisplayName : "",
     classFormerNames: readTexts(given.classFormerNames),
     linesFingerprint: isAText(given.linesFingerprint) ? given.linesFingerprint : "",
+    renameMask: readRenameMask(given.renameMask),
   };
 };
+
+// A plain JSON list is the form of the decided list the design reads, so the reader most likely gave that file in place of the decided review file the design writes.
+const formatTheHintOfAList = given => (Array.isArray(given) ? "; the file is a JSON list, the form of a decided list, and --decided-review takes the file plans/<n>/decided-review.json of the results folder" : "");
 
 // The file the design writes per ready plan; the render reads its decisions and carries the rest as context for the reader.
 export const readDecidedReviewFile = filePath => {
@@ -52,7 +61,7 @@ export const readDecidedReviewFile = filePath => {
     if (error instanceof RunFileStop) throw error;
     throw new RunFileStop(`decided review file: ${filePath} is no JSON: ${error.message}`);
   }
-  if (!given || !Array.isArray(given.decided)) throw new RunFileStop(`decided review file: ${filePath} holds no list decided`);
+  if (!given || !Array.isArray(given.decided)) throw new RunFileStop(`decided review file: ${filePath} holds no list decided${formatTheHintOfAList(given)}`);
 
   return {
     filePath,
@@ -96,8 +105,11 @@ const findMatchedBy = (decision, finding) => {
 
 const isOfTheKey = (decision, finding) => readCheckIds(finding).includes(decision.check) && Boolean(findMatchedBy(decision, finding));
 
-// The 2 expiries of a decision: outside the change holds only while the change does not touch the result, and a kind the plan left holds only while the review reads it unchanged.
+const FOLDER_SCALES = new Set(["application", "module"]);
+
+// The 2 expiries: outside the change holds only while the change does not touch the result, and a kind the plan left holds only while the review reads it unchanged. A lines fingerprint of the decision's own lines guards closer than either, because any change of those lines reads changed since, so such a decision never expires. The fingerprint of a folder holds only its child names, so a folder decision expires as one without a fingerprint, and its fingerprint only reads changed since where a child joins or leaves.
 const findExpiry = (decision, finding, changeKinds) => {
+  if (decision.linesFingerprint && !FOLDER_SCALES.has(decision.scale)) return "";
   if (decision.reason === OUTSIDE_THE_CHANGE && finding.inChange !== false) return "the change touches it";
   const reviewedKind = changeKinds.readKindOfTheFinding(finding);
   if (KINDS_THE_PLAN_LEAVES.has(decision.plannedKind) && KINDS_OF_A_CHANGE.has(reviewedKind)) return `the plan leaves it ${decision.plannedKind} and the review reads it ${reviewedKind}`;
@@ -119,17 +131,55 @@ const compareTheMarks = (left, right) => {
 
 // A method decision that marked a class-scale result compares the lines of its method, and every other mark the lines of the result's own abstraction.
 const readLinesFingerprintNow = (mark, linesFingerprints) => (mark.matchedBy === MATCHED_BY.CLASS_OF_THE_METHOD
-  ? linesFingerprints.findLinesFingerprint([mark.decision.displayName, ...mark.decision.formerNames], METHOD_SCALE, mark.finding.file)
-  : linesFingerprints.findLinesFingerprint([readDisplayNameOfTheFinding(mark.finding)], readScale(mark.finding), mark.finding.file));
+  ? linesFingerprints.findLinesFingerprint([mark.decision.displayName, ...mark.decision.formerNames], METHOD_SCALE, mark.finding.file, mark.decision.renameMask)
+  : linesFingerprints.findLinesFingerprint([readDisplayNameOfTheFinding(mark.finding)], readScale(mark.finding), mark.finding.file, mark.decision.renameMask));
+
+// The plan whose writers wrote the lines a changed-since result stands on now, read from the self-check run folders of that plan; null where no self-check gives those lines. It only names where the change came from: the result stays changed since, because nobody ruled on the written lines.
+const findThePlanThatWroteTheLines = (mark, written) => {
+  const writtenFingerprint = written.linesFingerprints.map(linesFingerprints => readLinesFingerprintNow(mark, linesFingerprints)).filter(Boolean).at(-1) || "";
+  return writtenFingerprint && writtenFingerprint === mark.linesFingerprintNow ? written.plan : null;
+};
+
+const NO_WRITTEN_LINES = Object.freeze({ plan: null, linesFingerprints: [] });
+
+// The checks of a result the merge combined that no decision of its marks names; a decision on 1 check rules on that check only, so the result stays open while any check of it is left.
+const listChecksLeftOpen = (finding, marks) => {
+  const decidedChecks = new Set(marks.map(mark => mark.decision.check));
+  return readCheckIds(finding).filter(check => !decidedChecks.has(check));
+};
+
+// The design keeps the self-check run folders of a plan's writers beside its decided review file, as self-check/group-<g>.
+const SELF_CHECK_FOLDER = "self-check";
+
+const readGroupNumber = groupFolder => Number(path.basename(groupFolder).replace(/\D+/g, "")) || 0;
+
+// The lines the writers of the plan of a decided review file wrote, as the self-check run folders beside the file read them, in the order of the groups, so the last group that wrote an abstraction gives its lines; none where the plan ran no self-check.
+export const readTheLinesOfTheWriters = decidedReview => {
+  const selfCheckFolder = path.join(path.dirname(decidedReview.filePath), SELF_CHECK_FOLDER);
+  if (decidedReview.plan === null || !fs.existsSync(selfCheckFolder)) return NO_WRITTEN_LINES;
+
+  const groupFolders = fs.readdirSync(selfCheckFolder, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => path.join(selfCheckFolder, entry.name))
+    .sort((first, second) => readGroupNumber(first) - readGroupNumber(second));
+  return { plan: decidedReview.plan, linesFingerprints: groupFolders.map(groupFolder => LinesFingerprintsOfTheRun.readFrom(groupFolder)) };
+};
 
 // A decision holds while the lines it was made on stand as they were; lines the run cannot read count as changed, so a decision never hides a result it cannot confirm.
 const isChangedSince = mark => Boolean(mark.decision.linesFingerprint) && mark.linesFingerprintNow !== mark.decision.linesFingerprint;
+
+// Every decision on a result that holds a lines fingerprint is compared, so a result stays decided only while the lines of each of its decisions stand as they were; the first decision that reads changed since leads the mark, else the first by its match and its plan.
+const createTheMarkOfTheFinding = (finding, marks, linesFingerprints) => {
+  const compared = [...marks].sort(compareTheMarks).map(mark => (mark.decision.linesFingerprint ? { ...mark, linesFingerprintNow: readLinesFingerprintNow({ finding, ...mark }, linesFingerprints) } : mark));
+  const leading = compared.find(isChangedSince) || compared[0];
+  return { finding, ...leading, alsoDecidedBy: compared.filter(mark => mark !== leading).map(mark => mark.decision) };
+};
 
 const NO_LINES_FINGERPRINTS = new LinesFingerprintsOfTheRun(null, null);
 
 export class DecidedResults {
   // A file whose plan base the reviewed range does not hold applies no decision, and the reports say why.
-  constructor(decidedReview, settledFindings, changeKinds, { notAppliedReason = "", linesFingerprints = NO_LINES_FINGERPRINTS } = {}) {
+  constructor(decidedReview, settledFindings, changeKinds, { notAppliedReason = "", linesFingerprints = NO_LINES_FINGERPRINTS, written = NO_WRITTEN_LINES } = {}) {
     this.filePath = decidedReview.filePath;
     this.decisionCount = decidedReview.decisions.length;
     this.overrides = decidedReview.overrides;
@@ -141,15 +191,14 @@ export class DecidedResults {
     const marksOfFindingMap = new Map();
     const appliedDecisions = notAppliedReason ? [] : decidedReview.decisions;
     for (const decision of appliedDecisions) this.matchTheDecision(decision, settledFindings, changeKinds, marksOfFindingMap);
+    this.combinedLeftOpen = settledFindings.filter(finding => marksOfFindingMap.has(finding) && listChecksLeftOpen(finding, marksOfFindingMap.get(finding)).length)
+      .map(finding => ({ finding, decisions: marksOfFindingMap.get(finding).map(mark => mark.decision), openChecks: listChecksLeftOpen(finding, marksOfFindingMap.get(finding)) }));
+    for (const { finding } of this.combinedLeftOpen) marksOfFindingMap.delete(finding);
     const marks = settledFindings
       .filter(finding => marksOfFindingMap.has(finding))
-      .map(finding => {
-        const [mark, ...others] = marksOfFindingMap.get(finding).sort(compareTheMarks);
-        const primary = { finding, ...mark, alsoDecidedBy: others.map(other => other.decision) };
-        return mark.decision.linesFingerprint ? { ...primary, linesFingerprintNow: readLinesFingerprintNow(primary, linesFingerprints) } : primary;
-      });
+      .map(finding => createTheMarkOfTheFinding(finding, marksOfFindingMap.get(finding), linesFingerprints));
     this.decided = marks.filter(mark => !isChangedSince(mark));
-    this.changedSince = marks.filter(isChangedSince).map(mark => ({ ...mark, changedSince: true }));
+    this.changedSince = marks.filter(isChangedSince).map(mark => ({ ...mark, changedSince: true, writtenByPlan: findThePlanThatWroteTheLines(mark, written) }));
   }
 
   matchTheDecision(decision, settledFindings, changeKinds, marksOfFindingMap) {

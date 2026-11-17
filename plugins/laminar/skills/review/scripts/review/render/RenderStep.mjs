@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { VerifyReturns } from "./verdicts/VerifyReturns.mjs";
 import { addTheFindingsToTheSweep, formatSweepWords } from "../merge/draft/Sweep.mjs";
 import { SettledFindings } from "./verdicts/SettledFindings.mjs";
-import { DecidedResults, readDecidedReviewFile } from "./verdicts/DecidedResults.mjs";
+import { DecidedResults, readDecidedReviewFile, readTheLinesOfTheWriters } from "./verdicts/DecidedResults.mjs";
 import { LinesFingerprintsOfTheRun } from "./verdicts/LinesFingerprint.mjs";
 import { findWhyThePlanBaseLiesOutsideTheRevisions } from "./verdicts/PlanBaseOfTheRevisions.mjs";
 import { TestCoveredPaths } from "./verdicts/TestCoveredPaths.mjs";
@@ -77,7 +77,7 @@ export class RenderStep {
   run() {
     this.covered = new TestCoveredPaths(this.merged.coveredPaths, this.returns, { mode: this.prepared.mode });
     this.settled = new SettledFindings([...numberThePossibleFindings(this.merged.groups), ...this.covered.pathsToTest], this.returns, this.covered.listNumbers(), this.prepared.codeUnderReview || [], (this.prepared.filter || {}).scales || []);
-    this.decided = this.decidedReview ? new DecidedResults(this.decidedReview, [...this.settled.kept, ...this.settled.considered], this.readTheChangeKinds(), { notAppliedReason: this.decidedNotAppliedReason, linesFingerprints: new LinesFingerprintsOfTheRun(this.prepared, this.reviewed) }) : null;
+    this.decided = this.decidedReview ? new DecidedResults(this.decidedReview, [...this.settled.kept, ...this.settled.considered], this.readTheChangeKinds(), { notAppliedReason: this.decidedNotAppliedReason, linesFingerprints: new LinesFingerprintsOfTheRun(this.prepared, this.reviewed), written: readTheLinesOfTheWriters(this.decidedReview) }) : null;
     if (this.decided) this.settled.moveOutTheDecided(this.decided.listDecidedFindings());
     this.scope = buildScope(this.prepared, readJsonFileIfPresent(path.join(this.runFolder, COST_PLAN_FILE), null), readJsonFileIfPresent(path.join(this.runFolder, FULL_COST_PLAN_FILE), null), this.settled.countLeftOutByScale());
     this.sweep = addTheFindingsToTheSweep(this.merged.sweep, this.covered.pathsToTest.flatMap(group => group.possibleFindings));

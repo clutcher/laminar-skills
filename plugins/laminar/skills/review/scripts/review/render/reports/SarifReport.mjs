@@ -171,7 +171,15 @@ const buildConsiderationResult = (finding, changeKinds) => {
 // A suppression under review is pending, so a generic reader keeps a result decided but changed since visible, and only an accepted one counts as decided.
 const SUPPRESSION = Object.freeze({ KIND: "external", STATUS: "accepted", STATUS_OF_THE_CHANGED_SINCE: "underReview" });
 
-const buildDecisionProperties = ({ decision, matchedBy }) => ({ check: decision.check, displayName: decision.displayName, reason: decision.reason, decidedBy: decision.decidedBy, plan: decision.plan, source: decision.source, matchedBy });
+// A result the merge combined leaves the items only where a decision names each of its checks, so its suppression names every check it was decided on.
+const buildCheckProperties = ({ finding, decision, alsoDecidedBy = [] }) => {
+  if (!finding.combined) return {};
+
+  const decidedChecks = new Set([decision, ...alsoDecidedBy].map(other => other.check));
+  return { checks: [...finding.combined.checks].filter(check => decidedChecks.has(check)) };
+};
+
+const buildDecisionProperties = mark => ({ check: mark.decision.check, ...buildCheckProperties(mark), displayName: mark.decision.displayName, reason: mark.decision.reason, decidedBy: mark.decision.decidedBy, plan: mark.decision.plan, source: mark.decision.source, matchedBy: mark.matchedBy });
 
 const buildAcceptedSuppression = mark => ({
   kind: SUPPRESSION.KIND,

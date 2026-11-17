@@ -115,7 +115,10 @@ export const DECIDED_BUT_CHANGED_SINCE = "Decided, but changed since the decisio
 
 export const formatChangedSinceWords = decision => `the ${decision.scale} changed since the decision`;
 
-export const formatChangedSinceLine = mark => addTheSummary(`${formatDecidedHead(mark)} · ${formatChangedSinceWords(mark.decision)}`, mark.finding);
+// The plan whose writers wrote the lines, where its self-check gives them; the result stays changed since, because nobody ruled on the written lines.
+const formatWrittenByWords = mark => (mark.writtenByPlan === null || mark.writtenByPlan === undefined ? "" : `: changed by the writers of plan ${mark.writtenByPlan}`);
+
+export const formatChangedSinceLine = mark => addTheSummary(`${formatDecidedHead(mark)} · ${formatChangedSinceWords(mark.decision)}${formatWrittenByWords(mark)}`, mark.finding);
 
 const formatDecidedBody = decided => {
   if (decided.notAppliedReason) return `No decision of the design applied: ${decided.notAppliedReason}.`;

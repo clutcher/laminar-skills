@@ -253,6 +253,8 @@ const formatAmbiguousLine = ({ decision, files }) => `- ${formatDecisionKey(deci
 
 const formatExpiredLine = ({ decision, finding, expiry }) => `- ${formatDecisionKey(decision)} at \`${finding.file}:${finding.line}\`: ${expiry}`;
 
+const formatCombinedLeftOpenLine = ({ finding, decisions, openChecks }) => `- \`${decisions[0].displayName}\` at \`${finding.file}:${finding.line}\`: decided on ${decisions.map(decision => decision.check).join(" and ")}, not on ${openChecks.join(" and ")}, so the result stays in the items`;
+
 const formatOverrideLine = override => `- ${override.project || "a project convention"} over ${override.codeStyle || "a code-style rule"}: ${override.says || "not stated"}`;
 
 const formatDecisionList = (title, lines, none) => `${title}\n\n${lines.join("\n") || none}`;
@@ -267,6 +269,7 @@ const formatDecidedSection = decided => [
   formatDecisionList("Not met:", decided.notMet.map(formatNotMetLine), "Every decision met a result."),
   formatDecisionList("Not applied, ambiguous:", decided.ambiguous.map(formatAmbiguousLine), "No decision was ambiguous."),
   formatDecisionList("Not applied, expired:", decided.expired.map(formatExpiredLine), "No decision expired."),
+  ...(decided.combinedLeftOpen.length ? [formatDecisionList("Not applied, combined with a check no decision names:", decided.combinedLeftOpen.map(formatCombinedLeftOpenLine), "")] : []),
 ].join("\n\n");
 
 const formatCoveredPathNotVerifiedLine = covered => `- ${formatNamedPlace(covered.abstractionPlace || {})} by ${formatNamedPlace(covered.test || {})}: ${readNotVerifiedReason(covered)}, so it stays covered as its judge wrote it`;
