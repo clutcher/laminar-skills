@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Grades 1 run of a one-shot case of the design evals: what stays open on the change after 1 design, 1 writing pass with its self-check and 1 full review.
 //
-//   node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]
+//   node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--decided <decided list of the case>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]
 //
 // --review, --repo and --range are needed where plan 1 ended ready; a plan that ended in a question or a stop starts no writer and no review.
 // --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left, decided again, decided again with its lines changed since the decision, or back, and --expected gives the planted keys that split the kept findings of the closing review; the change.diff beside it gives the files the planted change touched.
+// --decided is given for the feature input: each object of the list names a key of the closing review, by displayName and check, that the case itself decided, and a result on that key counts apart as decided by the case. The fix-from-review input gives its decided list to the designer, so it takes no --decided.
 // It exits with 0 where the run is one shot, 1 where it is not, and 2 on a usage error or a missing file. It writes nothing but --json, and runs git only in --repo.
 // Node with no dependencies.
 import fs from "node:fs";
@@ -15,7 +16,7 @@ import { findCheckWords } from "../skills/review/scripts/checks/CheckWords.mjs";
 import { Scale } from "../skills/review/scripts/code/graph/abstractions/Scale.mjs";
 import { createFindingKey, readRunFolder, RoundStop } from "../skills/design/scripts/round/RunFolder.mjs";
 
-const USAGE = "usage: node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]";
+const USAGE = "usage: node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--decided <decided list of the case>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]";
 
 const EXIT_CODES = Object.freeze({ ONE_SHOT: 0, NOT_ONE_SHOT: 1, USAGE: 2 });
 
@@ -27,6 +28,7 @@ const PLACEMENTS = Object.freeze({
   NOT_NEW: "not new",
   DECIDED: "decided by the design",
   DECIDED_CHANGED_SINCE: "decided, but changed since",
+  DECIDED_BY_THE_CASE: "decided by the case",
   LEFT: "left with a reason",
 });
 
@@ -98,7 +100,7 @@ class UsageStop extends Error {}
 
 const readOptions = argv => {
   const options = { usage: [] };
-  const valueKeys = new Map([["--results", "results"], ["--review", "review"], ["--repo", "repo"], ["--range", "range"], ["--input-review", "inputReview"], ["--expected", "expected"], ["--build", "build"], ["--json", "json"]]);
+  const valueKeys = new Map([["--results", "results"], ["--review", "review"], ["--repo", "repo"], ["--range", "range"], ["--input-review", "inputReview"], ["--expected", "expected"], ["--decided", "decided"], ["--build", "build"], ["--json", "json"]]);
   for (let at = 0; at < argv.length; at++) {
     const name = argv[at];
     const value = argv[at + 1];
@@ -110,6 +112,7 @@ const readOptions = argv => {
   }
   if (!options.results) throw new UsageStop("--results is needed");
   if (options.inputReview && !options.expected) throw new UsageStop("--input-review needs --expected, the expected.md of the planted change");
+  if (options.inputReview && options.decided) throw new UsageStop("--decided is for the feature input; the fix-from-review input gives its decided list to the designer");
 
   return options;
 };
@@ -202,9 +205,26 @@ const isOnTheChange = (finding, change) => {
   return finding.line !== null && isInAChangedSpan(finding, change);
 };
 
-const placeTheFinding = (finding, change, leftSourceOfKeyMap) => {
+const isAText = given => typeof given === "string" && given.trim() !== "";
+
+const DECIDED_KEYS = Object.freeze(["displayName", "check", "reason", "says"]);
+
+// The keys of the closing review that the case decided, each by an object with displayName, check, reason and says as text; none where no list is given.
+const readTheCaseDecidedKeys = decidedFile => {
+  if (!decidedFile) return new Set();
+
+  const decidedList = readJson(decidedFile, "decided");
+  if (!Array.isArray(decidedList)) throw new UsageStop(`decided: ${decidedFile} is no list`);
+  const malformedAt = decidedList.findIndex(decided => !decided || !DECIDED_KEYS.every(key => isAText(decided[key])));
+  if (malformedAt !== -1) throw new UsageStop(`decided: decided[${malformedAt}] in ${decidedFile} names no ${DECIDED_KEYS.join(", ")} as text`);
+
+  return new Set(decidedList.map(decided => createFindingKey(decided.displayName, decided.check)));
+};
+
+const placeTheFinding = (finding, change, leftSourceOfKeyMap, caseDecidedKeys) => {
   if (finding.changedSinceTheDecision) return PLACEMENTS.DECIDED_CHANGED_SINCE;
   if (finding.decided) return PLACEMENTS.DECIDED;
+  if (caseDecidedKeys.has(finding.findingKey)) return PLACEMENTS.DECIDED_BY_THE_CASE;
   if (finding.baselineState !== NEW_BASELINE_STATE) return PLACEMENTS.NOT_NEW;
   if (leftSourceOfKeyMap.has(finding.findingKey)) return PLACEMENTS.LEFT;
 
@@ -233,7 +253,8 @@ const countThePlacements = findings => {
 
 const gradeTheReview = (options, leftSourceOfKeyMap) => {
   const change = readChangeOfTheRange(options.repo, options.range);
-  const findings = readFindingsOfTheSarif(path.join(options.review, SARIF_FILE)).map(finding => ({ ...finding, placement: placeTheFinding(finding, change, leftSourceOfKeyMap) }));
+  const caseDecidedKeys = readTheCaseDecidedKeys(options.decided);
+  const findings = readFindingsOfTheSarif(path.join(options.review, SARIF_FILE)).map(finding => ({ ...finding, placement: placeTheFinding(finding, change, leftSourceOfKeyMap, caseDecidedKeys) }));
   const onTheChange = findings.filter(finding => finding.placement === PLACEMENTS.ON_THE_CHANGE);
   const keptOnTheChange = onTheChange.filter(finding => finding.kept);
   return {
@@ -243,6 +264,7 @@ const gradeTheReview = (options, leftSourceOfKeyMap) => {
     keptOnTheChange,
     toConsiderOnTheChange: onTheChange.length - keptOnTheChange.length,
     decidedChangedSince: findings.filter(finding => finding.placement === PLACEMENTS.DECIDED_CHANGED_SINCE),
+    decidedByTheCase: findings.filter(finding => finding.placement === PLACEMENTS.DECIDED_BY_THE_CASE),
     apart: countThePlacements(findings.filter(finding => finding.placement !== PLACEMENTS.ON_THE_CHANGE)),
   };
 };
@@ -517,6 +539,7 @@ const gradeTheRun = options => {
   const review = closingReview && inputRun ? markTheKeyKinds(closingReview, readTheBackSearch(options, storedKept, leftSourceOfKeyMap)) : closingReview;
   const grade = {
     input: inputRun ? "fix-from-review" : "feature",
+    caseDecided: Boolean(options.decided),
     planOutcome,
     shapeRuns: countTheShapeRuns(options.results),
     writers: gradeTheWriters(options.results),
@@ -558,7 +581,8 @@ const writeTheGradeLine = grade => {
   const stored = grade.stored ? ` · stored findings: ${formatTheStoredCounts(grade.stored)}` : "";
   const toConsider = grade.review ? grade.review.toConsiderOnTheChange : 0;
   const apart = grade.review ? grade.review.apart : {};
-  return `one shot: ${grade.oneShot ? "yes" : "no"} · kept on the change ${kept.total} (${scales}; test code ${kept.testCode}) · to consider ${toConsider} · decided ${apart[PLACEMENTS.DECIDED] || 0} · decided but changed since ${apart[PLACEMENTS.DECIDED_CHANGED_SINCE] || 0} · stops ${grade.writers.stops} · build ${formatTheBuildWord(grade.build)} · rounds ${grade.roundsNeeded} · ${formatDollars(grade.cost.dollars)}${stored}`;
+  const decidedByTheCase = grade.caseDecided ? ` · decided by the case ${apart[PLACEMENTS.DECIDED_BY_THE_CASE] || 0}` : "";
+  return `one shot: ${grade.oneShot ? "yes" : "no"} · kept on the change ${kept.total} (${scales}; test code ${kept.testCode}) · to consider ${toConsider} · decided ${apart[PLACEMENTS.DECIDED] || 0} · decided but changed since ${apart[PLACEMENTS.DECIDED_CHANGED_SINCE] || 0}${decidedByTheCase} · stops ${grade.writers.stops} · build ${formatTheBuildWord(grade.build)} · rounds ${grade.roundsNeeded} · ${formatDollars(grade.cost.dollars)}${stored}`;
 };
 
 const writeTheWriterLines = writers => {
@@ -587,6 +611,7 @@ const writeTheReviewLines = (review, stored) => {
   for (const finding of review.keptOnTheChange) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}`);
   lines.push(`to consider on the change: ${review.toConsiderOnTheChange}`);
   for (const finding of review.decidedChangedSince) lines.push(`  decided but changed since: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
+  for (const finding of review.decidedByTheCase) lines.push(`  decided by the case: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
   lines.push(`apart, not graded: ${formatTheApartCounts(review.apart, stored && stored.closingLeftBySource)}`);
   return lines;
 };
