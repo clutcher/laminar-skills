@@ -1,5 +1,6 @@
 import { readList } from "../model/DesignModel.mjs";
 import { readCurrentTree } from "../migration/CurrentTree.mjs";
+import { findCollectionNameDefects } from "./CollectionNames.mjs";
 import { findCompletenessDefects } from "./CompletenessCheck.mjs";
 import { findCurrentTreeDefects } from "./CurrentTreeCheck.mjs";
 import { findDomainObjectCopyDefects } from "./DomainObjectCopies.mjs";
@@ -108,6 +109,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
     ...findTriedNameDefects(model, shapeReviews, roundModels),
     ...findSimplestFormDefects(model),
+    ...findCollectionNameDefects(model, currentTree),
     ...findTypeNotOfTheDomainDefects(model),
     ...findDomainObjectCopyDefects(model),
     ...findChangingCollectionDefects(model),
