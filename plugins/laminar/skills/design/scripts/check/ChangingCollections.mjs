@@ -1,4 +1,4 @@
-import { DOES, KINDS, isATestFileOfTheModel, readHeadTypeName, readList } from "../model/DesignModel.mjs";
+import { DOES, isATestFileOfTheModel, readHeadTypeName, readList } from "../model/DesignModel.mjs";
 import { DEFECT_CODES, createRecheckDefect } from "./DesignDefect.mjs";
 
 const DOMAIN_ZONE = "domain";
@@ -48,7 +48,7 @@ const isAConstructor = (theClass, method) => method.name === readSimpleName(theC
 
 const listMethodsWithABody = theClass => readList(theClass.methods).filter(method => typeof method.body === "string" && method.body.trim() !== "");
 
-const isAComputingClassOfTheDomain = (model, theClass) => model.getKindOfClass(theClass) === KINDS.CREATED
+const isAComputingClassOfTheDomain = (model, theClass) => model.isChangedClass(theClass)
   && theClass.zone === DOMAIN_ZONE
   && !isATestFileOfTheModel(model, theClass.file || "")
   && !KIND_WORD_WITHOUT_CHANGING_FIELDS.test(String(theClass.kindWord || ""))
@@ -88,14 +88,14 @@ const findChangingCollectionDefect = (model, theClass) => {
       return createRecheckDefect(
         DEFECT_CODES.COMPUTATION_HOLDS_A_CHANGING_COLLECTION,
         model.getClassPath(theClass),
-        `${theClass.name} is a created computing class of the domain zone whose field ${field.name} holds a changing collection: ${change}`,
+        `${theClass.name} is a ${model.getKindOfClass(theClass)} computing class of the domain zone whose field ${field.name} holds a changing collection: ${change}`,
       );
     }
   }
   return null;
 };
 
-// A created class of the domain zone that computes and holds a collection whose content the model shows changing keeps state between calls, so the same inputs may give other outputs. It is a recheck case, because the model gives no final or immutable mark on a field, and a collection filled once may still be read as a value.
+// A created, moved or modified class of the domain zone that computes and holds a collection whose content the model shows changing keeps state between calls, so the same inputs may give other outputs. It is a recheck case, because the model gives no final or immutable mark on a field, and a collection filled once may still be read as a value.
 export const findChangingCollectionDefects = model => model.classes
   .filter(theClass => isAComputingClassOfTheDomain(model, theClass))
   .map(theClass => findChangingCollectionDefect(model, theClass))
