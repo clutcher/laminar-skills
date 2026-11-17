@@ -154,20 +154,20 @@ const isReadForTheCollectionForm = (model, theClass) => !INTERFACE_OR_ENUM_KIND_
   && theClass.zone !== CONFIG_ZONE
   && !isATestFileOfTheModel(model, theClass.file || "");
 
-// The 1 field that is no constant, where it is a collection of the language and the class takes the role of no other type; null otherwise.
-const findTheCollectionOfTheForm = theClass => {
+// The fields that are no constant, where each is a collection of the language, 1 or more of them, and the class takes the role of no other type; null otherwise.
+const listTheCollectionsOfTheForm = theClass => {
   const instanceFields = readList(theClass.fields).filter(field => !isAConstant(field));
-  if (takesTheRoleOfAnotherType(theClass) || instanceFields.length !== 1 || !isALanguageCollection(instanceFields[0].type)) return null;
-  return instanceFields[0];
+  if (takesTheRoleOfAnotherType(theClass) || instanceFields.length === 0 || !instanceFields.every(field => isALanguageCollection(field.type))) return null;
+  return instanceFields;
 };
 
-// The collection of the form, where no method of the class holds a rule outside construction; null otherwise.
-const findTheOnlyCollection = theClass => {
-  const collection = findTheCollectionOfTheForm(theClass);
-  if (collection === null) return null;
+// The collections of the form, where no method of the class holds a rule outside construction; null otherwise.
+const listTheCollectionsWithNoRule = theClass => {
+  const collections = listTheCollectionsOfTheForm(theClass);
+  if (collections === null) return null;
 
   const constructionMethods = listConstructionMethods(theClass);
-  return readList(theClass.methods).some(method => holdsARuleOutsideConstruction(constructionMethods, method)) ? null : collection;
+  return readList(theClass.methods).some(method => holdsARuleOutsideConstruction(constructionMethods, method)) ? null : collections;
 };
 
 // A Java marker, a question mark of Kotlin and a union with null or undefined of TypeScript and Python each say only that the value may be missing.
@@ -179,6 +179,8 @@ const YES_OR_NO = /^(?:boolean|Boolean|bool)$/;
 
 // The element types of the collection: every type name of its type but the head of the language collection, so the key and the value of a map both count.
 const listElementTypeNames = collection => new Set(readTypeNames(collection.type).slice(1));
+
+const listElementTypeNamesOfTheCollections = collections => new Set(collections.flatMap(collection => [...listElementTypeNames(collection)]));
 
 // A lookup answers with no value, a yes or no, or a type of the elements, alone, wrapped, nullable or in a collection, so a find, a filter, a pick, a presence or distinctness check and a refusal where 1 is absent all answer a lookup.
 const answersALookup = (method, elementTypeNames) => {
@@ -213,8 +215,8 @@ const changesTheBody = (body, collection) => new RegExp(createChangingCallPatter
   || createChangingOperatorPattern(collection).test(body)
   || new RegExp(createIndexDeletePattern(collection).source).test(body);
 
-const changesTheCollection = (theClass, method, constructionMethods, collection) => [method, ...listPrivateStepsOfTheMethod(theClass, method, constructionMethods)]
-  .some(step => isAText(step.body) && changesTheBody(step.body, collection));
+const changesACollection = (theClass, method, constructionMethods, collections) => [method, ...listPrivateStepsOfTheMethod(theClass, method, constructionMethods)]
+  .some(step => isAText(step.body) && collections.some(collection => changesTheBody(step.body, collection)));
 
 // A chain of reads of 1 value, such as shelf.name() or shelf.name, holds no rule of its own.
 const ACCESS_CHAIN = /^[\w$]+(?:\(\))?(?:\s*\.\s*[\w$]+(?:\(\))?)*$/;
@@ -493,12 +495,16 @@ const readCreationsOfElementsAsValues = (body, collection) => [...listElementTyp
 // The body of a step that only returns a presence test, after the readings of a guard.
 const createPresenceReturnPattern = collection => new RegExp(`^\\{?\\s*return\\s+!?\\s*(?:this\\.|self\\.)?${escapeForAPattern(collection.name)}\\.(?:contains|containsKey)\\([^()]*\\)\\s*;?\\s*\\}?$`);
 
-// A private step of the method whose body only tests presence, such as isTaken(shelf) that returns shelves.contains(shelf); a step that counts or compares holds its own rule and is left as a call.
-const listPresenceSteps = (theClass, method, constructionMethods, collection) => listPrivateStepsOfTheMethod(theClass, method, constructionMethods)
-  .filter(step => isAText(step.body) && createPresenceReturnPattern(collection).test(readTheGuardOfAChange(removeTheHead(step, step.body), step, collection, []).trim()));
+// A private step of the method whose body only tests presence in 1 collection, such as isTaken(shelf) that returns shelves.contains(shelf), with that collection; a step that counts or compares holds its own rule and is left as a call.
+const listPresenceSteps = (theClass, method, constructionMethods, collections) => listPrivateStepsOfTheMethod(theClass, method, constructionMethods)
+  .filter(step => isAText(step.body))
+  .flatMap(step => collections
+    .filter(collection => createPresenceReturnPattern(collection).test(readTheGuardOfAChange(removeTheHead(step, step.body), step, [collection], []).trim()))
+    .slice(0, 1)
+    .map(collection => ({ step, collection })));
 
-// Each call of a presence step, written as the presence test that its body is.
-const readPresenceStepsAsPresenceTests = (body, collection, presenceSteps) => presenceSteps.reduce((text, step) => text
+// Each call of a presence step, written as the presence test of its collection that its body is.
+const readPresenceStepsAsPresenceTests = (body, presenceSteps) => presenceSteps.reduce((text, { step, collection }) => text
   .replace(new RegExp(`(?<![\\w$.])(?:this\\.|self\\.)?${escapeForAPattern(step.name)}\\s*\\(([^()]*)\\)`, "g"), `${collection.name}.contains($1)`), body);
 
 // A call of Kotlin, Guava or Spring that fails where its test is false, such as require(test) or checkArgument(test), is an if that throws.
@@ -551,49 +557,58 @@ const readParameterChainsAsOneValue = (body, parameterNames) => {
   return body.replace(new RegExp(`(?<![\\w$.])(${names})(?:\\s*\\.\\s*[\\w$]+(?:\\(\\s*\\)|(?![\\w$]|\\s*\\()))+`, "g"), "$1");
 };
 
-const readTheGuardOfAChange = (body, step, collection, presenceSteps) => {
+// The guard of a change, read for each collection in turn, so a change of any of them reads as a read and a match against any of them as a presence test.
+const readTheGuardOfAChange = (body, step, collections, presenceSteps) => {
   const parameterNames = listParameterNames(step);
-  const withValues = readCreationsOfElementsAsValues(readParameterChainsAsOneValue(body, parameterNames), collection);
-  const withPresenceTests = readChangeAnswersAsPresenceTests(readPresenceStepsAsPresenceTests(withValues, collection, presenceSteps), collection);
-  const guard = readMatchTestsAsPresenceTests(readChangesAsReads(withPresenceTests, collection), collection, parameterNames);
+  const withValues = collections.reduce((text, collection) => readCreationsOfElementsAsValues(text, collection), readParameterChainsAsOneValue(body, parameterNames));
+  const withPresenceTests = collections.reduce((text, collection) => readChangeAnswersAsPresenceTests(text, collection), readPresenceStepsAsPresenceTests(withValues, presenceSteps));
+  const guard = collections.reduce((text, collection) => readMatchTestsAsPresenceTests(readChangesAsReads(text, collection), collection, parameterNames), withPresenceTests);
   return readPreconditionCallsAsIfs(guard);
 };
 
-// A change of the collection under a rule that reads the elements keeps a state of the whole, such as a limit on how many elements of 1 kind it holds, which no element holds; a plain change, or a change behind a presence or distinctness test only, is no rule.
-const guardsAChangeOfTheCollection = (theClass, method, constructionMethods, collection) => {
-  if (!changesTheCollection(theClass, method, constructionMethods, collection)) return false;
+// A change of a collection under a rule that reads the elements keeps a state of the whole, such as a limit on how many elements of 1 kind it holds, which no element holds; a plain change, or a change behind a presence or distinctness test only, is no rule.
+const guardsAChangeOfACollection = (theClass, method, constructionMethods, collections) => {
+  if (!changesACollection(theClass, method, constructionMethods, collections)) return false;
 
-  const presenceSteps = listPresenceSteps(theClass, method, constructionMethods, collection);
-  return holdsARuleInTheMethodOrItsSteps(theClass, method, constructionMethods, (body, step) => readTheGuardOfAChange(body, step, collection, presenceSteps));
+  const presenceSteps = listPresenceSteps(theClass, method, constructionMethods, collections);
+  return holdsARuleInTheMethodOrItsSteps(theClass, method, constructionMethods, (body, step) => readTheGuardOfAChange(body, step, collections, presenceSteps));
 };
 
-// A public method keeps the type where it answers a value that no element holds and computes it, in its body or a private step it names, or where it changes the collection under a rule.
-const keepsAStateOfTheWhole = (theClass, method, constructionMethods, elementTypeNames, collection) => {
+// A public method keeps the type where it answers a value that no element holds and computes it, in its body or a private step it names, or where it changes a collection under a rule.
+const keepsAStateOfTheWhole = (theClass, method, constructionMethods, elementTypeNames, collections) => {
   if (constructionMethods.has(method) || method.visibility === "private") return false;
   if (!answersALookup(method, elementTypeNames)) return holdsARuleInTheMethodOrItsSteps(theClass, method, constructionMethods, body => body);
-  return guardsAChangeOfTheCollection(theClass, method, constructionMethods, collection);
+  return guardsAChangeOfACollection(theClass, method, constructionMethods, collections);
 };
 
-// The collection of the form on a domain object, where no method keeps a state of the whole; null otherwise.
-const findTheOnlyCollectionOfTheDomainObject = theClass => {
-  const collection = findTheCollectionOfTheForm(theClass);
-  if (collection === null) return null;
+// The collections of the form on a domain object, where no method keeps a state of the whole; null otherwise.
+const listTheCollectionsOfTheDomainObject = theClass => {
+  const collections = listTheCollectionsOfTheForm(theClass);
+  if (collections === null) return null;
 
   const constructionMethods = listConstructionMethods(theClass);
-  const elementTypeNames = listElementTypeNames(collection);
-  return readList(theClass.methods).some(method => keepsAStateOfTheWhole(theClass, method, constructionMethods, elementTypeNames, collection)) ? null : collection;
+  const elementTypeNames = listElementTypeNamesOfTheCollections(collections);
+  return readList(theClass.methods).some(method => keepsAStateOfTheWhole(theClass, method, constructionMethods, elementTypeNames, collections)) ? null : collections;
 };
 
-const findTheDomainObjectCollectionDefect = (model, theClass, collection) => createDefect(
+const describeTheCollections = collections => (collections.length === 1
+  ? `whose only field that is no constant is the collection ${collections[0].type} of the language`
+  : `whose fields that are no constant are each a collection of the language, ${collections.map(collection => collection.type).join(", ")}`);
+
+const findTheDomainObjectCollectionDefect = (model, theClass, collections) => createDefect(
   DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION,
   model.getClassPath(theClass),
-  `${theClass.name} is a created type marked domain object whose only field that is no constant is the collection ${collection.type} of the language, and no method computes over its elements a value that no element holds or changes the collection under a rule that reads them, so it only finds, filters or picks among its elements; mark the class work, or give the whole a value that no element holds`,
+  collections.length === 1
+    ? `${theClass.name} is a created type marked domain object ${describeTheCollections(collections)}, and no method computes over its elements a value that no element holds or changes the collection under a rule that reads them, so it only finds, filters or picks among its elements; mark the class work, or give the whole a value that no element holds`
+    : `${theClass.name} is a created type marked domain object ${describeTheCollections(collections)}, and no method computes over their elements a value that no element holds or changes a collection under a rule that reads them, so it only finds, filters or picks among their elements; mark the class work, or give the whole a value that no element holds`,
 );
 
-const findTheCollectionTypeDefect = (model, theClass, collection) => createRecheckDefect(
+const findTheCollectionTypeDefect = (model, theClass, collections) => createRecheckDefect(
   DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION,
   model.getClassPath(theClass),
-  `${theClass.name} is a created type whose only field that is no constant is the collection ${collection.type} of the language, and its methods only fill it at creation or read it; hold the collection as a field of the service that uses it and make the lookup a method of that service; keep the type only where it decides something the service could not`,
+  collections.length === 1
+    ? `${theClass.name} is a created type ${describeTheCollections(collections)}, and its methods only fill it at creation or read it; hold the collection as a field of the service that uses it and make the lookup a method of that service; keep the type only where it decides something the service could not`
+    : `${theClass.name} is a created type ${describeTheCollections(collections)}, and its methods only fill them at creation or read them; hold each collection as a field of the service that uses it and make each lookup a method of that service; keep the type only where it decides something the services could not`,
 );
 
 const listReasonWords = reason => String(reason || "").split(/[\s,;:()`'"]+/).map(word => word.replace(/\.+$/, ""));
@@ -633,24 +648,30 @@ const findTheSingleImplementationDefect = (model, theInterface, implementation) 
 
 const findTheInterfaceOfTheName = (model, typeName) => model.classes.find(theClass => isAnInterface(theClass) && readSimpleName(theClass) === typeName);
 
-// The collection holds the implementations of 1 contract where an element type is an interface of the model that 2 or more classes of the model implement, such as the map of the readers of 1 file format each, keyed by a text.
-const holdsTheImplementationsOfAContract = (model, collection) => [...listElementTypeNames(collection)].some(typeName => {
+// The contracts whose implementations the collection holds: each element type that is an interface of the model that 2 or more classes of the model implement, such as the readers of 1 file format each in a map keyed by a text.
+const listTheContractsOfTheCollection = (model, collection) => [...listElementTypeNames(collection)].filter(typeName => {
   const theInterface = findTheInterfaceOfTheName(model, typeName);
   return theInterface !== undefined && listImplementations(model, theInterface).length >= IMPLEMENTATIONS_OF_A_CHOICE;
 });
 
+// The collections hold the implementations of 1 contract where 1 and the same contract stands in every collection, so a map of implementations beside a map of data holds more than the choice.
+const holdTheImplementationsOfOneContract = (model, collections) => {
+  const [first, ...others] = collections.map(collection => listTheContractsOfTheCollection(model, collection));
+  return first.some(contract => others.every(contracts => contracts.includes(contract)));
+};
+
 // A type marked domain object that only finds, filters or picks among its elements is no domain object, whatever its body, so its case is a defect. A type marked work that holds the implementations of 1 contract is the class that picks 1 of them, which is 1 of the 2 places of that class, so it has no case. On every other mark, and for a collection of values or domain objects, the case is a recheck, because a rule can stand outside what the model shows.
 const findTheCollectionDefect = (model, theClass) => {
   if (theClass.represents === DOMAIN_OBJECT) {
-    const collection = findTheOnlyCollectionOfTheDomainObject(theClass);
-    return collection ? findTheDomainObjectCollectionDefect(model, theClass, collection) : null;
+    const collections = listTheCollectionsOfTheDomainObject(theClass);
+    return collections ? findTheDomainObjectCollectionDefect(model, theClass, collections) : null;
   }
-  const collection = findTheOnlyCollection(theClass);
-  if (collection === null) return null;
-  return theClass.represents === WORK && holdsTheImplementationsOfAContract(model, collection) ? null : findTheCollectionTypeDefect(model, theClass, collection);
+  const collections = listTheCollectionsWithNoRule(theClass);
+  if (collections === null) return null;
+  return theClass.represents === WORK && holdTheImplementationsOfOneContract(model, collections) ? null : findTheCollectionTypeDefect(model, theClass, collections);
 };
 
-// The 2 forms that are larger than the change needs where nothing varies: a created type that only holds a collection of the language, and a created interface with 1 implementation that no layout split and no second answer asks for. Each is a recheck case, because a rule or a second answer can stand outside what the model shows, except the collection on a type marked domain object.
+// The 2 forms that are larger than the change needs where nothing varies: a created type that only holds collections of the language, and a created interface with 1 implementation that no layout split and no second answer asks for. Each is a recheck case, because a rule or a second answer can stand outside what the model shows, except the collection on a type marked domain object.
 export const findSimplestFormDefects = model => {
   const defects = [];
   for (const theClass of model.classes.filter(other => isACreatedClass(model, other))) {
