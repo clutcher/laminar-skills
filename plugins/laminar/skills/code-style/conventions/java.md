@@ -6,7 +6,7 @@ These are rules of this skill for Java, narrower than the book. Read this file w
 
 ## 1. Records for values
 
-Write a domain value as a record, and a part of it as a nested record. A record has no setter, so no holder of a reference can change it (correctness, section 5).
+Write a type for values as a record, and a part of it as a nested record. A record has no setter, so no holder of a reference can change it (correctness, section 5).
 
 - Limits: where the domain forbids a combination of fields, the compact constructor of the record rejects it (correctness, section 4). Work that builds the value again from its own fields is a method of the record.
 
