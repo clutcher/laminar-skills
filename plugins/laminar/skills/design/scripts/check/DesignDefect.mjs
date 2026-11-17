@@ -70,6 +70,8 @@ export const DEFECT_CODES = Object.freeze({
   TYPE_HOLDS_ONLY_A_COLLECTION: "type-holds-only-a-collection",
   INTERFACE_WITH_ONE_IMPLEMENTATION: "interface-with-one-implementation",
   TYPE_NOT_OF_THE_DOMAIN: "type-not-of-the-domain",
+  COPIES_A_DOMAIN_OBJECT: "copies-a-domain-object",
+  COMPUTATION_HOLDS_A_CHANGING_COLLECTION: "computation-holds-a-changing-collection",
   RENAMED_WITHOUT_FINDING: "renamed-without-finding",
   OPTION_WITHOUT_CODE: "option-without-code",
   OWNER_WITHOUT_ITS_VALUES: "owner-without-its-values",

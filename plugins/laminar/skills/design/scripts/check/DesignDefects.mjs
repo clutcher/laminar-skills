@@ -2,9 +2,11 @@ import { readList } from "../model/DesignModel.mjs";
 import { readCurrentTree } from "../migration/CurrentTree.mjs";
 import { findCompletenessDefects } from "./CompletenessCheck.mjs";
 import { findCurrentTreeDefects } from "./CurrentTreeCheck.mjs";
+import { findDomainObjectCopyDefects } from "./DomainObjectCopies.mjs";
 import { findConventionOverrideDefects } from "./ConventionOverrides.mjs";
 import { findCycleCheckDefects, findFolderPairOutsideTheBase } from "./CycleCheck.mjs";
 import { DEFECT_CODES, createDefect } from "./DesignDefect.mjs";
+import { findChangingCollectionDefects } from "./ChangingCollections.mjs";
 import { findDataFlowDefects } from "./DataFlowCheck.mjs";
 import { findNameOfThePath } from "./DefectNames.mjs";
 import { findExitListResult } from "./ExitList.mjs";
@@ -97,6 +99,8 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findTriedNameDefects(model, shapeReviews, roundModels),
     ...findSimplestFormDefects(model),
     ...findTypeNotOfTheDomainDefects(model),
+    ...findDomainObjectCopyDefects(model),
+    ...findChangingCollectionDefects(model),
     ...findOwnerValueDefects(model, currentTree),
     ...findRepeatedDecisionDefects(model, currentTree),
     ...findUnchangedCopyDefects(model, currentTree),
