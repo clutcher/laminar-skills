@@ -1,10 +1,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { isAText, readList } from "../model/DesignModel.mjs";
+import { readList } from "../model/DesignModel.mjs";
 import { writeWorkflowReturnFile } from "../../../review/scripts/files/workflowReturnFile.mjs";
 import { listMigrationGroups } from "./MigrationGroups.mjs";
 import { SELF_CHECK_JUDGES, estimateSelfCheckCost } from "./SelfCheckCost.mjs";
-import { DECIDED_REVIEW_FILE, getPlanFolder } from "../plan/PlanFolder.mjs";
+import { DECIDED_REVIEW_FILE, getPlanFolder, isAnOpenQuestion } from "../plan/PlanFolder.mjs";
 
 export const MIGRATION_WORKFLOW_FILE = "migration.workflow.js";
 
@@ -12,16 +12,12 @@ const DESIGN_FILE = "design.md";
 
 const MIGRATION_RETURN_META = { name: "migration-return", description: "The migration groups of 1 design, for the writer workflow" };
 
-const OPEN_AUTONOMOUS = "open";
-
 const DESIGN_SCRIPTS_FOLDER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const REVIEW_SCRIPTS_FOLDER = path.resolve(DESIGN_SCRIPTS_FOLDER, "../../review/scripts");
 
-const isAnsweredQuestion = question => Boolean(question.answer) && isAText(question.answer.option);
-
 const listOpenQuestionIds = model => readList(model.decisions.questions)
-  .filter(question => question.autonomous === OPEN_AUTONOMOUS && !isAnsweredQuestion(question))
+  .filter(isAnOpenQuestion)
   .map(question => question.id);
 
 // The writer workflow cannot read a file, so it loads this file as a workflow that returns the migration groups beside the migration.

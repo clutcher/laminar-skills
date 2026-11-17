@@ -43,9 +43,14 @@ export const copyFileIfPresent = (fromPath, toFolder) => {
   if (fs.existsSync(fromPath)) fs.copyFileSync(fromPath, path.join(toFolder, path.basename(fromPath)));
 };
 
+const isAnsweredQuestion = question => Boolean(question.answer) && isAText(question.answer.option);
+
+// An open question holds no answer and its autonomous answer is open, so the plan goes on and the writers stay off its boundary.
+export const isAnOpenQuestion = question => question.autonomous === AUTONOMOUS_ANSWERS.OPEN && !isAnsweredQuestion(question);
+
 // A question stops the plan where it holds no answer and its autonomous answer is not open, because an open question only keeps the writers off its boundary.
 export const listQuestionsThatStopThePlan = model => readList(model.decisions.questions)
-  .filter(question => !(question.answer && isAText(question.answer.option)) && question.autonomous !== AUTONOMOUS_ANSWERS.OPEN)
+  .filter(question => !isAnsweredQuestion(question) && question.autonomous !== AUTONOMOUS_ANSWERS.OPEN)
   .map(question => question.id);
 
 export const writeOutcome = (resultsFolder, plan, outcome) => {

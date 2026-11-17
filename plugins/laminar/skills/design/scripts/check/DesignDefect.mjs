@@ -21,6 +21,7 @@ export const DEFECT_CODES = Object.freeze({
   TEST_NAME_FORM: "test-name-form",
   QUESTION_OPTIONS_TOO_FEW: "question-options-too-few",
   QUESTION_UNKNOWN: "question-unknown",
+  OPEN_QUESTION_ON_WRITTEN_CODE: "open-question-on-written-code",
   ANSWER_OPTION_UNKNOWN: "answer-option-unknown",
   BODY_CALL_NOT_IN_CALLS: "body-call-not-in-calls",
   OLD_PATH_NOT_IN_TREE: "old-path-not-in-tree",

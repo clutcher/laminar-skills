@@ -18,6 +18,7 @@ import { findExitReachDefects } from "./ExitReach.mjs";
 import { findAbsentResult, findExitFailureResult, findFailureHandlingDefects } from "./FailureHandling.mjs";
 import { findFieldListResult } from "./FieldListCheck.mjs";
 import { findMethodListResult } from "./MethodListCheck.mjs";
+import { findOpenQuestionDefects } from "./OpenQuestions.mjs";
 import { listMigrationSteps } from "../migration/MigrationSteps.mjs";
 import { findGroupOrderDefects } from "../migration/GroupOrder.mjs";
 import { findOwnerValueDefects } from "./OwnerValues.mjs";
@@ -140,6 +141,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...cycleCheck.defects,
     ...findExitReachDefects(model, zoneOrder),
     ...findFailureHandlingDefects(model),
+    ...findOpenQuestionDefects(model),
     ...exitAbsent.defects,
     ...exitFailure.defects,
     ...findGroupOrderDefects(model, listMigrationSteps(model, currentTree)),
