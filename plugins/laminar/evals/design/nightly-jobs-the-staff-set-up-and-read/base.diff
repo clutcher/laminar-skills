@@ -1,0 +1,221 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,7 @@
++# Lending library
++
++A small service of a lending library. The module `loan` keeps the loans, sends the notices of overdue loans and closes each day of lending.
++
++- Java 17 and Spring Boot 3.3.5, with JUnit 5 and Spring Boot Test.
++- The application lives under `org.example.library`. Each module follows the hexagonal layout: `app/api` holds what the module offers, `app/spi` what it needs, `app/domain` the business rules, `in` the entries, `out` the stores and the senders, and `config` the wiring.
++- The stores keep their data in memory, so the service needs no database. The notices are written to the log.
+diff --git a/src/main/java/org/example/library/LibraryApplication.java b/src/main/java/org/example/library/LibraryApplication.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/LibraryApplication.java
+@@ -0,0 +1,12 @@
++package org.example.library;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class LibraryApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(LibraryApplication.class, args);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/api/ApiForLoanUpkeep.java b/src/main/java/org/example/library/loan/app/api/ApiForLoanUpkeep.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/api/ApiForLoanUpkeep.java
+@@ -0,0 +1,10 @@
++package org.example.library.loan.app.api;
++
++import java.time.LocalDate;
++
++public interface ApiForLoanUpkeep {
++
++    int sendOverdueNotices(LocalDate day);
++
++    int closeDay(LocalDate day);
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/LoanUpkeep.java b/src/main/java/org/example/library/loan/app/domain/LoanUpkeep.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/LoanUpkeep.java
+@@ -0,0 +1,36 @@
++package org.example.library.loan.app.domain;
++
++import org.example.library.loan.app.api.ApiForLoanUpkeep;
++import org.example.library.loan.app.domain.model.Loan;
++import org.example.library.loan.app.spi.LoanRepository;
++import org.example.library.loan.app.spi.OverdueNotifier;
++
++import java.time.LocalDate;
++import java.util.List;
++
++public class LoanUpkeep implements ApiForLoanUpkeep {
++
++    private final LoanRepository loanRepository;
++
++    private final OverdueNotifier overdueNotifier;
++
++    public LoanUpkeep(LoanRepository loanRepository, OverdueNotifier overdueNotifier) {
++        this.loanRepository = loanRepository;
++        this.overdueNotifier = overdueNotifier;
++    }
++
++    @Override
++    public int sendOverdueNotices(LocalDate day) {
++        List<Loan> overdueLoans = loanRepository.findLoansDueBefore(day);
++        for (Loan loan : overdueLoans) {
++            overdueNotifier.notifyMember(loan.memberId(), loan.itemTitle(), loan.dueDate());
++        }
++
++        return overdueLoans.size();
++    }
++
++    @Override
++    public int closeDay(LocalDate day) {
++        return loanRepository.archiveLoansReturnedOn(day);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/model/Loan.java b/src/main/java/org/example/library/loan/app/domain/model/Loan.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/model/Loan.java
+@@ -0,0 +1,6 @@
++package org.example.library.loan.app.domain.model;
++
++import java.time.LocalDate;
++
++public record Loan(String loanId, String memberId, String itemTitle, LocalDate dueDate, LocalDate returnedOn) {
++}
+diff --git a/src/main/java/org/example/library/loan/app/spi/LoanRepository.java b/src/main/java/org/example/library/loan/app/spi/LoanRepository.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/spi/LoanRepository.java
+@@ -0,0 +1,13 @@
++package org.example.library.loan.app.spi;
++
++import org.example.library.loan.app.domain.model.Loan;
++
++import java.time.LocalDate;
++import java.util.List;
++
++public interface LoanRepository {
++
++    List<Loan> findLoansDueBefore(LocalDate day);
++
++    int archiveLoansReturnedOn(LocalDate day);
++}
+diff --git a/src/main/java/org/example/library/loan/app/spi/OverdueNotifier.java b/src/main/java/org/example/library/loan/app/spi/OverdueNotifier.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/spi/OverdueNotifier.java
+@@ -0,0 +1,8 @@
++package org.example.library.loan.app.spi;
++
++import java.time.LocalDate;
++
++public interface OverdueNotifier {
++
++    void notifyMember(String memberId, String itemTitle, LocalDate dueDate);
++}
+diff --git a/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java b/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java
+@@ -0,0 +1,16 @@
++package org.example.library.loan.config;
++
++import org.example.library.loan.app.domain.LoanUpkeep;
++import org.example.library.loan.app.spi.LoanRepository;
++import org.example.library.loan.app.spi.OverdueNotifier;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++
++@Configuration
++public class LoanModuleConfiguration {
++
++    @Bean
++    public LoanUpkeep createLoanUpkeep(LoanRepository loanRepository, OverdueNotifier overdueNotifier) {
++        return new LoanUpkeep(loanRepository, overdueNotifier);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/out/log/OverdueNotifierUsingLog.java b/src/main/java/org/example/library/loan/out/log/OverdueNotifierUsingLog.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/out/log/OverdueNotifierUsingLog.java
+@@ -0,0 +1,19 @@
++package org.example.library.loan.out.log;
++
++import org.example.library.loan.app.spi.OverdueNotifier;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++import org.springframework.stereotype.Component;
++
++import java.time.LocalDate;
++
++@Component
++public class OverdueNotifierUsingLog implements OverdueNotifier {
++
++    private static final Logger LOG = LoggerFactory.getLogger(OverdueNotifierUsingLog.class);
++
++    @Override
++    public void notifyMember(String memberId, String itemTitle, LocalDate dueDate) {
++        LOG.info("Overdue notice to member {}: {} was due on {}", memberId, itemTitle, dueDate);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java b/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java
+@@ -0,0 +1,38 @@
++package org.example.library.loan.out.memory;
++
++import org.example.library.loan.app.domain.model.Loan;
++import org.example.library.loan.app.spi.LoanRepository;
++import org.springframework.stereotype.Repository;
++
++import java.time.LocalDate;
++import java.util.List;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++@Repository
++public class LoanRepositoryUsingMemory implements LoanRepository {
++
++    private final Map<String, Loan> loanByIdMap = new ConcurrentHashMap<>();
++
++    private final Map<String, Loan> archivedLoanByIdMap = new ConcurrentHashMap<>();
++
++    @Override
++    public List<Loan> findLoansDueBefore(LocalDate day) {
++        return loanByIdMap.values().stream()
++                .filter(loan -> loan.returnedOn() == null && loan.dueDate().isBefore(day))
++                .toList();
++    }
++
++    @Override
++    public int archiveLoansReturnedOn(LocalDate day) {
++        List<Loan> returnedLoans = loanByIdMap.values().stream()
++                .filter(loan -> day.equals(loan.returnedOn()))
++                .toList();
++        for (Loan loan : returnedLoans) {
++            loanByIdMap.remove(loan.loanId());
++            archivedLoanByIdMap.put(loan.loanId(), loan);
++        }
++
++        return returnedLoans.size();
++    }
++}
+diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
+new file mode 100644
+--- /dev/null
++++ b/src/main/resources/application.properties
+@@ -0,0 +1,1 @@
++spring.application.name=library

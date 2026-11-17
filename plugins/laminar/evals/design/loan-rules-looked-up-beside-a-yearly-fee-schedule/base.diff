@@ -1,0 +1,241 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,7 @@
++# Lending library
++
++A small service of a lending library. A librarian lends an item to a member, and the due date follows the loan rule of the item.
++
++- Java 17 and Spring Boot 3.3.5, with JUnit 5 and Spring Boot Test.
++- The application lives under `org.example.library`. The module `loan` follows the hexagonal layout: `app/api` holds what the module offers, `app/spi` what it needs, `app/domain` the business rules, `out/memory` the stores, and `config` the wiring.
++- The stores keep their data in memory, so the service needs no database.
+diff --git a/src/main/java/org/example/library/LibraryApplication.java b/src/main/java/org/example/library/LibraryApplication.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/LibraryApplication.java
+@@ -0,0 +1,12 @@
++package org.example.library;
++
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++
++@SpringBootApplication
++public class LibraryApplication {
++
++    public static void main(String[] args) {
++        SpringApplication.run(LibraryApplication.class, args);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/api/ApiForLending.java b/src/main/java/org/example/library/loan/app/api/ApiForLending.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/api/ApiForLending.java
+@@ -0,0 +1,10 @@
++package org.example.library.loan.app.api;
++
++import org.example.library.loan.app.domain.model.Loan;
++
++import java.time.LocalDate;
++
++public interface ApiForLending {
++
++    Loan lend(String memberId, String itemId, LocalDate lentOn);
++}
+diff --git a/src/main/java/org/example/library/loan/app/api/ItemNotFoundException.java b/src/main/java/org/example/library/loan/app/api/ItemNotFoundException.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/api/ItemNotFoundException.java
+@@ -0,0 +1,8 @@
++package org.example.library.loan.app.api;
++
++public class ItemNotFoundException extends RuntimeException {
++
++    public ItemNotFoundException(String itemId) {
++        super("No item " + itemId);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
+@@ -0,0 +1,38 @@
++package org.example.library.loan.app.domain;
++
++import org.example.library.loan.app.api.ApiForLending;
++import org.example.library.loan.app.api.ItemNotFoundException;
++import org.example.library.loan.app.domain.model.Item;
++import org.example.library.loan.app.domain.model.Loan;
++import org.example.library.loan.app.domain.model.LoanRule;
++import org.example.library.loan.app.spi.ItemRepository;
++import org.example.library.loan.app.spi.LoanRepository;
++
++import java.time.LocalDate;
++import java.util.UUID;
++
++public class LoanDesk implements ApiForLending {
++
++    private static final LoanRule STANDARD_RULE = new LoanRule("standard", 21, 2);
++
++    private final ItemRepository itemRepository;
++
++    private final LoanRepository loanRepository;
++
++    public LoanDesk(ItemRepository itemRepository, LoanRepository loanRepository) {
++        this.itemRepository = itemRepository;
++        this.loanRepository = loanRepository;
++    }
++
++    @Override
++    public Loan lend(String memberId, String itemId, LocalDate lentOn) {
++        Item item = itemRepository.findItem(itemId);
++        if (item == null) {
++            throw new ItemNotFoundException(itemId);
++        }
++
++        Loan loan = new Loan(UUID.randomUUID().toString(), memberId, item.itemId(), lentOn, lentOn.plusDays(STANDARD_RULE.loanDays()), 0);
++        loanRepository.save(loan);
++        return loan;
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/model/Item.java b/src/main/java/org/example/library/loan/app/domain/model/Item.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/model/Item.java
+@@ -0,0 +1,4 @@
++package org.example.library.loan.app.domain.model;
++
++public record Item(String itemId, String title, String loanRuleName) {
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/model/Loan.java b/src/main/java/org/example/library/loan/app/domain/model/Loan.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/model/Loan.java
+@@ -0,0 +1,6 @@
++package org.example.library.loan.app.domain.model;
++
++import java.time.LocalDate;
++
++public record Loan(String loanId, String memberId, String itemId, LocalDate lentOn, LocalDate dueDate, int renewalCount) {
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/model/LoanRule.java b/src/main/java/org/example/library/loan/app/domain/model/LoanRule.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/model/LoanRule.java
+@@ -0,0 +1,4 @@
++package org.example.library.loan.app.domain.model;
++
++public record LoanRule(String name, int loanDays, int maxRenewals) {
++}
+diff --git a/src/main/java/org/example/library/loan/app/spi/ItemRepository.java b/src/main/java/org/example/library/loan/app/spi/ItemRepository.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/spi/ItemRepository.java
+@@ -0,0 +1,8 @@
++package org.example.library.loan.app.spi;
++
++import org.example.library.loan.app.domain.model.Item;
++
++public interface ItemRepository {
++
++    Item findItem(String itemId);
++}
+diff --git a/src/main/java/org/example/library/loan/app/spi/LoanRepository.java b/src/main/java/org/example/library/loan/app/spi/LoanRepository.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/spi/LoanRepository.java
+@@ -0,0 +1,10 @@
++package org.example.library.loan.app.spi;
++
++import org.example.library.loan.app.domain.model.Loan;
++
++public interface LoanRepository {
++
++    Loan findLoan(String loanId);
++
++    void save(Loan loan);
++}
+diff --git a/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java b/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java
+@@ -0,0 +1,16 @@
++package org.example.library.loan.config;
++
++import org.example.library.loan.app.domain.LoanDesk;
++import org.example.library.loan.app.spi.ItemRepository;
++import org.example.library.loan.app.spi.LoanRepository;
++import org.springframework.context.annotation.Bean;
++import org.springframework.context.annotation.Configuration;
++
++@Configuration
++public class LoanModuleConfiguration {
++
++    @Bean
++    public LoanDesk createLoanDesk(ItemRepository itemRepository, LoanRepository loanRepository) {
++        return new LoanDesk(itemRepository, loanRepository);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/out/memory/ItemRepositoryUsingMemory.java b/src/main/java/org/example/library/loan/out/memory/ItemRepositoryUsingMemory.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/out/memory/ItemRepositoryUsingMemory.java
+@@ -0,0 +1,23 @@
++package org.example.library.loan.out.memory;
++
++import org.example.library.loan.app.domain.model.Item;
++import org.example.library.loan.app.spi.ItemRepository;
++import org.springframework.stereotype.Repository;
++
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++@Repository
++public class ItemRepositoryUsingMemory implements ItemRepository {
++
++    private final Map<String, Item> itemByIdMap = new ConcurrentHashMap<>();
++
++    @Override
++    public Item findItem(String itemId) {
++        return itemByIdMap.get(itemId);
++    }
++
++    public void save(Item item) {
++        itemByIdMap.put(item.itemId(), item);
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java b/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java
+@@ -0,0 +1,24 @@
++package org.example.library.loan.out.memory;
++
++import org.example.library.loan.app.domain.model.Loan;
++import org.example.library.loan.app.spi.LoanRepository;
++import org.springframework.stereotype.Repository;
++
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++@Repository
++public class LoanRepositoryUsingMemory implements LoanRepository {
++
++    private final Map<String, Loan> loanByIdMap = new ConcurrentHashMap<>();
++
++    @Override
++    public Loan findLoan(String loanId) {
++        return loanByIdMap.get(loanId);
++    }
++
++    @Override
++    public void save(Loan loan) {
++        loanByIdMap.put(loan.loanId(), loan);
++    }
++}
+diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
+new file mode 100644
+--- /dev/null
++++ b/src/main/resources/application.properties
+@@ -0,0 +1,1 @@
++spring.application.name=library
