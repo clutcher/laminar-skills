@@ -117,7 +117,7 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/s
  
      @Override
 @@ -35,13 +46,49 @@ public class LoanDesk implements ApiForMemberLoans {
-         return new MemberLoans(memberId, loans, member.fineStatement().sumOwedAmount());
+         return new MemberLoans(memberId, loans, member.sumOwedFines());
      }
  
 +    @Override

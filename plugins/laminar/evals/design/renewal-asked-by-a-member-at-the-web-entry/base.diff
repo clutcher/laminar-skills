@@ -196,7 +196,7 @@ new file mode 100644
 +        }
 +
 +        List<Loan> loans = loanRepository.findLoansOfMember(memberId);
-+        return new MemberLoans(memberId, loans, member.fineStatement().sumOwedAmount());
++        return new MemberLoans(memberId, loans, member.sumOwedFines());
 +    }
 +
 +    public Loan renew(Loan loan) {
@@ -265,10 +265,16 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/model/Member.java
 new file mode 100644
 --- /dev/null
 +++ b/src/main/java/org/example/library/loan/app/domain/model/Member.java
-@@ -0,0 +1,4 @@
+@@ -0,0 +1,10 @@
 +package org.example.library.loan.app.domain.model;
 +
++import java.math.BigDecimal;
++
 +public record Member(String memberId, String email, FineStatement fineStatement) {
++
++    public BigDecimal sumOwedFines() {
++        return fineStatement.sumOwedAmount();
++    }
 +}
 diff --git a/src/main/java/org/example/library/loan/app/spi/LoanRepository.java b/src/main/java/org/example/library/loan/app/spi/LoanRepository.java
 new file mode 100644
