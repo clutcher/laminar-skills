@@ -321,12 +321,33 @@ diff --git a/src/main/java/org/example/library/loan/in/web/response/LoanOverview
 +++ b/src/main/java/org/example/library/loan/in/web/response/LoanOverviewResponse.java
 @@ -6,6 +6,6 @@ import java.util.List;
  
- public record LoanOverviewResponse(String memberId, List<HeldLoan> loans, BigDecimal owedFines) {
+ public record LoanOverviewResponse(String memberId, List<HeldLoan> loans, BigDecimal owedFineTotal) {
  
 -    public record HeldLoan(String loanId, String itemTitle, LocalDate dueDate) {
 +    public record HeldLoan(String loanId, String itemTitle, LocalDate dueDate, boolean renewable) {
      }
  }
+diff --git a/src/test/java/org/example/library/loan/app/domain/model/LoanTest.java b/src/test/java/org/example/library/loan/app/domain/model/LoanTest.java
+--- a/src/test/java/org/example/library/loan/app/domain/model/LoanTest.java
++++ b/src/test/java/org/example/library/loan/app/domain/model/LoanTest.java
+@@ -11,7 +11,7 @@ class LoanTest {
+     void shouldRefuseTheRenewalWhenTheLoanIsOnHold() {
+         // given
+         boolean onHoldForAnotherMember = true;
+-        Loan loan = new Loan("L-5001", "M-1001", "Dune", LocalDate.of(2026, 11, 30), onHoldForAnotherMember);
++        Loan loan = new Loan("L-5001", "M-1001", "Dune", LocalDate.of(2026, 11, 30), onHoldForAnotherMember, 0);
+ 
+         // when
+         LoanOnHoldException refusal = Assertions.assertThrows(LoanOnHoldException.class, loan::renew);
+@@ -24,7 +24,7 @@ class LoanTest {
+     void shouldMoveTheDueDateByFourteenDaysWhenTheLoanIsNotOnHold() {
+         // given
+         boolean onHoldForAnotherMember = false;
+-        Loan loan = new Loan("L-5002", "M-1001", "Middlemarch", LocalDate.of(2026, 11, 30), onHoldForAnotherMember);
++        Loan loan = new Loan("L-5002", "M-1001", "Middlemarch", LocalDate.of(2026, 11, 30), onHoldForAnotherMember, 0);
+ 
+         // when
+         Loan renewed = loan.renew();
 diff --git a/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java b/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
 --- a/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
 +++ b/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
@@ -344,7 +365,7 @@ diff --git a/src/test/java/org/example/library/loan/in/web/LoanOverviewControlle
                  .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].itemTitle").value("Dune"))
                  .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].dueDate").value("2026-11-30"))
 +                .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].renewable").value(true))
-                 .andExpect(MockMvcResultMatchers.jsonPath("$.owedFines").value(6.50));
+                 .andExpect(MockMvcResultMatchers.jsonPath("$.owedFineTotal").value(6.50));
      }
  
 diff --git a/src/test/java/org/example/library/loan/in/web/LoanRenewalControllerTest.java b/src/test/java/org/example/library/loan/in/web/LoanRenewalControllerTest.java

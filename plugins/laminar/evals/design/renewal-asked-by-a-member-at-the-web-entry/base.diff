@@ -426,10 +426,10 @@ new file mode 100644
 +        return loanOverviewResponseConverter.convert(memberId, heldLoans, owedFineTotal);
 +    }
 +}
-diff --git a/src/main/java/org/example/library/loan/in/web/MemberExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/MemberExceptionHandler.java
+diff --git a/src/main/java/org/example/library/loan/in/web/LoanWebExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/LoanWebExceptionHandler.java
 new file mode 100644
 --- /dev/null
-+++ b/src/main/java/org/example/library/loan/in/web/MemberExceptionHandler.java
++++ b/src/main/java/org/example/library/loan/in/web/LoanWebExceptionHandler.java
 @@ -0,0 +1,16 @@
 +package org.example.library.loan.in.web;
 +
@@ -440,7 +440,7 @@ new file mode 100644
 +import org.springframework.web.bind.annotation.RestControllerAdvice;
 +
 +@RestControllerAdvice
-+public class MemberExceptionHandler {
++public class LoanWebExceptionHandler {
 +
 +    @ExceptionHandler(MemberNotFoundException.class)
 +    public ProblemDetail answerMemberNotFound(MemberNotFoundException exception) {
@@ -484,7 +484,7 @@ new file mode 100644
 +import java.time.LocalDate;
 +import java.util.List;
 +
-+public record LoanOverviewResponse(String memberId, List<HeldLoan> loans, BigDecimal owedFines) {
++public record LoanOverviewResponse(String memberId, List<HeldLoan> loans, BigDecimal owedFineTotal) {
 +
 +    public record HeldLoan(String loanId, String itemTitle, LocalDate dueDate) {
 +    }
@@ -559,6 +559,46 @@ new file mode 100644
 @@ -0,0 +1,2 @@
 +spring.application.name=lending-library
 +library.mail.sender-address=loans@library.example
+diff --git a/src/test/java/org/example/library/loan/app/domain/model/LoanTest.java b/src/test/java/org/example/library/loan/app/domain/model/LoanTest.java
+new file mode 100644
+--- /dev/null
++++ b/src/test/java/org/example/library/loan/app/domain/model/LoanTest.java
+@@ -0,0 +1,35 @@
++package org.example.library.loan.app.domain.model;
++
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++
++import java.time.LocalDate;
++
++class LoanTest {
++
++    @Test
++    void shouldRefuseTheRenewalWhenTheLoanIsOnHold() {
++        // given
++        boolean onHoldForAnotherMember = true;
++        Loan loan = new Loan("L-5001", "M-1001", "Dune", LocalDate.of(2026, 11, 30), onHoldForAnotherMember);
++
++        // when
++        LoanOnHoldException refusal = Assertions.assertThrows(LoanOnHoldException.class, loan::renew);
++
++        // then
++        Assertions.assertEquals("loan L-5001 is on hold for another member", refusal.getMessage());
++    }
++
++    @Test
++    void shouldMoveTheDueDateByFourteenDaysWhenTheLoanIsNotOnHold() {
++        // given
++        boolean onHoldForAnotherMember = false;
++        Loan loan = new Loan("L-5002", "M-1001", "Middlemarch", LocalDate.of(2026, 11, 30), onHoldForAnotherMember);
++
++        // when
++        Loan renewed = loan.renew();
++
++        // then
++        Assertions.assertEquals(LocalDate.of(2026, 12, 14), renewed.dueDate());
++    }
++}
 diff --git a/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java b/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
 new file mode 100644
 --- /dev/null
@@ -616,7 +656,7 @@ new file mode 100644
 +                .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].loanId").value("L-5001"))
 +                .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].itemTitle").value("Dune"))
 +                .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].dueDate").value("2026-11-30"))
-+                .andExpect(MockMvcResultMatchers.jsonPath("$.owedFines").value(6.50));
++                .andExpect(MockMvcResultMatchers.jsonPath("$.owedFineTotal").value(6.50));
 +    }
 +
 +    @Test
@@ -630,7 +670,7 @@ new file mode 100644
 +        // then
 +        answer.andExpect(MockMvcResultMatchers.status().isOk())
 +                .andExpect(MockMvcResultMatchers.jsonPath("$.loans").isEmpty())
-+                .andExpect(MockMvcResultMatchers.jsonPath("$.owedFines").value(0));
++                .andExpect(MockMvcResultMatchers.jsonPath("$.owedFineTotal").value(0));
 +    }
 +
 +    @Test
