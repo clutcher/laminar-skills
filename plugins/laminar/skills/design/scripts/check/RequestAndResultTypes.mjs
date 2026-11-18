@@ -45,7 +45,7 @@ const standsInABoundaryFolder = (module, file) => {
   return boundaryAt >= 0 && !folderNames.slice(0, boundaryAt).some(folderName => OUTER_ZONE_FOLDERS.has(folderName));
 };
 
-const listFilesTheModelTakesAway = model => new Set(readList(model.folders).flatMap(folder => readList(folder.children).flatMap(child => [
+export const listFilesTheModelTakesAway = model => new Set(readList(model.folders).flatMap(folder => readList(folder.children).flatMap(child => [
   ...(child.kind === KINDS.REMOVED ? [getFileOfTheChild(folder, child)] : []),
   ...(isAText(child.oldPath) ? [child.oldPath] : []),
 ])));

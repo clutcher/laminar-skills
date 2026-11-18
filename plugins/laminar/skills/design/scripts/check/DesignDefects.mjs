@@ -14,6 +14,7 @@ import { findDataFlowDefects } from "./DataFlowCheck.mjs";
 import { findNameOfThePath } from "./DefectNames.mjs";
 import { findEventListenerDefects } from "./EventListeners.mjs";
 import { findIoBodyTextDefects } from "./IoBodyTexts.mjs";
+import { findLoosePieceDefects } from "./LoosePieces.mjs";
 import { findExitListResult } from "./ExitList.mjs";
 import { findExitReachDefects } from "./ExitReach.mjs";
 import { findAbsentResult, findExitFailureResult, findFailureHandlingDefects } from "./FailureHandling.mjs";
@@ -129,6 +130,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findRegistryNameDefects(model),
     ...findRepresentedKindDefects(model, zoneOrder),
     ...findRequestAndResultTypeDefects(model, zoneOrder, currentTree),
+    ...findLoosePieceDefects(model, currentTree),
     ...findDomainObjectCopyDefects(model),
     ...findEventListenerDefects(model),
     ...findChangingCollectionDefects(model),

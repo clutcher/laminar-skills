@@ -95,6 +95,7 @@ export const DEFECT_CODES = Object.freeze({
   EVENT_WITH_ONE_LISTENER: "event-with-one-listener",
   IO_BODY_BUILDS_A_TEXT: "io-body-builds-a-text",
   OWNER_OF_DECISIONS_WITHOUT_PARTS: "owner-of-decisions-without-parts",
+  PIECE_LOOSE_BESIDE_ITS_TYPE: "piece-loose-beside-its-type",
   CODE_STYLE_FILE_NOT_READ: "code-style-file-not-read",
   TAKES_CODE_FROM_NO_DECISION: "takes-code-from-no-decision",
 });

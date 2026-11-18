@@ -55,7 +55,7 @@ const ZONE_RULES = Object.freeze([
   { kinds: [REPRESENTS.TRANSLATOR], zones: ["in", "out"], standsInside: true },
 ]);
 
-const isAConstant = field => CONSTANT_NAME.test(String(field.name || ""));
+export const isAConstant = field => CONSTANT_NAME.test(String(field.name || ""));
 
 const readLastNamePiece = name => String(name || "").split(".").pop();
 
@@ -233,7 +233,7 @@ const breaksTheZoneRule = (zoneOrder, zoneRule, zone) => {
   return zoneOrder.namesTheZone(zone) && zoneRule.zones.every(ruleZone => zoneOrder.namesTheZone(ruleZone)) && !zoneRule.zones.includes(zone);
 };
 
-const namesTheClass = (model, typeText, referringClass, theClass) => readTypeNames(typeText).some(typeName => model.findClassOfTheType(typeName, referringClass) === theClass);
+export const namesTheClass = (model, typeText, referringClass, theClass) => readTypeNames(typeText).some(typeName => model.findClassOfTheType(typeName, referringClass) === theClass);
 
 const takesTheClass = (model, otherClass, method, theClass) => readList(method.parameters).some(parameter => namesTheClass(model, parameter.type, otherClass, theClass));
 
@@ -307,7 +307,7 @@ const readComparableName = name => String(name || "").replace(/[-_]/g, "").toLow
 
 const PLURAL_ENDINGS = ["", "s", "es"];
 
-const isTheFolderNamedFor = (folder, theClass) => {
+export const isTheFolderNamedFor = (folder, theClass) => {
   const folderName = readComparableName(folder.split("/").pop());
   return PLURAL_ENDINGS.some(ending => folderName === `${readComparableName(theClass.name)}${ending}`);
 };
