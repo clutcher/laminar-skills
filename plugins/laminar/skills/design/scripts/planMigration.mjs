@@ -6,6 +6,7 @@ import { findChangedClassDefects, listCutSteps, listStoppedGroups, sortAndNumber
 import { listFindingSteps } from "./migration/FindingSteps.mjs";
 import { findGroupOrderDefects } from "./migration/GroupOrder.mjs";
 import { listMigrationSteps } from "./migration/MigrationSteps.mjs";
+import { findStepFileKindDefects } from "./migration/StepFileKinds.mjs";
 import { writeMigrationText } from "./migration/MigrationText.mjs";
 import { writeMigrationWorkflowFile } from "./migration/MigrationWorkflowFile.mjs";
 import { estimateSelfCheckCost, formatSelfCheckCostLine } from "./migration/SelfCheckCost.mjs";
@@ -83,7 +84,7 @@ function planMigration() {
   const isCut = options.classes !== undefined;
   const { steps, cutLine, classDefects } = isCut ? cutThePlan(model, allSteps, findingSteps, options) : { steps: sortAndNumberTheSteps([...allSteps, ...findingSteps]), cutLine: "", classDefects: [] };
   const orderDefects = findGroupOrderDefects(model, steps);
-  const planDefects = [...classDefects, ...findingDefects];
+  const planDefects = [...classDefects, ...findingDefects, ...findStepFileKindDefects(model, steps)];
   const defects = [...planDefects, ...orderDefects];
   const outPath = path.resolve(options.out);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
