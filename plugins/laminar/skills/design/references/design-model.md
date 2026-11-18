@@ -18,7 +18,7 @@ The scope follows the book: "every part is named before any detail is written" (
 The file has 2 halves:
 
 - The shape half is the shape model of `shape-model.md` of the skill `review`, unchanged, plus keys that the prepare command ignores: `zone`, `does`, `exposed`, `oldName`, `removed`, `group`, `addedForFindings`, `represents`, `for`, `madeWhen`, `partOf` and `typeParameters` on a class, `calls`, `oldName`, `unchanged` and `static` on a method, `oldName` on a field, and `oldPath` on a `created` child and `removedClasses` on a `modified` child (section 4).
-- The decisions half is the 1 top-level key `decisions`, whose keys `design-decisions.md`, `design-boundaries.md` and `design-findings.md` hold. The prepare command ignores it, so no judge of the shape check reads a decision.
+- The decisions half is the 1 top-level key `decisions`, whose keys `design-decisions.md`, `design-boundaries.md` and `design-findings.md` hold. The prepare command ignores it, so no judge of the shape check reads a decision. Its key `referencesRead` is a list of texts: each reference file and each conventions file of the skill `code-style` that the designer read in this plan, by its path relative to the folder of that skill, such as `references/correctness.md` or `conventions/java.md`, and for a file it read only by section, the path and then its sections, such as `references/classes.md sections 1, 2, 4, 5, 6, 8, 9, 11` (`SKILL.md`, section 7). It is required where the plan writes a body, a name or a signature: where the model holds a created or moved file or class, an `oldName` on a class, a field or a method, or a method of a `modified` file that is not marked `unchanged`. A carried model whose plan writes none of these needs no list. The design check matches the list against the files of `SKILL.md`, section 7 (`design-checks.md`, section 4), and the finish command copies it into `outcome.json` of the plan.
 
 The designer writes the 2 halves in this order:
 
@@ -95,6 +95,6 @@ Every key of the model that names an abstraction holds a display name: `Class#me
 | `represents`, `for`, `madeWhen`, `partOf` | no | yes | yes | no |
 | `oldName`, `removed`, `removedClasses`, `oldPath` on a `created` child | no | yes | yes | yes |
 | `group`, `unchanged` on a method | no | yes | no | yes |
-| `decisions` (`design-decisions.md`, `design-boundaries.md`, `design-findings.md`) | no | yes | yes | `tests`, `existingDefects` and `stops` only |
+| `decisions` (`design-decisions.md`, `design-boundaries.md`, `design-findings.md`, and `referencesRead` of section 2) | no | yes | yes, except `referencesRead` | `tests`, `existingDefects` and `stops` only |
 
 Each object of the model has a closed form: the keys that this file, `shape-model.md` of the skill `review`, `design-decisions.md`, `design-boundaries.md` and `design-findings.md` name for it. The design check reports each other key as a defect, with the key and its object (`key-unknown`), because no script reads such a key, so the fact it holds is lost. The designer writes that fact under the key that holds it, such as the kind of a file as the `kind` of its child, and never as a key of the class. This rule is a format of this skill, not of the book. `design-checks.md` holds what the design check reports and how the migration script orders its steps.

@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { listConsiderations } from "./check/AutonomousReasons.mjs";
 import { readNamedReviewItems } from "./check/ReviewItems.mjs";
-import { isAText, readDesignModel } from "./model/DesignModel.mjs";
+import { isAText, readDesignModel, readList } from "./model/DesignModel.mjs";
 import { readDesignModelOrExit, readOptionsOrExit } from "./command/CommandLine.mjs";
 import { carryTheFixedFindings, listUnfinishedGroupsOfThePlanBefore } from "./plan/FixedFindings.mjs";
 import { DecidedListStop, checkDecidedListForm, findReachDefects, resolveDecidedList } from "./plan/DecidedList.mjs";
@@ -208,7 +208,7 @@ const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput) => {
   const questions = listQuestionsThatStopThePlan(model);
   const openAfterCeiling = listFindingsThatStopThePlan(model);
   const outcomeWord = questions.length || openAfterCeiling.length ? PLAN_OUTCOMES.QUESTION : PLAN_OUTCOMES.READY;
-  writeOutcome(resultsFolder, plan, { word: outcomeWord, questions, considerations: paths.considerations, openAfterCeiling });
+  writeOutcome(resultsFolder, plan, { word: outcomeWord, questions, considerations: paths.considerations, openAfterCeiling, referencesRead: readList(model.decisions.referencesRead) });
   if (outcomeWord === PLAN_OUTCOMES.READY) writeTheDecidedReview(resultsFolder, plan, model, roundInput);
   return outcomeWord;
 };

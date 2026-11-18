@@ -27,6 +27,7 @@ import { findOwnerWithoutPartsDefects } from "./OwnersWithoutParts.mjs";
 import { findPassedOnCallDefects } from "./PassedOnCalls.mjs";
 import { findFindingsDefects } from "./FindingsCheck.mjs";
 import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
+import { findReferencesReadDefects } from "./ReferencesRead.mjs";
 import { findRegistryNameDefects } from "./RegistryNames.mjs";
 import { findRemovedBodilessMethodDefects } from "./RemovedBodilessMethods.mjs";
 import { findRepeatedDecisionDefects } from "./RepeatedDecisions.mjs";
@@ -153,6 +154,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findGroupOrderDefects(model, listMigrationSteps(model, currentTree)),
     ...dataFlow.defects,
     ...exitList.defects,
+    ...findReferencesReadDefects(model),
   ];
   const markedDefects = markTheScriptCases(model, defects, baseTree);
   return {

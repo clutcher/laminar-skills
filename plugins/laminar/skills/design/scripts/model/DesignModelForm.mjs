@@ -96,6 +96,7 @@ const DECISIONS_FORM = createObjectOf({
   findings: createListOf(createObjectOf({ run: NUMBER, number: NUMBER, check: TEXT, closedBy: TEXT, reason: TEXT, says: TEXT, decidedBy: TEXT, openAfterCeiling: TEXT })),
   existingDefects: createListOf(createObjectOf({ class: TEXT, member: TEXT, defect: TEXT, fix: TEXT, notFixed: TEXT, group: NUMBER })),
   scriptCases: createListOf(createObjectOf({ code: TEXT, name: TEXT, text: TEXT, reason: TEXT })),
+  referencesRead: TEXTS,
 });
 
 const DESIGN_MODEL_FORM = createObjectOf({ version: NUMBER, folders: createListOf(FOLDER_FORM), classes: createListOf(CLASS_FORM), decisions: DECISIONS_FORM });
