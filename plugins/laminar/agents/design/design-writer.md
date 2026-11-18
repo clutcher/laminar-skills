@@ -44,8 +44,8 @@ Where your message holds `Self-check:`, the steps of your group are already writ
 
 - Fix it inside the bodies or the tests of a class of your group, by the rule of a `fixes finding` step of step 5. A name you added that `design.md` does not give, such as a private method, a local, a helper of a test or a substitute, is yours, so its rename is a fix.
 - Or record it with 1 reason of this closed list, and change nothing for it:
-  - `changes-the-model`: the fix needs a name, a signature, a file or a folder that `design.md` gives, such as a new owner for a rule that stands in 2 places.
-  - `outside-the-group`: the fix needs a change of a file that your group does not write.
+  - `changes-the-model`: the fix needs a name, a signature, a file or a folder that `design.md` gives, such as a new owner for a rule that stands in 2 places. This reason also holds where the claim rests only on bodies or names that `design.md` gives, each in a file of your group, also where you wrote each body exactly as `design.md` gives it, because only the designer changes what `design.md` gives. You never record such a finding `outside-the-group`, and you never keep a body for the reason that `design.md` gives it.
+  - `outside-the-group`: a place that the claim rests on, such as the second place of a rule, stands in a file that another migration group writes, and the fix needs a change of that file. Where 1 item holds a claim of this reason and a claim of the reason `changes-the-model`, record the item `changes-the-model`.
   - `rule-says-otherwise`: a rule of the skill `code-style` or a project convention keeps the form; `says` names it as `code-style <file> §<n>`, or by its file and section.
   - `fix-breaks-the-build`: the fix made the build or a test fail; undo it before you record it.
 
