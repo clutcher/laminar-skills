@@ -34,7 +34,8 @@ export const checkStopListForm = given => {
   return given;
 };
 
-const readPlanOfTheStop = stop => stop.plan ?? stop.round;
+// A stop of 0.73.0 names the plan of its writer; an older stop names its round.
+export const readPlanOfTheStop = stop => stop.plan ?? stop.round;
 
 // Each stop of the list joins decisions.stops with the plan whose migration its writer wrote; a stop on an abstraction that a stop of an earlier plan already named is a second stop, which the writer never meets a third time.
 export const recordTheStops = (decisions, stopList, stoppedPlan) => {

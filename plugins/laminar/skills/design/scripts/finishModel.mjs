@@ -13,7 +13,7 @@ import { DecidedListStop, checkDecidedListForm, findReachDefects, formatDecidedK
 import { listFindingEntries } from "./plan/FindingList.mjs";
 import { buildDecidedReview, readCommitOfThePlan } from "./plan/DecidedReview.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
-import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, SHAPE_RUN_NOT_JUDGED, describeTheShapeRunNotJudged, formatPlanLine, getPlanFolder, getShapeRunFolder, listFindingsThatStopThePlan, listQuestionsThatStopThePlan, listShapeQuestionsThatStopThePlan, listShapeRunsNotJudged, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
+import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, SHAPE_RUN_NOT_JUDGED, describeTheShapeRunNotJudged, formatPlanLine, getPlanFolder, getShapeRunFolder, holdsAModelOfAPlanBefore, isAReplanOfThePlanBefore, listFindingsThatStopThePlan, listQuestionsThatStopThePlan, listShapeQuestionsThatStopThePlan, listShapeRunsNotJudged, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { listRoundDispositions } from "./plan/RoundDispositions.mjs";
 import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder, readShapeRunFolders } from "./round/RunFolder.mjs";
 import { listDefectLinesOfTheRun, removeFinishStop, writeFinishStop } from "./plan/FinishStop.mjs";
@@ -45,9 +45,10 @@ const listOptionArguments = (options, names) => names.filter(name => options[nam
 
 const listShapeReviewArguments = options => options[SHAPE_REVIEW_OPTION].flatMap(reviewPath => [`--${SHAPE_REVIEW_OPTION}`, reviewPath]);
 
-// A later plan is cut, also where the designer changed no class, so it plans only the groups of its changes, its findings, its stopped writers and the groups that waited for them.
+// A later plan is cut, also where the designer changed no class, so it plans only the groups of its changes, its findings, its stopped writers and the groups that waited for them. A plan after plans that left no model, such as a plan 1 that ended at base-missing, and a re-plan plan the whole model, as plan 1 does, because no writer had a migration of them, or no group of the plan before was written.
 const listCutArguments = (options, plan, paths) => {
-  if (plan === 1) return ["--plan", String(plan)];
+  if (plan === 1 || !holdsAModelOfAPlanBefore(paths.results, plan) || paths.isAReplan) return ["--plan", String(plan)];
+
   const modelBeforePath = path.join(getPlanFolder(paths.results, plan - 1), MODEL_FILE);
   const unfinished = paths.unfinishedGroups.length ? ["--unfinished", paths.unfinishedGroups.join(",")] : [];
   return ["--classes", options.classes || "", "--plan", String(plan), ...unfinished, ...(fs.existsSync(modelBeforePath) ? ["--before", modelBeforePath] : [])];
@@ -273,7 +274,7 @@ function finishModel() {
   ];
   // A kept item of a shape run left as a question to the author is the answer of the user in the mode with a user, and a question of the plan in autonomous mode.
   const shapeQuestions = options[AUTONOMOUS_SWITCH] ? listShapeQuestions(model, reviewText, shapeReviews) : [];
-  const paths = { model: options.model, results: resultsFolder, design: path.join(resultsFolder, "design.md"), migration: path.join(resultsFolder, "migration.md"), findings: runInput ? path.join(resultsFolder, FINDINGS_FILE) : null, unfinishedGroups, considerations, shapeQuestions, shapeDecisions };
+  const paths = { model: options.model, results: resultsFolder, design: path.join(resultsFolder, "design.md"), migration: path.join(resultsFolder, "migration.md"), findings: runInput ? path.join(resultsFolder, FINDINGS_FILE) : null, unfinishedGroups, isAReplan: isAReplanOfThePlanBefore(resultsFolder, plan, readList(model.decisions.stops)), considerations, shapeQuestions, shapeDecisions };
   if (runInput) writeJson(paths.findings, entries);
 
   const steps = listFinishSteps(options, paths, plan);

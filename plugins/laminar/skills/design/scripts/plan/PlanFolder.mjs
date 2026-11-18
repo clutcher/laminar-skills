@@ -3,6 +3,8 @@ import path from "node:path";
 import { AUTONOMOUS_ANSWERS } from "../model/DesignModelForm.mjs";
 import { isAText, isWaitingAfterTheCeiling, readList } from "../model/DesignModel.mjs";
 import { readChecksOfTheFinding } from "./DecidedList.mjs";
+import { readCommitOfThePlan } from "./DecidedReview.mjs";
+import { readPlanOfTheStop } from "./StopList.mjs";
 import { PREPARE_FILE, REVIEW_FILE, RoundStop, readRunFolder } from "../round/RunFolder.mjs";
 
 export const BASE_COMMIT_FILE = "base-commit.txt";
@@ -37,6 +39,29 @@ export const findLastPlan = resultsFolder => {
   if (!fs.existsSync(plansFolder)) return 0;
   const plans = fs.readdirSync(plansFolder).filter(name => PLAN_FOLDER_NAME.test(name)).map(Number);
   return plans.length ? Math.max(...plans) : 0;
+};
+
+// A plan folder before the given plan holds a model, which a plan that ended at the start, such as at base-missing, does not.
+export const holdsAModelOfAPlanBefore = (resultsFolder, plan) => {
+  for (let planBefore = 1; planBefore < plan; planBefore++) {
+    if (fs.existsSync(path.join(getPlanFolder(resultsFolder, planBefore), MODEL_FILE))) return true;
+  }
+  return false;
+};
+
+// The files and folders that the writer workflow and the calling session leave in a plan folder once a writer of that plan ran.
+const WRITER_TRACES = [SELF_CHECK_FILE, "self-check", "build"];
+
+// A re-plan plans the tree of the plan before again, because no group of the plan before was written: the 2 plans have 1 plan commit, the folder before holds no trace of the writers, and no writer of the plan before stopped. A plan before with no plan commit, as in a results folder of 0.72.0, may have had writers, so it gives no re-plan.
+export const isAReplanOfThePlanBefore = (resultsFolder, plan, stops) => {
+  if (plan < 2) return false;
+  const folderBefore = getPlanFolder(resultsFolder, plan - 1);
+  const planCommitBefore = readCommitOfThePlan(folderBefore, PLAN_COMMIT_FILE);
+  if (!planCommitBefore) return false;
+
+  const holdsAWriterTrace = WRITER_TRACES.some(name => fs.existsSync(path.join(folderBefore, name)));
+  const holdsAStopOfThePlanBefore = stops.some(stop => readPlanOfTheStop(stop) === plan - 1);
+  return planCommitBefore === readCommitOfThePlan(getPlanFolder(resultsFolder, plan), PLAN_COMMIT_FILE) && !holdsAWriterTrace && !holdsAStopOfThePlanBefore;
 };
 
 export const writeJson = (filePath, value) => fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);

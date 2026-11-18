@@ -2,13 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { isAText, readList } from "../model/DesignModel.mjs";
 import { FINDINGS_FILE, getPlanFolder } from "./PlanFolder.mjs";
-import { readGroupOfTheStop } from "./StopList.mjs";
+import { readGroupOfTheStop, readPlanOfTheStop } from "./StopList.mjs";
 
 const MIGRATION_WORKFLOW_FILE = "migration.workflow.js";
 
 const RETURN_LINE = /^return (.*)$/m;
-
-const readPlanOfTheStop = stop => stop.plan ?? stop.round;
 
 // The groups that the migration workflow file of a plan planned, with the earlier groups each one waits for.
 export const readPlannedGroups = planFolder => {

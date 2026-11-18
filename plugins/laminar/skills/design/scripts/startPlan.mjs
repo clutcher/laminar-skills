@@ -5,7 +5,8 @@ import { readDesignModelOrExit, readOptionsOrExit, runOrExitOnTreeStop } from ".
 import { readCurrentTree } from "./migration/CurrentTree.mjs";
 import { carryTheModel } from "./plan/CarriedModel.mjs";
 import { listUnfinishedGroups, readPlannedGroups } from "./plan/FixedFindings.mjs";
-import { BASE_COMMIT_FILE, MODEL_FILE, OUTCOME_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, findLastPlan, formatPlanLine, getPlanFolder, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
+import { readList } from "./model/DesignModel.mjs";
+import { BASE_COMMIT_FILE, MODEL_FILE, OUTCOME_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, findLastPlan, formatPlanLine, getPlanFolder, isAReplanOfThePlanBefore, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { StopListStop, checkStopListForm, recordTheStops } from "./plan/StopList.mjs";
 
 const USAGE = "usage: node startPlan.mjs --results <results folder> --repo <repository root> [--base <commit>] [--run <run folder>] [--stop <stop list>] [--autonomous]";
@@ -76,6 +77,9 @@ const startsANewChange = (resultsFolder, plan, options, baseCommit) => {
   return JSON.parse(outcomeText).outcome === PLAN_OUTCOMES.READY && earlierBaseText.trim() !== baseCommit;
 };
 
+// A stop list holds the stops of the writers of the plan before, so a start with one is never a re-plan.
+const replansThePlanBefore = (resultsFolder, plan, options, given) => !options.stop && isAReplanOfThePlanBefore(resultsFolder, plan, readList((given.decisions || {}).stops));
+
 const endThePlan = (resultsFolder, plan, stop) => {
   writeOutcome(resultsFolder, plan, { word: PLAN_OUTCOMES.STOP, stop });
   console.log(formatPlanLine(plan, PLAN_OUTCOMES.STOP, resultsFolder));
@@ -124,13 +128,15 @@ function startPlan() {
   console.log(`plan commit: ${headCommit}`);
 
   if (!hasModel) {
-    console.log(`RESULT ${JSON.stringify({ plan, later: false })}`);
+    console.log(`RESULT ${JSON.stringify({ plan, later: false, replan: false })}`);
     return;
   }
 
   let given = readModelTextOrExit(modelPath);
   let counts = null;
-  if (isNew) {
+  const isAReplan = replansThePlanBefore(resultsFolder, plan, options, given);
+  if (isAReplan) console.log(`re-plan: plan ${plan - 1} wrote no group on the plan commit ${headCommit}, so this plan carries nothing and plans the whole model`);
+  if (isNew && !isAReplan) {
     const unfinishedGroups = listUnfinishedGroups(model, stopList.map(stopped => ({ group: stopped.group })), readPlannedGroups(getPlanFolder(resultsFolder, plan - 1)));
     const isANewChange = startsANewChange(resultsFolder, plan, options, baseCommit);
     ({ model: given, counts } = runOrExitOnTreeStop(() => carryTheModel(given, readCurrentTree(repositoryRoot, headCommit), unfinishedGroups, isANewChange)));
@@ -140,7 +146,7 @@ function startPlan() {
   if (stops) given = { ...given, decisions: { ...given.decisions, stops } };
   writeJson(modelPath, given);
   for (const stop of secondStops) console.log(["second stop", stop.at, `plans ${stop.earlierPlan} and ${stop.plan}`, stop.says].join("\t"));
-  console.log(`RESULT ${JSON.stringify({ plan, later: true, carried: counts, stops: options.stop ? stops.length : null, secondStops: secondStops.length })}`);
+  console.log(`RESULT ${JSON.stringify({ plan, later: !isAReplan, replan: isAReplan, carried: counts, stops: options.stop ? stops.length : null, secondStops: secondStops.length })}`);
   if (secondStops.length && options.autonomous) endThePlan(resultsFolder, plan, { reason: secondStops[0].reason, at: secondStops[0].at, says: secondStops[0].says });
 }
 
