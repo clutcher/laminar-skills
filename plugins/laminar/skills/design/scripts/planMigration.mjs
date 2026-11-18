@@ -9,8 +9,9 @@ import { listMigrationSteps } from "./migration/MigrationSteps.mjs";
 import { writeMigrationText } from "./migration/MigrationText.mjs";
 import { writeMigrationWorkflowFile } from "./migration/MigrationWorkflowFile.mjs";
 import { estimateSelfCheckCost, formatSelfCheckCostLine } from "./migration/SelfCheckCost.mjs";
+import { RoundStop, readItemChecksOfTheReview } from "./round/RunFolder.mjs";
 
-const USAGE = "usage: node planMigration.mjs --model <design-model.json> --out <migration.md|migration.json> [--repo <repository root> [--tree <commit>]] [--findings <findings.json>] [--classes <display names>] [--plan <n>] [--unfinished <group numbers>] [--before <design-model.json of the plan before>]";
+const USAGE = "usage: node planMigration.mjs --model <design-model.json> --out <migration.md|migration.json> [--repo <repository root> [--tree <commit>]] [--findings <findings.json> [--review <review.md>]] [--classes <display names>] [--plan <n>] [--unfinished <group numbers>] [--before <design-model.json of the plan before>]";
 
 const STOP_EXIT_CODE = 2;
 
@@ -39,6 +40,17 @@ const readFindingEntriesOrExit = findingsPath => {
   return given;
 };
 
+// The checks each item of the review.md of the run holds, so a finding step whose number names an item of another check is a defect; none where no review.md is given.
+const readItemChecksOrExit = reviewPath => {
+  if (!reviewPath) return null;
+  try {
+    return readItemChecksOfTheReview(path.resolve(reviewPath));
+  } catch (error) {
+    if (error instanceof RoundStop) return exitWith(error.message);
+    return exitWith(`review: cannot read ${reviewPath}: ${error.message}`);
+  }
+};
+
 const readPlanNumberOrExit = text => {
   if (text === undefined) return null;
   if (!PLAN_NUMBER.test(text)) exitWith(`--plan takes a whole number above 0, and got ${text}`);
@@ -59,14 +71,15 @@ const cutThePlan = (model, allSteps, findingSteps, options) => {
 };
 
 function planMigration() {
-  const options = readOptionsOrExit(USAGE, ["model", "out", "repo", "tree", "findings", "classes", "plan", "unfinished", "before"], ["model", "out"]);
+  const options = readOptionsOrExit(USAGE, ["model", "out", "repo", "tree", "findings", "review", "classes", "plan", "unfinished", "before"], ["model", "out"]);
   const model = readDesignModelOrExit(options.model);
   const repositoryRoot = options.repo ? path.resolve(options.repo) : null;
   const entries = readFindingEntriesOrExit(options.findings);
+  const itemChecks = readItemChecksOrExit(options.review);
 
   const currentTree = repositoryRoot ? runOrExitOnTreeStop(() => readCurrentTree(repositoryRoot, readTreeCommit(options))) : null;
   const allSteps = runOrExitOnTreeStop(() => listMigrationSteps(model, currentTree));
-  const { findingSteps, noStepLines, defects: findingDefects } = listFindingSteps(model, allSteps, entries);
+  const { findingSteps, noStepLines, defects: findingDefects } = listFindingSteps(model, allSteps, entries, itemChecks);
   const isCut = options.classes !== undefined;
   const { steps, cutLine, classDefects } = isCut ? cutThePlan(model, allSteps, findingSteps, options) : { steps: sortAndNumberTheSteps([...allSteps, ...findingSteps]), cutLine: "", classDefects: [] };
   const orderDefects = findGroupOrderDefects(model, steps);

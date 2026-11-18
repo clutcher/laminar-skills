@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { readNamedReviewItems } from "../check/ReviewItems.mjs";
+import { CHECK_WORDS, readLead } from "../../../review/scripts/checks/CheckWords.mjs";
+import { COMBINED_LEADS_SEPARATOR } from "../../../review/scripts/review/render/sections/ItemText.mjs";
 
 export const REVIEW_FILE = "review.md";
 
@@ -121,19 +123,83 @@ const isTheItemOfTheFinding = (item, finding) => {
   return item.scale === finding.scale && item.name === head.name && item.enclosing === shownEnclosing;
 };
 
-// review.sarif carries no item number and lists its results in the order of the items of review.md, so each finding joins the first item whose head names it at or after the item of the finding before; 2 checks on 1 class in 2 sections of review.md so keep their 2 numbers.
-const joinFindingsToItems = (items, findings) => {
-  const findingsOfItemMap = new Map(items.map(item => [item, []]));
-  let itemAt = 0;
-  for (const finding of findings) {
-    const laterAt = items.findIndex((item, at) => at >= itemAt && isTheItemOfTheFinding(item, finding));
-    const joinedAt = laterAt >= 0 ? laterAt : items.findIndex(item => isTheItemOfTheFinding(item, finding));
-    if (joinedAt < 0) continue;
+const readRulesOfTheSarif = sarif => (sarif.runs || []).flatMap(run => ((run.tool || {}).driver || {}).rules || []);
 
-    findingsOfItemMap.get(items[joinedAt]).push(finding);
-    itemAt = joinedAt;
+// review.md names a check by the name that the rule of the check has in the review.sarif of the same render, and a check that no rule of the run names by the lead words of the review's own catalog.
+const createLeadReader = sarif => {
+  const nameOfRuleMap = new Map(readRulesOfTheSarif(sarif).map(rule => [String(rule.id), String(rule.name || "")]));
+  return check => nameOfRuleMap.get(check) || readLead(check);
+};
+
+const listLeadsOfEveryCheck = sarif => new Set([...readRulesOfTheSarif(sarif).map(rule => String(rule.name || "")), ...CHECK_WORDS.map(checkWords => checkWords.lead)]);
+
+// The lead words of a finding as review.md prints them: the lead of its check, or the leads of every check of a combined result, joined as the review joins them.
+const formatLeadOfTheFinding = (finding, readLeadOfTheCheck) => finding.checks.map(readLeadOfTheCheck).join(COMBINED_LEADS_SEPARATOR);
+
+const POINT_END = /\.$/;
+
+// review.md prints the message of a result as a point of its item, written as a sentence: spaces collapsed, a capital after the lead and a full stop at the end.
+const normalizeThePointText = text => text.replace(/\s+/g, " ").trim().replace(POINT_END, "").toLowerCase();
+
+const printsTheMessage = (item, finding) => item.points.some(point => normalizeThePointText(point) === normalizeThePointText(finding.text));
+
+const isAtTheLineOfTheFinding = (item, finding) => item.line !== null && finding.places.some(place => place.line === item.line);
+
+const narrowTo = (items, isPreferred) => {
+  const preferredItems = items.filter(isPreferred);
+  return preferredItems.length ? preferredItems : items;
+};
+
+const findTheOnlyItem = (items, isTheItem) => {
+  const matchingItems = items.filter(isTheItem);
+  return matchingItems.length === 1 ? matchingItems[0] : null;
+};
+
+const namesTheFindingAlsoIn = (item, finding, lead) => item.alsoIn.some(alsoIn => (!alsoIn.lead || alsoIn.lead === lead) && alsoIn.names.includes(finding.displayName));
+
+// The item of a finding whose head no item prints, because the review shows it under the head of another finding of its check: the 1 item that holds its check and names it under Also in; where 2 items do, the review does not tell which, so it joins none.
+const findTheItemNamingTheFindingAlsoIn = (items, finding, lead) => findTheOnlyItem(items, item => item.leads.includes(lead) && namesTheFindingAlsoIn(item, finding, lead));
+
+// review.sarif carries no item number and lists its results by check, while 1 item of review.md can hold several checks, so each finding joins an item whose head names it and whose points name its check. Of 2 or more such items, as for 2 overloads of 1 method, it joins the one that prints its message, then the one whose head prints its line, then the first with a point of its check that no finding took yet. A finding whose head no item prints the way this script reads a display name joins the 1 item that prints its message, else the 1 item that names it under Also in, and else none, so it takes no number and no other item's number.
+const joinFindingsToItems = (items, findings, readLeadOfTheCheck) => {
+  const findingsOfItemMap = new Map(items.map(item => [item, []]));
+  const leadOfFindingMap = new Map(findings.map(finding => [finding, formatLeadOfTheFinding(finding, readLeadOfTheCheck)]));
+  const holdsAPointLeftOfTheLead = (item, lead) => findingsOfItemMap.get(item).filter(other => leadOfFindingMap.get(other) === lead).length < item.leads.filter(itemLead => itemLead === lead).length;
+  for (const finding of findings) {
+    const lead = leadOfFindingMap.get(finding);
+    const itemsOfTheHead = items.filter(item => isTheItemOfTheFinding(item, finding) && item.leads.includes(lead));
+    const preferences = [item => printsTheMessage(item, finding), item => isAtTheLineOfTheFinding(item, finding), item => holdsAPointLeftOfTheLead(item, lead)];
+    const joinedItem = preferences.reduce(narrowTo, itemsOfTheHead)[0]
+      || findTheOnlyItem(items, item => printsTheMessage(item, finding))
+      || findTheItemNamingTheFindingAlsoIn(items, finding, lead);
+    if (!joinedItem) continue;
+
+    findingsOfItemMap.get(joinedItem).push(finding);
   }
   return items.map(item => ({ number: item.number, findings: findingsOfItemMap.get(item) }));
+};
+
+// A lead of an item names a check where it is the lead of the check, or a lead of combined checks that holds the lead of the check among its parts; the lead of another single check, which may itself hold the separator, names only that check.
+const createCheckOfTheLeadTest = leadsOfEveryCheck => (itemLead, leadOfTheCheck) => {
+  if (itemLead === leadOfTheCheck) return true;
+  if (leadsOfEveryCheck.has(itemLead)) return false;
+  return `${COMBINED_LEADS_SEPARATOR}${itemLead}${COMBINED_LEADS_SEPARATOR}`.includes(`${COMBINED_LEADS_SEPARATOR}${leadOfTheCheck}${COMBINED_LEADS_SEPARATOR}`);
+};
+
+const readSarifIfPresent = sarifPath => (fs.existsSync(sarifPath) ? readJsonOrStop(sarifPath, "review") : {});
+
+// The checks that each item of a review.md holds, read by the lead words its points print, so a finding step can be refused where its number names an item of another check.
+export const readItemChecksOfTheReview = reviewPath => {
+  const items = readNamedReviewItems(fs.readFileSync(reviewPath, "utf8"));
+  const sarif = readSarifIfPresent(path.join(path.dirname(reviewPath), SARIF_FILE));
+  const readLeadOfTheCheck = createLeadReader(sarif);
+  const namesTheCheck = createCheckOfTheLeadTest(listLeadsOfEveryCheck(sarif));
+  const leadsOfItemMap = new Map(items.map(item => [item.number, item.leads]));
+  return {
+    readLeadOfTheCheck,
+    hasTheItem: number => leadsOfItemMap.has(number),
+    holdsTheCheck: (number, check) => (leadsOfItemMap.get(number) || []).some(itemLead => namesTheCheck(itemLead, readLeadOfTheCheck(check))),
+  };
 };
 
 // The finding keys of a run folder, also of the results it set apart; none where its review.sarif cannot be read.
@@ -195,10 +261,11 @@ export const readRunFolder = (runFolder, hasNoFindings) => {
   if (hasNoFindings) return { runFolder, judgedAbstractions, judgedKeys, scales, findings: [], decidedFindings: [], changedSinceFindings: [], items: [], copiedFiles: [] };
   if (!fs.existsSync(sarifPath)) throw new RoundStop(`run folder: ${runFolder} holds no ${SARIF_FILE}; pass --no-findings where the run kept nothing`);
 
-  const results = readResultsOfTheSarif(readJsonOrStop(sarifPath, "run folder"));
+  const sarif = readJsonOrStop(sarifPath, "run folder");
+  const results = readResultsOfTheSarif(sarif);
   const findings = readFindingsOfTheSarif(results);
   const reviewText = fs.existsSync(reviewPath) ? fs.readFileSync(reviewPath, "utf8") : "";
-  const items = joinFindingsToItems(readNamedReviewItems(reviewText), findings);
+  const items = joinFindingsToItems(readNamedReviewItems(reviewText), findings, createLeadReader(sarif));
   const copiedFiles = [sarifPath, ...(reviewText ? [reviewPath] : [])];
   return {
     runFolder, judgedAbstractions, judgedKeys, scales, findings,

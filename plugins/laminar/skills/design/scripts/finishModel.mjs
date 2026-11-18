@@ -52,7 +52,7 @@ const listCutArguments = (options, plan, paths) => {
 const listFinishSteps = (options, paths, plan) => [
   { name: "check", script: "checkDesign.mjs", arguments: [...listOptionArguments(options, ["model", "repo", "tree", "base", "review", "decided"]), ...listShapeReviewArguments(options), ...(options[AUTONOMOUS_SWITCH] ? [`--${AUTONOMOUS_SWITCH}`] : [])] },
   { name: "render", script: "renderDesign.mjs", arguments: [...listOptionArguments(options, ["model", "rounds", "review", "repo", "tree"]), ...listShapeReviewArguments(options), "--out", paths.design] },
-  { name: "migration", script: "planMigration.mjs", arguments: [...listOptionArguments(options, ["model", "repo", "tree"]), ...(paths.findings ? ["--findings", paths.findings] : []), ...listCutArguments(options, plan, paths), "--out", paths.migration] },
+  { name: "migration", script: "planMigration.mjs", arguments: [...listOptionArguments(options, ["model", "repo", "tree"]), ...(paths.findings ? ["--findings", paths.findings, ...listOptionArguments(options, ["review"])] : []), ...listCutArguments(options, plan, paths), "--out", paths.migration] },
 ];
 
 // The scripts exit inside their own code, so each runs as its own process, and its output is read whole.

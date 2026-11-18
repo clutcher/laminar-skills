@@ -2,7 +2,7 @@ import { KINDS, isAText, isMarkedUnchanged, readList } from "../model/DesignMode
 import { findClassOfTheFinding, readFindingNamePieces } from "../plan/FindingList.mjs";
 import { MIGRATION_STAGES } from "./MigrationSteps.mjs";
 
-export const FINDING_DEFECT_CODES = Object.freeze({ FINDING_WITHOUT_GROUP: "finding-without-group", FINDING_ON_UNCHANGED_METHOD: "finding-on-unchanged-method" });
+export const FINDING_DEFECT_CODES = Object.freeze({ FINDING_WITHOUT_GROUP: "finding-without-group", FINDING_ON_UNCHANGED_METHOD: "finding-on-unchanged-method", FINDING_ON_ANOTHER_ITEM: "finding-on-another-item" });
 
 const METHOD_MARK = "#";
 
@@ -51,8 +51,17 @@ const createNoStepLine = (entry, why) => ({ number: entry.number, check: entry.c
 
 const createFindingDefect = (code, entry, sentence) => ({ code, sentence: `finding ${entry.number}: ${entry.check} on ${entry.displayName} ${sentence}` });
 
-// 1 finding step per entry of findings.json that holds no reason class and names an abstraction the model keeps; every other entry gets a no-step line or a defect, so no finding is dropped in silence.
-export const listFindingSteps = (model, steps, entries) => {
+// A writer reads the item of its step in review.md by the number, so a number that names no item, or an item that holds no point of the check, sends the writer to another finding; none where no review.md is given.
+const findItemDefect = (itemChecks, entry) => {
+  if (!itemChecks || itemChecks.holdsTheCheck(entry.number, entry.check)) return null;
+
+  const leadOfTheCheck = itemChecks.readLeadOfTheCheck(entry.check);
+  const why = itemChecks.hasTheItem(entry.number) ? `names item ${entry.number} of review.md, which does not hold ${entry.check} (${leadOfTheCheck})` : "names no item of review.md";
+  return createFindingDefect(FINDING_DEFECT_CODES.FINDING_ON_ANOTHER_ITEM, entry, `${why}, so its step would send the writer to another finding; findings.json must give it the number of the item that holds its check`);
+};
+
+// 1 finding step per entry of findings.json that holds no reason class and names an abstraction the model keeps; every other entry gets a no-step line or a defect, so no finding is dropped in silence. itemChecks answers which checks each item of the review.md of the run holds, and is null where no review.md is given.
+export const listFindingSteps = (model, steps, entries, itemChecks = null) => {
   const findingSteps = [];
   const noStepLines = [];
   const defects = [];
@@ -85,6 +94,11 @@ export const listFindingSteps = (model, steps, entries) => {
     const group = Number.isFinite(entry.group) ? entry.group : findGroupOfTheTestFile(steps, entry.file);
     if (group === null) {
       defects.push(createFindingDefect(FINDING_DEFECT_CODES.FINDING_WITHOUT_GROUP, entry, `stands in ${entry.file || "no file"}, which no class of the model and no test step of the plan holds; add its class to the model as modified`));
+      continue;
+    }
+    const itemDefect = findItemDefect(itemChecks, entry);
+    if (itemDefect) {
+      defects.push(itemDefect);
       continue;
     }
     findingSteps.push({
