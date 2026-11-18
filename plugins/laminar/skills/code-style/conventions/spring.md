@@ -28,7 +28,7 @@ Put the bean wiring of a module into a config folder beside app, in and out, in 
 
 End a class name with a word for what it does where one exists, after a business word that says which, as in OrderFacade (naming, sections 2 and 8). Prefer the words of Spring, such as Service, Repository, Controller and Configuration from its markers, and Converter, Validator and Resolver from its interfaces. At the edge, Using and the technology follow that word, as in OrderRepositoryUsingJpa (modules, section 9). A class of its own that only picks 1 strategy for an input does the work of a resolver of Spring, so its name says what it picks and ends in Resolver or Service. A registry of Spring is a place other code adds to, so that word predicts an add the class lacks. That word never stands alone, because Mapper alone predicts little. Name the types of a web interface for the call with Request and Response, the words of the request body and response entity of Spring. Name a nested list element for what it is, as in LoanResponse.Book, because the outer name gives the context and stands at each use (java.md, section 7). Request and Response stay out of the names of domain objects and of the failures of the domain layer (modules, section 5).
 
-- A Facade is the 1 class that 1 kind of caller calls: it calls services and holds no business rule of its own. Where a module has an api, a controller calls the api, and no Facade stands between them.
+- A Facade is the 1 class that 1 kind of caller calls: it calls services and holds no business rule. Where a module has an api, a controller calls the api, and no Facade stands between them.
 
 ## 6. Strategies collected into a map
 
@@ -44,8 +44,8 @@ Build an executor from the factory the framework gives, and set only the values 
 
 ## 9. Tests with the framework
 
-- An integration test starts the application and calls its entry boundary as a real caller does, such as through a web test client, and replaces only what lies past the exit boundary with a substitute bean of the framework, never a plain substitute that the context does not know (tests, sections 3 and 4).
-- Assert on the content of the response with concrete values; capture an argument sent to a substitute only for an effect that leaves no trace in the response (tests, section 3).
+- An integration test starts the application and calls its entry boundary as a real caller does, such as through a web test client, and replaces only what lies past the exit boundary with a substitute bean of the framework, never a plain substitute the context does not know (tests, sections 3 and 4).
+- Assert on the content of the response with concrete values; for an effect that leaves no trace in the response, read back in the then phase what the substitute bean received (tests, section 2).
 - Test pure logic without the framework context (java.md, section 11).
 - A test class takes the beans it uses through its constructor, into private final fields, and never by field injection (section 1). Set the constructor injection mode of the test framework to all once in the test properties, such as spring.test.constructor.autowire.mode=all, and write no Autowired marker on the constructor.
 - Give a test a property through the property support of the test framework or through the constructor, never by setting a field by reflection.
