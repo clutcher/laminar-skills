@@ -1,6 +1,6 @@
 import { isAText, readList } from "../model/DesignModel.mjs";
 import { listFormerNames } from "../round/FormerNames.mjs";
-import { DECIDED_BY_DEFAULT, DECIDED_DEFECT_CODES, createFindingCheckKey, listBoundaryMethodNamesOfTheImplementer, readChecksOfTheFinding } from "../plan/DecidedList.mjs";
+import { DECIDED_BY_DEFAULT, DECIDED_DEFECT_CODES, createFindingCheckKey, decidesTheShapeFinding, listBoundaryMethodNamesOfTheImplementer, readChecksOfTheFinding } from "../plan/DecidedList.mjs";
 
 const readDecidedByOfTheList = decided => decided.decidedBy || DECIDED_BY_DEFAULT;
 
@@ -33,10 +33,10 @@ const isGivenOnTheInputRun = (findingObject, { finding, check }, decisionOfFindi
   return Boolean(decision) && decision.decidedBy === findingObject.decidedBy;
 };
 
-// An item of a shape run is given where an object of the decided list with the same decidedBy names its finding key with the check, under its own name or a former name the design model gives it, or the api or spi method that its method implements.
+// An item of a shape run is given where an object of the decided list with the same decidedBy names its finding key with the check, or a reach key on it, under its own name or a former name the design model gives it, or the api or spi method that its method implements.
 const isGivenOnTheShapeRun = (findingObject, { finding, check }, decided, shapeModel) => {
   const keys = new Set([...listFormerNames(shapeModel, null, finding.displayName), ...(shapeModel ? listBoundaryMethodNamesOfTheImplementer(shapeModel, finding.displayName) : [])]);
-  return decided.some(other => isAText(other.displayName) && other.check === check && keys.has(other.displayName) && readDecidedByOfTheList(other) === findingObject.decidedBy);
+  return decided.some(other => decidesTheShapeFinding(other, keys, finding, check) && readDecidedByOfTheList(other) === findingObject.decidedBy);
 };
 
 const describeTheItem = findingObject => `the item ${findingObject.number}${Number.isFinite(findingObject.run) ? ` of shape run ${findingObject.run}` : ""}`;

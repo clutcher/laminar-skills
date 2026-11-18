@@ -3,6 +3,7 @@ import path from "node:path";
 import { checkDesignModel } from "./check/DesignDefects.mjs";
 import { findAutonomousReasonDefects } from "./check/AutonomousReasons.mjs";
 import { findDecidedDefects, findShapeDecidedDefects } from "./check/DecidedCheck.mjs";
+import { findDecidedKeyLeftOpenDefects } from "./check/DecidedKeysLeftOpen.mjs";
 import { findDecidedNotGivenDefects } from "./check/DecidedNotGiven.mjs";
 import { findNameOfThePath } from "./check/DefectNames.mjs";
 import { findTakenCodeDefects } from "./check/TakenCode.mjs";
@@ -150,6 +151,19 @@ const findDecidedNotGivenDefectsOrExit = (model, options) => {
   }
 };
 
+// A proof that an item does not close, or a shape question, is checked against the decided list, so it needs the list; a list that is refused has already stopped the check.
+const findDecidedKeyLeftOpenDefectsOrExit = (model, options, reviewText, shapeReviews) => {
+  if (!options.decided) return [];
+  try {
+    const decidedList = checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided"));
+    return findDecidedKeyLeftOpenDefects(model, decidedList.decided, { shapeRuns: readShapeRunFolders(options[SHAPE_REVIEW_OPTION]), reviewText, shapeReviews }).map(asAnOpenDefect);
+  } catch (error) {
+    if (error instanceof DecidedListStop) return stopOnTheMalformedList(error.defects);
+    if (!(error instanceof RoundStop)) throw error;
+    return exitWith(error.message);
+  }
+};
+
 const NO_DECIDED_LIST = Object.freeze({ round: null, decided: [] });
 
 // The decisions of every ready plan of the results folder, from each decided review file under plans/.
@@ -226,7 +240,7 @@ function checkDesign() {
   const model = readDesignModelOrExit(options.model);
   const reviewText = options.review ? readTextOrExit("review", options.review) : null;
   const shapeReviews = options[SHAPE_REVIEW_OPTION].map(readShapeReviewOrExit);
-  const decidedDefects = [...findDecidedDefectsOrExit(model, options), ...findDecidedNotGivenDefectsOrExit(model, options), ...findTakenCodeDefectsOrExit(model, options), ...findItemsThatDoNotCloseDefectsOrExit(model, options)];
+  const decidedDefects = [...findDecidedDefectsOrExit(model, options), ...findDecidedNotGivenDefectsOrExit(model, options), ...findTakenCodeDefectsOrExit(model, options), ...findItemsThatDoNotCloseDefectsOrExit(model, options), ...findDecidedKeyLeftOpenDefectsOrExit(model, options, reviewText, shapeReviews)];
 
   const repositoryRoot = options.repo ? path.resolve(options.repo) : null;
   const commits = repositoryRoot ? { treeCommit: readTreeCommit(options), baseCommit: readBaseCommit(options) } : undefined;

@@ -9,6 +9,7 @@ export const DECIDED_DEFECT_CODES = Object.freeze({
   DECIDED_NOT_CARRIED: "decided-not-carried",
   DECIDED_NOT_GIVEN: "decided-not-given",
   DECIDED_ROUND_NOT_OF_THE_RUN: "decided-round-not-of-the-run",
+  DECIDED_KEY_LEFT_OPEN: "decided-key-left-open",
   DECIDED_LIST_MALFORMED: "decided-list-malformed",
   REACH_KEY_UNKNOWN: "reach-key-unknown",
   REACH_KEY_WITHOUT_FINGERPRINT: "reach-key-without-fingerprint",
@@ -294,6 +295,12 @@ const isTheResultOfTheReachKey = (finding, decided, key) => finding.displayName 
 const listChecksOfTheReachKey = (finding, decided, key) => {
   const check = readCheckOfTheReachKey(decided, key);
   return check === undefined ? readChecksOfTheFinding(finding) : [check];
+};
+
+// An object of the decided list decides 1 check of a finding of a shape run by its finding key under 1 of the given names with that check, or by a reach key on 1 of those names at the scale of the finding with that check; an item number names an item of the input run only, so it decides no finding of a shape run.
+export const decidesTheShapeFinding = (decided, names, finding, check) => {
+  if (names.has(decided.displayName) && decided.check === check) return true;
+  return (decided.reach || []).some(key => names.has(key.displayName) && key.scale.toLowerCase() === finding.scale && (readCheckOfTheReachKey(decided, key) ?? check) === check);
 };
 
 const readModelFindingObjects = model => (model && model.decisions && Array.isArray(model.decisions.findings) ? model.decisions.findings.filter(object => object && typeof object === "object") : []);
