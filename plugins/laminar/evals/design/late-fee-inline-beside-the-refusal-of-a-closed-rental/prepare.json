@@ -1,0 +1,496 @@
+{
+ "mode": "REPOSITORY",
+ "target": "/tmp/laminar-review/fixture-300/.claude/worktrees/laminar-review-change-12ea12",
+ "filter": {
+  "judges": [
+   "judge-simplicity-class",
+   "judge-simplicity-method"
+  ],
+  "paths": [],
+  "scales": []
+ },
+ "counts": {
+  "codeUnderReview": 5,
+  "checks": 10,
+  "byTrack": {
+   "SIMPLICITY": 5,
+   "DESIGN": 0,
+   "PREVENTION": 0,
+   "TEST_METHOD": 0,
+   "TEST_PLAN": 0,
+   "PERFORMANCE": 0,
+   "DECISION": 0,
+   "COMMENT": 0,
+   "IO_PATHS": 0,
+   "ENTRY_BOUNDARY": 0,
+   "BOUNDARY": 0
+  },
+  "byJudgeType": {
+   "judge-simplicity-class": 3,
+   "judge-simplicity-method": 2
+  },
+  "screenBatches": 0,
+  "endCalls": 0,
+  "ioRuleScreenCalls": 0,
+  "ioEndMethods": 0,
+  "waves": 1
+ },
+ "notAnswered": [],
+ "codeUnderReview": [
+  {
+   "id": "U1",
+   "abstractionId": "A5",
+   "displayName": "ReturnDesk",
+   "name": "ReturnDesk",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "BOUNDARY_CHANGED",
+   "path": "src/main/java/org/example/bikerental/rental/ReturnDesk.java",
+   "lines": {
+    "from": 6,
+    "to": 31
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_ITS_TYPE_HEADS",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "6: public class ReturnDesk {",
+       "7: ",
+       "8:     private static final long LATE_FEE_CENTS_PER_QUARTER_HOUR = 50;",
+       "9: ",
+       "10:     private final RentalStore rentalStore;",
+       "11: ",
+       "12:     public ReturnDesk(RentalStore rentalStore) {",
+       "13:         this.rentalStore = rentalStore;",
+       "14:     }",
+       "15: ",
+       "16:     public ReturnReceipt closeRental(String rentalId, Instant returnedAt) {",
+       "17:         Rental rental = rentalStore.findRental(rentalId);",
+       "18:         if (rental == null) {",
+       "19:             throw new RentalNotFoundException(rentalId);",
+       "20:         }",
+       "21:         if (rental.isClosed()) {",
+       "22:             throw new RentalAlreadyClosedException(rentalId);",
+       "23:         }",
+       "24: ",
+       "25:         long lateMinutes = Duration.between(rental.dueAt(), returnedAt).toMinutes();",
+       "26:         long startedQuarterHours = lateMinutes > 0 ? (lateMinutes + 14) / 15 : 0;",
+       "27:         long lateFeeCents = startedQuarterHours * LATE_FEE_CENTS_PER_QUARTER_HOUR;",
+       "28:         rentalStore.saveRental(rental.closeAt(returnedAt));",
+       "29:         return new ReturnReceipt(rental.id(), rental.bikeId(), returnedAt, lateFeeCents);",
+       "30:     }",
+       "31: }"
+      ]
+     },
+     {
+      "section": "fieldTypeHeads",
+      "lines": [
+       "src/main/java/org/example/bikerental/rental/RentalStore.java:5: public interface RentalStore {"
+      ]
+     }
+    ],
+    "bytes": 1174
+   }
+  },
+  {
+   "id": "U2",
+   "abstractionId": "A7",
+   "displayName": "ReturnDesk#closeRental",
+   "name": "closeRental",
+   "enclosing": "ReturnDesk",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "INTERNALS_CHANGED",
+   "path": "src/main/java/org/example/bikerental/rental/ReturnDesk.java",
+   "lines": {
+    "from": 16,
+    "to": 30
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": {
+     "line": 19,
+     "text": "throw new RentalNotFoundException(rentalId);"
+    },
+    "constructs": [
+     {
+      "line": 18,
+      "text": "if (rental == null) {"
+     }
+    ]
+   },
+   "callArgumentCalls": [
+    {
+     "line": 28,
+     "outer": "rentalStore.saveRental",
+     "inner": "rental.closeAt"
+    }
+   ],
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_ITS_TYPE_HEADS",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "16:     public ReturnReceipt closeRental(String rentalId, Instant returnedAt) {",
+       "17:         Rental rental = rentalStore.findRental(rentalId);",
+       "18:         if (rental == null) {",
+       "19:             throw new RentalNotFoundException(rentalId);",
+       "20:         }",
+       "21:         if (rental.isClosed()) {",
+       "22:             throw new RentalAlreadyClosedException(rentalId);",
+       "23:         }",
+       "24: ",
+       "25:         long lateMinutes = Duration.between(rental.dueAt(), returnedAt).toMinutes();",
+       "26:         long startedQuarterHours = lateMinutes > 0 ? (lateMinutes + 14) / 15 : 0;",
+       "27:         long lateFeeCents = startedQuarterHours * LATE_FEE_CENTS_PER_QUARTER_HOUR;",
+       "28:         rentalStore.saveRental(rental.closeAt(returnedAt));",
+       "29:         return new ReturnReceipt(rental.id(), rental.bikeId(), returnedAt, lateFeeCents);",
+       "30:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "6: public class ReturnDesk {",
+       "8: private static final long LATE_FEE_CENTS_PER_QUARTER_HOUR = 50;",
+       "10: private final RentalStore rentalStore;",
+       "12: public ReturnDesk(RentalStore rentalStore) {"
+      ]
+     }
+    ],
+    "bytes": 989
+   }
+  },
+  {
+   "id": "U3",
+   "abstractionId": "A11",
+   "displayName": "ReturnReceipt",
+   "name": "ReturnReceipt",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "BOUNDARY_CHANGED",
+   "path": "src/main/java/org/example/bikerental/rental/ReturnReceipt.java",
+   "lines": {
+    "from": 5,
+    "to": 6
+   },
+   "isTest": false,
+   "boundaryRank": "MODULE_BOUNDARY",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_ITS_TYPE_HEADS",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "5: public record ReturnReceipt(String rentalId, String bikeId, Instant returnedAt, long lateFeeCents) {",
+       "6: }"
+      ]
+     }
+    ],
+    "bytes": 108
+   }
+  },
+  {
+   "id": "U4",
+   "abstractionId": "A14",
+   "displayName": "ReturnDeskRestController#closeRental",
+   "name": "closeRental",
+   "enclosing": "ReturnDeskRestController",
+   "usedIn": "",
+   "scale": "METHOD",
+   "changeKind": "INTERNALS_CHANGED",
+   "path": "src/main/java/org/example/bikerental/web/ReturnDeskRestController.java",
+   "lines": {
+    "from": 30,
+    "to": 33
+   },
+   "isTest": false,
+   "boundaryRank": "IN_CODE",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-method",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": {
+    "deepestLine": null,
+    "constructs": []
+   },
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_ITS_TYPE_HEADS",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "30:     public ReturnResponse closeRental(@PathVariable String rentalId) {",
+       "31:         ReturnReceipt receipt = returnDesk.closeRental(rentalId, clock.instant());",
+       "32:         return new ReturnResponse(receipt.rentalId(), receipt.bikeId(), receipt.returnedAt(), receipt.lateFeeCents());",
+       "33:     }"
+      ]
+     },
+     {
+      "section": "typeHeads",
+      "lines": [
+       "19: public class ReturnDeskRestController {",
+       "21: private final ReturnDesk returnDesk;",
+       "22: private final Clock clock;",
+       "24: public ReturnDeskRestController(ReturnDesk returnDesk, Clock clock) {",
+       "37: public ErrorResponse answerUnknownRental(RentalNotFoundException exception) {",
+       "43: public ErrorResponse answerClosedRental(RentalAlreadyClosedException exception) {"
+      ]
+     }
+    ],
+    "bytes": 651
+   }
+  },
+  {
+   "id": "U5",
+   "abstractionId": "A15",
+   "displayName": "ReturnResponse",
+   "name": "ReturnResponse",
+   "enclosing": "",
+   "usedIn": "",
+   "scale": "CLASS",
+   "changeKind": "BOUNDARY_CHANGED",
+   "path": "src/main/java/org/example/bikerental/web/response/ReturnResponse.java",
+   "lines": {
+    "from": 5,
+    "to": 6
+   },
+   "isTest": false,
+   "boundaryRank": "IN_CODE",
+   "track": "SIMPLICITY",
+   "judgeType": "judge-simplicity-class",
+   "checks": [
+    {
+     "id": "S2",
+     "name": "Prediction Failure",
+     "fields": []
+    },
+    {
+     "id": "S5",
+     "name": "Unnamed Part Failure",
+     "fields": []
+    }
+   ],
+   "comments": [],
+   "openConstructs": null,
+   "facts": {
+    "hiddenDependency": false,
+    "interactionAssertion": false
+   },
+   "testFriction": [],
+   "namedDeclarations": null,
+   "outsideDeclaration": null,
+   "sameDecisionAt": [],
+   "homeModule": null,
+   "searchScope": null,
+   "slice": {
+    "need": "THE_MEMBER_AND_ITS_TYPE_HEADS",
+    "sections": [
+     {
+      "section": "ownLines",
+      "lines": [
+       "5: public record ReturnResponse(String rentalId, String bikeId, Instant returnedAt, long lateFeeCents) {",
+       "6: }"
+      ]
+     }
+    ],
+    "bytes": 109
+   }
+  }
+ ],
+ "screenBatches": [],
+ "gate": {
+  "D3": [
+   "namesMechanism"
+  ],
+  "CP1": [
+   "encodesCaseAsPrimitiveOrFallback"
+  ],
+  "CP3": [
+   "changesStateBeyondTheCall"
+  ],
+  "CP4": [
+   "signalsFailureAsValueOrError"
+  ],
+  "CP7": [
+   "recoversFromFailureInPlace"
+  ],
+  "P2": [
+   "repeatsWork",
+   "callsOutsideProcess"
+  ],
+  "P3": [
+   "callsOutsideProcess"
+  ],
+  "P4": [
+   "createsReusableResource"
+  ]
+ },
+ "checkNames": {
+  "S1": "Incomplete Mental Model",
+  "S2": "Prediction Failure",
+  "S4": "Compression Failure",
+  "S5": "Unnamed Part Failure",
+  "S6": "Open Construct Overload",
+  "D1": "Over-Extraction",
+  "D2": "Scoped Parameters",
+  "D3": "Leaked Details",
+  "D4": "Missing Boundary",
+  "D5": "Type per Variant",
+  "CP1": "Exclude Illegal States",
+  "CP3": "Protect the State",
+  "CP4": "Remove Edge Cases",
+  "CP5": "Remove Hidden Dependencies",
+  "CP6": "Validate at the Boundary",
+  "CP7": "Fail Fast",
+  "CD2": "Test Behavior",
+  "CD4": "Integration Test Needed",
+  "CD5": "Unit Test Needed",
+  "CD6": "Unit Test to Remove",
+  "CD7": "Partial Path Test",
+  "P1": "Looped I/O",
+  "P2": "Repeated Retrieval",
+  "P3": "Excess Retrieval",
+  "P4": "Resource Recreation"
+ },
+ "ioRuleScreenCall": null,
+ "ioCachedRules": null,
+ "ioGroups": [],
+ "ioPaths": [],
+ "ioRuleKey": "8311f255855e040cbd7de4dfa4915d954e58975ff4528be6e41b79be3abbb9e5",
+ "ioEnds": [],
+ "entryBoundaries": {
+  "boundaries": 0,
+  "applications": 0,
+  "judged": 0,
+  "noCaller": 0,
+  "notJudged": 0
+ },
+ "boundaryPaths": {
+  "paths": 1,
+  "inner": 1,
+  "entry": 0,
+  "judged": 0,
+  "notJudged": 1
+ },
+ "waves": [
+  {
+   "number": 1,
+   "agentCalls": 5,
+   "screenBatches": [],
+   "ioRules": false,
+   "codeUnderReview": [
+    [
+     1,
+     5
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,80 @@
+diff --git a/src/main/java/org/example/bikerental/rental/ReturnDesk.java b/src/main/java/org/example/bikerental/rental/ReturnDesk.java
+--- a/src/main/java/org/example/bikerental/rental/ReturnDesk.java
++++ b/src/main/java/org/example/bikerental/rental/ReturnDesk.java
+@@ -1,9 +1,12 @@
+ package org.example.bikerental.rental;
+ 
++import java.time.Duration;
+ import java.time.Instant;
+ 
+ public class ReturnDesk {
+ 
++    private static final long LATE_FEE_CENTS_PER_QUARTER_HOUR = 50;
++
+     private final RentalStore rentalStore;
+ 
+     public ReturnDesk(RentalStore rentalStore) {
+@@ -19,7 +22,10 @@ public class ReturnDesk {
+             throw new RentalAlreadyClosedException(rentalId);
+         }
+ 
++        long lateMinutes = Duration.between(rental.dueAt(), returnedAt).toMinutes();
++        long startedQuarterHours = lateMinutes > 0 ? (lateMinutes + 14) / 15 : 0;
++        long lateFeeCents = startedQuarterHours * LATE_FEE_CENTS_PER_QUARTER_HOUR;
+         rentalStore.saveRental(rental.closeAt(returnedAt));
+-        return new ReturnReceipt(rental.id(), rental.bikeId(), returnedAt);
++        return new ReturnReceipt(rental.id(), rental.bikeId(), returnedAt, lateFeeCents);
+     }
+ }
+diff --git a/src/main/java/org/example/bikerental/rental/ReturnReceipt.java b/src/main/java/org/example/bikerental/rental/ReturnReceipt.java
+--- a/src/main/java/org/example/bikerental/rental/ReturnReceipt.java
++++ b/src/main/java/org/example/bikerental/rental/ReturnReceipt.java
+@@ -2,5 +2,5 @@ package org.example.bikerental.rental;
+ 
+ import java.time.Instant;
+ 
+-public record ReturnReceipt(String rentalId, String bikeId, Instant returnedAt) {
++public record ReturnReceipt(String rentalId, String bikeId, Instant returnedAt, long lateFeeCents) {
+ }
+diff --git a/src/main/java/org/example/bikerental/web/ReturnDeskRestController.java b/src/main/java/org/example/bikerental/web/ReturnDeskRestController.java
+--- a/src/main/java/org/example/bikerental/web/ReturnDeskRestController.java
++++ b/src/main/java/org/example/bikerental/web/ReturnDeskRestController.java
+@@ -29,7 +29,7 @@ public class ReturnDeskRestController {
+     @PostMapping("/rentals/{rentalId}/return")
+     public ReturnResponse closeRental(@PathVariable String rentalId) {
+         ReturnReceipt receipt = returnDesk.closeRental(rentalId, clock.instant());
+-        return new ReturnResponse(receipt.rentalId(), receipt.bikeId(), receipt.returnedAt());
++        return new ReturnResponse(receipt.rentalId(), receipt.bikeId(), receipt.returnedAt(), receipt.lateFeeCents());
+     }
+ 
+     @ExceptionHandler(RentalNotFoundException.class)
+diff --git a/src/main/java/org/example/bikerental/web/response/ReturnResponse.java b/src/main/java/org/example/bikerental/web/response/ReturnResponse.java
+--- a/src/main/java/org/example/bikerental/web/response/ReturnResponse.java
++++ b/src/main/java/org/example/bikerental/web/response/ReturnResponse.java
+@@ -2,5 +2,5 @@ package org.example.bikerental.web.response;
+ 
+ import java.time.Instant;
+ 
+-public record ReturnResponse(String rentalId, String bikeId, Instant returnedAt) {
++public record ReturnResponse(String rentalId, String bikeId, Instant returnedAt, long lateFeeCents) {
+ }
+diff --git a/src/test/java/org/example/bikerental/rental/ReturnDeskTest.java b/src/test/java/org/example/bikerental/rental/ReturnDeskTest.java
+--- a/src/test/java/org/example/bikerental/rental/ReturnDeskTest.java
++++ b/src/test/java/org/example/bikerental/rental/ReturnDeskTest.java
+@@ -22,6 +22,16 @@ class ReturnDeskTest {
+         Assertions.assertTrue(rentalStore.findRental("rental-1").isClosed());
+     }
+ 
++    @Test
++    void shouldChargeEveryStartedQuarterHourWhenTheBikeComesBackLate() {
++        rentalStore.saveRental(new Rental("rental-1", "bike-7", "rider-3", DUE_AT, null));
++        Instant sixteenMinutesLate = DUE_AT.plusSeconds(16 * 60);
++
++        ReturnReceipt receipt = returnDesk.closeRental("rental-1", sixteenMinutesLate);
++
++        Assertions.assertEquals(100, receipt.lateFeeCents());
++    }
++
+     @Test
+     void shouldRefuseTheReturnWhenTheRentalIsAlreadyClosed() {
+         Instant closedAt = DUE_AT.minusSeconds(600);

@@ -1,0 +1,298 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# Bike rental
++
++Java 21 with Spring Web. The return desk closes the rental of a bike when the rider brings it back. `RentalStore` is an interface; its implementation stands in the persistence module, which is not in this repository slice.
+diff --git a/src/main/java/org/example/bikerental/rental/Rental.java b/src/main/java/org/example/bikerental/rental/Rental.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/bikerental/rental/Rental.java
+@@ -0,0 +1,14 @@
++package org.example.bikerental.rental;
++
++import java.time.Instant;
++
++public record Rental(String id, String bikeId, String riderId, Instant dueAt, Instant closedAt) {
++
++    public boolean isClosed() {
++        return closedAt != null;
++    }
++
++    public Rental closeAt(Instant returnedAt) {
++        return new Rental(id, bikeId, riderId, dueAt, returnedAt);
++    }
++}
+diff --git a/src/main/java/org/example/bikerental/rental/RentalAlreadyClosedException.java b/src/main/java/org/example/bikerental/rental/RentalAlreadyClosedException.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/bikerental/rental/RentalAlreadyClosedException.java
+@@ -0,0 +1,8 @@
++package org.example.bikerental.rental;
++
++public class RentalAlreadyClosedException extends RuntimeException {
++
++    public RentalAlreadyClosedException(String rentalId) {
++        super("The rental " + rentalId + " is already closed");
++    }
++}
+diff --git a/src/main/java/org/example/bikerental/rental/RentalNotFoundException.java b/src/main/java/org/example/bikerental/rental/RentalNotFoundException.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/bikerental/rental/RentalNotFoundException.java
+@@ -0,0 +1,8 @@
++package org.example.bikerental.rental;
++
++public class RentalNotFoundException extends RuntimeException {
++
++    public RentalNotFoundException(String rentalId) {
++        super("No rental has the id " + rentalId);
++    }
++}
+diff --git a/src/main/java/org/example/bikerental/rental/RentalStore.java b/src/main/java/org/example/bikerental/rental/RentalStore.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/bikerental/rental/RentalStore.java
+@@ -0,0 +1,11 @@
++package org.example.bikerental.rental;
++
++import org.springframework.lang.Nullable;
++
++public interface RentalStore {
++
++    @Nullable
++    Rental findRental(String rentalId);
++
++    void saveRental(Rental rental);
++}
+diff --git a/src/main/java/org/example/bikerental/rental/ReturnDesk.java b/src/main/java/org/example/bikerental/rental/ReturnDesk.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/bikerental/rental/ReturnDesk.java
+@@ -0,0 +1,25 @@
++package org.example.bikerental.rental;
++
++import java.time.Instant;
++
++public class ReturnDesk {
++
++    private final RentalStore rentalStore;
++
++    public ReturnDesk(RentalStore rentalStore) {
++        this.rentalStore = rentalStore;
++    }
++
++    public ReturnReceipt closeRental(String rentalId, Instant returnedAt) {
++        Rental rental = rentalStore.findRental(rentalId);
++        if (rental == null) {
++            throw new RentalNotFoundException(rentalId);
++        }
++        if (rental.isClosed()) {
++            throw new RentalAlreadyClosedException(rentalId);
++        }
++
++        rentalStore.saveRental(rental.closeAt(returnedAt));
++        return new ReturnReceipt(rental.id(), rental.bikeId(), returnedAt);
++    }
++}
+diff --git a/src/main/java/org/example/bikerental/rental/ReturnReceipt.java b/src/main/java/org/example/bikerental/rental/ReturnReceipt.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/bikerental/rental/ReturnReceipt.java
+@@ -0,0 +1,6 @@
++package org.example.bikerental.rental;
++
++import java.time.Instant;
++
++public record ReturnReceipt(String rentalId, String bikeId, Instant returnedAt) {
++}
+diff --git a/src/main/java/org/example/bikerental/web/ReturnDeskRestController.java b/src/main/java/org/example/bikerental/web/ReturnDeskRestController.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/bikerental/web/ReturnDeskRestController.java
+@@ -0,0 +1,46 @@
++package org.example.bikerental.web;
++
++import org.example.bikerental.rental.RentalAlreadyClosedException;
++import org.example.bikerental.rental.RentalNotFoundException;
++import org.example.bikerental.rental.ReturnDesk;
++import org.example.bikerental.rental.ReturnReceipt;
++import org.example.bikerental.web.response.ErrorResponse;
++import org.example.bikerental.web.response.ReturnResponse;
++import org.springframework.http.HttpStatus;
++import org.springframework.web.bind.annotation.ExceptionHandler;
++import org.springframework.web.bind.annotation.PathVariable;
++import org.springframework.web.bind.annotation.PostMapping;
++import org.springframework.web.bind.annotation.ResponseStatus;
++import org.springframework.web.bind.annotation.RestController;
++
++import java.time.Clock;
++
++@RestController
++public class ReturnDeskRestController {
++
++    private final ReturnDesk returnDesk;
++    private final Clock clock;
++
++    public ReturnDeskRestController(ReturnDesk returnDesk, Clock clock) {
++        this.returnDesk = returnDesk;
++        this.clock = clock;
++    }
++
++    @PostMapping("/rentals/{rentalId}/return")
++    public ReturnResponse closeRental(@PathVariable String rentalId) {
++        ReturnReceipt receipt = returnDesk.closeRental(rentalId, clock.instant());
++        return new ReturnResponse(receipt.rentalId(), receipt.bikeId(), receipt.returnedAt());
++    }
++
++    @ExceptionHandler(RentalNotFoundException.class)
++    @ResponseStatus(HttpStatus.NOT_FOUND)
++    public ErrorResponse answerUnknownRental(RentalNotFoundException exception) {
++        return new ErrorResponse(exception.getMessage());
++    }
++
++    @ExceptionHandler(RentalAlreadyClosedException.class)
++    @ResponseStatus(HttpStatus.CONFLICT)
++    public ErrorResponse answerClosedRental(RentalAlreadyClosedException exception) {
++        return new ErrorResponse(exception.getMessage());
++    }
++}
+diff --git a/src/main/java/org/example/bikerental/web/response/ErrorResponse.java b/src/main/java/org/example/bikerental/web/response/ErrorResponse.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/bikerental/web/response/ErrorResponse.java
+@@ -0,0 +1,4 @@
++package org.example.bikerental.web.response;
++
++public record ErrorResponse(String message) {
++}
+diff --git a/src/main/java/org/example/bikerental/web/response/ReturnResponse.java b/src/main/java/org/example/bikerental/web/response/ReturnResponse.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/bikerental/web/response/ReturnResponse.java
+@@ -0,0 +1,6 @@
++package org.example.bikerental.web.response;
++
++import java.time.Instant;
++
++public record ReturnResponse(String rentalId, String bikeId, Instant returnedAt) {
++}
+diff --git a/src/test/java/org/example/bikerental/rental/InMemoryRentalStore.java b/src/test/java/org/example/bikerental/rental/InMemoryRentalStore.java
+new file mode 100644
+--- /dev/null
++++ b/src/test/java/org/example/bikerental/rental/InMemoryRentalStore.java
+@@ -0,0 +1,22 @@
++package org.example.bikerental.rental;
++
++import org.springframework.lang.Nullable;
++
++import java.util.HashMap;
++import java.util.Map;
++
++class InMemoryRentalStore implements RentalStore {
++
++    private final Map<String, Rental> rentalByIdMap = new HashMap<>();
++
++    @Nullable
++    @Override
++    public Rental findRental(String rentalId) {
++        return rentalByIdMap.get(rentalId);
++    }
++
++    @Override
++    public void saveRental(Rental rental) {
++        rentalByIdMap.put(rental.id(), rental);
++    }
++}
+diff --git a/src/test/java/org/example/bikerental/rental/ReturnDeskTest.java b/src/test/java/org/example/bikerental/rental/ReturnDeskTest.java
+new file mode 100644
+--- /dev/null
++++ b/src/test/java/org/example/bikerental/rental/ReturnDeskTest.java
+@@ -0,0 +1,37 @@
++package org.example.bikerental.rental;
++
++import org.junit.jupiter.api.Assertions;
++import org.junit.jupiter.api.Test;
++
++import java.time.Instant;
++
++class ReturnDeskTest {
++
++    private static final Instant DUE_AT = Instant.parse("2026-06-01T10:00:00Z");
++
++    private final InMemoryRentalStore rentalStore = new InMemoryRentalStore();
++    private final ReturnDesk returnDesk = new ReturnDesk(rentalStore);
++
++    @Test
++    void shouldCloseTheRentalWhenTheRentalIsOpen() {
++        rentalStore.saveRental(new Rental("rental-1", "bike-7", "rider-3", DUE_AT, null));
++
++        ReturnReceipt receipt = returnDesk.closeRental("rental-1", DUE_AT);
++
++        Assertions.assertEquals("bike-7", receipt.bikeId());
++        Assertions.assertTrue(rentalStore.findRental("rental-1").isClosed());
++    }
++
++    @Test
++    void shouldRefuseTheReturnWhenTheRentalIsAlreadyClosed() {
++        Instant closedAt = DUE_AT.minusSeconds(600);
++        rentalStore.saveRental(new Rental("rental-1", "bike-7", "rider-3", DUE_AT, closedAt));
++
++        Assertions.assertThrows(RentalAlreadyClosedException.class, () -> returnDesk.closeRental("rental-1", DUE_AT));
++    }
++
++    @Test
++    void shouldRefuseTheReturnWhenNoRentalHasTheId() {
++        Assertions.assertThrows(RentalNotFoundException.class, () -> returnDesk.closeRental("rental-9", DUE_AT));
++    }
++}
+diff --git a/src/test/java/org/example/bikerental/web/ReturnDeskRestControllerTest.java b/src/test/java/org/example/bikerental/web/ReturnDeskRestControllerTest.java
+new file mode 100644
+--- /dev/null
++++ b/src/test/java/org/example/bikerental/web/ReturnDeskRestControllerTest.java
+@@ -0,0 +1,43 @@
++package org.example.bikerental.web;
++
++import org.example.bikerental.rental.RentalAlreadyClosedException;
++import org.example.bikerental.rental.ReturnDesk;
++import org.junit.jupiter.api.Test;
++import org.mockito.ArgumentMatchers;
++import org.mockito.Mockito;
++import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
++import org.springframework.test.context.bean.override.mockito.MockitoBean;
++import org.springframework.test.web.servlet.MockMvc;
++import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
++import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
++
++import java.time.Clock;
++import java.time.Instant;
++
++@WebMvcTest(ReturnDeskRestController.class)
++class ReturnDeskRestControllerTest {
++
++    private final MockMvc mockMvc;
++
++    @MockitoBean
++    private ReturnDesk returnDesk;
++
++    @MockitoBean
++    private Clock clock;
++
++    ReturnDeskRestControllerTest(MockMvc mockMvc) {
++        this.mockMvc = mockMvc;
++    }
++
++    @Test
++    void shouldAnswerConflictWhenTheRentalIsAlreadyClosed() throws Exception {
++        Instant now = Instant.parse("2026-06-01T10:30:00Z");
++        Mockito.when(clock.instant()).thenReturn(now);
++        Mockito.when(returnDesk.closeRental(ArgumentMatchers.eq("rental-1"), ArgumentMatchers.eq(now)))
++                .thenThrow(new RentalAlreadyClosedException("rental-1"));
++
++        mockMvc.perform(MockMvcRequestBuilders.post("/rentals/rental-1/return"))
++                .andExpect(MockMvcResultMatchers.status().isConflict())
++                .andExpect(MockMvcResultMatchers.jsonPath("$.message").value("The rental rental-1 is already closed"));
++    }
++}
