@@ -17,6 +17,7 @@ const DESIGN_SKILL = "laminar:design";
 const DESIGN_LOADED_MARKER = "design-loaded";
 const DESIGN_REMINDED_MARKER = "design-reminded";
 const DESIGN_MODEL_FILE = "design-model.json";
+const WRITER_AGENT_TYPE = "laminar:design-writer";
 const PRODUCTION_CODE_EXTENSIONS = new Set([".java", ".kt", ".scala", ".groovy", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rs", ".cs", ".rb", ".php", ".swift", ".c", ".cc", ".cpp", ".h", ".hpp", ".dart", ".ex", ".vue", ".svelte"]);
 const TEST_FOLDER_NAMES = new Set(["test", "tests", "__tests__", "spec", "specs", "testing"]);
 const TEST_FILE_PATTERN = /(^test_|_test\.|_spec\.|\.test\.|\.spec\.|(Test|Tests|Spec|IT)\.[A-Za-z]+$)/;
@@ -137,8 +138,10 @@ function isACreationOfAProductionFile(hookInput) {
   return !fs.existsSync(filePath) && isAProductionFile(filePath) && !isInsideADesignResultsFolder(path.resolve(filePath));
 }
 
+const isAWriterSubagent = hookInput => Boolean(hookInput.agent_id) && hookInput.agent_type === WRITER_AGENT_TYPE;
+
 function showDesignReminder(hookInput) {
-  if (!hookInput.session_id || !isACreationOfAProductionFile(hookInput)) return;
+  if (!hookInput.session_id || isAWriterSubagent(hookInput) || !isACreationOfAProductionFile(hookInput)) return;
   if (hasSessionMarker(hookInput, DESIGN_LOADED_MARKER) || !claimSessionMarker(hookInput, DESIGN_REMINDED_MARKER)) return;
   process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: DESIGN_REMINDER_LINE } }));
 }
