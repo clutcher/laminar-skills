@@ -23,6 +23,7 @@ import { findOpenQuestionDefects } from "./OpenQuestions.mjs";
 import { listMigrationSteps } from "../migration/MigrationSteps.mjs";
 import { findGroupOrderDefects } from "../migration/GroupOrder.mjs";
 import { findOwnerValueDefects } from "./OwnerValues.mjs";
+import { findOwnerWithoutPartsDefects } from "./OwnersWithoutParts.mjs";
 import { findPassedOnCallDefects } from "./PassedOnCalls.mjs";
 import { findFindingsDefects } from "./FindingsCheck.mjs";
 import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
@@ -133,6 +134,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findConfigApiCallDefects(model, zoneOrder),
     ...findConstantInstanceDefects(model),
     ...findOwnerValueDefects(model, currentTree),
+    ...findOwnerWithoutPartsDefects(model),
     ...findRepeatedDecisionDefects(model, currentTree),
     ...findUnchangedCopyDefects(model, currentTree),
     ...findIoBodyTextDefects(model),
