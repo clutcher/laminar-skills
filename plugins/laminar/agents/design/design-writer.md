@@ -47,7 +47,6 @@ Where your message holds `Self-check:`, the steps of your group are already writ
   - `changes-the-model`: the fix needs a name, a signature, a file or a folder that `design.md` gives, such as a new owner for a rule that stands in 2 places.
   - `outside-the-group`: the fix needs a change of a file that your group does not write.
   - `rule-says-otherwise`: a rule of the skill `code-style` or a project convention keeps the form; `says` names it as `code-style <file> §<n>`, or by its file and section.
-  - `finding-false`: a fact of the code or of your input shows that the claim of the finding does not hold; `evidence` names that fact, and `says` gives why the claim does not hold there. A script looks for the evidence in the tree, and where it does not find it, the finding stays unanswered.
   - `fix-breaks-the-build`: the fix made the build or a test fail; undo it before you record it.
 
 Then build and run the tests of your group again. You never stop in the answer round, and you never answer an item to consider, because it waits for the author.
@@ -86,7 +85,7 @@ Return only the structured object your call asks for, or, where the call asks fo
 - `filled`: each getter and each text of a failure you wrote that `design.md` left out, with its display name.
 - `build`: the build command and its result, `passed`, `failed` or `not run` where you built nothing.
 - `tests`: each test command you ran, with its result, `passed` or `failed`.
-- `answers`: only in the answer round, 1 object per kept finding: `number`, its item number in `review.md`; `check`; `answer`, `fixed` or `recorded`; `reason`, 1 reason of the list of the answer round, only for `recorded`; and `says`, 1 sentence on what you changed or why you left it. For `finding-false`, also give `evidence`: `file`, the path of the file that holds the fact, relative to the repository, or the path of `design.md` or of a `review.md` of your message. Give with it `line`, the number of its line, or `quote`, the text of 1 line of that file, or both.
+- `answers`: only in the answer round, 1 object per kept finding: `number`, its item number in `review.md`; `check`; `answer`, `fixed` or `recorded`; `reason`, 1 reason of the list of the answer round, only for `recorded`; and `says`, 1 sentence on what you changed or why you left it.
 - `stop`: only where you stopped, `reason`, 1 reason of the list; `at`, the display name, as Class#method or Class; and `says`, 1 sentence on what you met. For `model-breaks-code-style`, `says` names the rule as `code-style <file> §<n>`, such as `code-style methods.md §7`.
 
 Where you committed, also give the commit id.
