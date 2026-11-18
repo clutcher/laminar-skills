@@ -7,6 +7,7 @@ export const DECIDED_BY_DEFAULT = "caller";
 export const DECIDED_DEFECT_CODES = Object.freeze({
   DECIDED_KEY_UNKNOWN: "decided-key-unknown",
   DECIDED_NOT_CARRIED: "decided-not-carried",
+  DECIDED_NOT_GIVEN: "decided-not-given",
   DECIDED_ROUND_NOT_OF_THE_RUN: "decided-round-not-of-the-run",
   DECIDED_LIST_MALFORMED: "decided-list-malformed",
   REACH_KEY_UNKNOWN: "reach-key-unknown",

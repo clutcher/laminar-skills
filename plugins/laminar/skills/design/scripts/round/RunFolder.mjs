@@ -98,6 +98,7 @@ const readDecidedFinding = (result, index) => {
   return {
     ...readFinding(result, index),
     reason: String(decision.reason || ""),
+    decidedBy: String(decision.decidedBy || ""),
     checkOfTheDecision: String(decision.check || ""),
     displayNameOfTheDecision: String(decision.displayName || ""),
     matchedBy: String(decision.matchedBy || ""),
