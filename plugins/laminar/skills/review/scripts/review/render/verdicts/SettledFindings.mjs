@@ -24,7 +24,7 @@ const NO_VERDICT = Object.freeze({ decision: "" });
 
 const NO_SECOND_READ = Object.freeze({ refutation: null, notVerified: "", notSentToTheRefuter: false });
 
-const FEWEST_COMBINED_CHECKS = 2;
+const FEWEST_COMBINED_POSSIBLE_FINDINGS = 2;
 
 const SCALES_A_FILTER_CAN_LEAVE_OUT = Object.freeze([Scale.APPLICATION, Scale.MODULE, Scale.CLASS, Scale.METHOD, Scale.VARIABLE].map(scale => scale.name));
 
@@ -123,15 +123,18 @@ const findCombinedChecks = (verdict, group) => {
   return [...new Set(listNamedChecks(verdict))].filter(check => checksOfTheItem.includes(check));
 };
 
+const joinsEnoughPossibleFindings = (checks, group) => group.possibleFindings
+  .filter(finding => checks.includes(readCheckKey(finding.check))).length >= FEWEST_COMBINED_POSSIBLE_FINDINGS;
+
 const isAValidCombine = (verdict, group) => isACombine(verdict)
-  && findCombinedChecks(verdict, group).length >= FEWEST_COMBINED_CHECKS
+  && joinsEnoughPossibleFindings(findCombinedChecks(verdict, group), group)
   && Boolean(trimText(verdict.summary));
 
 const combinesOf = (group, verdicts) => {
   const taken = new Set();
   return verdicts.filter(verdict => isAValidCombine(verdict, group)).flatMap(verdict => {
     const checks = findCombinedChecks(verdict, group).filter(check => !taken.has(check));
-    if (checks.length < FEWEST_COMBINED_CHECKS) return [];
+    if (!joinsEnoughPossibleFindings(checks, group)) return [];
     checks.forEach(check => taken.add(check));
     return [{ verdict, checks: checks.sort((left, right) => readCheckRank(left) - readCheckRank(right)) }];
   });
@@ -288,6 +291,8 @@ export const UNMATCHED_REASONS = Object.freeze({
   NO_ITEM: "no item has this id",
   NO_CHECK: "the item holds no check with this id",
   NO_POSSIBLE_FINDING: "no possible finding has this number",
+  COMBINE_OF_ONE_POSSIBLE_FINDING: "the combine joins fewer than 2 possible findings of the item, so each stays on its own",
+  COMBINE_WITH_NO_SUMMARY: "the combine carries no shared summary, so each possible finding stays on its own",
 });
 
 const listNamedChecksAsWritten = verdict => [...new Set([verdict.check, ...(Array.isArray(verdict.checks) ? verdict.checks : [])].filter(Boolean).map(String))];
@@ -311,6 +316,16 @@ const findUnmatchedNumberedVerdicts = (groups, numberedVerdicts, numbersSettledE
     .filter(verdict => !numbers.has(Number(verdict.possibleFinding)))
     .map(verdict => buildUnmatched(verdict, UNMATCHED_REASONS.NO_POSSIBLE_FINDING));
 };
+
+const isApplied = (verdict, combines) => combines.some(combine => combine.verdict === verdict);
+
+const isReportedAsNamingAnotherCheck = (verdict, group) => !verdict.possibleFinding && namesACheckTheItemDoesNotHold(verdict, group);
+
+const readWhyTheCombineIsNotApplied = verdict => trimText(verdict.summary) ? UNMATCHED_REASONS.COMBINE_OF_ONE_POSSIBLE_FINDING : UNMATCHED_REASONS.COMBINE_WITH_NO_SUMMARY;
+
+const listCombinesNotApplied = (group, verdicts, combines) => verdicts
+  .filter(verdict => isACombine(verdict) && !isApplied(verdict, combines) && !isReportedAsNamingAnotherCheck(verdict, group))
+  .map(verdict => buildUnmatched(verdict, readWhyTheCombineIsNotApplied(verdict)));
 
 const findTheCheckOfTheNumber = (group, number) => (group.possibleFindings.find(finding => finding.number === number) || {}).check;
 
@@ -345,7 +360,9 @@ export class SettledFindings {
   }
 
   settle(group, returns) {
-    const combines = group.verdict ? [] : combinesOf(group, listVerdictsOfTheGroup(group, returns));
+    const verdicts = group.verdict ? [] : listVerdictsOfTheGroup(group, returns);
+    const combines = combinesOf(group, verdicts);
+    this.unmatchedVerdicts.push(...listCombinesNotApplied(group, verdicts, combines));
     const ruled = keepThePlacesOfSurvivors(group.possibleFindings.map(finding => ruleFinding(finding, group, returns, combines)), this.matchingKeyPlacesOf);
     const standing = foldTheSameLineChecks(foldTheCombines(ruled.filter(ruledFinding => !isRejected(ruledFinding))));
     this.rejected.push(...ruled.filter(isRejected).map(ruledFinding => ruledFinding.finding));
