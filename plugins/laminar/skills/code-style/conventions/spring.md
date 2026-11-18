@@ -6,7 +6,7 @@ These are rules of this skill for Spring, narrower than the book. Read this file
 
 ## 1. Constructor injection
 
-Inject every dependency through the constructor, into a private final field. Write no field injection, no setter injection, and no Autowired marker on a class with 1 constructor. Never ask the application context for a bean in code: that is a hidden dependency the signature does not show (correctness, section 7). A configuration value comes in as a constructor parameter with its Value marker. Name the field of a dependency for the type it holds, such as carrierClient for a CarrierClient, so the name keeps the kind word of the type (naming, section 5).
+Outside a test class (section 9), inject every dependency through the constructor, into a private final field: write no field injection, no setter injection, and no Autowired marker on a class with 1 constructor. Never ask the application context for a bean in code: that is a hidden dependency the signature does not show (correctness, section 7). A configuration value comes in as a constructor parameter with its Value marker. Name the field of a dependency for the type it holds, such as carrierClient for a CarrierClient, so the name keeps the kind word of the type (naming, section 5).
 
 ## 2. Inject by the interface
 
@@ -47,7 +47,7 @@ Build an executor from the factory the framework gives, and set only the values 
 - An integration test starts the application and calls its entry boundary as a real caller does, such as through a web test client, and replaces only what lies past the exit boundary with a substitute bean of the framework, never a plain substitute the context does not know (tests, sections 3 and 4).
 - Assert on the content of the response with concrete values; for an effect that leaves no trace in the response, read back in the then phase what the substitute bean received (tests, section 2).
 - Test pure logic without the framework context (java.md, section 11).
-- A test class takes the beans it uses through its constructor, into private final fields, and never by field injection (section 1). Set the constructor injection mode of the test framework to all once in the test properties, such as spring.test.constructor.autowire.mode=all, and write no Autowired marker on the constructor.
+- A test class takes the beans it uses by field injection or through its constructor (section 1), because only the framework builds a test class. For a constructor, set spring.test.constructor.autowire.mode=all once in the test properties, and write no Autowired marker on the constructor.
 - Give a test a property through the property support of the test framework or through the constructor, never by setting a field by reflection.
 - Mark a test that calls a real outside system with the tag marker of the test framework, or with a condition on a property, so the regular build leaves it out, and give its class the suffix the project chose (tests, section 14).
 
