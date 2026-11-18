@@ -2,7 +2,7 @@
 
 The defects of the planted change. Each item names its scale by its kind word, its check by its lead, and the judge type that raises it, so `grade.mjs` grades the stored input review against them. The stored input review may raise other findings, and this file does not grade them.
 
-Planted item 5 is out since the rewrite of the renewal task, which turned the free-text mail status into a list of the mails sent. The prevention judge raised no Exclude Illegal States on that list in the input review, also where the slice of `LoanDesk#renewLoan` shows the literals that fill it. So the entry holds 6 planted faults, and the numbers of the other items stay as they were.
+Planted item 5 is out since the rewrite of the renewal task, because the renewal answer holds nothing of the mail, so the planted change holds no field of the mail state. So the entry holds 6 planted faults, and the numbers of the other items stay as they were.
 
 ## Design
 

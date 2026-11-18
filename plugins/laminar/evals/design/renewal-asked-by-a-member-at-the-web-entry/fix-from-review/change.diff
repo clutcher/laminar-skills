@@ -2,17 +2,16 @@ diff --git a/src/main/java/org/example/library/loan/app/api/ApiForLoanRenewal.ja
 new file mode 100644
 --- /dev/null
 +++ b/src/main/java/org/example/library/loan/app/api/ApiForLoanRenewal.java
-@@ -0,0 +1,26 @@
+@@ -0,0 +1,25 @@
 +package org.example.library.loan.app.api;
 +
 +import java.time.LocalDate;
-+import java.util.List;
 +
 +public interface ApiForLoanRenewal {
 +
 +    LoanRenewalResult renewLoan(String memberId, String loanId);
 +
-+    record LoanRenewalResult(String loanId, LocalDate newDueDate, List<String> sentMails) {
++    record LoanRenewalResult(String loanId, LocalDate newDueDate) {
 +    }
 +
 +    class LoanNotFoundException extends RuntimeException {
@@ -61,7 +60,7 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/s
 new file mode 100644
 --- /dev/null
 +++ b/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,66 @@
 +package org.example.library.loan.app.domain;
 +
 +import org.example.library.loan.app.api.ApiForLoanRenewal;
@@ -71,10 +70,14 @@ new file mode 100644
 +import org.example.library.loan.app.spi.LoanRepository;
 +import org.example.postbox.PostboxClient;
 +import org.example.postbox.PostboxUnavailable;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
 +
 +import java.util.List;
 +
 +public class LoanDesk implements ApiForLoanRenewal {
++
++    private static final Logger LOG = LoggerFactory.getLogger(LoanDesk.class);
 +
 +    private static final int MOST_RENEWALS = 2;
 +
@@ -100,13 +103,12 @@ new file mode 100644
 +                if (check.renewalCount() < MOST_RENEWALS) {
 +                    Loan renewed = loan.renew();
 +                    loanRepository.save(renewed);
-+                    List<String> sentMails = List.of("RENEWAL_CONFIRMATION");
 +                    try {
 +                        sendRenewalMail(check, renewed);
 +                    } catch (PostboxUnavailable unavailable) {
-+                        sentMails = List.of();
++                        LOG.warn("the renewal mail of loan {} was not sent", renewed.id(), unavailable);
 +                    }
-+                    return new ApiForLoanRenewal.LoanRenewalResult(renewed.id(), renewed.dueDate(), sentMails);
++                    return new ApiForLoanRenewal.LoanRenewalResult(renewed.id(), renewed.dueDate());
 +                } else {
 +                    throw new ApiForLoanRenewal.RenewalRefusedException(
 +                            "loan " + loanId + " was renewed " + MOST_RENEWALS + " times, the most a loan allows");
@@ -353,7 +355,7 @@ diff --git a/src/test/java/org/example/library/loan/in/web/LoanRenewalRestContro
 new file mode 100644
 --- /dev/null
 +++ b/src/test/java/org/example/library/loan/in/web/LoanRenewalRestControllerTest.java
-@@ -0,0 +1,143 @@
+@@ -0,0 +1,141 @@
 +package org.example.library.loan.in.web;
 +
 +import org.example.library.loan.app.domain.model.Loan;
@@ -411,8 +413,7 @@ new file mode 100644
 +        // then
 +        answer.andExpect(MockMvcResultMatchers.status().isOk())
 +                .andExpect(MockMvcResultMatchers.jsonPath("$.loanId").value("L-6001"))
-+                .andExpect(MockMvcResultMatchers.jsonPath("$.newDueDate").value("2026-12-14"))
-+                .andExpect(MockMvcResultMatchers.jsonPath("$.sentMails[0]").value("RENEWAL_CONFIRMATION"));
++                .andExpect(MockMvcResultMatchers.jsonPath("$.newDueDate").value("2026-12-14"));
 +    }
 +
 +    @Test
@@ -429,7 +430,7 @@ new file mode 100644
 +    }
 +
 +    @Test
-+    void shouldAnswerMailNotSentWhenPostboxIsUnavailable() throws Exception {
++    void shouldRenewTheLoanWhenPostboxIsUnavailable() throws Exception {
 +        // given
 +        memberRepository.save(new Member("M-2003", "alan.kay@mail.example", new Member.FineStatement(List.of())));
 +        loanRepository.save(new Loan("L-6003", "M-2003", "Solaris", LocalDate.of(2026, 12, 1), false, 0));
@@ -442,8 +443,7 @@ new file mode 100644
 +
 +        // then
 +        answer.andExpect(MockMvcResultMatchers.status().isOk())
-+                .andExpect(MockMvcResultMatchers.jsonPath("$.newDueDate").value("2026-12-15"))
-+                .andExpect(MockMvcResultMatchers.jsonPath("$.sentMails").isEmpty());
++                .andExpect(MockMvcResultMatchers.jsonPath("$.newDueDate").value("2026-12-15"));
 +    }
 +
 +    @Test
