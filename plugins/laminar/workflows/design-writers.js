@@ -52,7 +52,11 @@ const STOP_REASONS = [
   'model-breaks-code-style',
 ]
 
-const RECORD_REASONS = { CHANGES_THE_MODEL: 'changes-the-model', OUTSIDE_THE_GROUP: 'outside-the-group', RULE_SAYS_OTHERWISE: 'rule-says-otherwise', FIX_BREAKS_THE_BUILD: 'fix-breaks-the-build' }
+const RECORD_REASONS = { CHANGES_THE_MODEL: 'changes-the-model', OUTSIDE_THE_GROUP: 'outside-the-group', RULE_SAYS_OTHERWISE: 'rule-says-otherwise', FINDING_FALSE: 'finding-false', FIX_BREAKS_THE_BUILD: 'fix-breaks-the-build' }
+
+const ANSWER_EVIDENCE_SCRIPT = 'checkAnswerEvidence.mjs'
+
+const FINDING_FALSE_ANSWERS_FILE = 'finding-false-answers.json'
 
 const ANSWERS = { FIXED: 'fixed', RECORDED: 'recorded' }
 
@@ -160,6 +164,8 @@ const ANSWER_ROUND_SCHEMA = {
           answer: { type: 'string', enum: [ANSWERS.FIXED, ANSWERS.RECORDED] },
           reason: { type: 'string', enum: Object.values(RECORD_REASONS) },
           says: { type: 'string' },
+          // No key is required here, because a schema failure would lose the whole answer round: the evidence script refuses an answer that leaves 1 out.
+          evidence: { type: 'object', properties: { file: { type: 'string' }, line: { type: 'integer' }, quote: { type: 'string' } } },
         },
         required: ['number', 'check', 'answer', 'says'],
       },
@@ -528,10 +534,12 @@ function countRecordedByReason(answers) {
   return recordedByReasonMap
 }
 
+// A refused answer stays in answers with its refused reason, and its finding counts as unanswered.
 function selfCheckOf(reviewed, answers, answered) {
   const keptNumbers = new Set(reviewed.kept.map(item => item.number))
   const answersOfTheKept = answers.filter(answer => keptNumbers.has(answer.number))
-  const answeredNumbers = new Set(answersOfTheKept.map(answer => answer.number))
+  const standingAnswers = answersOfTheKept.filter(answer => !answer.refused)
+  const answeredNumbers = new Set(standingAnswers.map(answer => answer.number))
   return {
     run: reviewed.run,
     judgeCalls: reviewed.judgeCalls,
@@ -541,11 +549,46 @@ function selfCheckOf(reviewed, answers, answered) {
     ...(reviewed.changedSince ? { changedSince: reviewed.changedSince } : {}),
     answered,
     answers: answersOfTheKept,
-    fixed: answersOfTheKept.filter(answer => answer.answer === ANSWERS.FIXED).length,
-    recorded: countRecordedByReason(answersOfTheKept),
+    fixed: standingAnswers.filter(answer => answer.answer === ANSWERS.FIXED).length,
+    recorded: countRecordedByReason(standingAnswers),
     unanswered: reviewed.kept.filter(item => !answeredNumbers.has(item.number)).map(item => item.number),
-    needsModelChange: answersOfTheKept.filter(answer => answer.reason === RECORD_REASONS.CHANGES_THE_MODEL),
+    needsModelChange: standingAnswers.filter(answer => answer.reason === RECORD_REASONS.CHANGES_THE_MODEL),
   }
+}
+
+function isFindingFalse(answer) {
+  return answer.answer === ANSWERS.RECORDED && answer.reason === RECORD_REASONS.FINDING_FALSE
+}
+
+// The inputs of the writer that a finding-false answer may quote beside the files of the repository.
+function inputsOfTheAnswerRound(run) {
+  return [theArguments.planned.design, `${run}/review.md`, ...(theArguments.roundReview ? [theArguments.roundReview] : [])].map(forward)
+}
+
+// Every finding-false answer is refused with 1 reason where the script cannot check it, because an answer that nobody checked never sets a finding aside.
+async function refusedOfNumberMapOf(group, run, findingFalseAnswers) {
+  const refuseEvery = why => new Map(findingFalseAnswers.map(answer => [answer.number, why]))
+  const repository = theArguments.planned.repository
+  if (!repository) return refuseEvery('the migration names no repository, so the evidence was not checked')
+  const answersFile = `${run}/returns/${FINDING_FALSE_ANSWERS_FILE}`
+  try {
+    const resultLine = await helperResultOf(group, 'evidence', [[answersFile, findingFalseAnswers]], [
+      `node ${quoted(`${theArguments.planned.designScripts}/${ANSWER_EVIDENCE_SCRIPT}`)} --answers ${quoted(answersFile)} --repo ${quoted(repository)} --inputs ${quoted(inputsOfTheAnswerRound(run).join(','))}`,
+    ])
+    const checked = JSON.parse(resultLine.startsWith(RESULT_MARK) ? resultLine.slice(RESULT_MARK.length) : resultLine)
+    return new Map((checked.refused || []).map(refused => [refused.number, refused.why]))
+  } catch (error) {
+    return refuseEvery(`the evidence check did not run: ${error.message}`)
+  }
+}
+
+// A finding-false answer stands only where the evidence script finds its fact in the tree; the other answers pass as the writer gave them.
+async function answersWithTheEvidenceChecked(group, run, answers) {
+  const findingFalseAnswers = answers.filter(isFindingFalse)
+  if (!findingFalseAnswers.length) return answers
+  const refusedOfNumberMap = await refusedOfNumberMapOf(group, run, findingFalseAnswers)
+  for (const [number, why] of refusedOfNumberMap) log(`the finding-false answer to finding ${number} of the self-check of group ${group.group} is refused: ${why}`)
+  return answers.map(answer => (isFindingFalse(answer) && refusedOfNumberMap.has(answer.number) ? { ...answer, refused: refusedOfNumberMap.get(answer.number) } : answer))
 }
 
 // 1 answer round: the fixes are not judged again before the commit, because the closing review judges every scale anyway.
@@ -558,6 +601,7 @@ async function answeredSelfCheckOf(group, written, reviewed) {
     return { ...written, selfCheck: selfCheckOf(reviewed, [], false) }
   }
   const answeredGroup = writtenOf(group, returned)
+  const answers = await answersWithTheEvidenceChecked(group, reviewed.run, returned.answers || [])
   return {
     ...answeredGroup,
     files: [...new Set([...written.files, ...answeredGroup.files])],
@@ -565,7 +609,7 @@ async function answeredSelfCheckOf(group, written, reviewed) {
     steps: written.steps,
     filled: [...new Set([...written.filled, ...answeredGroup.filled])],
     referencesRead: [...new Set([...written.referencesRead, ...answeredGroup.referencesRead])],
-    selfCheck: selfCheckOf(reviewed, returned.answers || [], true),
+    selfCheck: selfCheckOf(reviewed, answers, true),
   }
 }
 

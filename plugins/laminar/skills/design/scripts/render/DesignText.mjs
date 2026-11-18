@@ -1,4 +1,5 @@
 import { ANSWER_GIVERS, DOES, KINDS, OVERRIDE_KINDS, getFileOfTheChild, getFolderPath, holdsADecidedReason, isAText, isAnInterface, isLeftUnfixed, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
+import { FINDING_FALSE } from "../round/AnswerEvidence.mjs";
 
 const GUESS_EVIDENCE = new Set(["churn", "none"]);
 
@@ -360,9 +361,26 @@ const writeSelfCheckLine = (plan, selfCheck) => {
   ].join(" · ")}`;
 };
 
+const formatEvidencePlace = evidence => {
+  const given = evidence || {};
+  return `${given.file || "no file"}${given.line == null ? "" : `:${given.line}`}${given.quote ? ` "${given.quote}"` : ""}`;
+};
+
+// 1 line per finding-false answer, with its evidence and its reason, so a person or the calling session can check the fact that sets the finding aside.
+const writeFindingFalseLine = answer => {
+  const head = `  - finding ${answer.number} ${answer.check}: ${FINDING_FALSE}`;
+  if (answer.refused) return `${head} refused, ${answer.refused}: ${answer.says}`;
+  return `${head} at ${formatEvidencePlace(answer.evidence)}: ${answer.says}`;
+};
+
+const writeSelfCheckLinesOfTheGroup = (plan, selfCheck) => [
+  writeSelfCheckLine(plan, selfCheck),
+  ...readList(selfCheck.answers).filter(answer => answer.reason === FINDING_FALSE).map(writeFindingFalseLine),
+];
+
 // 1 line per migration group of each plan whose self-check file the calling session wrote, after the rows of the rounds.
 const writeSelfCheckLines = selfChecksOfThePlans => (selfChecksOfThePlans.length
-  ? ["Self-checks:", "", ...selfChecksOfThePlans.flatMap(({ plan, groups }) => readList(groups).map(selfCheck => writeSelfCheckLine(plan, selfCheck))), ""]
+  ? ["Self-checks:", "", ...selfChecksOfThePlans.flatMap(({ plan, groups }) => readList(groups).flatMap(selfCheck => writeSelfCheckLinesOfTheGroup(plan, selfCheck))), ""]
   : []);
 
 // 1 row per round that the round script recorded, with the dollars of the round and the sum so far.
