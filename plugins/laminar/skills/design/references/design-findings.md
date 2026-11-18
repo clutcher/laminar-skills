@@ -78,7 +78,7 @@ The migration script writes each such group apart, with the label `existing defe
 
 ## `scriptCases`
 
-1 object per recheck case of the design check that the designer finds wrong against the model, so `design.md` shows it as a defect of the script. Empty where the designer finds none. The keys, all required:
+1 object per recheck case of the design check that the designer finds wrong against the model, so `design.md` shows it as a defect of the script. Empty where the designer finds none. The keys, all required except `businessRules`:
 
 | Key | Type | Read by |
 |---|---|---|
@@ -86,10 +86,9 @@ The migration script writes each such group apart, with the label `existing defe
 | `name` | display name: the abstraction the line of the check is about | design check, render |
 | `text` | text: the whole rest of the line after its code and its display name, copied whole | design check, render |
 | `reason` | 1 sentence that names what in the model shows the case wrong | render |
+| `businessRules` | list of texts: only on a `repeated-conditions` line, the 2 business rules that the 2 bodies decide, each in its own words | design check |
 
-The design check matches an object with a line by its `code`, its `name` and its `text`, never by a JSON path or an array index, because an index changes when a class is added or removed. It marks only a line that matches all 3 `found-wrong` in place of `recheck`, so a new defect on the same abstraction stays open. A `found-wrong` line does not set exit 1, and the render prints each object in its own section. An object that matches no line prints as `not matched`, so the designer removes it (`design-checks.md`, section 1).
-
-A `folder-cycle` line of a cycle that predates the change takes an object whose `reason` is `outside the change`, as a member does. The design check clears such a line only with `--repo`, where each edge of the cycle has a relation that stands in the base commit: the file of the class that refers names the class it refers to, and that class stands in its own file there. Where 1 edge has no such relation, or where no `--repo` is given, the line stays `recheck`, and the check prints the defect `outside-the-change-but-changed` with the edge.
+The design check matches an object with a line by its `code`, its `name` and its `text`, never by a JSON path or an array index, because an index changes when a class is added or removed. It marks only a line that matches all 3 `found-wrong` in place of `recheck`, so a new defect on the same abstraction stays open. A `found-wrong` line does not set exit 1, and the render prints each object in its own section. An object that matches no line prints as `not matched`, so the designer removes it (`design-checks.md`, section 1). A `folder-cycle` line of a cycle that predates the change takes an object whose `reason` is `outside the change`, as a member does. The design check clears such a line only with `--repo`, where each edge of the cycle has a relation that stands in the base commit: the file of the class that refers names the class it refers to, and that class stands in its own file there. Where 1 edge has no such relation, or where no `--repo` is given, the line stays `recheck`, and the check prints the defect `outside-the-change-but-changed` with the edge.
 
 ```json
 { "code": "data-source-missing", "name": "Checkout#priceLines", "text": "line: no source", "reason": "loop variable" }

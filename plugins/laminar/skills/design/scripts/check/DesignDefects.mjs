@@ -31,6 +31,7 @@ import { findRenamesWithoutFindingDefects } from "./RenamesWithoutFinding.mjs";
 import { findReferencesReadDefects } from "./ReferencesRead.mjs";
 import { findRegistryNameDefects } from "./RegistryNames.mjs";
 import { findRemovedBodilessMethodDefects } from "./RemovedBodilessMethods.mjs";
+import { findRepeatedConditionDefects } from "./RepeatedConditions.mjs";
 import { findRepeatedDecisionDefects } from "./RepeatedDecisions.mjs";
 import { findRepresentedKindDefects } from "./RepresentedKinds.mjs";
 import { findRequestAndResultTypeDefects } from "./RequestAndResultTypes.mjs";
@@ -74,7 +75,7 @@ const isAnAnswerTheCaseTakes = (model, defect, answerTest, name, scriptCase) => 
 
   const theClass = model.findClass(name);
   if (theClass === null) return false;
-  if (answerTest) return answerTest(model, theClass, scriptCase.reason);
+  if (answerTest) return answerTest(model, theClass, scriptCase.reason, scriptCase);
   return defect.code === DEFECT_CODES.TYPE_HOLDS_ONLY_A_COLLECTION ? isAnAnswerOfTheCollectionCase(model, theClass, scriptCase.reason) : namesAMethodWithARule(model, theClass, scriptCase.reason);
 };
 
@@ -140,6 +141,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findOwnerWithoutPartsDefects(model),
     ...findRepeatedDecisionDefects(model, currentTree),
     ...findUnchangedCopyDefects(model, currentTree),
+    ...findRepeatedConditionDefects(model),
     ...findIoBodyTextDefects(model),
     ...findRenamesWithoutFindingDefects(model, { shapeRuns: shapeReviews, roundModels, reviewText, decidedList }),
     ...(currentTree ? findCurrentTreeDefects(model, currentTree) : []),
