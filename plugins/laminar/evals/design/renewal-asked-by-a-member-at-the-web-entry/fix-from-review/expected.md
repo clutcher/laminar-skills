@@ -31,7 +31,7 @@ The defects of the planted change. Each item names its scale by its kind word, i
 
 ### Production code
 
-5. Class `LoanRenewalResult`
+5. Class `ApiForLoanRenewal.LoanRenewalResult`
    - Exclude Illegal States
    - Also accepted on: Method `LoanDesk#renewLoan`
    - Judge: correctness-prevention

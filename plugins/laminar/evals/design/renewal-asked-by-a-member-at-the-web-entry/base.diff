@@ -2,14 +2,14 @@ diff --git a/.claude/rules/conventions/modules.md b/.claude/rules/conventions/mo
 new file mode 100644
 --- /dev/null
 +++ b/.claude/rules/conventions/modules.md
-@@ -0,0 +1,27 @@
+@@ -0,0 +1,31 @@
 +---
 +paths:
 +  - "src/main/java/**/*.java"
 +---
 +# Modules
 +
-+Contents: 1. Api and spi interfaces at the root of their folder · 2. 1 configuration class per module · 3. Configuration values bound when the bean is made · 4. An act that stores or calls out gets its own service · 5. Domain types shaped by the business
++Contents: 1. Api and spi interfaces at the root of their folder · 2. 1 configuration class per module · 3. Configuration values bound when the bean is made · 4. An act that stores or calls out gets its own service · 5. Domain types shaped by the business · 6. The types of an api or spi interface nested in it
 +
 +## 1. Api and spi interfaces at the root of their folder
 +
@@ -30,6 +30,10 @@ new file mode 100644
 +## 5. Domain types shaped by the business
 +
 +Shape each domain type by its business concept, and let the entry or the outside adapter turn it into the fields of a call. A domain type that copies the fields of a request or a response changes each time a screen or a partner changes, while the business it holds stays the same.
++
++## 6. The types of an api or spi interface nested in it
++
++Declare the request, result and failure types of an api or spi interface nested in that interface, such as LoanRenewalResult in ApiForLoanRenewal, never beside it at the root of app/api or app/spi, in a subfolder of its own, or with the domain types in domain/model. Every module puts them in this 1 place. A reader then finds every type that a call takes, answers or throws in the file of the interface it belongs to.
 diff --git a/.claude/rules/conventions/names.md b/.claude/rules/conventions/names.md
 new file mode 100644
 --- /dev/null
