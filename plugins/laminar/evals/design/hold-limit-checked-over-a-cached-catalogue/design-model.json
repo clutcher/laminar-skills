@@ -712,6 +712,17 @@
     "findings": [],
     "stops": [],
     "existingDefects": [],
-    "scriptCases": []
+    "scriptCases": [],
+    "referencesRead": [
+      "references/naming.md",
+      "references/methods.md",
+      "references/correctness.md",
+      "references/comments.md",
+      "references/performance.md",
+      "references/tests.md",
+      "references/classes.md sections 1, 2, 4, 5, 6, 8, 9, 11",
+      "references/modules.md sections 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13",
+      "conventions/typescript.md"
+    ]
   }
 }
