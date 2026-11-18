@@ -1,3 +1,119 @@
+diff --git a/.claude/rules/conventions/modules.md b/.claude/rules/conventions/modules.md
+new file mode 100644
+--- /dev/null
++++ b/.claude/rules/conventions/modules.md
+@@ -0,0 +1,27 @@
++---
++paths:
++  - "src/main/java/**/*.java"
++---
++# Modules
++
++Contents: 1. Api and spi interfaces at the root of their folder · 2. 1 configuration class per module · 3. Configuration values bound when the bean is made · 4. An act that stores or calls out gets its own service · 5. Domain types shaped by the business
++
++## 1. Api and spi interfaces at the root of their folder
++
++Keep every api interface at the root of app/api and every spi interface at the root of app/spi. Only where 1 of these folders holds the interfaces of several concepts, group them into 1 subfolder for each concept, such as app/spi/loan and app/spi/reservation, and never make a subfolder for 1 interface alone. A reader finds what a module offers and what it needs in 1 folder each, with no extra depth to cross.
++
++## 2. 1 configuration class per module
++
++Create the beans of a module in 1 class in its config folder, named for the module and ending in ModuleConfiguration, such as LoanModuleConfiguration. Setup that the whole application shares, such as the mail client, stays in a configuration class at the root of the application. A reader then sees the whole wiring of a module in 1 file.
++
++## 3. Configuration values bound when the bean is made
++
++Take a configuration value as a constructor parameter with its Value marker, or bind a group of values into a ConfigurationProperties record. A bean then holds the values it was made with, and no later write can change them while it runs.
++
++## 4. An act that stores or calls out gets its own service
++
++Give an act on a domain object that needs storage or an outside call its own service, which does the act and stores the object, such as a LoanCancellationService that cancels a loan and stores it. An act that checks and changes only the own state of the object stays a method of the object, such as Loan#renew. A reader then finds every rule of the object on the object, and every step that reaches storage or another system in 1 service named for the act.
++
++## 5. Domain types shaped by the business
++
++Shape each domain type by its business concept, and let the entry or the outside adapter turn it into the fields of a call. A domain type that copies the fields of a request or a response changes each time a screen or a partner changes, while the business it holds stays the same.
+diff --git a/.claude/rules/conventions/names.md b/.claude/rules/conventions/names.md
+new file mode 100644
+--- /dev/null
++++ b/.claude/rules/conventions/names.md
+@@ -0,0 +1,45 @@
++---
++paths:
++  - "src/main/java/**/*.java"
++---
++# Names
++
++Contents: 1. An api named for 1 use · 2. Type names in the singular · 3. The own id named id · 4. Enums named for what their values are · 5. Acronyms written as words · 6. A lookup named get, a check named for its check · 7. The answer of an api operation · 8. The parameters of a search and of an act
++
++## 1. An api named for 1 use
++
++Name an api interface ApiFor and then the noun of its use, with the action word last, such as ApiForLoanRenewal or ApiForBookSearch, never ApiForRenewLoan, and give it only the operations of that 1 use. A reader finds the api of a use by its noun, and an api that holds 1 use never grows into a list of unrelated calls.
++
++## 2. Type names in the singular
++
++Name every type in the singular, such as MemberRepository and LoanSearchResult, also a type that holds 1 answer or 1 set of conditions. A plural name reads as a collection, so a reader expects a list where the type holds 1 thing.
++
++- Limits: a class of static functions keeps the word Utils, such as IsbnUtils.
++
++## 3. The own id named id
++
++Name the field that holds the id of a domain object id, such as id on Loan, and name a field that holds the id of another thing for that thing, such as memberId on Loan. The type already says whose id the field holds, so a second word for the own id only makes the reader check whether it is the id of another thing.
++
++- Limits: the fields of a request or a response keep the names of the call, because the clients of the call read them.
++
++## 4. Enums named for what their values are
++
++Name an enum that classifies a concept with the concept and then Type, on a field named type, such as BookType on Book.type, never BookCode. Name an enum of states, modes or formats with Status, Mode or Format, such as LoanStatus. Name an enum whose values are the concept itself, where none of these words fits, with the concept and then Enum, such as LanguageEnum with ENGLISH and GERMAN. The last word tells the reader what kind of values the set holds before they read the values.
++
++## 5. Acronyms written as words
++
++Write an acronym inside a name as a word, with only its first letter in upper case, such as HttpHeaders and IsbnParser. Where Spring spells an acronym in its own types, follow Spring, such as GraphQl. The words of the name then stay apart at a glance.
++
++## 6. A lookup named get, a check named for its check
++
++Name a lookup that fails where the item is missing with get, and a check that fails with the verb of its check. A get with 1 parameter leaves the key out of its name, such as getMember(memberId); with 2 or more parameters, Of and the thing that holds the item may follow, such as getLoanOfMember(memberId, loanId). A reader of the call then knows that it answers the item or stops, and the parameter already names the key.
++
++## 7. The answer of an api operation
++
++Where an api operation makes a thing and its answer is that thing, it answers that thing, such as createLoan answering a Loan. Where it makes nothing, such as a renewal, a cancellation or an import, or where its answer carries more than the made thing, name the answer with the concept, the act and then Result, such as LoanRenewalResult; a closed set of the ways an act ends is such an answer too, such as ReservationCancellationResult, never an Outcome. An operation with no answer returns nothing. 1 last word for every answer of an act lets a reader tell an answer from a domain object.
++
++- Limits: a method of a domain object that returns a new copy of that object, such as Loan#renew, returns the type of the object.
++
++## 8. The parameters of a search and of an act
++
++Give a search plain parameters or 1 type named with the concept and then SearchCriteria, such as BookSearchCriteria. Give a create, an update, a copy or a remove plain parameters, the domain object, or 1 type named with the concept, the act and then Attributes, such as LoanExtensionAttributes. A search never takes Attributes, and the other acts never take Criteria, so the last word tells the reader whether the values pick items or set them.
+diff --git a/.claude/rules/conventions/tests.md b/.claude/rules/conventions/tests.md
+new file mode 100644
+--- /dev/null
++++ b/.claude/rules/conventions/tests.md
+@@ -0,0 +1,11 @@
++---
++paths:
++  - "src/test/java/**/*.java"
++---
++# Tests
++
++Contents: 1. Substitutes and test data named for their work
++
++## 1. Substitutes and test data named for their work
++
++Name a substitute that you write by hand and that keeps its data in memory with the port it stands for and then InMemory, such as ReminderSenderInMemory. Name a class that builds test data with the concept and then Factory, such as LoanFactory. A reader of a test then knows from the name alone whether a class stands in for a port or only builds the data of a test.
+diff --git a/.claude/rules/conventions/web.md b/.claude/rules/conventions/web.md
+new file mode 100644
+--- /dev/null
++++ b/.claude/rules/conventions/web.md
+@@ -0,0 +1,13 @@
++---
++paths:
++  - "src/main/java/**/in/web/**/*.java"
++---
++# Web entry
++
++Contents: 1. The classes at the root of in/web
++
++## 1. The classes at the root of in/web
++
++Keep at the root of the in/web folder of a module only the classes that the folder exists for, and name each with its concept first: a controller ends in RestController, such as LoanRestController, and an exception handler ends in WebExceptionHandler, such as LoanWebExceptionHandler. Put their helpers into subfolders named for their kind, such as response for the types of a call and converter for the classes that build them. A reader sees at the root which calls the module answers, and the last word of each class tells the entry it serves.
++
++- Limits: belonging, not a count of files, decides where a helper goes.
 diff --git a/.gitignore b/.gitignore
 new file mode 100644
 --- /dev/null
@@ -201,7 +317,7 @@ new file mode 100644
 +    @Override
 +    public List<Loan> searchLoansOfMember(String memberId) {
 +        Member member = memberService.getMember(memberId);
-+        return loanRepository.findLoansOfMember(member.memberId());
++        return loanRepository.findLoansOfMember(member.id());
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/app/domain/MemberService.java b/src/main/java/org/example/library/loan/app/domain/MemberService.java
@@ -232,30 +348,6 @@ new file mode 100644
 +        return member;
 +    }
 +}
-diff --git a/src/main/java/org/example/library/loan/app/domain/model/FineStatement.java b/src/main/java/org/example/library/loan/app/domain/model/FineStatement.java
-new file mode 100644
---- /dev/null
-+++ b/src/main/java/org/example/library/loan/app/domain/model/FineStatement.java
-@@ -0,0 +1,19 @@
-+package org.example.library.loan.app.domain.model;
-+
-+import java.math.BigDecimal;
-+import java.time.LocalDate;
-+import java.util.List;
-+
-+public record FineStatement(List<Fine> fines) {
-+
-+    public BigDecimal sumOwedAmount() {
-+        BigDecimal owedAmount = BigDecimal.ZERO;
-+        for (Fine fine : fines) {
-+            owedAmount = owedAmount.add(fine.amount());
-+        }
-+        return owedAmount;
-+    }
-+
-+    public record Fine(String itemTitle, LocalDate issuedOn, BigDecimal amount) {
-+    }
-+}
 diff --git a/src/main/java/org/example/library/loan/app/domain/model/Loan.java b/src/main/java/org/example/library/loan/app/domain/model/Loan.java
 new file mode 100644
 --- /dev/null
@@ -265,16 +357,16 @@ new file mode 100644
 +
 +import java.time.LocalDate;
 +
-+public record Loan(String loanId, String memberId, String itemTitle, LocalDate dueDate, boolean onHold) {
++public record Loan(String id, String memberId, String itemTitle, LocalDate dueDate, boolean onHold) {
 +
 +    private static final int RENEWAL_DAYS = 14;
 +
 +    public Loan renew() {
 +        if (onHold) {
-+            throw new LoanOnHoldException(loanId);
++            throw new LoanOnHoldException(id);
 +        }
 +
-+        return new Loan(loanId, memberId, itemTitle, dueDate.plusDays(RENEWAL_DAYS), onHold);
++        return new Loan(id, memberId, itemTitle, dueDate.plusDays(RENEWAL_DAYS), onHold);
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/app/domain/model/LoanOnHoldException.java b/src/main/java/org/example/library/loan/app/domain/model/LoanOnHoldException.java
@@ -294,15 +386,31 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/model/Member.java
 new file mode 100644
 --- /dev/null
 +++ b/src/main/java/org/example/library/loan/app/domain/model/Member.java
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,26 @@
 +package org.example.library.loan.app.domain.model;
 +
 +import java.math.BigDecimal;
++import java.time.LocalDate;
++import java.util.List;
 +
-+public record Member(String memberId, String email, FineStatement fineStatement) {
++public record Member(String id, String email, FineStatement fineStatement) {
 +
 +    public BigDecimal sumOwedFines() {
 +        return fineStatement.sumOwedAmount();
++    }
++
++    public record FineStatement(List<Fine> fines) {
++
++        public BigDecimal sumOwedAmount() {
++            BigDecimal owedAmount = BigDecimal.ZERO;
++            for (Fine fine : fines) {
++                owedAmount = owedAmount.add(fine.amount());
++            }
++            return owedAmount;
++        }
++
++        public record Fine(String itemTitle, LocalDate issuedOn, BigDecimal amount) {
++        }
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/app/domain/model/MemberNotFoundException.java b/src/main/java/org/example/library/loan/app/domain/model/MemberNotFoundException.java
@@ -385,11 +493,11 @@ new file mode 100644
 +        return new FineTotalSearchService(memberService);
 +    }
 +}
-diff --git a/src/main/java/org/example/library/loan/in/web/LoanOverviewController.java b/src/main/java/org/example/library/loan/in/web/LoanOverviewController.java
+diff --git a/src/main/java/org/example/library/loan/in/web/LoanOverviewRestController.java b/src/main/java/org/example/library/loan/in/web/LoanOverviewRestController.java
 new file mode 100644
 --- /dev/null
-+++ b/src/main/java/org/example/library/loan/in/web/LoanOverviewController.java
-@@ -0,0 +1,36 @@
++++ b/src/main/java/org/example/library/loan/in/web/LoanOverviewRestController.java
+@@ -0,0 +1,39 @@
 +package org.example.library.loan.in.web;
 +
 +import org.example.library.loan.app.api.ApiForFineTotalSearch;
@@ -405,7 +513,7 @@ new file mode 100644
 +import java.util.List;
 +
 +@RestController
-+public class LoanOverviewController {
++public class LoanOverviewRestController {
 +
 +    private final ApiForLoanSearch apiForLoanSearch;
 +
@@ -413,7 +521,10 @@ new file mode 100644
 +
 +    private final LoanOverviewResponseConverter loanOverviewResponseConverter;
 +
-+    public LoanOverviewController(ApiForLoanSearch apiForLoanSearch, ApiForFineTotalSearch apiForFineTotalSearch, LoanOverviewResponseConverter loanOverviewResponseConverter) {
++    public LoanOverviewRestController(
++            ApiForLoanSearch apiForLoanSearch,
++            ApiForFineTotalSearch apiForFineTotalSearch,
++            LoanOverviewResponseConverter loanOverviewResponseConverter) {
 +        this.apiForLoanSearch = apiForLoanSearch;
 +        this.apiForFineTotalSearch = apiForFineTotalSearch;
 +        this.loanOverviewResponseConverter = loanOverviewResponseConverter;
@@ -421,9 +532,9 @@ new file mode 100644
 +
 +    @GetMapping("/members/{memberId}/loans")
 +    public LoanOverviewResponse searchLoanOverview(@PathVariable String memberId) {
-+        List<Loan> heldLoans = apiForLoanSearch.searchLoansOfMember(memberId);
++        List<Loan> loans = apiForLoanSearch.searchLoansOfMember(memberId);
 +        BigDecimal owedFineTotal = apiForFineTotalSearch.searchOwedFineTotalOfMember(memberId);
-+        return loanOverviewResponseConverter.convert(memberId, heldLoans, owedFineTotal);
++        return loanOverviewResponseConverter.convert(memberId, loans, owedFineTotal);
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/in/web/LoanWebExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/LoanWebExceptionHandler.java
@@ -464,13 +575,13 @@ new file mode 100644
 +@Component
 +public class LoanOverviewResponseConverter {
 +
-+    public LoanOverviewResponse convert(String memberId, List<Loan> heldLoans, BigDecimal owedFineTotal) {
-+        List<LoanOverviewResponse.HeldLoan> heldLoanResponses = heldLoans.stream().map(this::convertHeldLoan).toList();
-+        return new LoanOverviewResponse(memberId, heldLoanResponses, owedFineTotal);
++    public LoanOverviewResponse convert(String memberId, List<Loan> loans, BigDecimal owedFineTotal) {
++        List<LoanOverviewResponse.Loan> overviewLoans = loans.stream().map(this::convertLoan).toList();
++        return new LoanOverviewResponse(memberId, overviewLoans, owedFineTotal);
 +    }
 +
-+    private LoanOverviewResponse.HeldLoan convertHeldLoan(Loan heldLoan) {
-+        return new LoanOverviewResponse.HeldLoan(heldLoan.loanId(), heldLoan.itemTitle(), heldLoan.dueDate());
++    private LoanOverviewResponse.Loan convertLoan(Loan loan) {
++        return new LoanOverviewResponse.Loan(loan.id(), loan.itemTitle(), loan.dueDate());
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/in/web/response/LoanOverviewResponse.java b/src/main/java/org/example/library/loan/in/web/response/LoanOverviewResponse.java
@@ -484,9 +595,9 @@ new file mode 100644
 +import java.time.LocalDate;
 +import java.util.List;
 +
-+public record LoanOverviewResponse(String memberId, List<HeldLoan> loans, BigDecimal owedFineTotal) {
++public record LoanOverviewResponse(String memberId, List<Loan> loans, BigDecimal owedFineTotal) {
 +
-+    public record HeldLoan(String loanId, String itemTitle, LocalDate dueDate) {
++    public record Loan(String loanId, String itemTitle, LocalDate dueDate) {
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java b/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java
@@ -518,7 +629,7 @@ new file mode 100644
 +
 +    @Override
 +    public void save(Loan loan) {
-+        loanByIdMap.put(loan.loanId(), loan);
++        loanByIdMap.put(loan.id(), loan);
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/out/memory/MemberRepositoryUsingMemory.java b/src/main/java/org/example/library/loan/out/memory/MemberRepositoryUsingMemory.java
@@ -549,7 +660,7 @@ new file mode 100644
 +
 +    @Override
 +    public void save(Member member) {
-+        memberByIdMap.put(member.memberId(), member);
++        memberByIdMap.put(member.id(), member);
 +    }
 +}
 diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
@@ -599,14 +710,13 @@ new file mode 100644
 +        Assertions.assertEquals(LocalDate.of(2026, 12, 14), renewed.dueDate());
 +    }
 +}
-diff --git a/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java b/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
+diff --git a/src/test/java/org/example/library/loan/in/web/LoanOverviewRestControllerTest.java b/src/test/java/org/example/library/loan/in/web/LoanOverviewRestControllerTest.java
 new file mode 100644
 --- /dev/null
-+++ b/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
-@@ -0,0 +1,82 @@
++++ b/src/test/java/org/example/library/loan/in/web/LoanOverviewRestControllerTest.java
+@@ -0,0 +1,84 @@
 +package org.example.library.loan.in.web;
 +
-+import org.example.library.loan.app.domain.model.FineStatement;
 +import org.example.library.loan.app.domain.model.Loan;
 +import org.example.library.loan.app.domain.model.Member;
 +import org.example.library.loan.app.spi.LoanRepository;
@@ -625,7 +735,7 @@ new file mode 100644
 +
 +@SpringBootTest
 +@AutoConfigureMockMvc
-+class LoanOverviewControllerTest {
++class LoanOverviewRestControllerTest {
 +
 +    private final MockMvc mockMvc;
 +
@@ -633,7 +743,7 @@ new file mode 100644
 +
 +    private final MemberRepository memberRepository;
 +
-+    LoanOverviewControllerTest(MockMvc mockMvc, LoanRepository loanRepository, MemberRepository memberRepository) {
++    LoanOverviewRestControllerTest(MockMvc mockMvc, LoanRepository loanRepository, MemberRepository memberRepository) {
 +        this.mockMvc = mockMvc;
 +        this.loanRepository = loanRepository;
 +        this.memberRepository = memberRepository;
@@ -642,9 +752,12 @@ new file mode 100644
 +    @Test
 +    void shouldAnswerTheLoansAndTheOwedFinesWhenTheMemberHoldsLoans() throws Exception {
 +        // given
-+        FineStatement.Fine lateReturnFine = new FineStatement.Fine("The Left Hand of Darkness", LocalDate.of(2026, 9, 2), new BigDecimal("2.50"));
-+        FineStatement.Fine damagedCoverFine = new FineStatement.Fine("Middlemarch", LocalDate.of(2026, 10, 14), new BigDecimal("4.00"));
-+        memberRepository.save(new Member("M-1001", "ada.byron@mail.example", new FineStatement(List.of(lateReturnFine, damagedCoverFine))));
++        Member.FineStatement.Fine lateReturnFine = new Member.FineStatement.Fine(
++                "The Left Hand of Darkness", LocalDate.of(2026, 9, 2), new BigDecimal("2.50"));
++        Member.FineStatement.Fine damagedCoverFine = new Member.FineStatement.Fine(
++                "Middlemarch", LocalDate.of(2026, 10, 14), new BigDecimal("4.00"));
++        Member.FineStatement fineStatement = new Member.FineStatement(List.of(lateReturnFine, damagedCoverFine));
++        memberRepository.save(new Member("M-1001", "ada.byron@mail.example", fineStatement));
 +        loanRepository.save(new Loan("L-5001", "M-1001", "Dune", LocalDate.of(2026, 11, 30), false));
 +
 +        // when
@@ -662,7 +775,7 @@ new file mode 100644
 +    @Test
 +    void shouldAnswerNoLoansWhenTheMemberHoldsNone() throws Exception {
 +        // given
-+        memberRepository.save(new Member("M-1002", "grace.hopper@mail.example", new FineStatement(List.of())));
++        memberRepository.save(new Member("M-1002", "grace.hopper@mail.example", new Member.FineStatement(List.of())));
 +
 +        // when
 +        ResultActions answer = mockMvc.perform(MockMvcRequestBuilders.get("/members/M-1002/loans"));

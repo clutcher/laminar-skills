@@ -6,7 +6,7 @@ The defects of the planted change. Each item names its scale by its kind word, i
 
 ### Production code
 
-1. Method `LoanRenewalController#renewLoan`
+1. Method `LoanRenewalRestController#renewLoan`
    - Leaked Details
    - Judge: design-leaked-details
 
@@ -40,7 +40,7 @@ The defects of the planted change. Each item names its scale by its kind word, i
 
 ### Test code
 
-6. Method `LoanRenewalControllerTest#shouldSendTheRenewalMailWhenTheLoanIsRenewed`
+6. Method `LoanRenewalRestControllerTest#shouldSendTheRenewalMailWhenTheLoanIsRenewed`
    - Test Behavior
    - Judge: correctness-simplicity-test-method
 

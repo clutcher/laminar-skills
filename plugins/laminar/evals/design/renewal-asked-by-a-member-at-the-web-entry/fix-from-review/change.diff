@@ -78,7 +78,7 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/s
 new file mode 100644
 --- /dev/null
 +++ b/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
-@@ -0,0 +1,65 @@
+@@ -0,0 +1,66 @@
 +package org.example.library.loan.app.domain;
 +
 +import org.example.library.loan.app.api.ApiForLoanRenewal;
@@ -115,7 +115,7 @@ new file mode 100644
 +        Member member = memberService.getMember(memberId);
 +
 +        for (Loan loan : loanRepository.findLoansOfMember(memberId)) {
-+            if (loan.loanId().equals(loanId)) {
++            if (loan.id().equals(loanId)) {
 +                RenewalCheck check = new RenewalCheck(loanId, member, loan.renewalCount());
 +                if (check.renewalCount() < MOST_RENEWALS) {
 +                    Loan renewed = loan.renew();
@@ -126,9 +126,10 @@ new file mode 100644
 +                    } catch (PostboxUnavailable unavailable) {
 +                        mailStatus = "NOT_SENT";
 +                    }
-+                    return new LoanRenewalResult(renewed.loanId(), renewed.dueDate(), mailStatus);
++                    return new LoanRenewalResult(renewed.id(), renewed.dueDate(), mailStatus);
 +                } else {
-+                    throw new RenewalRefusedException("loan " + loanId + " was renewed " + MOST_RENEWALS + " times, the most a loan allows");
++                    throw new RenewalRefusedException(
++                            "loan " + loanId + " was renewed " + MOST_RENEWALS + " times, the most a loan allows");
 +                }
 +            }
 +        }
@@ -151,17 +152,17 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/model/Loan.java b
  
  import java.time.LocalDate;
  
--public record Loan(String loanId, String memberId, String itemTitle, LocalDate dueDate, boolean onHold) {
-+public record Loan(String loanId, String memberId, String itemTitle, LocalDate dueDate, boolean onHold, int renewalCount) {
+-public record Loan(String id, String memberId, String itemTitle, LocalDate dueDate, boolean onHold) {
++public record Loan(String id, String memberId, String itemTitle, LocalDate dueDate, boolean onHold, int renewalCount) {
  
      private static final int RENEWAL_DAYS = 14;
  
-@@ -11,6 +11,6 @@ public record Loan(String loanId, String memberId, String itemTitle, LocalDate d
-             throw new LoanOnHoldException(loanId);
+@@ -11,6 +11,6 @@ public record Loan(String id, String memberId, String itemTitle, LocalDate dueDa
+             throw new LoanOnHoldException(id);
          }
  
--        return new Loan(loanId, memberId, itemTitle, dueDate.plusDays(RENEWAL_DAYS), onHold);
-+        return new Loan(loanId, memberId, itemTitle, dueDate.plusDays(RENEWAL_DAYS), onHold, renewalCount + 1);
+-        return new Loan(id, memberId, itemTitle, dueDate.plusDays(RENEWAL_DAYS), onHold);
++        return new Loan(id, memberId, itemTitle, dueDate.plusDays(RENEWAL_DAYS), onHold, renewalCount + 1);
      }
  }
 diff --git a/src/main/java/org/example/library/loan/app/domain/model/RenewalCheck.java b/src/main/java/org/example/library/loan/app/domain/model/RenewalCheck.java
@@ -190,13 +191,14 @@ diff --git a/src/main/java/org/example/library/loan/config/LoanModuleConfigurati
  import org.springframework.context.annotation.Bean;
  import org.springframework.context.annotation.Configuration;
  
-@@ -25,4 +28,14 @@ public class LoanModuleConfiguration {
+@@ -25,4 +28,15 @@ public class LoanModuleConfiguration {
      public FineTotalSearchService createFineTotalSearchService(MemberService memberService) {
          return new FineTotalSearchService(memberService);
      }
 +
 +    @Bean("loanDesk")
-+    public LoanDesk createLoanDesk(LoanRepository loanRepository, MemberService memberService, PostboxClient postboxClient) {
++    public LoanDesk createLoanDesk(
++            LoanRepository loanRepository, MemberService memberService, PostboxClient postboxClient) {
 +        return new LoanDesk(loanRepository, memberService, postboxClient);
 +    }
 +
@@ -205,11 +207,11 @@ diff --git a/src/main/java/org/example/library/loan/config/LoanModuleConfigurati
 +        return new ExtensionPolicy();
 +    }
  }
-diff --git a/src/main/java/org/example/library/loan/in/web/LoanRenewalController.java b/src/main/java/org/example/library/loan/in/web/LoanRenewalController.java
+diff --git a/src/main/java/org/example/library/loan/in/web/LoanRenewalRestController.java b/src/main/java/org/example/library/loan/in/web/LoanRenewalRestController.java
 new file mode 100644
 --- /dev/null
-+++ b/src/main/java/org/example/library/loan/in/web/LoanRenewalController.java
-@@ -0,0 +1,34 @@
++++ b/src/main/java/org/example/library/loan/in/web/LoanRenewalRestController.java
+@@ -0,0 +1,36 @@
 +package org.example.library.loan.in.web;
 +
 +import org.example.library.loan.app.api.ApiForFineTotalSearch;
@@ -223,13 +225,14 @@ new file mode 100644
 +import java.math.BigDecimal;
 +
 +@RestController
-+public class LoanRenewalController {
++public class LoanRenewalRestController {
 +
 +    private final ApiForLoanRenewal apiForLoanRenewal;
 +
 +    private final ApiForFineTotalSearch apiForFineTotalSearch;
 +
-+    public LoanRenewalController(ApiForLoanRenewal apiForLoanRenewal, ApiForFineTotalSearch apiForFineTotalSearch) {
++    public LoanRenewalRestController(
++            ApiForLoanRenewal apiForLoanRenewal, ApiForFineTotalSearch apiForFineTotalSearch) {
 +        this.apiForLoanRenewal = apiForLoanRenewal;
 +        this.apiForFineTotalSearch = apiForFineTotalSearch;
 +    }
@@ -238,16 +241,17 @@ new file mode 100644
 +    public LoanRenewalResult renewLoan(@PathVariable String memberId, @PathVariable String loanId) {
 +        BigDecimal owedFineTotal = apiForFineTotalSearch.searchOwedFineTotalOfMember(memberId);
 +        if (owedFineTotal.compareTo(new BigDecimal("10.00")) >= 0) {
-+            throw new RenewalRefusedException("member " + memberId + " owes fines of " + owedFineTotal + ", and a renewal needs less than 10.00");
++            throw new RenewalRefusedException(
++                    "member " + memberId + " owes fines of " + owedFineTotal + ", and a renewal needs less than 10.00");
 +        }
 +
 +        return apiForLoanRenewal.renewLoan(memberId, loanId);
 +    }
 +}
-diff --git a/src/main/java/org/example/library/loan/in/web/LoanRenewalExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/LoanRenewalExceptionHandler.java
+diff --git a/src/main/java/org/example/library/loan/in/web/LoanRenewalWebExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/LoanRenewalWebExceptionHandler.java
 new file mode 100644
 --- /dev/null
-+++ b/src/main/java/org/example/library/loan/in/web/LoanRenewalExceptionHandler.java
++++ b/src/main/java/org/example/library/loan/in/web/LoanRenewalWebExceptionHandler.java
 @@ -0,0 +1,28 @@
 +package org.example.library.loan.in.web;
 +
@@ -260,7 +264,7 @@ new file mode 100644
 +import org.springframework.web.bind.annotation.RestControllerAdvice;
 +
 +@RestControllerAdvice
-+public class LoanRenewalExceptionHandler {
++public class LoanRenewalWebExceptionHandler {
 +
 +    @ExceptionHandler(LoanNotFoundException.class)
 +    public ProblemDetail answerLoanNotFound(LoanNotFoundException exception) {
@@ -301,19 +305,19 @@ diff --git a/src/main/java/org/example/library/loan/in/web/converter/LoanOvervie
 +        this.extensionPolicy = extensionPolicy;
 +    }
 +
-     public LoanOverviewResponse convert(String memberId, List<Loan> heldLoans, BigDecimal owedFineTotal) {
--        List<LoanOverviewResponse.HeldLoan> heldLoanResponses = heldLoans.stream().map(this::convertHeldLoan).toList();
-+        List<LoanOverviewResponse.HeldLoan> heldLoanResponses = new ArrayList<>();
-+        for (Loan heldLoan : heldLoans) {
-+            heldLoanResponses.add(convertHeldLoan(heldLoan, extensionPolicy.allowsExtension(heldLoan, owedFineTotal)));
+     public LoanOverviewResponse convert(String memberId, List<Loan> loans, BigDecimal owedFineTotal) {
+-        List<LoanOverviewResponse.Loan> overviewLoans = loans.stream().map(this::convertLoan).toList();
++        List<LoanOverviewResponse.Loan> overviewLoans = new ArrayList<>();
++        for (Loan loan : loans) {
++            overviewLoans.add(convertLoan(loan, extensionPolicy.allowsExtension(loan, owedFineTotal)));
 +        }
-         return new LoanOverviewResponse(memberId, heldLoanResponses, owedFineTotal);
+         return new LoanOverviewResponse(memberId, overviewLoans, owedFineTotal);
      }
  
--    private LoanOverviewResponse.HeldLoan convertHeldLoan(Loan heldLoan) {
--        return new LoanOverviewResponse.HeldLoan(heldLoan.loanId(), heldLoan.itemTitle(), heldLoan.dueDate());
-+    private LoanOverviewResponse.HeldLoan convertHeldLoan(Loan heldLoan, boolean renewable) {
-+        return new LoanOverviewResponse.HeldLoan(heldLoan.loanId(), heldLoan.itemTitle(), heldLoan.dueDate(), renewable);
+-    private LoanOverviewResponse.Loan convertLoan(Loan loan) {
+-        return new LoanOverviewResponse.Loan(loan.id(), loan.itemTitle(), loan.dueDate());
++    private LoanOverviewResponse.Loan convertLoan(Loan loan, boolean renewable) {
++        return new LoanOverviewResponse.Loan(loan.id(), loan.itemTitle(), loan.dueDate(), renewable);
      }
  }
 diff --git a/src/main/java/org/example/library/loan/in/web/response/LoanOverviewResponse.java b/src/main/java/org/example/library/loan/in/web/response/LoanOverviewResponse.java
@@ -321,10 +325,10 @@ diff --git a/src/main/java/org/example/library/loan/in/web/response/LoanOverview
 +++ b/src/main/java/org/example/library/loan/in/web/response/LoanOverviewResponse.java
 @@ -6,6 +6,6 @@ import java.util.List;
  
- public record LoanOverviewResponse(String memberId, List<HeldLoan> loans, BigDecimal owedFineTotal) {
+ public record LoanOverviewResponse(String memberId, List<Loan> loans, BigDecimal owedFineTotal) {
  
--    public record HeldLoan(String loanId, String itemTitle, LocalDate dueDate) {
-+    public record HeldLoan(String loanId, String itemTitle, LocalDate dueDate, boolean renewable) {
+-    public record Loan(String loanId, String itemTitle, LocalDate dueDate) {
++    public record Loan(String loanId, String itemTitle, LocalDate dueDate, boolean renewable) {
      }
  }
 diff --git a/src/test/java/org/example/library/loan/app/domain/model/LoanTest.java b/src/test/java/org/example/library/loan/app/domain/model/LoanTest.java
@@ -348,19 +352,19 @@ diff --git a/src/test/java/org/example/library/loan/app/domain/model/LoanTest.ja
  
          // when
          Loan renewed = loan.renew();
-diff --git a/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java b/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
---- a/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
-+++ b/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
-@@ -39,7 +39,7 @@ class LoanOverviewControllerTest {
-         FineStatement.Fine lateReturnFine = new FineStatement.Fine("The Left Hand of Darkness", LocalDate.of(2026, 9, 2), new BigDecimal("2.50"));
-         FineStatement.Fine damagedCoverFine = new FineStatement.Fine("Middlemarch", LocalDate.of(2026, 10, 14), new BigDecimal("4.00"));
-         memberRepository.save(new Member("M-1001", "ada.byron@mail.example", new FineStatement(List.of(lateReturnFine, damagedCoverFine))));
+diff --git a/src/test/java/org/example/library/loan/in/web/LoanOverviewRestControllerTest.java b/src/test/java/org/example/library/loan/in/web/LoanOverviewRestControllerTest.java
+--- a/src/test/java/org/example/library/loan/in/web/LoanOverviewRestControllerTest.java
++++ b/src/test/java/org/example/library/loan/in/web/LoanOverviewRestControllerTest.java
+@@ -41,7 +41,7 @@ class LoanOverviewRestControllerTest {
+                 "Middlemarch", LocalDate.of(2026, 10, 14), new BigDecimal("4.00"));
+         Member.FineStatement fineStatement = new Member.FineStatement(List.of(lateReturnFine, damagedCoverFine));
+         memberRepository.save(new Member("M-1001", "ada.byron@mail.example", fineStatement));
 -        loanRepository.save(new Loan("L-5001", "M-1001", "Dune", LocalDate.of(2026, 11, 30), false));
 +        loanRepository.save(new Loan("L-5001", "M-1001", "Dune", LocalDate.of(2026, 11, 30), false, 0));
  
          // when
          ResultActions answer = mockMvc.perform(MockMvcRequestBuilders.get("/members/M-1001/loans"));
-@@ -50,6 +50,7 @@ class LoanOverviewControllerTest {
+@@ -52,6 +52,7 @@ class LoanOverviewRestControllerTest {
                  .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].loanId").value("L-5001"))
                  .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].itemTitle").value("Dune"))
                  .andExpect(MockMvcResultMatchers.jsonPath("$.loans[0].dueDate").value("2026-11-30"))
@@ -368,14 +372,13 @@ diff --git a/src/test/java/org/example/library/loan/in/web/LoanOverviewControlle
                  .andExpect(MockMvcResultMatchers.jsonPath("$.owedFineTotal").value(6.50));
      }
  
-diff --git a/src/test/java/org/example/library/loan/in/web/LoanRenewalControllerTest.java b/src/test/java/org/example/library/loan/in/web/LoanRenewalControllerTest.java
+diff --git a/src/test/java/org/example/library/loan/in/web/LoanRenewalRestControllerTest.java b/src/test/java/org/example/library/loan/in/web/LoanRenewalRestControllerTest.java
 new file mode 100644
 --- /dev/null
-+++ b/src/test/java/org/example/library/loan/in/web/LoanRenewalControllerTest.java
-@@ -0,0 +1,134 @@
++++ b/src/test/java/org/example/library/loan/in/web/LoanRenewalRestControllerTest.java
+@@ -0,0 +1,143 @@
 +package org.example.library.loan.in.web;
 +
-+import org.example.library.loan.app.domain.model.FineStatement;
 +import org.example.library.loan.app.domain.model.Loan;
 +import org.example.library.loan.app.domain.model.Member;
 +import org.example.library.loan.app.spi.LoanRepository;
@@ -399,7 +402,7 @@ new file mode 100644
 +
 +@SpringBootTest
 +@AutoConfigureMockMvc
-+class LoanRenewalControllerTest {
++class LoanRenewalRestControllerTest {
 +
 +    private final MockMvc mockMvc;
 +
@@ -410,7 +413,7 @@ new file mode 100644
 +    @MockBean
 +    private PostboxClient postboxClient;
 +
-+    LoanRenewalControllerTest(MockMvc mockMvc, LoanRepository loanRepository, MemberRepository memberRepository) {
++    LoanRenewalRestControllerTest(MockMvc mockMvc, LoanRepository loanRepository, MemberRepository memberRepository) {
 +        this.mockMvc = mockMvc;
 +        this.loanRepository = loanRepository;
 +        this.memberRepository = memberRepository;
@@ -419,9 +422,11 @@ new file mode 100644
 +    @Test
 +    void shouldMoveTheDueDateByFourteenDaysWhenTheLoanMayBeRenewed() throws Exception {
 +        // given
-+        memberRepository.save(new Member("M-2001", "ada.byron@mail.example", new FineStatement(List.of())));
++        memberRepository.save(new Member("M-2001", "ada.byron@mail.example", new Member.FineStatement(List.of())));
 +        loanRepository.save(new Loan("L-6001", "M-2001", "Dune", LocalDate.of(2026, 11, 30), false, 0));
-+        Mockito.when(postboxClient.send(List.of("ada.byron@mail.example"), "Your loan is renewed", "Dune is now due on 2026-12-14.")).thenReturn(new DeliveryReceipt(1795132800L));
++        Mockito.when(postboxClient.send(
++                        List.of("ada.byron@mail.example"), "Your loan is renewed", "Dune is now due on 2026-12-14."))
++                .thenReturn(new DeliveryReceipt(1795132800L));
 +
 +        // when
 +        ResultActions answer = mockMvc.perform(MockMvcRequestBuilders.post("/members/M-2001/loans/L-6001/renewals"));
@@ -436,7 +441,7 @@ new file mode 100644
 +    @Test
 +    void shouldSendTheRenewalMailWhenTheLoanIsRenewed() throws Exception {
 +        // given
-+        memberRepository.save(new Member("M-2002", "grace.hopper@mail.example", new FineStatement(List.of())));
++        memberRepository.save(new Member("M-2002", "grace.hopper@mail.example", new Member.FineStatement(List.of())));
 +        loanRepository.save(new Loan("L-6002", "M-2002", "Middlemarch", LocalDate.of(2026, 12, 3), false, 1));
 +
 +        // when
@@ -449,9 +454,11 @@ new file mode 100644
 +    @Test
 +    void shouldAnswerMailNotSentWhenPostboxIsUnavailable() throws Exception {
 +        // given
-+        memberRepository.save(new Member("M-2003", "alan.kay@mail.example", new FineStatement(List.of())));
++        memberRepository.save(new Member("M-2003", "alan.kay@mail.example", new Member.FineStatement(List.of())));
 +        loanRepository.save(new Loan("L-6003", "M-2003", "Solaris", LocalDate.of(2026, 12, 1), false, 0));
-+        Mockito.when(postboxClient.send(List.of("alan.kay@mail.example"), "Your loan is renewed", "Solaris is now due on 2026-12-15.")).thenThrow(new PostboxUnavailable("service down"));
++        Mockito.when(postboxClient.send(
++                        List.of("alan.kay@mail.example"), "Your loan is renewed", "Solaris is now due on 2026-12-15."))
++                .thenThrow(new PostboxUnavailable("service down"));
 +
 +        // when
 +        ResultActions answer = mockMvc.perform(MockMvcRequestBuilders.post("/members/M-2003/loans/L-6003/renewals"));
@@ -465,7 +472,8 @@ new file mode 100644
 +    @Test
 +    void shouldAnswerConflictWhenAnotherMemberHoldsTheTitle() throws Exception {
 +        // given
-+        memberRepository.save(new Member("M-2004", "edsger.dijkstra@mail.example", new FineStatement(List.of())));
++        memberRepository.save(new Member(
++                "M-2004", "edsger.dijkstra@mail.example", new Member.FineStatement(List.of())));
 +        boolean onHoldForAnotherMember = true;
 +        loanRepository.save(new Loan("L-6004", "M-2004", "Emma", LocalDate.of(2026, 12, 2), onHoldForAnotherMember, 0));
 +
@@ -474,14 +482,17 @@ new file mode 100644
 +
 +        // then
 +        answer.andExpect(MockMvcResultMatchers.status().isConflict())
-+                .andExpect(MockMvcResultMatchers.jsonPath("$.detail").value("loan L-6004 is on hold for another member"));
++                .andExpect(MockMvcResultMatchers.jsonPath("$.detail")
++                        .value("loan L-6004 is on hold for another member"));
 +    }
 +
 +    @Test
 +    void shouldAnswerUnprocessableWhenTheMemberOwesTenOrMore() throws Exception {
 +        // given
-+        FineStatement.Fine lostItemFine = new FineStatement.Fine("Ulysses", LocalDate.of(2026, 10, 1), new BigDecimal("12.50"));
-+        memberRepository.save(new Member("M-2005", "barbara.liskov@mail.example", new FineStatement(List.of(lostItemFine))));
++        Member.FineStatement.Fine lostItemFine = new Member.FineStatement.Fine(
++                "Ulysses", LocalDate.of(2026, 10, 1), new BigDecimal("12.50"));
++        memberRepository.save(new Member(
++                "M-2005", "barbara.liskov@mail.example", new Member.FineStatement(List.of(lostItemFine))));
 +        loanRepository.save(new Loan("L-6005", "M-2005", "Beloved", LocalDate.of(2026, 12, 4), false, 0));
 +
 +        // when
@@ -489,13 +500,14 @@ new file mode 100644
 +
 +        // then
 +        answer.andExpect(MockMvcResultMatchers.status().isUnprocessableEntity())
-+                .andExpect(MockMvcResultMatchers.jsonPath("$.detail").value("member M-2005 owes fines of 12.50, and a renewal needs less than 10.00"));
++                .andExpect(MockMvcResultMatchers.jsonPath("$.detail")
++                        .value("member M-2005 owes fines of 12.50, and a renewal needs less than 10.00"));
 +    }
 +
 +    @Test
 +    void shouldAnswerUnprocessableWhenTheLoanWasRenewedTwice() throws Exception {
 +        // given
-+        memberRepository.save(new Member("M-2006", "donald.knuth@mail.example", new FineStatement(List.of())));
++        memberRepository.save(new Member("M-2006", "donald.knuth@mail.example", new Member.FineStatement(List.of())));
 +        int renewedTwice = 2;
 +        loanRepository.save(new Loan("L-6006", "M-2006", "Persuasion", LocalDate.of(2026, 12, 5), false, renewedTwice));
 +
@@ -504,6 +516,7 @@ new file mode 100644
 +
 +        // then
 +        answer.andExpect(MockMvcResultMatchers.status().isUnprocessableEntity())
-+                .andExpect(MockMvcResultMatchers.jsonPath("$.detail").value("loan L-6006 was renewed 2 times, the most a loan allows"));
++                .andExpect(MockMvcResultMatchers.jsonPath("$.detail")
++                        .value("loan L-6006 was renewed 2 times, the most a loan allows"));
 +    }
 +}
