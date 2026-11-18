@@ -1,4 +1,4 @@
-import { readList } from "../model/DesignModel.mjs";
+import { isAText, readList } from "../model/DesignModel.mjs";
 import { DECIDED_DEFECT_CODES, createFindingCheckKey, readChecksOfTheFinding } from "../plan/DecidedList.mjs";
 import { PLAN_SCALES, buildItemNumberOfFindingMap } from "../plan/FindingList.mjs";
 
@@ -27,6 +27,23 @@ export const findDecidedDefects = (model, run, decisionOfFindingCheckMap) => {
       const why = findingObject ? `its object of decisions.findings holds ${difference}` : "decisions.findings holds no object of it";
       defects.push({ code: DECIDED_DEFECT_CODES.DECIDED_NOT_CARRIED, name: finding.displayName, sentence: `${describeTheItem(number, finding, check)} is decided as ${decision.reason} by ${decision.decidedBy}, and ${why}` });
     }
+  }
+  return defects;
+};
+
+const isTheObjectOfTheShapeItem = (findingObject, shapeItem) => findingObject.run === shapeItem.shapeRun && findingObject.number === shapeItem.number && (findingObject.check === undefined || findingObject.check === shapeItem.check);
+
+// Each item of a shape run that the decided list decided by its finding key stands in decisions.findings with the same reason, says and decidedBy, beside openAfterCeiling where it has one, because the designer carries a decision of the calling session and never changes it; an item that the tree closed needs no decision.
+export const findShapeDecidedDefects = (model, decidedShapeItems) => {
+  const defects = [];
+  for (const shapeItem of decidedShapeItems) {
+    const findingObject = readList(model.decisions.findings).find(other => isTheObjectOfTheShapeItem(other, shapeItem));
+    if (findingObject && isAText(findingObject.closedBy)) continue;
+    const difference = findingObject ? describeTheDifference(findingObject, shapeItem.decision) : "";
+    if (findingObject && !difference) continue;
+
+    const why = findingObject ? `its object of decisions.findings holds ${difference}` : "decisions.findings holds no object of it";
+    defects.push({ code: DECIDED_DEFECT_CODES.DECIDED_NOT_CARRIED, name: shapeItem.displayName, sentence: `shape run ${shapeItem.shapeRun}, item ${shapeItem.number} is decided as ${shapeItem.decision.reason} by ${shapeItem.decision.decidedBy}, and ${why}` });
   }
   return defects;
 };

@@ -256,6 +256,12 @@ export const createFinderOfTheRunHoldingTheKey = givenRunFolder => {
   };
 };
 
+// The run folders of the shape runs, each with the number of its folder, from the review.md paths of --shape-review; a shape run that kept nothing and holds no review.sarif gives no item.
+export const readShapeRunFolders = reviewPaths => reviewPaths.map(reviewPath => {
+  const runFolder = path.dirname(path.resolve(reviewPath));
+  return { number: Number(path.basename(runFolder)), run: readRunFolder(runFolder, !fs.existsSync(path.join(runFolder, SARIF_FILE))) };
+});
+
 export const readRunFolder = (runFolder, hasNoFindings) => {
   const prepare = readJsonOrStop(path.join(runFolder, PREPARE_FILE), "run folder");
   const judgedAbstractions = listJudgedAbstractions(prepare);

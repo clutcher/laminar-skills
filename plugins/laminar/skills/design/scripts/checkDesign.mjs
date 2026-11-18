@@ -2,19 +2,19 @@ import fs from "node:fs";
 import path from "node:path";
 import { checkDesignModel } from "./check/DesignDefects.mjs";
 import { findAutonomousReasonDefects } from "./check/AutonomousReasons.mjs";
-import { findDecidedDefects } from "./check/DecidedCheck.mjs";
+import { findDecidedDefects, findShapeDecidedDefects } from "./check/DecidedCheck.mjs";
 import { findNameOfThePath } from "./check/DefectNames.mjs";
 import { findTakenCodeDefects } from "./check/TakenCode.mjs";
 import { listClassesOfTheAbstractions } from "./check/TriedNames.mjs";
 import { readBaseCommit, readDesignModelOrExit, readOptionsOrExit, readTreeCommit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
-import { DecidedListStop, checkDecidedListForm, findReachDefects, readDecidedEntries, resolveDecidedList } from "./plan/DecidedList.mjs";
+import { DecidedListStop, checkDecidedListForm, findReachDefects, readDecidedEntries, resolveDecidedList, resolveDecidedListOnShapeRuns } from "./plan/DecidedList.mjs";
 import { buildDecidedReview, listMethodsThatTakeCode } from "./plan/DecidedReview.mjs";
 import { listFindingEntries } from "./plan/FindingList.mjs";
 import { DECIDED_REVIEW_FILE, getPlansFolder } from "./plan/PlanFolder.mjs";
-import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
+import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder, readShapeRunFolders } from "./round/RunFolder.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
 
-const USAGE = "usage: node checkDesign.mjs --model <design-model.json> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md> [--decided <decided list>]] [--shape-review <results>/shape-runs/<n>/review.md]... [--autonomous]";
+const USAGE = "usage: node checkDesign.mjs --model <design-model.json> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md>] [--decided <decided list>] [--shape-review <results>/shape-runs/<n>/review.md]... [--autonomous]";
 
 const STOP_EXIT_CODE = 2;
 
@@ -115,11 +115,14 @@ const stopOnTheMalformedList = defects => {
   process.exit(STOP_EXIT_CODE);
 };
 
-// The decided list names findings of the run folder that holds review.md, so it needs --review; a list that is refused stops the check. The round of the run is read from the rounds folder beside the model, the results folder.
+// The decided list names findings of the run folder that holds review.md, and with no --review the items of the shape runs by their finding key; a list that is refused stops the check. The round of the run is read from the rounds folder beside the model, the results folder.
 const findDecidedDefectsOrExit = (model, options) => {
   if (!options.decided) return [];
-  if (!options.review) exitWith(`--decided needs --review, the review.md of the run folder whose findings it decides\n${USAGE}`);
   try {
+    if (!options.review) {
+      const { decidedShapeItems, defects } = resolveDecidedListOnShapeRuns(checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided")), readShapeRunFolders(options[SHAPE_REVIEW_OPTION]));
+      return [...defects, ...findShapeDecidedDefects(model, decidedShapeItems)].map(asAnOpenDefect);
+    }
     const run = readRunFolder(path.dirname(path.resolve(options.review)), false);
     const roundOfTheRun = findTheRoundOfTheRun(path.join(path.dirname(path.resolve(options.model)), ROUNDS_FOLDER), run.runFolder);
     const decidedList = checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided"));

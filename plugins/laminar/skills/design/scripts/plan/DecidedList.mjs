@@ -214,6 +214,44 @@ export const resolveDecidedList = (given, run, findRunHoldingTheKey = () => "", 
   return { decisionOfFindingMap: buildDecisionOfFindingMap(run, decisionOfFindingCheckMap), decisionOfFindingCheckMap, defects, refreshed, notRefreshedLines };
 };
 
+const createShapeItemCheckKey = (shapeRunNumber, itemNumber, check) => `${shapeRunNumber}\t${itemNumber}\t${check}`;
+
+const createKeyUnknownDefect = (decided, why) => ({ code: DECIDED_DEFECT_CODES.DECIDED_KEY_UNKNOWN, name: decided.displayName || "", sentence: `the decided list names ${describeTheKey(decided)}, and ${why}` });
+
+const listShapeItemsOfTheDecided = (decided, shapeRuns) => shapeRuns.flatMap(shapeRun => shapeRun.run.items
+  .filter(item => item.findings.some(finding => finding.displayName === decided.displayName && holdsTheCheck(finding, decided.check)))
+  .map(item => ({ shapeRun: shapeRun.number, number: item.number, check: decided.check, displayName: decided.displayName })));
+
+export const DECIDED_KEY_NOT_RAISED_PREFIX = "decided key not raised";
+
+export const formatDecidedKeyNotRaisedLine = decidedKey => `${DECIDED_KEY_NOT_RAISED_PREFIX}\t${decidedKey.displayName}\t${decidedKey.check}\tthe decided list names the finding key ${decidedKey.displayName} with the check ${decidedKey.check}, and no shape run raised it, so it decides nothing in this plan`;
+
+// With no run folder of --review, such as for a described change, the decided list decides items of the shape runs by their finding key, because an item number names an item of 1 run only and a reach names abstractions of a run folder. The list is written before the shape runs, so a key that no shape run raised is no defect: it is a decided key not raised, which the finish command prints and lists in outcome.json, so no object is dropped in silence.
+export const resolveDecidedListOnShapeRuns = (decidedList, shapeRuns) => {
+  const decidedShapeItemOfKeyMap = new Map();
+  const decidedKeysNotRaised = [];
+  const defects = [];
+  for (const decided of decidedList.decided) {
+    if (Number.isInteger(decided.number)) {
+      defects.push(createKeyUnknownDefect(decided, "with no run folder of --review an item number names no item, so the object names its finding by displayName with check"));
+      continue;
+    }
+    if (decided.reach) {
+      defects.push(...decided.reach.map(key => createReachKeyDefect(DECIDED_DEFECT_CODES.REACH_KEY_UNKNOWN, decided, key, "and with no run folder of --review the decided list has no abstractions to extend a ruling to")));
+      continue;
+    }
+
+    const shapeItems = listShapeItemsOfTheDecided(decided, shapeRuns);
+    if (!shapeItems.length) {
+      decidedKeysNotRaised.push({ displayName: decided.displayName, check: decided.check });
+      continue;
+    }
+    const decision = { reason: decided.reason, says: decided.says, decidedBy: decided.decidedBy || DECIDED_BY_DEFAULT };
+    for (const shapeItem of shapeItems) decidedShapeItemOfKeyMap.set(createShapeItemCheckKey(shapeItem.shapeRun, shapeItem.number, shapeItem.check), { ...shapeItem, decision });
+  }
+  return { decidedShapeItems: [...decidedShapeItemOfKeyMap.values()], decidedKeysNotRaised, defects };
+};
+
 const describeTheReachKey = (decided, key) => `the reach of ${describeTheKey(decided)} names ${key.displayName} at ${key.scale} scale${key.file ? ` in ${key.file}` : ""}`;
 
 const createReachKeyDefect = (code, decided, key, why) => ({ code, name: key.displayName, sentence: `${describeTheReachKey(decided, key)}, ${why}` });
