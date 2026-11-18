@@ -1,8 +1,10 @@
 # renewal-asked-by-a-member-at-the-web-entry, fix-from-review
 
-The defects of the planted change. Each item names its scale by its kind word, its check by its lead, and the judge type that raises it, so `grade.mjs` grades the stored input review against them. The stored input review may raise other findings, and this file does not grade them.
+The defects of the planted change. Each item names its scale by its kind word, its check by its lead, and the judge type that raises it, so `grade.mjs` grades the stored input review against them. The stored input review may raise other findings, and this file does not grade them, but every kept finding of the input review on the planted change goes to the fix.
 
-Planted item 5 is out since the rewrite of the renewal task, because the renewal answer holds nothing of the mail, so the planted change holds no field of the mail state. So the entry holds 6 planted faults, and the numbers of the other items stay as they were.
+Planted item 5 is out since the rewrite of the renewal task, because the renewal answer holds nothing of the mail, so the planted change holds no field of the mail state. So the entry holds 5 planted faults, and the numbers of the other items stay as they were.
+
+Planted item 2, Class `LoanDesk` Unnamed Part Failure, is out by the author's ruling of 2026-11-19, and the planted code stays as it was. `LoanDesk` exists for the renewal alone, so the mail that its 1 use sends is a part of that use, and the class names no part less by sending it. Only this naming claim falls under the ruling. A finding on the dependency, a vendor postbox client used from a domain class, is not forbidden: where a review raises it under its own check, it goes to the fix with the other kept findings.
 
 ## Design
 
@@ -16,9 +18,6 @@ Planted item 5 is out since the rewrite of the renewal task, because the renewal
 
 ### Production code
 
-2. Class `LoanDesk`
-   - Unnamed Part Failure
-   - Judge: simplicity-class
 3. Method `LoanDesk#renewLoan`
    - Open Construct Overload
    - Judge: simplicity-method
