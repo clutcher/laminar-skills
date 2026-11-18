@@ -6,6 +6,7 @@ import { findChangedClassDefects, listCutSteps, listStoppedGroups, sortAndNumber
 import { listFindingSteps } from "./migration/FindingSteps.mjs";
 import { findGroupOrderDefects } from "./migration/GroupOrder.mjs";
 import { listMigrationSteps } from "./migration/MigrationSteps.mjs";
+import { findPlanBeforeOnAnotherTree } from "./migration/PlanBefore.mjs";
 import { findStepFileKindDefects } from "./migration/StepFileKinds.mjs";
 import { writeMigrationText } from "./migration/MigrationText.mjs";
 import { writeMigrationWorkflowFile } from "./migration/MigrationWorkflowFile.mjs";
@@ -58,12 +59,19 @@ const readPlanNumberOrExit = text => {
   return Number(text);
 };
 
+// The model of --before, read only where it was built on an ancestor of the current tree, since a diff against another tree writes its tests as changes.
+const readModelBeforeOrExit = (options, repositoryRoot) => {
+  if (!options.before) return null;
+  const anotherTreeSentence = findPlanBeforeOnAnotherTree(repositoryRoot, options.before, readTreeCommit(options));
+  if (anotherTreeSentence) exitWith(anotherTreeSentence);
+  return readDesignModelOrExit(options.before);
+};
+
 const splitNames = text => (text ? text.split(",").map(name => name.trim()).filter(Boolean) : []);
 
 // A later plan is cut by --classes, also an empty one: it holds only the groups of the changed classes, the finding steps and the stopped writers, and the head line names them.
-const cutThePlan = (model, allSteps, findingSteps, options) => {
+const cutThePlan = (model, allSteps, findingSteps, options, modelBefore) => {
   const classNames = splitNames(options.classes);
-  const modelBefore = options.before ? readDesignModelOrExit(options.before) : null;
   // The groups no writer finished: the groups of the stops, and those the finish command names because they waited for a stopped group.
   const unfinishedGroups = splitNames(options.unfinished).map(Number).filter(Number.isInteger);
   const stoppedGroups = [...new Set([...listStoppedGroups(model, readPlanNumberOrExit(options.plan)), ...unfinishedGroups])];
@@ -82,9 +90,10 @@ function planMigration() {
   const allSteps = runOrExitOnTreeStop(() => listMigrationSteps(model, currentTree));
   const { findingSteps, noStepLines, defects: findingDefects } = listFindingSteps(model, allSteps, entries, itemChecks);
   const isCut = options.classes !== undefined;
-  const { steps, cutLine, classDefects } = isCut ? cutThePlan(model, allSteps, findingSteps, options) : { steps: sortAndNumberTheSteps([...allSteps, ...findingSteps]), cutLine: "", classDefects: [] };
+  const modelBefore = isCut ? readModelBeforeOrExit(options, repositoryRoot) : null;
+  const { steps, cutLine, classDefects } = isCut ? cutThePlan(model, allSteps, findingSteps, options, modelBefore) : { steps: sortAndNumberTheSteps([...allSteps, ...findingSteps]), cutLine: "", classDefects: [] };
   const orderDefects = findGroupOrderDefects(model, steps);
-  const planDefects = [...classDefects, ...findingDefects, ...findStepFileKindDefects(model, steps)];
+  const planDefects = [...classDefects, ...findingDefects, ...findStepFileKindDefects(model, steps, modelBefore)];
   const defects = [...planDefects, ...orderDefects];
   const outPath = path.resolve(options.out);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });

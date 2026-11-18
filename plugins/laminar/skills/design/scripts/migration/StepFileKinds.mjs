@@ -1,5 +1,6 @@
 import { KINDS, isAText, readList } from "../model/DesignModel.mjs";
 import { DEFECT_CODES, createDefect } from "../check/DesignDefect.mjs";
+import { listTestChangesAgainstThePlanBefore } from "./CutSteps.mjs";
 
 const MIGRATION_PATH = "migration";
 
@@ -16,6 +17,11 @@ const findRemovedTestDefects = model => listRemovedTests(model).flatMap(({ remov
   return [createDefect(DEFECT_CODES.REMOVED_TEST_FILE_UNLISTED, path, `the removed test ${removedTest.test} is in ${removedTest.file}, which the model does not list; list the file as modified`)];
 });
 
+// A test step that removes names of decisions.tests against the model of the plan before also changes its file, so a file the model does not list is changed with no model of the change; a model rebuilt from the tree that drops a test object reads the same way, so the fix names both.
+const findPlanBeforeRemovalDefects = (model, modelBefore) => listTestChangesAgainstThePlanBefore(model, modelBefore)
+  .filter(({ testObject, removed }) => removed.length && !model.findChildOfTheFile(testObject.file))
+  .map(({ testObject, removed }) => createDefect(DEFECT_CODES.REMOVED_TEST_FILE_UNLISTED, MIGRATION_PATH, `the test step of ${testObject.testedName} removes ${removed.join(", ")} from ${testObject.file} against the model of the plan before, and the model does not list that file; list the file as modified, or put the tests back in decisions.tests.${testObject.kind} where the change keeps them`));
+
 // A file of a removed test is reported by its removal, so a step on that file gets no second line with the same fix.
 const findUnchangedFileStepDefects = (model, steps) => {
   const removedTestFiles = new Set(listRemovedTests(model).map(({ removedTest }) => removedTest.file));
@@ -26,5 +32,5 @@ const findUnchangedFileStepDefects = (model, steps) => {
   });
 };
 
-// A step that changes a file the model keeps, or a removed test on a file the model does not list, changes code that the design never shows, so a writer changes it with no model and the design check passes it.
-export const findStepFileKindDefects = (model, steps) => [...findRemovedTestDefects(model), ...findUnchangedFileStepDefects(model, steps)];
+// A step that changes a file the model keeps, or a removed test on a file the model does not list, from decisions.tests.removed or from the diff against the model of the plan before, changes code that the design never shows, so a writer changes it with no model and the design check passes it.
+export const findStepFileKindDefects = (model, steps, modelBefore = null) => [...findRemovedTestDefects(model), ...findPlanBeforeRemovalDefects(model, modelBefore), ...findUnchangedFileStepDefects(model, steps)];

@@ -31,32 +31,36 @@ const readGroupOfTheTests = (model, steps, testObject) => {
   return theClass ? getGroupOfTheClass(theClass) : FIRST_GROUP;
 };
 
-const createTestChangeStep = (model, steps, objectNow, objectBefore) => {
+const createTestChange = (objectNow, objectBefore) => {
   const namesNow = objectNow ? objectNow.names : [];
   const namesBefore = objectBefore ? objectBefore.names : [];
   const added = listNamesMissingFrom(namesNow, namesBefore);
   const removed = listNamesMissingFrom(namesBefore, namesNow);
   if (!added.length && !removed.length) return [];
 
-  const testObject = objectNow || objectBefore;
-  return [{
-    stage: MIGRATION_STAGES.TESTS,
-    group: readGroupOfTheTests(model, steps, testObject),
-    says: `changes the ${testObject.kind} tests of ${testObject.testedName}: ${describeTheTestChange(added, removed)}`,
-    files: [testObject.file],
-    existingDefect: false,
-  }];
+  return [{ testObject: objectNow || objectBefore, added, removed }];
 };
 
-// A plan whose model adds, removes or renames a test of decisions.tests against the model of the plan before gets 1 test step per changed test object, because the steps of the changed classes hold no test; a rename reads as 1 removed and 1 added name.
-const listTestChangeSteps = (model, modelBefore, steps) => {
+// 1 test change per test object whose names differ between decisions.tests of the model and of the model of the plan before; a rename reads as 1 removed and 1 added name.
+export const listTestChangesAgainstThePlanBefore = (model, modelBefore) => {
   if (!modelBefore) return [];
 
   const objectBeforeOfKeyMap = new Map(listTestObjects(modelBefore).map(testObject => [testObject.key, testObject]));
   const objectNowOfKeyMap = new Map(listTestObjects(model).map(testObject => [testObject.key, testObject]));
   const keys = [...new Set([...objectNowOfKeyMap.keys(), ...objectBeforeOfKeyMap.keys()])];
-  return keys.flatMap(key => createTestChangeStep(model, steps, objectNowOfKeyMap.get(key), objectBeforeOfKeyMap.get(key)));
+  return keys.flatMap(key => createTestChange(objectNowOfKeyMap.get(key), objectBeforeOfKeyMap.get(key)));
 };
+
+const createTestChangeStep = (model, steps, { testObject, added, removed }) => ({
+  stage: MIGRATION_STAGES.TESTS,
+  group: readGroupOfTheTests(model, steps, testObject),
+  says: `changes the ${testObject.kind} tests of ${testObject.testedName}: ${describeTheTestChange(added, removed)}`,
+  files: [testObject.file],
+  existingDefect: false,
+});
+
+// A plan whose model adds, removes or renames a test of decisions.tests against the model of the plan before gets 1 test step per changed test object, because the steps of the changed classes hold no test.
+const listTestChangeSteps = (model, modelBefore, steps) => listTestChangesAgainstThePlanBefore(model, modelBefore).map(testChange => createTestChangeStep(model, steps, testChange));
 
 export const findChangedClassDefects = (model, classNames) => classNames
   .filter(className => !model.findClass(className))
