@@ -13,6 +13,7 @@ import { findConstantInstanceDefects } from "./ConstantInstances.mjs";
 import { findDataFlowDefects } from "./DataFlowCheck.mjs";
 import { findNameOfThePath } from "./DefectNames.mjs";
 import { findEventListenerDefects } from "./EventListeners.mjs";
+import { findIoBodyTextDefects } from "./IoBodyTexts.mjs";
 import { findExitListResult } from "./ExitList.mjs";
 import { findExitReachDefects } from "./ExitReach.mjs";
 import { findAbsentResult, findExitFailureResult, findFailureHandlingDefects } from "./FailureHandling.mjs";
@@ -134,6 +135,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findOwnerValueDefects(model, currentTree),
     ...findRepeatedDecisionDefects(model, currentTree),
     ...findUnchangedCopyDefects(model, currentTree),
+    ...findIoBodyTextDefects(model),
     ...findRenamesWithoutFindingDefects(model, { shapeRuns: shapeReviews, roundModels, reviewText, decidedList }),
     ...(currentTree ? findCurrentTreeDefects(model, currentTree) : []),
     ...(currentTree ? findRemovedBodilessMethodDefects(model, currentTree) : []),

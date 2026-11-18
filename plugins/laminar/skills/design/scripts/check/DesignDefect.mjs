@@ -90,6 +90,7 @@ export const DEFECT_CODES = Object.freeze({
   TEST_FILE_OF_SEVERAL_BEHAVIORS: "test-file-of-several-behaviors",
   KIND_DOES_NOT_FIT: "kind-does-not-fit",
   EVENT_WITH_ONE_LISTENER: "event-with-one-listener",
+  IO_BODY_BUILDS_A_TEXT: "io-body-builds-a-text",
 });
 
 export const createDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false });
