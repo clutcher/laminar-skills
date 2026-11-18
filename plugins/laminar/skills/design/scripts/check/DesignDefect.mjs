@@ -76,6 +76,7 @@ export const DEFECT_CODES = Object.freeze({
   INTERFACE_WITH_ONE_IMPLEMENTATION: "interface-with-one-implementation",
   CLASS_ONLY_PASSES_THE_CALL_ON: "class-only-passes-the-call-on",
   COPIES_A_DOMAIN_OBJECT: "copies-a-domain-object",
+  REQUEST_OR_RESULT_TYPE_APART: "request-or-result-type-apart",
   COMPUTATION_HOLDS_A_CHANGING_COLLECTION: "computation-holds-a-changing-collection",
   RECORD_ONLY_IN_CONSTANTS: "record-only-in-constants",
   RENAMED_WITHOUT_FINDING: "renamed-without-finding",

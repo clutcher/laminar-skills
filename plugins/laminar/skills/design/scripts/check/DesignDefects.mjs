@@ -29,6 +29,7 @@ import { findRegistryNameDefects } from "./RegistryNames.mjs";
 import { findRemovedBodilessMethodDefects } from "./RemovedBodilessMethods.mjs";
 import { findRepeatedDecisionDefects } from "./RepeatedDecisions.mjs";
 import { findRepresentedKindDefects } from "./RepresentedKinds.mjs";
+import { findRequestAndResultTypeDefects } from "./RequestAndResultTypes.mjs";
 import { findSimplestFormDefects, isAnAnswerOfTheCollectionCase, namesAMethodWithARule } from "./SimplestForm.mjs";
 import { findTestFileBehaviorDefects } from "./TestFileBehaviors.mjs";
 import { findTriedNameDefects } from "./TriedNames.mjs";
@@ -124,6 +125,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findCollectionNameDefects(model, currentTree),
     ...findRegistryNameDefects(model),
     ...findRepresentedKindDefects(model, zoneOrder),
+    ...findRequestAndResultTypeDefects(model, zoneOrder, currentTree),
     ...findDomainObjectCopyDefects(model),
     ...findEventListenerDefects(model),
     ...findChangingCollectionDefects(model),

@@ -239,7 +239,7 @@ const takesTheClass = (model, otherClass, method, theClass) => readList(method.p
 
 const takesOrReturnsTheClass = (model, otherClass, method, theClass) => namesTheClass(model, method.returns, otherClass, theClass) || takesTheClass(model, otherClass, method, theClass);
 
-const isTakenOrReturnedInTheZones = (model, theClass, zones) => model.classes.some(otherClass => zones.has(otherClass.zone)
+export const isTakenOrReturnedInTheZones = (model, theClass, zones) => model.classes.some(otherClass => zones.has(otherClass.zone)
   && readList(otherClass.methods).some(method => takesOrReturnsTheClass(model, otherClass, method, theClass)));
 
 // A carrier in the domain zone that a method of api or spi takes or returns is a type of that boundary kept with the data types of the domain layer, a place the project may choose.
