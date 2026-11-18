@@ -1,5 +1,5 @@
 import { FINDING_REASONS } from "../model/DesignModelForm.mjs";
-import { isAText } from "../model/DesignModel.mjs";
+import { holdsADecidedReason, isAText } from "../model/DesignModel.mjs";
 
 export const DECIDED_BY_DEFAULT = "caller";
 
@@ -231,7 +231,7 @@ const listChecksOfTheReachKey = (finding, decided, key) => {
 const readModelFindingObjects = model => (model && model.decisions && Array.isArray(model.decisions.findings) ? model.decisions.findings.filter(object => object && typeof object === "object") : []);
 
 // An object of the model that closes an item with a reason is a decision of the designer; one without a reason asks the writer for a change.
-const isADecisionOfTheDesigner = (object, check) => isAText(object.reason) && !isAText(object.closedBy) && !isAText(object.openAfterCeiling) && (object.check === undefined || object.check === check);
+const isADecisionOfTheDesigner = (object, check) => isAText(object.reason) && !isAText(object.closedBy) && (!isAText(object.openAfterCeiling) || holdsADecidedReason(object)) && (object.check === undefined || object.check === check);
 
 const buildItemNumberOfFindingMap = run => new Map((run ? run.items || [] : []).flatMap(item => item.findings.map(finding => [finding.index, item.number])));
 

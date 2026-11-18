@@ -1,7 +1,7 @@
 import { FINDING_REASONS } from "../model/DesignModelForm.mjs";
-import { KINDS, getFolderPath, isAText, isMarkedUnchanged, readList } from "../model/DesignModel.mjs";
+import { KINDS, getFolderPath, holdsADecidedReason, isAText, isMarkedUnchanged, isWaitingAfterTheCeiling, readList } from "../model/DesignModel.mjs";
 import { isPlacedByThePlan, readNamedReviewItems, readReviewItems } from "./ReviewItems.mjs";
-import { DEFECT_CODES, createDefect } from "./DesignDefect.mjs";
+import { DEFECT_CODES, createDefect, createQuestionDefect } from "./DesignDefect.mjs";
 import { describeTheChangeOfTheFields, describeTheChangeOfTheFolder, describeTheChangeOfTheMember } from "./MemberChange.mjs";
 
 const OUTSIDE_THE_CHANGE = "outside the change";
@@ -11,8 +11,10 @@ const FIELD_GROUP_SEPARATOR = ", ";
 
 const isAShapeRunFinding = finding => finding.run !== undefined;
 
-// A finding is closed by the tree, left with a reason, or open after the ceiling of shape runs with its intended change, and exactly 1 of the 3.
+// A finding is closed by the tree, left with a reason, or open after the ceiling of shape runs with its intended change, and exactly 1 of the 3; a finding open after the ceiling may also hold the reason that the user or the decided list gave it.
 const FINDING_ENDING_KEYS = Object.freeze(["closedBy", "reason", "openAfterCeiling"]);
+
+const isOpenAfterTheCeilingWithADecidedReason = (finding, endingKeys) => endingKeys.length === 2 && !endingKeys.includes("closedBy") && holdsADecidedReason(finding);
 
 // A part closes a finding only where the design creates, moves, renames or modifies it; a class of an unchanged file, a method marked unchanged and an unchanged folder stay as they are.
 const isAnUnchangedPart = (model, displayName) => {
@@ -27,9 +29,9 @@ const isAnUnchangedPart = (model, displayName) => {
 
 const findObjectDefects = (model, finding, path) => {
   const endingKeys = FINDING_ENDING_KEYS.filter(key => isAText(finding[key]));
-  if (endingKeys.length > 1) return [createDefect(DEFECT_CODES.FINDING_CLOSED_AND_LEFT, path, `the finding ${finding.number} holds ${endingKeys.join(" and ")}, and holds 1 of ${FINDING_ENDING_KEYS.join(", ")}`)];
+  if (endingKeys.length > 1 && !isOpenAfterTheCeilingWithADecidedReason(finding, endingKeys)) return [createDefect(DEFECT_CODES.FINDING_CLOSED_AND_LEFT, path, `the finding ${finding.number} holds ${endingKeys.join(" and ")}, and holds 1 of ${FINDING_ENDING_KEYS.join(", ")}`)];
   if (!endingKeys.length) return [createDefect(DEFECT_CODES.FINDING_NEITHER_CLOSED_NOR_LEFT, path, `the finding ${finding.number} holds none of ${FINDING_ENDING_KEYS.join(", ")}, and holds 1 of them`)];
-  if (isAText(finding.openAfterCeiling)) return [];
+  if (isAText(finding.openAfterCeiling) && !isAText(finding.reason)) return [];
   if (isAText(finding.closedBy)) {
     if (isAnUnchangedPart(model, finding.closedBy)) return [createDefect(DEFECT_CODES.CLOSED_BY_UNCHANGED_PART, `${path}.closedBy`, `${finding.closedBy} closes the finding ${finding.number}, and the design neither creates, moves, renames nor modifies it`)];
     if (isAShapeRunFinding(finding) || model.holdsTheName(finding.closedBy)) return [];
@@ -40,6 +42,14 @@ const findObjectDefects = (model, finding, path) => {
   if (!FINDING_REASONS.includes(finding.reason)) defects.push(createDefect(DEFECT_CODES.FINDING_REASON_OUTSIDE_LIST, `${path}.reason`, `${JSON.stringify(finding.reason)} is not 1 of ${FINDING_REASONS.join(", ")}`));
   if (!isAText(finding.says)) defects.push(createDefect(DEFECT_CODES.KEY_MISSING, `${path}.says`, "the key says is required here and is missing"));
   return defects;
+};
+
+const describeTheShapeRunItem = finding => `the item ${finding.number}${isAText(finding.check) ? ` (${finding.check})` : ""} of shape run ${finding.run}`;
+
+// No shape check judged the change of a finding open after the ceiling, and no script can decide it, so only the user or the decided list leaves it, and the plan ends with the outcome question until one does.
+const findOpenAfterCeilingDefect = (finding, path) => {
+  if (!isWaitingAfterTheCeiling(finding)) return [];
+  return [createQuestionDefect(DEFECT_CODES.OPEN_AFTER_CEILING, `${path}.openAfterCeiling`, `${describeTheShapeRunItem(finding)} is open after the ceiling, and no reason class with says and decidedBy leaves it, so the plan ends with the outcome question and no writer writes its change; ask the user, or where no user can answer, end the plan`)];
 };
 
 const findItemDefects = (itemNumbers, findingsWithPath, reviewName, scaleWords = "") => {
@@ -114,6 +124,7 @@ export const findFindingsDefects = (model, reviewText, shapeReviews, currentTree
   for (const { finding, path } of listFindingsWithPath(model)) {
     if (finding.number === undefined) defects.push(createDefect(DEFECT_CODES.KEY_MISSING, `${path}.number`, "the key number is required here and is missing"));
     defects.push(...findObjectDefects(model, finding, path));
+    defects.push(...findOpenAfterCeilingDefect(finding, path));
   }
   if (reviewText !== null) {
     const itemNumbers = new Set(readReviewItems(reviewText).filter(isPlacedByThePlan).map(item => item.number));

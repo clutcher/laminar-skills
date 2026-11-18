@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { AUTONOMOUS_ANSWERS } from "../model/DesignModelForm.mjs";
-import { isAText, readList } from "../model/DesignModel.mjs";
+import { isAText, isWaitingAfterTheCeiling, readList } from "../model/DesignModel.mjs";
 
 export const BASE_COMMIT_FILE = "base-commit.txt";
 
@@ -53,10 +53,15 @@ export const listQuestionsThatStopThePlan = model => readList(model.decisions.qu
   .filter(question => !isAnsweredQuestion(question) && question.autonomous !== AUTONOMOUS_ANSWERS.OPEN)
   .map(question => question.id);
 
+// A shape-run finding open after the ceiling with no decided reason stops the plan as a question does, because no writer writes a change that no shape check judged; each object names the item and the change the designer would make.
+export const listFindingsThatStopThePlan = model => readList(model.decisions.findings)
+  .filter(isWaitingAfterTheCeiling)
+  .map(finding => ({ run: finding.run, number: finding.number, check: isAText(finding.check) ? finding.check : null, openAfterCeiling: finding.openAfterCeiling }));
+
 export const writeOutcome = (resultsFolder, plan, outcome) => {
   const planFolder = getPlanFolder(resultsFolder, plan);
   fs.mkdirSync(planFolder, { recursive: true });
-  writeJson(path.join(planFolder, OUTCOME_FILE), { plan, outcome: outcome.word, questions: outcome.questions || [], considerations: outcome.considerations || [], stop: outcome.stop || null });
+  writeJson(path.join(planFolder, OUTCOME_FILE), { plan, outcome: outcome.word, questions: outcome.questions || [], considerations: outcome.considerations || [], openAfterCeiling: outcome.openAfterCeiling || [], stop: outcome.stop || null });
 };
 
 export const formatPlanLine = (plan, outcomeWord, resultsFolder) => `plan ${plan} ${outcomeWord} ${resultsFolder}`;

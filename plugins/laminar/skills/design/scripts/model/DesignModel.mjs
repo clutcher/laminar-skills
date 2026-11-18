@@ -69,6 +69,12 @@ const listNestedNamesOfTheBareName = (typeName, referringClassName) => {
 // An existing defect left as it is carries the reason under notFixed, and has no fix and no migration group.
 export const isLeftUnfixed = existingDefect => isAText(existingDefect.notFixed);
 
+// A reason class with says that the user or the decided list gave a finding, which names who decided under decidedBy.
+export const holdsADecidedReason = finding => isAText(finding.reason) && isAText(finding.says) && isAText(finding.decidedBy);
+
+// A shape-run finding left open at the ceiling of shape runs waits for a decision, so the plan does not go to the writers until a decided reason leaves it.
+export const isWaitingAfterTheCeiling = finding => finding.run !== undefined && isAText(finding.openAfterCeiling) && !holdsADecidedReason(finding);
+
 export const getFolderPath = folder => (folder.path || "").replace(/\/+$/, "");
 
 export const getFileOfTheChild = (folder, child) => `${getFolderPath(folder)}/${child.name || ""}`;

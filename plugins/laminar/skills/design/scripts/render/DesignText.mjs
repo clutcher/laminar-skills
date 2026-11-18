@@ -1,4 +1,4 @@
-import { ANSWER_GIVERS, DOES, KINDS, OVERRIDE_KINDS, getFileOfTheChild, getFolderPath, isAText, isAnInterface, isLeftUnfixed, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
+import { ANSWER_GIVERS, DOES, KINDS, OVERRIDE_KINDS, getFileOfTheChild, getFolderPath, holdsADecidedReason, isAText, isAnInterface, isLeftUnfixed, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
 
 const GUESS_EVIDENCE = new Set(["churn", "none"]);
 
@@ -302,11 +302,16 @@ const writeToConsiderSection = (findings, findingsToConsider) => {
   return ["", "## To consider", "", ...consideredFindings.map(writeFindingLine)];
 };
 
-// An item the shape runs left open at their ceiling, with the change the designer intends, which the writers do not build.
+const writeOpenAfterCeilingLine = finding => {
+  const decision = holdsADecidedReason(finding) ? `; left, ${finding.reason}, decided by ${finding.decidedBy}: ${finding.says}` : "";
+  return `- ${describeFindingItem(finding)}: ${finding.openAfterCeiling}${decision}`;
+};
+
+// An item the shape runs left open at their ceiling, with the change the designer intends, which the writers do not build, and the decision that leaves it where the user or the decided list gave one.
 const writeOpenAfterCeilingSection = findings => {
   const openFindings = findings.filter(finding => isAText(finding.openAfterCeiling));
   if (!openFindings.length) return [];
-  return ["", "## Open after the ceiling", "", ...openFindings.map(finding => `- ${describeFindingItem(finding)}: ${finding.openAfterCeiling}`)];
+  return ["", "## Open after the ceiling", "", ...openFindings.map(writeOpenAfterCeilingLine)];
 };
 
 const writeExistingDefectLine = existingDefect => {

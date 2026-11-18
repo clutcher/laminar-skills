@@ -55,6 +55,7 @@ export const DEFECT_CODES = Object.freeze({
   FINDING_NEITHER_CLOSED_NOR_LEFT: "finding-neither-closed-nor-left",
   FINDING_REASON_OUTSIDE_LIST: "finding-reason-outside-list",
   OUTSIDE_THE_CHANGE_BUT_CHANGED: "outside-the-change-but-changed",
+  OPEN_AFTER_CEILING: "open-after-ceiling",
   REASON_NOT_AUTONOMOUS: "reason-not-autonomous",
   METHOD_CHANGED_BUT_MARKED_UNCHANGED: "method-changed-but-marked-unchanged",
   GROUP_ORDER_BROKEN: "group-order-broken",
@@ -97,3 +98,6 @@ export const DEFECT_CODES = Object.freeze({
 export const createDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false });
 
 export const createRecheckDefect = (code, path, sentence) => ({ code, path, sentence, recheck: true });
+
+// A defect that no change of the model fixes without a decision, so the finish command goes on and ends the plan with the outcome question.
+export const createQuestionDefect = (code, path, sentence) => ({ code, path, sentence, recheck: false, question: true });

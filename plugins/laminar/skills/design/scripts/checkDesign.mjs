@@ -28,10 +28,12 @@ const MODEL_FILE = "design-model.json";
 
 const SHAPE_MODEL_FILE = "shape-model.json";
 
-const MARKS = Object.freeze({ DEFECT: "defect", RECHECK: "recheck", FOUND_WRONG: "found-wrong" });
+// A question defect ends the plan with the outcome question and does not stop the finish command, so it counts as no open defect.
+const MARKS = Object.freeze({ DEFECT: "defect", RECHECK: "recheck", FOUND_WRONG: "found-wrong", QUESTION: "question" });
 
 const markTheDefect = defect => {
   if (defect.foundWrong) return MARKS.FOUND_WRONG;
+  if (defect.question) return MARKS.QUESTION;
   return defect.recheck ? MARKS.RECHECK : MARKS.DEFECT;
 };
 

@@ -11,7 +11,7 @@ import { DecidedListStop, checkDecidedListForm, findReachDefects, resolveDecided
 import { listFindingEntries } from "./plan/FindingList.mjs";
 import { buildDecidedReview, readCommitOfThePlan } from "./plan/DecidedReview.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
-import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, formatPlanLine, getPlanFolder, listQuestionsThatStopThePlan, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
+import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, formatPlanLine, getPlanFolder, listFindingsThatStopThePlan, listQuestionsThatStopThePlan, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { listRoundDispositions } from "./plan/RoundDispositions.mjs";
 import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
 import { listDefectLinesOfTheRun, removeFinishStop, writeFinishStop } from "./plan/FinishStop.mjs";
@@ -31,6 +31,9 @@ const RESULT_PREFIX = "RESULT ";
 const DEFECT_PREFIX = "defect\t";
 
 const NO_STEP_PREFIX = "no step\t";
+
+// A question line of the design check does not stop the finish, and the plan ends with the outcome question, so the finish prints each one.
+const QUESTION_PREFIX = "question\t";
 
 const DEFECT_EXIT_CODE = 1;
 
@@ -203,8 +206,9 @@ const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput) => {
   copyFileIfPresent(path.join(paths.results, MIGRATION_WORKFLOW_FILE), planFolder);
   if (roundInput) writeJson(path.join(planFolder, DISPOSITIONS_FILE), listRoundDispositions(model, roundInput.run, roundInput));
   const questions = listQuestionsThatStopThePlan(model);
-  const outcomeWord = questions.length ? PLAN_OUTCOMES.QUESTION : PLAN_OUTCOMES.READY;
-  writeOutcome(resultsFolder, plan, { word: outcomeWord, questions, considerations: paths.considerations });
+  const openAfterCeiling = listFindingsThatStopThePlan(model);
+  const outcomeWord = questions.length || openAfterCeiling.length ? PLAN_OUTCOMES.QUESTION : PLAN_OUTCOMES.READY;
+  writeOutcome(resultsFolder, plan, { word: outcomeWord, questions, considerations: paths.considerations, openAfterCeiling });
   if (outcomeWord === PLAN_OUTCOMES.READY) writeTheDecidedReview(resultsFolder, plan, model, roundInput);
   return outcomeWord;
 };
@@ -232,6 +236,7 @@ function finishModel() {
   for (const step of steps) {
     const run = runFinishStep(step);
     if (run.exitCode) stopAtTheStep(step, run, plan, getPlanFolder(resultsFolder, plan));
+    for (const line of run.lines.filter(line => line.startsWith(QUESTION_PREFIX))) console.log(line);
     console.log(`${step.name}\t${run.resultLine}`);
     if (step.name === "migration") migrationLines = run.lines;
   }
