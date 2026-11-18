@@ -90,19 +90,25 @@ const findFindingOfTheShapeItem = (resultsFolder, findingObject) => {
   }
 };
 
-// A shape-run finding open after the ceiling with no decided reason stops the plan as a question does, because no writer writes a change that no shape check judged; each object names the item, its display name and check as the decided list keys a finding, taken from the shape run where the object names none, and the change the designer would make.
+// The item of 1 object of a shape run as the decided list keys a finding, with the display name and the check taken from the shape run where the object names none.
+const nameTheShapeItem = (findingObject, resultsFolder) => {
+  const fromTheShapeRun = findFindingOfTheShapeItem(resultsFolder, findingObject);
+  return {
+    run: findingObject.run,
+    number: findingObject.number,
+    displayName: fromTheShapeRun ? fromTheShapeRun.displayName : null,
+    check: isAText(findingObject.check) ? findingObject.check : (fromTheShapeRun ? fromTheShapeRun.check : null),
+  };
+};
+
+// A shape-run finding open after the ceiling with no decided reason stops the plan as a question does, because no writer writes a change that no shape check judged; each object names the item and the change the designer would make.
 export const listFindingsThatStopThePlan = (model, resultsFolder) => readList(model.decisions.findings)
   .filter(isWaitingAfterTheCeiling)
-  .map(finding => {
-    const fromTheShapeRun = findFindingOfTheShapeItem(resultsFolder, finding);
-    return {
-      run: finding.run,
-      number: finding.number,
-      displayName: fromTheShapeRun ? fromTheShapeRun.displayName : null,
-      check: isAText(finding.check) ? finding.check : (fromTheShapeRun ? fromTheShapeRun.check : null),
-      openAfterCeiling: finding.openAfterCeiling,
-    };
-  });
+  .map(finding => ({ ...nameTheShapeItem(finding, resultsFolder), openAfterCeiling: finding.openAfterCeiling }));
+
+// A kept item of a shape run that the designer leaves as a question to the author stops the autonomous plan as a question of the model does; each object names the item and the says, which names what the designer tried.
+export const listShapeQuestionsThatStopThePlan = (shapeQuestions, resultsFolder) => shapeQuestions
+  .map(finding => ({ ...nameTheShapeItem(finding, resultsFolder), says: finding.says }));
 
 // decidedKeysNotRaised and decidedThroughInterfaceMethod stand only where the finish read a decided list with no run folder: the decided keys that no shape run raised, and the items of a shape run that a decided key on an api or spi method decides on the method that implements it.
 export const writeOutcome = (resultsFolder, plan, outcome) => {

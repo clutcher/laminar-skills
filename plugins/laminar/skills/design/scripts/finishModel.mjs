@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { listConsiderations } from "./check/AutonomousReasons.mjs";
+import { listConsiderations, listShapeQuestions } from "./check/AutonomousReasons.mjs";
 import { DEFECT_CODES } from "./check/DesignDefect.mjs";
 import { holdsAnItemThatDoesNotClose, listItemsThatDoNotClose } from "./check/ItemsThatDoNotClose.mjs";
 import { readNamedReviewItems } from "./check/ReviewItems.mjs";
@@ -13,7 +13,7 @@ import { DecidedListStop, checkDecidedListForm, findReachDefects, formatDecidedK
 import { listFindingEntries } from "./plan/FindingList.mjs";
 import { buildDecidedReview, readCommitOfThePlan } from "./plan/DecidedReview.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
-import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, SHAPE_RUN_NOT_JUDGED, describeTheShapeRunNotJudged, formatPlanLine, getPlanFolder, getShapeRunFolder, listFindingsThatStopThePlan, listQuestionsThatStopThePlan, listShapeRunsNotJudged, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
+import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, SHAPE_RUN_NOT_JUDGED, describeTheShapeRunNotJudged, formatPlanLine, getPlanFolder, getShapeRunFolder, listFindingsThatStopThePlan, listQuestionsThatStopThePlan, listShapeQuestionsThatStopThePlan, listShapeRunsNotJudged, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { listRoundDispositions } from "./plan/RoundDispositions.mjs";
 import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder, readShapeRunFolders } from "./round/RunFolder.mjs";
 import { listDefectLinesOfTheRun, removeFinishStop, writeFinishStop } from "./plan/FinishStop.mjs";
@@ -218,9 +218,9 @@ const decideTheOutcome = (questions, openAfterCeiling, itemsThatDoNotClose, isAu
   return { word: PLAN_OUTCOMES.READY, stop: null };
 };
 
-// The outcome of the plan with the questions, the shape findings open after the ceiling and the items that do not close that decide it.
-const findTheOutcomeOfThePlan = (model, resultsFolder, options) => {
-  const questions = listQuestionsThatStopThePlan(model);
+// The outcome of the plan with the questions, the shape findings open after the ceiling and the items that do not close that decide it; the shape questions of autonomous mode follow the question ids of the model.
+const findTheOutcomeOfThePlan = (model, resultsFolder, shapeQuestions, options) => {
+  const questions = [...listQuestionsThatStopThePlan(model), ...listShapeQuestionsThatStopThePlan(shapeQuestions, resultsFolder)];
   const openAfterCeiling = listFindingsThatStopThePlan(model, resultsFolder);
   const doesNotClose = listItemsThatDoNotCloseOfTheModel(model, options);
   return { ...decideTheOutcome(questions, openAfterCeiling, doesNotClose, options[AUTONOMOUS_SWITCH]), questions, openAfterCeiling, doesNotClose };
@@ -266,11 +266,14 @@ function finishModel() {
   const entries = runInput ? carryTheFixedFindings(model, resultsFolder, plan, listFindingEntries(model, runInput.run, runInput.decisionOfFindingMap, runInput.decisionOfFindingCheckMap)) : [];
   // An item to consider left as a question to the author is passed on as a consideration, never as a question of the plan, because items to consider on existing code stand in most changes.
   const reviewText = readTextIfGiven(options.review);
+  const shapeReviews = readShapeReviews(options);
   const considerations = [
-    ...listConsiderations(model, reviewText, readShapeReviews(options), (number, check) => findFindingOfTheItem(runInput, number, check)),
+    ...listConsiderations(model, reviewText, shapeReviews, (number, check) => findFindingOfTheItem(runInput, number, check)),
     ...listConsiderationsOfTheEntries(entries, reviewText),
   ];
-  const paths = { model: options.model, results: resultsFolder, design: path.join(resultsFolder, "design.md"), migration: path.join(resultsFolder, "migration.md"), findings: runInput ? path.join(resultsFolder, FINDINGS_FILE) : null, unfinishedGroups, considerations, shapeDecisions };
+  // A kept item of a shape run left as a question to the author is the answer of the user in the mode with a user, and a question of the plan in autonomous mode.
+  const shapeQuestions = options[AUTONOMOUS_SWITCH] ? listShapeQuestions(model, reviewText, shapeReviews) : [];
+  const paths = { model: options.model, results: resultsFolder, design: path.join(resultsFolder, "design.md"), migration: path.join(resultsFolder, "migration.md"), findings: runInput ? path.join(resultsFolder, FINDINGS_FILE) : null, unfinishedGroups, considerations, shapeQuestions, shapeDecisions };
   if (runInput) writeJson(paths.findings, entries);
 
   const steps = listFinishSteps(options, paths, plan);
@@ -282,7 +285,7 @@ function finishModel() {
     console.log(`${step.name}\t${run.resultLine}`);
     if (step.name === "migration") migrationLines = run.lines;
   }
-  const outcome = findTheOutcomeOfThePlan(model, resultsFolder, options);
+  const outcome = findTheOutcomeOfThePlan(model, resultsFolder, paths.shapeQuestions, options);
   if (outcome.word === PLAN_OUTCOMES.READY) stopOnTheShapeRunsNotJudged(resultsFolder, plan);
   const roundInput = runInput ? { ...runInput, entries, noStepKeys: readNoStepKeys(migrationLines) } : null;
   for (const line of runInput ? runInput.notRefreshedLines : []) console.log(line);

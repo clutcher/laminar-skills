@@ -34,14 +34,23 @@ export const listFindingsToConsider = (model, reviewText, shapeReviews) => {
     .map(finding => ({ finding, item: itemOfKeyMap.get(readKeyOfTheFinding(finding)) }));
 };
 
-// In autonomous mode the designer leaves a finding only with a reason class a script checks, and the calling session with any reason of its decided list; an item to consider may stay a question to the author, which the plan passes on as a consideration.
+// A kept item of a shape run that no change of the tree can close and no other reason class fits stays a question to the author with no decidedBy, which ends the autonomous plan with the outcome question; an object that waits after the ceiling or after the changes tried keeps its own ending.
+const isAShapeQuestion = finding => Number.isFinite(finding.run) && isAnOpenQuestion(finding) && !isAText(finding.openAfterCeiling) && !isAText(finding.doesNotClose);
+
+// The objects of decisions.findings on a kept item of a shape run, not an item to consider, that the designer leaves as a question to the author with no decidedBy.
+export const listShapeQuestions = (model, reviewText, shapeReviews) => {
+  const toConsider = new Set(listFindingsToConsider(model, reviewText, shapeReviews).map(({ finding }) => finding));
+  return readList(model.decisions.findings).filter(finding => isAShapeQuestion(finding) && !toConsider.has(finding));
+};
+
+// In autonomous mode the designer leaves a finding only with a reason class a script checks, and the calling session with any reason of its decided list; an item to consider may stay a question to the author, which the plan passes on as a consideration, and so may a kept item of a shape run, which the plan asks as a question.
 export const findAutonomousReasonDefects = (model, reviewText, shapeReviews) => {
   const toConsider = new Set(listFindingsToConsider(model, reviewText, shapeReviews).map(({ finding }) => finding));
   const defects = [];
   readList(model.decisions.findings).forEach((finding, at) => {
     if (!isAText(finding.reason) || isAText(finding.decidedBy) || AUTONOMOUS_REASONS.has(finding.reason)) return;
-    if (finding.reason === QUESTION_TO_THE_AUTHOR && toConsider.has(finding)) return;
-    defects.push(createDefect(DEFECT_CODES.REASON_NOT_AUTONOMOUS, `decisions.findings[${at}].reason`, `the item ${finding.number}${Number.isFinite(finding.run) ? ` of shape run ${finding.run}` : ""} takes ${finding.reason}, and autonomous mode takes only ${[...AUTONOMOUS_REASONS].join(" or ")}, a reason of the decided list, or ${QUESTION_TO_THE_AUTHOR} on an item to consider`));
+    if (finding.reason === QUESTION_TO_THE_AUTHOR && (toConsider.has(finding) || isAShapeQuestion(finding))) return;
+    defects.push(createDefect(DEFECT_CODES.REASON_NOT_AUTONOMOUS, `decisions.findings[${at}].reason`, `the item ${finding.number}${Number.isFinite(finding.run) ? ` of shape run ${finding.run}` : ""} takes ${finding.reason}, and autonomous mode takes only ${[...AUTONOMOUS_REASONS].join(" or ")}, a reason of the decided list, or ${QUESTION_TO_THE_AUTHOR} on an item to consider or on a kept item of a shape run`));
   });
   return defects;
 };
