@@ -29,18 +29,18 @@ const DEFECT_MARK = "defect";
 const FIELD_SEPARATOR = "\t";
 const MEMBER_SEPARATOR = "#";
 
-const readSectionLinesMap = text => {
-  const sectionLinesMap = new Map();
+const readLinesBySectionMap = text => {
+  const linesBySectionMap = new Map();
   let lines = null;
   for (const line of text.split("\n")) {
     if (line.startsWith(SECTION_HEAD)) {
       lines = [];
-      sectionLinesMap.set(line.slice(SECTION_HEAD.length).trim(), lines);
+      linesBySectionMap.set(line.slice(SECTION_HEAD.length).trim(), lines);
       continue;
     }
     if (lines) lines.push(line);
   }
-  return sectionLinesMap;
+  return linesBySectionMap;
 };
 
 const readSegmentsOfThePath = given => String(given || "").replace(/`/g, "").trim().replace(FILE_EXTENSION, "").split("/").filter(Boolean);
@@ -255,7 +255,7 @@ const gradeALevel1Line = (graded, line) => {
   return createResult(false, "no level 1 form reads this line");
 };
 
-export const readLevel1Lines = expectationText => (readSectionLinesMap(expectationText).get(LEVEL_1) || [])
+export const readLevel1Lines = expectationText => (readLinesBySectionMap(expectationText).get(LEVEL_1) || [])
   .map(line => LIST_ITEM.exec(line))
   .filter(Boolean)
   .map(match => match[1]);

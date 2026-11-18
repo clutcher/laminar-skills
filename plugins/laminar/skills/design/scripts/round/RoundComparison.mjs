@@ -55,7 +55,7 @@ const readFormerNamesOfTheState = keyState => (Array.isArray(keyState.formerName
 
 const readKeyOfTheState = keyState => createFindingKey(keyState.displayName, keyState.check);
 
-const buildKeyStateMap = previous => new Map(readList(previous && previous.findingKeys).map(keyState => [readKeyOfTheState(keyState), keyState]));
+const buildStateByKeyMap = previous => new Map(readList(previous && previous.findingKeys).map(keyState => [readKeyOfTheState(keyState), keyState]));
 
 // The files of the findings of 1 key, from each place with a line, because a place with no line names a folder.
 const listFilesOfTheFindings = findings => [...new Set(findings.flatMap(finding => finding.places.filter(place => place.file && place.line !== null).map(place => place.file)))];
@@ -104,16 +104,16 @@ class RoundComparison {
     this.modelBefore = modelBefore;
     this.newNameOfOldNameMap = listRenamesBetweenRounds(modelBefore, model, givenRenames);
     this.round = round;
-    this.earlierKeyStateMap = buildKeyStateMap(previous);
+    this.earlierStateByKeyMap = buildStateByKeyMap(previous);
     this.isCountedAsOpen = createOpenCountRule(model);
     this.readings = run.findings.map(finding => readTheFinding(finding, dispositionOfFindingMap.get(finding.index), this.readEarlierState(finding.findingKey), this.isCountedAsOpen));
-    this.keyStateMap = new Map();
+    this.stateByKeyMap = new Map();
     this.notJudgedLines = [];
     this.defects = [];
   }
 
   readEarlierState(findingKey) {
-    const earlier = this.earlierKeyStateMap.get(findingKey);
+    const earlier = this.earlierStateByKeyMap.get(findingKey);
     return earlier ? earlier.state : null;
   }
 
@@ -121,7 +121,7 @@ class RoundComparison {
     for (const [findingKey, findings] of groupFindingsByKey(this.run.findings)) {
       const readings = this.readings.filter(reading => findings.includes(reading.finding));
       const { displayName, check, scale } = findings[0];
-      this.keyStateMap.set(findingKey, createKeyState(displayName, check, scale, readStateOfTheRaisedKey(readings), {
+      this.stateByKeyMap.set(findingKey, createKeyState(displayName, check, scale, readStateOfTheRaisedKey(readings), {
         lastRaised: this.round,
         counted: readings.some(reading => reading.counted),
         carried: readings.some(reading => reading.carried),
@@ -149,11 +149,11 @@ class RoundComparison {
   // The new key of a renamed abstraction carries the open finding until a round judges it.
   recordTheRenamedKey(earlier, newDisplayName) {
     const newKey = createFindingKey(newDisplayName, earlier.check);
-    if (this.keyStateMap.has(newKey)) return;
+    if (this.stateByKeyMap.has(newKey)) return;
 
     const judged = this.run.judgedKeys.has(newKey);
     const state = judged ? KEY_STATES.CLOSED_BY_A_FIX : KEY_STATES.STILL_OPEN;
-    this.keyStateMap.set(newKey, createKeyState(newDisplayName, earlier.check, earlier.scale, state, { lastRaised: earlier.lastRaised, counted: earlier.counted, renamedFrom: earlier.displayName, formerNames: [newDisplayName, ...readFormerNamesOfTheState(earlier)] }));
+    this.stateByKeyMap.set(newKey, createKeyState(newDisplayName, earlier.check, earlier.scale, state, { lastRaised: earlier.lastRaised, counted: earlier.counted, renamedFrom: earlier.displayName, formerNames: [newDisplayName, ...readFormerNamesOfTheState(earlier)] }));
     if (!judged) this.notJudgedLines.push({ mark: KEY_STATES.STILL_OPEN, displayName: newDisplayName, check: earlier.check, text: `renamed from ${earlier.displayName}; no review judged it since round ${earlier.lastRaised}` });
   }
 
@@ -165,23 +165,23 @@ class RoundComparison {
   }
 
   recordTheEarlierKeys() {
-    for (const [findingKey, earlier] of this.earlierKeyStateMap) {
-      if (this.keyStateMap.has(findingKey)) continue;
+    for (const [findingKey, earlier] of this.earlierStateByKeyMap) {
+      if (this.stateByKeyMap.has(findingKey)) continue;
       const keyState = this.readTheEarlierKey(findingKey, earlier);
-      if (!this.keyStateMap.has(findingKey)) this.keyStateMap.set(findingKey, keyState);
+      if (!this.stateByKeyMap.has(findingKey)) this.stateByKeyMap.set(findingKey, keyState);
     }
   }
 
   listKeysOfTheState(state) {
-    return [...this.keyStateMap.entries()].filter(([, keyState]) => keyState.state === state).map(([findingKey]) => findingKey);
+    return [...this.stateByKeyMap.entries()].filter(([, keyState]) => keyState.state === state).map(([findingKey]) => findingKey);
   }
 
   countStillOpen() {
-    return [...this.keyStateMap.values()].filter(keyState => keyState.state === KEY_STATES.STILL_OPEN && keyState.counted !== false).length;
+    return [...this.stateByKeyMap.values()].filter(keyState => keyState.state === KEY_STATES.STILL_OPEN && keyState.counted !== false).length;
   }
 
   listRaisedBefore() {
-    return [...this.earlierKeyStateMap.entries()].filter(([, keyState]) => keyState.lastRaised === this.round - 1);
+    return [...this.earlierStateByKeyMap.entries()].filter(([, keyState]) => keyState.lastRaised === this.round - 1);
   }
 
   compareWithTheRoundBefore(judgedBefore, fixCreatedFiles) {
@@ -192,8 +192,8 @@ class RoundComparison {
     const vanished = raisedBefore.filter(([findingKey]) => judgedNow.has(findingKey) && !raisedNow.has(findingKey));
     const notJudgedAgain = raisedBefore.filter(([findingKey]) => !judgedNow.has(findingKey));
     const appeared = [...raisedNow].filter(findingKey => !raisedBeforeKeys.has(findingKey));
-    const stateNow = findingKey => this.keyStateMap.get(findingKey).state;
-    const isOpenNow = findingKey => OPEN_STATES.has(stateNow(findingKey)) && this.keyStateMap.get(findingKey).counted;
+    const stateNow = findingKey => this.stateByKeyMap.get(findingKey).state;
+    const isOpenNow = findingKey => OPEN_STATES.has(stateNow(findingKey)) && this.stateByKeyMap.get(findingKey).counted;
     return {
       judgedInBoth: [...judgedBefore].filter(findingKey => judgedNow.has(findingKey)).length,
       vanished: vanished.length,
@@ -204,7 +204,7 @@ class RoundComparison {
       closedByTheModel: notJudgedAgain.filter(([findingKey]) => stateNow(findingKey) === KEY_STATES.CLOSED_BY_THE_MODEL).length,
       appeared: appeared.length,
       appearedOnJudgedKeys: appeared.filter(findingKey => judgedBefore.has(findingKey)).length,
-      appearedCarried: appeared.filter(findingKey => this.keyStateMap.get(findingKey).carried).length,
+      appearedCarried: appeared.filter(findingKey => this.stateByKeyMap.get(findingKey).carried).length,
       appearedOnFixCreatedFiles: fixCreatedFiles ? appeared.filter(findingKey => this.isOnAFixCreatedFile(findingKey, fixCreatedFiles)).length : null,
       openBefore: raisedBefore.filter(([findingKey, earlier]) => OPEN_STATES.has(earlier.state) && earlier.counted && judgedNow.has(findingKey)).length,
       openNow: [...raisedNow].filter(findingKey => isOpenNow(findingKey) && judgedBefore.has(findingKey)).length,
@@ -230,7 +230,7 @@ class RoundComparison {
 
   // An earlier key of the same check under a former name, which this round did not raise, and whose finding a fix or the model closed or was sent to close: the rename or the move chased the finding.
   findFormerKeyOfTheReturn(findingKey, keyState, raisedNowKeys) {
-    for (const [earlierKey, earlier] of this.earlierKeyStateMap) {
+    for (const [earlierKey, earlier] of this.earlierStateByKeyMap) {
       if (earlierKey === findingKey || raisedNowKeys.has(earlierKey) || earlier.check !== keyState.check) continue;
       if (STATES_OF_A_FIXED_FORMER_KEY.has(earlier.state) && shareAFormerName(readFormerNamesOfTheState(earlier), keyState.formerNames)) return earlier;
     }
@@ -240,7 +240,7 @@ class RoundComparison {
   findReturnedKeys() {
     const raisedNowKeys = new Set(this.run.findings.map(finding => finding.findingKey));
     const returnedKeys = [];
-    for (const [findingKey, keyState] of this.keyStateMap) {
+    for (const [findingKey, keyState] of this.stateByKeyMap) {
       if (keyState.lastRaised !== this.round || keyState.carried) continue;
       const earlierState = this.readEarlierState(findingKey);
       if (RETURN_CLOSERS_OF_STATE_MAP.has(earlierState)) {
@@ -261,12 +261,12 @@ class RoundComparison {
     return {
       counts: { ...countTheFindings(this.readings), open: counted + stillOpen, stillOpen },
       comparison: this.previous ? this.compareWithTheRoundBefore(judgedBefore, fixCreatedFiles) : null,
-      findingKeys: [...this.keyStateMap.values()],
+      findingKeys: [...this.stateByKeyMap.values()],
       notJudgedLines: this.notJudgedLines,
       defects: this.defects,
       returnedKeys: this.findReturnedKeys(),
-      openChecksNow: this.listOpenChecksOfNameMap(this.keyStateMap.values(), this.round),
-      openChecksBefore: this.listOpenChecksOfNameMap(this.earlierKeyStateMap.values(), this.round - 1),
+      openChecksNow: this.listOpenChecksOfNameMap(this.stateByKeyMap.values(), this.round),
+      openChecksBefore: this.listOpenChecksOfNameMap(this.earlierStateByKeyMap.values(), this.round - 1),
       readings: this.readings,
       filesToExclude: this.listFilesToExclude(),
     };
@@ -275,7 +275,7 @@ class RoundComparison {
   // A file whose every finding key holds a reason class goes out of the next review, so no review judges a key with a reason class again; a key of another state on the file keeps it in, because pass and the return need that key judged.
   listFilesToExclude() {
     const statesOfFileMap = new Map();
-    for (const keyState of this.keyStateMap.values()) {
+    for (const keyState of this.stateByKeyMap.values()) {
       for (const file of readList(keyState.files)) statesOfFileMap.set(file, [...(statesOfFileMap.get(file) || []), keyState.state]);
     }
     return [...statesOfFileMap].filter(([, states]) => states.every(state => state === KEY_STATES.REASON)).map(([file]) => file).sort();

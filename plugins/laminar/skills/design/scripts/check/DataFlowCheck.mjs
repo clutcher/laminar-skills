@@ -235,22 +235,22 @@ const buildExitsOfFromMap = model => {
 };
 
 const listStepsToTheExits = (model, entryName, exitNames, exitsOfFromMap) => {
-  const nextNamesMap = new Map();
+  const nextNamesByNameMap = new Map();
   const namesToVisit = [entryName];
   while (namesToVisit.length) {
     const name = namesToVisit.pop();
-    if (nextNamesMap.has(name)) continue;
+    if (nextNamesByNameMap.has(name)) continue;
 
     const nextNames = name !== entryName && exitNames.has(name) ? [] : listNextNames(model, name, exitsOfFromMap);
-    nextNamesMap.set(name, nextNames);
+    nextNamesByNameMap.set(name, nextNames);
     namesToVisit.push(...nextNames);
   }
 
-  const reachingNames = new Set([...nextNamesMap.keys()].filter(name => exitNames.has(name)));
+  const reachingNames = new Set([...nextNamesByNameMap.keys()].filter(name => exitNames.has(name)));
   let grew = true;
   while (grew) {
     grew = false;
-    for (const [name, nextNames] of nextNamesMap) {
+    for (const [name, nextNames] of nextNamesByNameMap) {
       if (reachingNames.has(name) || !nextNames.some(nextName => reachingNames.has(nextName))) continue;
       reachingNames.add(name);
       grew = true;

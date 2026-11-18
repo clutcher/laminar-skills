@@ -558,8 +558,8 @@ const formatDollars = dollars => `$${dollars.toFixed(2)}`;
 
 const formatCount = (name, count) => `${name} ${count}`;
 
-const formatCounts = (countMap, formatTheEntry = formatCount) => {
-  const entries = Object.entries(countMap).filter(([, count]) => count > 0);
+const formatCounts = (countByNameMap, formatTheEntry = formatCount) => {
+  const entries = Object.entries(countByNameMap).filter(([, count]) => count > 0);
   return entries.length ? entries.map(([name, count]) => formatTheEntry(name, count)).join(" · ") : "none";
 };
 
