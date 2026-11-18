@@ -114,8 +114,8 @@ const isAMemberAndItsClass = (decision, finding, name, scale, classOfTreeKeyMap)
 
 // The relation of 1 open result to 1 decision, read from the 2 keys and the tree of the run, or "" where none holds; a decision of the result's own key relates nothing, because the key match handles it, also where it expired.
 export const findRelationToTheDecision = (decision, finding, classOfTreeKeyMap) => {
-  // A reach decision relates nothing: the person already chose which keys the ruling reaches, and its key has no reach of its own to add to.
-  if (decision.reachOf) return "";
+  // A reach decision relates nothing: the person already chose which keys the ruling reaches, and its key has no reach of its own to add to. A decision taken onto the code a created method took relates nothing either, because the decision of its source already relates the same results.
+  if (decision.reachOf || decision.takenFrom) return "";
   if (!readCheckIds(finding).includes(decision.check)) return "";
 
   const name = readDisplayNameOfTheFinding(finding);

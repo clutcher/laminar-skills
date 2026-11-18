@@ -4,9 +4,13 @@ import { checkDesignModel } from "./check/DesignDefects.mjs";
 import { findAutonomousReasonDefects } from "./check/AutonomousReasons.mjs";
 import { findDecidedDefects } from "./check/DecidedCheck.mjs";
 import { findNameOfThePath } from "./check/DefectNames.mjs";
+import { findTakenCodeDefects } from "./check/TakenCode.mjs";
 import { listClassesOfTheAbstractions } from "./check/TriedNames.mjs";
 import { readBaseCommit, readDesignModelOrExit, readOptionsOrExit, readTreeCommit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
 import { DecidedListStop, checkDecidedListForm, findReachDefects, readDecidedEntries, resolveDecidedList } from "./plan/DecidedList.mjs";
+import { buildDecidedReview, listMethodsThatTakeCode } from "./plan/DecidedReview.mjs";
+import { listFindingEntries } from "./plan/FindingList.mjs";
+import { DECIDED_REVIEW_FILE, getPlansFolder } from "./plan/PlanFolder.mjs";
 import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder } from "./round/RunFolder.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
 
@@ -128,12 +132,72 @@ const findDecidedDefectsOrExit = (model, options) => {
   }
 };
 
+const SHAPE_RUNS_FOLDER = "shape-runs";
+
+const NO_DECIDED_LIST = Object.freeze({ round: null, decided: [] });
+
+// The decisions of every ready plan of the results folder, from each decided review file under plans/.
+const readTheDecisionsOfThePlans = resultsFolder => {
+  const plansFolder = getPlansFolder(resultsFolder);
+  if (!fs.existsSync(plansFolder)) return [];
+  return fs.readdirSync(plansFolder)
+    .filter(name => RUN_FOLDER_NAME.test(name))
+    .map(name => path.join(plansFolder, name, DECIDED_REVIEW_FILE))
+    .filter(filePath => fs.existsSync(filePath))
+    .flatMap(filePath => readJsonOrStop(filePath, "decided review").decided || []);
+};
+
+// A shape run that cannot be read gives no decision.
+const readShapeRunIfPresent = (resultsFolder, run) => {
+  try {
+    return readRunFolder(path.join(resultsFolder, SHAPE_RUNS_FOLDER, String(run)), false);
+  } catch (error) {
+    if (!(error instanceof RoundStop)) throw error;
+    return null;
+  }
+};
+
+// The decisions a created method may take code from, as the finish command exports them: of the run folder of --review with its decided list, of its shape runs, and of every ready plan of the results folder beside the model.
+const listDecisionsToTakeCodeFrom = (model, options) => {
+  const resultsFolder = path.dirname(path.resolve(options.model));
+  const run = options.review ? readRunFolder(path.dirname(path.resolve(options.review)), false) : null;
+  const decidedList = options.decided ? checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided")) : NO_DECIDED_LIST;
+  const resolved = run ? resolveDecidedList(decidedList, run, createFinderOfTheRunHoldingTheKey(run.runFolder), findTheRoundOfTheRun(path.join(resultsFolder, ROUNDS_FOLDER), run.runFolder)) : null;
+  const decisionsOfThePlans = readTheDecisionsOfThePlans(resultsFolder);
+  const { decidedReview } = buildDecidedReview({
+    model,
+    modelBefore: null,
+    plan: 0,
+    inputRun: run,
+    entries: run ? listFindingEntries(model, run, resolved.decisionOfFindingMap, resolved.decisionOfFindingCheckMap) : [],
+    readShapeRun: number => readShapeRunIfPresent(resultsFolder, number),
+    baseCommit: "",
+    planCommit: "",
+    earlier: decisionsOfThePlans.length ? { model, decided: decisionsOfThePlans } : null,
+    linesFingerprints: run ? LinesFingerprintsOfTheRun.readFrom(run.runFolder) : null,
+    refreshed: resolved ? resolved.refreshed : [],
+    decisionOfFindingCheckMap: resolved ? resolved.decisionOfFindingCheckMap : new Map(),
+  });
+  return decidedReview.decided;
+};
+
+// Read only where the model holds the key takesCodeFrom, so a model without it is checked as before; a malformed decided list has already stopped the check.
+const findTakenCodeDefectsOrExit = (model, options) => {
+  if (!listMethodsThatTakeCode(model).length) return [];
+  try {
+    return findTakenCodeDefects(model, listDecisionsToTakeCodeFrom(model, options)).map(defect => ({ ...defect, name: findNameOfThePath(model, defect.path) || defect.path, foundWrong: false }));
+  } catch (error) {
+    if (!(error instanceof RoundStop)) throw error;
+    return exitWith(error.message);
+  }
+};
+
 function checkDesign() {
   const options = readOptionsOrExit(USAGE, ["model", "repo", "tree", "base", "review", "decided"], ["model"], [SHAPE_REVIEW_OPTION], [AUTONOMOUS_SWITCH]);
   const model = readDesignModelOrExit(options.model);
   const reviewText = options.review ? readTextOrExit("review", options.review) : null;
   const shapeReviews = options[SHAPE_REVIEW_OPTION].map(readShapeReviewOrExit);
-  const decidedDefects = findDecidedDefectsOrExit(model, options);
+  const decidedDefects = [...findDecidedDefectsOrExit(model, options), ...findTakenCodeDefectsOrExit(model, options)];
 
   const repositoryRoot = options.repo ? path.resolve(options.repo) : null;
   const commits = repositoryRoot ? { treeCommit: readTreeCommit(options), baseCommit: readBaseCommit(options) } : undefined;

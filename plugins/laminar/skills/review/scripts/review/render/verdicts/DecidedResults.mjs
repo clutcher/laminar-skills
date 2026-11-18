@@ -53,6 +53,7 @@ const createDecision = (given, order) => {
     linesFingerprint: isAText(given.linesFingerprint) ? given.linesFingerprint : "",
     renameMask: readRenameMask(given.renameMask),
     reachOf: isAText(given.reachOf) ? given.reachOf : "",
+    takenFrom: isAText(given.takenFrom) ? given.takenFrom : "",
     methodRemoved: given.methodRemoved === true,
   };
 };

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { holdsADecidedReason, isAText, readList, readOldTypeName } from "../model/DesignModel.mjs";
+import { holdsADecidedReason, isAText, isMarkedUnchanged, readList, readOldTypeName } from "../model/DesignModel.mjs";
 import { findClassOfTheFinding, readFindingNamePieces } from "./FindingList.mjs";
 import { NOT_REFRESHED_REASONS, createFindingCheckKey, formatNotRefreshedLine, readChecksOfTheFinding } from "./DecidedList.mjs";
 import { listFormerNames } from "../round/FormerNames.mjs";
@@ -27,6 +27,8 @@ const formatShapeRunSource = (run, number) => `shape run ${run} item ${number}`;
 const formatDecidedListSource = round => `decided list round ${round}`;
 
 const formatReachSource = decision => `reach of ${decision.check} ${decision.displayName}`;
+
+const formatTakenCodeSource = decision => `code taken from ${decision.check} ${decision.displayName}`;
 
 const createDecisionKey = decision => `${decision.check}\t${decision.scale}\t${decision.displayName}`;
 
@@ -200,7 +202,40 @@ const listKeysOfTheDecision = decision => [decision.displayName, ...readList(dec
 
 const isSentToAFix = entry => !isAText(entry.reason) && !entry.toConsider;
 
-const isADirectDecision = decision => !decision.reachOf;
+const isADirectDecision = decision => !decision.reachOf && !decision.takenFrom;
+
+// A method the change creates: a method marked unchanged or renamed by oldName stands in the current tree, so no decision is taken onto it.
+export const isACreatedMethod = method => !isMarkedUnchanged(method) && !isAText(method.oldName);
+
+// Each method of the model with the display names of the decided methods its body takes code from, and its own display name.
+export const listMethodsThatTakeCode = model => model.classes.flatMap(theClass => readList(theClass.methods)
+  .filter(method => readList(method.takesCodeFrom).length)
+  .map(method => ({ theClass, method, displayName: `${theClass.name}${METHOD_MARK}${method.name}`, sources: readList(method.takesCodeFrom) })));
+
+// The method decisions on 1 source by its planned name or a former name, never a decision that was itself taken from another method.
+export const listDecisionsOfTheSource = (decisions, sourceName) => decisions.filter(decision => decision.scale === METHOD_SCALE
+  && !decision.takenFrom
+  && [decision.displayName, ...readList(decision.formerNames)].includes(sourceName));
+
+export const holdsALinesFingerprint = decision => isAText(decision.linesFingerprint);
+
+const withoutTheReach = ({ reachOf, ...decision }) => decision;
+
+// A created method that takes code from a decided method takes each decision of that method that holds a lines fingerprint, with that fingerprint, so its result is decided only while its own lines are the lines the person ruled on, and decided but changed since once they differ. It takes no class of its method, so it never decides a class result, and it never decides a finding that no decision holds.
+const listDecisionsOfTheTakenCode = (model, plan, decisions) => listMethodsThatTakeCode(model)
+  .filter(({ method }) => isACreatedMethod(method))
+  .flatMap(({ theClass, displayName, sources }) => sources.flatMap(source => listDecisionsOfTheSource(decisions, source)
+    .filter(holdsALinesFingerprint)
+    .map(decision => ({
+      ...withoutTheClassOfTheMethod(withoutTheReach(decision)),
+      displayName,
+      formerNames: [],
+      file: theClass.file,
+      plan,
+      source: formatTakenCodeSource(decision),
+      plannedKind: model.getKindOfClass(theClass),
+      takenFrom: decision.displayName,
+    }))));
 
 // A reach never replaces a ruling, in any order of the list: a decision this plan made on its key by an entry or an object, a decision of an earlier plan the export carries, and a key the same round sends to a fix each keep the key, and of 2 reaches on 1 key the first stands.
 const keepTheReachOffTheRulings = (decisions, carried, entries) => {
@@ -271,7 +306,8 @@ export const buildDecidedReview = ({ model, modelBefore, plan, inputRun, entries
   const decisionsOfThePlan = [...decisionOfKeyMap.values()];
   const replacedKeys = new Set(refreshedDecisions.map(refresh => refresh.replacedKey));
   const { carried, dropped } = carryTheEarlierDecisions(earlier, model, new Set(decisionsOfThePlan.filter(isADirectDecision).map(createDecisionKey)), replacedKeys);
-  const decisions = keepTheReachOffTheRulings(decisionsOfThePlan, carried, entries);
+  const decisionsBeforeTheTakenCode = keepTheReachOffTheRulings(decisionsOfThePlan, carried, entries);
+  const decisions = keepTheReachOffTheRulings([...decisionsBeforeTheTakenCode, ...listDecisionsOfTheTakenCode(model, plan, [...carried, ...decisionsBeforeTheTakenCode])], carried, entries);
   return {
     decidedReview: {
       plan,
