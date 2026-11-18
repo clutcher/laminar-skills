@@ -121,6 +121,7 @@ const WRITER_PROPERTIES = {
   commitMessage: { type: 'string' },
   steps: { type: 'array', items: { type: 'integer' } },
   filled: A_TEXT_LIST,
+  referencesRead: A_TEXT_LIST,
   build: {
     type: 'object',
     properties: { command: { type: 'string' }, result: { type: 'string', enum: BUILD_RESULTS } },
@@ -141,7 +142,7 @@ const WRITER_PROPERTIES = {
   },
 }
 
-const WRITER_REQUIRED = ['outcome', 'files', 'steps', 'build', 'tests']
+const WRITER_REQUIRED = ['outcome', 'files', 'steps', 'referencesRead', 'build', 'tests']
 
 const WRITER_SCHEMA = { type: 'object', properties: WRITER_PROPERTIES, required: WRITER_REQUIRED }
 
@@ -397,7 +398,7 @@ function isAWriterAnswer(returned) {
 }
 
 function notWrittenOf(group, outcome, extra) {
-  return { group: group.group, dependsOn: group.dependsOn, outcome, files: [], steps: [], filled: [], tests: [], ...extra }
+  return { group: group.group, dependsOn: group.dependsOn, outcome, files: [], steps: [], filled: [], referencesRead: [], tests: [], ...extra }
 }
 
 function writtenOf(group, returned) {
@@ -409,6 +410,7 @@ function writtenOf(group, returned) {
     commitMessage: returned.commitMessage || '',
     steps: returned.steps || [],
     filled: returned.filled || [],
+    referencesRead: returned.referencesRead || [],
     build: returned.build,
     tests: returned.tests || [],
     ...(returned.outcome === OUTCOMES.STOPPED ? { stop: returned.stop || stopWithoutAReasonOf(group) } : {}),
@@ -562,6 +564,7 @@ async function answeredSelfCheckOf(group, written, reviewed) {
     commitMessage: answeredGroup.commitMessage || written.commitMessage,
     steps: written.steps,
     filled: [...new Set([...written.filled, ...answeredGroup.filled])],
+    referencesRead: [...new Set([...written.referencesRead, ...answeredGroup.referencesRead])],
     selfCheck: selfCheckOf(reviewed, returned.answers || [], true),
   }
 }
@@ -702,7 +705,7 @@ async function fixedGroupOf(written, failuresFile) {
     log(`the ${options.label} call returned nothing usable, so the failures of group ${group.group} stand`)
     return null
   }
-  const fixed = { ...written, files: [...new Set([...written.files, ...(returned.files || [])])], filled: [...new Set([...written.filled, ...(returned.filled || [])])] }
+  const fixed = { ...written, files: [...new Set([...written.files, ...(returned.files || [])])], filled: [...new Set([...written.filled, ...(returned.filled || [])])], referencesRead: [...new Set([...written.referencesRead, ...(returned.referencesRead || [])])] }
   if (returned.outcome === OUTCOMES.STOPPED) return stoppedGroupOf(group, fixed, returned.stop || stopWithoutAReasonOf(group))
   return fixed
 }
