@@ -12,11 +12,11 @@ const describeTheDifference = (findingObject, decision) => ["reason", "says", "d
 // The check named only where the item holds a result the merge combined, so the sentence says which check of it the decided list decided.
 const describeTheItem = (number, finding, check) => (readChecksOfTheFinding(finding).length > 1 ? `item ${number} with the check ${check}` : `item ${number}`);
 
-// Each check at the application, module or class scale that the decided list decided stands in decisions.findings with the same reason, says and decidedBy, because the designer carries a decision of the calling session and never changes it; a combined result is checked per check, by an object that names that check or no check.
+// Each check at the application, module or class scale that the decided list decided stands in decisions.findings with the same reason, says and decidedBy, because the designer carries a decision of the calling session and never changes it; a combined result is checked per check, by an object that names that check or no check. A finding that no item of its scale shows has no object of decisions.findings, which holds 1 object per item, so findings.json carries its decision by its finding key.
 export const findDecidedDefects = (model, run, decisionOfFindingCheckMap) => {
   const itemNumberOfFindingMap = buildItemNumberOfFindingMap(run);
   const defects = [];
-  for (const finding of run.findings.filter(other => PLAN_SCALES.has(other.scale))) {
+  for (const finding of run.findings.filter(other => PLAN_SCALES.has(other.scale) && itemNumberOfFindingMap.has(other.index))) {
     for (const check of readChecksOfTheFinding(finding).filter(other => decisionOfFindingCheckMap.has(createFindingCheckKey(finding, other)))) {
       const number = itemNumberOfFindingMap.get(finding.index);
       const decision = decisionOfFindingCheckMap.get(createFindingCheckKey(finding, check));

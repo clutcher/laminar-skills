@@ -8,6 +8,8 @@ const METHOD_MARK = "#";
 
 const TO_CONSIDER = "to consider";
 
+const NO_ITEM_OF_ITS_SCALE = "no item of its scale in review.md";
+
 // The group of a test file is the group of the step of the whole plan that writes its tests, which waits for the production code it tests.
 export const findGroupOfTheTestFile = (steps, file) => {
   const testStep = steps.find(step => step.stage === MIGRATION_STAGES.TESTS && step.files.includes(file));
@@ -77,6 +79,11 @@ export const listFindingSteps = (model, steps, entries, itemChecks = null) => {
     // An item to consider asks the author a question and claims no defect, so no writer changes code for it.
     if (entry.toConsider) {
       noStepLines.push(createNoStepLine(entry, TO_CONSIDER));
+      continue;
+    }
+    // A writer reads the finding of a step by its item number, and a finding that no item of its scale shows has none, such as one the review folded into an item of another scale, whose own ending closes the claim.
+    if (entry.number === null) {
+      noStepLines.push(createNoStepLine(entry, NO_ITEM_OF_ITS_SCALE));
       continue;
     }
     const pieces = readFindingNamePieces(entry.displayName, entry.scale);

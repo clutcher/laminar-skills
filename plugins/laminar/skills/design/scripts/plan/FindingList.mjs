@@ -65,11 +65,14 @@ const listChecksOfTheEntries = (finding, decisionOfFindingCheckMap) => {
   return isDecidedOnSomeChecks ? checks : [finding.check];
 };
 
-// 1 entry per finding of the run at the method and variable scales, with the migration group of its class and the decision of the decided list where it holds one.
+// The model closes a finding by the object of its item, so a finding at the application, module or class scale that no item of its scale shows, such as one the review folded into an item of another scale, has no object and needs an entry.
+const isClosedByAnObjectOfItsItem = (finding, itemNumberOfFindingMap) => PLAN_SCALES.has(finding.scale) && itemNumberOfFindingMap.has(finding.index);
+
+// 1 entry per finding of the run at the method and variable scales, and per finding at another scale that no item of its scale shows, with the migration group of its class and the decision of the decided list where it holds one.
 export const listFindingEntries = (model, run, decisionOfFindingMap, decisionOfFindingCheckMap = new Map()) => {
   const itemNumberOfFindingMap = buildItemNumberOfFindingMap(run);
   return readList(run.findings)
-    .filter(finding => !PLAN_SCALES.has(finding.scale))
+    .filter(finding => !isClosedByAnObjectOfItsItem(finding, itemNumberOfFindingMap))
     .flatMap(finding => {
       const file = readFileOfTheFinding(finding);
       const theClass = findClassOfTheFinding(model, finding.displayName, finding.scale, file);

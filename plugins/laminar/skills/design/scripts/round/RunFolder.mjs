@@ -160,7 +160,14 @@ const namesTheFindingAlsoIn = (item, finding, lead) => item.alsoIn.some(alsoIn =
 // The item of a finding whose head no item prints, because the review shows it under the head of another finding of its check: the 1 item that holds its check and names it under Also in; where 2 items do, the review does not tell which, so it joins none.
 const findTheItemNamingTheFindingAlsoIn = (items, finding, lead) => findTheOnlyItem(items, item => item.leads.includes(lead) && namesTheFindingAlsoIn(item, finding, lead));
 
-// review.sarif carries no item number and lists its results by check, while 1 item of review.md can hold several checks, so each finding joins an item whose head names it and whose points name its check. Of 2 or more such items, as for 2 overloads of 1 method, it joins the one that prints its message, then the one whose head prints its line, then the first with a point of its check that no finding took yet. A finding whose head no item prints the way this script reads a display name joins the 1 item that prints its message, else the 1 item that names it under Also in, and else none, so it takes no number and no other item's number.
+// The 1 item that shows a finding whose head no item prints: the item that prints its message, else the item that names it under Also in.
+const findTheItemShowingTheFindingElsewhere = (items, finding, lead) => findTheOnlyItem(items, item => printsTheMessage(item, finding))
+  || findTheItemNamingTheFindingAlsoIn(items, finding, lead);
+
+// The design closes an item at its own scale, by the plan at the application, module and class scales and by a writer below them, so a finding keeps only an item of its own scale.
+const keepTheItemOfItsScale = (item, finding) => (item && item.scale === finding.scale ? item : null);
+
+// review.sarif carries no item number and lists its results by check, while 1 item of review.md can hold several checks, so each finding joins an item of its own scale whose head names it and whose points name its check. Of 2 or more such items, as for 2 overloads of 1 method, it joins the one that prints its message, then the one whose head prints its line, then the first with a point of its check that no finding took yet. A finding whose head no item prints the way this script reads a display name joins the 1 item that prints its message, else the 1 item that names it under Also in, where that item is of its scale, and else none, so it takes no number and no other item's number. The review folds a finding into the item of another finding of its check where both make 1 claim, and prints it there at most as a name under Also in, which also lists places that hold no finding; a finding folded into an item of another scale so takes no number, and the design reads it by its finding key.
 const joinFindingsToItems = (items, findings, readLeadOfTheCheck) => {
   const findingsOfItemMap = new Map(items.map(item => [item, []]));
   const leadOfFindingMap = new Map(findings.map(finding => [finding, formatLeadOfTheFinding(finding, readLeadOfTheCheck)]));
@@ -170,8 +177,7 @@ const joinFindingsToItems = (items, findings, readLeadOfTheCheck) => {
     const itemsOfTheHead = items.filter(item => isTheItemOfTheFinding(item, finding) && item.leads.includes(lead));
     const preferences = [item => printsTheMessage(item, finding), item => isAtTheLineOfTheFinding(item, finding), item => holdsAPointLeftOfTheLead(item, lead)];
     const joinedItem = preferences.reduce(narrowTo, itemsOfTheHead)[0]
-      || findTheOnlyItem(items, item => printsTheMessage(item, finding))
-      || findTheItemNamingTheFindingAlsoIn(items, finding, lead);
+      || keepTheItemOfItsScale(findTheItemShowingTheFindingElsewhere(items, finding, lead), finding);
     if (!joinedItem) continue;
 
     findingsOfItemMap.get(joinedItem).push(finding);
