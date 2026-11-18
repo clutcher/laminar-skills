@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { AUTONOMOUS_ANSWERS } from "../model/DesignModelForm.mjs";
 import { isAText, isWaitingAfterTheCeiling, readList } from "../model/DesignModel.mjs";
+import { readChecksOfTheFinding } from "./DecidedList.mjs";
+import { RoundStop, readRunFolder } from "../round/RunFolder.mjs";
 
 export const BASE_COMMIT_FILE = "base-commit.txt";
 
@@ -53,10 +55,33 @@ export const listQuestionsThatStopThePlan = model => readList(model.decisions.qu
   .filter(question => !isAnsweredQuestion(question) && question.autonomous !== AUTONOMOUS_ANSWERS.OPEN)
   .map(question => question.id);
 
-// A shape-run finding open after the ceiling with no decided reason stops the plan as a question does, because no writer writes a change that no shape check judged; each object names the item and the change the designer would make.
-export const listFindingsThatStopThePlan = model => readList(model.decisions.findings)
+const SHAPE_RUNS_FOLDER = "shape-runs";
+
+// The first finding of 1 item of a shape run, on the check of the object where it names one, read from the run folder of that shape run; null where the folder cannot be read or holds no such item.
+const findFindingOfTheShapeItem = (resultsFolder, findingObject) => {
+  try {
+    const run = readRunFolder(path.join(resultsFolder, SHAPE_RUNS_FOLDER, String(findingObject.run)), false);
+    const item = run.items.find(other => other.number === findingObject.number);
+    return item ? item.findings.find(finding => !isAText(findingObject.check) || readChecksOfTheFinding(finding).includes(findingObject.check)) || null : null;
+  } catch (error) {
+    if (!(error instanceof RoundStop)) throw error;
+    return null;
+  }
+};
+
+// A shape-run finding open after the ceiling with no decided reason stops the plan as a question does, because no writer writes a change that no shape check judged; each object names the item, its display name and check as the decided list keys a finding, taken from the shape run where the object names none, and the change the designer would make.
+export const listFindingsThatStopThePlan = (model, resultsFolder) => readList(model.decisions.findings)
   .filter(isWaitingAfterTheCeiling)
-  .map(finding => ({ run: finding.run, number: finding.number, check: isAText(finding.check) ? finding.check : null, openAfterCeiling: finding.openAfterCeiling }));
+  .map(finding => {
+    const fromTheShapeRun = findFindingOfTheShapeItem(resultsFolder, finding);
+    return {
+      run: finding.run,
+      number: finding.number,
+      displayName: fromTheShapeRun ? fromTheShapeRun.displayName : null,
+      check: isAText(finding.check) ? finding.check : (fromTheShapeRun ? fromTheShapeRun.check : null),
+      openAfterCeiling: finding.openAfterCeiling,
+    };
+  });
 
 // decidedKeysNotRaised and decidedThroughInterfaceMethod stand only where the finish read a decided list with no run folder: the decided keys that no shape run raised, and the items of a shape run that a decided key on an api or spi method decides on the method that implements it.
 export const writeOutcome = (resultsFolder, plan, outcome) => {

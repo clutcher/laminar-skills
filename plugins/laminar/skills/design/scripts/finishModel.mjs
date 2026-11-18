@@ -218,7 +218,7 @@ const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput) => {
   copyFileIfPresent(path.join(paths.results, MIGRATION_WORKFLOW_FILE), planFolder);
   if (roundInput) writeJson(path.join(planFolder, DISPOSITIONS_FILE), listRoundDispositions(model, roundInput.run, roundInput));
   const questions = listQuestionsThatStopThePlan(model);
-  const openAfterCeiling = listFindingsThatStopThePlan(model);
+  const openAfterCeiling = listFindingsThatStopThePlan(model, resultsFolder);
   const outcomeWord = questions.length || openAfterCeiling.length ? PLAN_OUTCOMES.QUESTION : PLAN_OUTCOMES.READY;
   writeOutcome(resultsFolder, plan, { word: outcomeWord, questions, considerations: paths.considerations, openAfterCeiling, referencesRead: readList(model.decisions.referencesRead), decidedKeysNotRaised: paths.shapeDecisions?.decidedKeysNotRaised, decidedThroughInterfaceMethod: paths.shapeDecisions?.decidedThroughInterfaceMethod });
   if (outcomeWord === PLAN_OUTCOMES.READY) writeTheDecidedReview(resultsFolder, plan, model, roundInput);
