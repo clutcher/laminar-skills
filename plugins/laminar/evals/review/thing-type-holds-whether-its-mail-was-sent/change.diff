@@ -1,0 +1,144 @@
+diff --git a/vegbox/src/main/java/com/example/vegbox/delivery/app/domain/BoxDispatchService.java b/vegbox/src/main/java/com/example/vegbox/delivery/app/domain/BoxDispatchService.java
+new file mode 100644
+--- /dev/null
++++ b/vegbox/src/main/java/com/example/vegbox/delivery/app/domain/BoxDispatchService.java
+@@ -0,0 +1,33 @@
++package com.example.vegbox.delivery.app.domain;
++
++import com.example.vegbox.delivery.app.domain.model.VegBox;
++import com.example.vegbox.delivery.app.spi.BoxStore;
++import com.example.vegbox.delivery.app.spi.Courier;
++import com.example.vegbox.delivery.app.spi.SubscriberMailer;
++
++public class BoxDispatchService {
++
++    private final BoxStore boxStore;
++    private final Courier courier;
++    private final SubscriberMailer subscriberMailer;
++
++    public BoxDispatchService(BoxStore boxStore, Courier courier, SubscriberMailer subscriberMailer) {
++        this.boxStore = boxStore;
++        this.courier = courier;
++        this.subscriberMailer = subscriberMailer;
++    }
++
++    public VegBox dispatchBox(String boxCode) {
++        VegBox box = boxStore.findBox(boxCode);
++        courier.handOver(box.code(), box.deliveryDay());
++        box.markDispatched();
++
++        boolean noticeSent = subscriberMailer.sendDispatchNotice(box.subscriberCode(), box.deliveryDay());
++        if (noticeSent) {
++            box.markSubscriberNotified();
++        }
++
++        boxStore.saveBox(box);
++        return box;
++    }
++}
+diff --git a/vegbox/src/main/java/com/example/vegbox/delivery/app/domain/model/BoxStatus.java b/vegbox/src/main/java/com/example/vegbox/delivery/app/domain/model/BoxStatus.java
+new file mode 100644
+--- /dev/null
++++ b/vegbox/src/main/java/com/example/vegbox/delivery/app/domain/model/BoxStatus.java
+@@ -0,0 +1,7 @@
++package com.example.vegbox.delivery.app.domain.model;
++
++public enum BoxStatus {
++    PACKED,
++    DISPATCHED,
++    DELIVERED
++}
+diff --git a/vegbox/src/main/java/com/example/vegbox/delivery/app/domain/model/VegBox.java b/vegbox/src/main/java/com/example/vegbox/delivery/app/domain/model/VegBox.java
+new file mode 100644
+--- /dev/null
++++ b/vegbox/src/main/java/com/example/vegbox/delivery/app/domain/model/VegBox.java
+@@ -0,0 +1,48 @@
++package com.example.vegbox.delivery.app.domain.model;
++
++import java.time.LocalDate;
++
++public class VegBox {
++
++    private final String code;
++    private final String subscriberCode;
++    private final LocalDate deliveryDay;
++    private BoxStatus status;
++    private boolean subscriberNotified;
++
++    public VegBox(String code, String subscriberCode, LocalDate deliveryDay, BoxStatus status, boolean subscriberNotified) {
++        this.code = code;
++        this.subscriberCode = subscriberCode;
++        this.deliveryDay = deliveryDay;
++        this.status = status;
++        this.subscriberNotified = subscriberNotified;
++    }
++
++    public String code() {
++        return code;
++    }
++
++    public String subscriberCode() {
++        return subscriberCode;
++    }
++
++    public LocalDate deliveryDay() {
++        return deliveryDay;
++    }
++
++    public BoxStatus status() {
++        return status;
++    }
++
++    public boolean isSubscriberNotified() {
++        return subscriberNotified;
++    }
++
++    public void markDispatched() {
++        status = BoxStatus.DISPATCHED;
++    }
++
++    public void markSubscriberNotified() {
++        subscriberNotified = true;
++    }
++}
+diff --git a/vegbox/src/main/java/com/example/vegbox/delivery/app/spi/BoxStore.java b/vegbox/src/main/java/com/example/vegbox/delivery/app/spi/BoxStore.java
+new file mode 100644
+--- /dev/null
++++ b/vegbox/src/main/java/com/example/vegbox/delivery/app/spi/BoxStore.java
+@@ -0,0 +1,10 @@
++package com.example.vegbox.delivery.app.spi;
++
++import com.example.vegbox.delivery.app.domain.model.VegBox;
++
++public interface BoxStore {
++
++    VegBox findBox(String boxCode);
++
++    void saveBox(VegBox box);
++}
+diff --git a/vegbox/src/main/java/com/example/vegbox/delivery/app/spi/Courier.java b/vegbox/src/main/java/com/example/vegbox/delivery/app/spi/Courier.java
+new file mode 100644
+--- /dev/null
++++ b/vegbox/src/main/java/com/example/vegbox/delivery/app/spi/Courier.java
+@@ -0,0 +1,8 @@
++package com.example.vegbox.delivery.app.spi;
++
++import java.time.LocalDate;
++
++public interface Courier {
++
++    void handOver(String boxCode, LocalDate deliveryDay);
++}
+diff --git a/vegbox/src/main/java/com/example/vegbox/delivery/app/spi/SubscriberMailer.java b/vegbox/src/main/java/com/example/vegbox/delivery/app/spi/SubscriberMailer.java
+new file mode 100644
+--- /dev/null
++++ b/vegbox/src/main/java/com/example/vegbox/delivery/app/spi/SubscriberMailer.java
+@@ -0,0 +1,8 @@
++package com.example.vegbox.delivery.app.spi;
++
++import java.time.LocalDate;
++
++public interface SubscriberMailer {
++
++    boolean sendDispatchNotice(String subscriberCode, LocalDate deliveryDay);
++}
