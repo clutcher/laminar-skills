@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Grades 1 run of a one-shot case of the design evals: what stays open on the change after 1 design, 1 writing pass with its self-check and 1 full review.
 //
-//   node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--decided <decided list of the case>] [--known <known findings of the base>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]
+//   node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b> [--run-range <a>...<b>]] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--decided <decided list of the case>] [--known <known findings of the base>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]
 //
 // --review, --repo and --range are needed where plan 1 ended ready; a plan that ended in a question or a stop starts no writer and no review.
+// --run-range gives the diff of the run itself where --range holds more, such as the planted change of the fix-from-review input before the commits of the writers; it defaults to --range. A kept finding on the change whose lines the run left byte for byte, and that the input did not raise, counts apart as on code the run left untouched; the input is the stored input review, and for the feature input the known findings of the base stand in for the review of the base.
 // --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left, decided again, decided again with its lines changed since the decision, or back, and --expected gives the planted keys that split the kept findings of the closing review; the change.diff beside it gives the files the planted change touched.
 // --decided is given for the feature input: each object of the list names a key of the closing review, by displayName and check, that the case itself decided, and a result on that key counts apart as decided by the case. The fix-from-review input gives its decided list to the designer, so it takes no --decided.
 // --known is given for either input: each object of the list names a key, by displayName and check, that a full review of the base kept, with the review that found it as foundBy. It is measured, not decided, so a result on that key counts apart as known of the base only where it stands off the change; on code the run changed it is a result of the run like any other.
@@ -17,7 +18,7 @@ import { findCheckWords } from "../skills/review/scripts/checks/CheckWords.mjs";
 import { Scale } from "../skills/review/scripts/code/graph/abstractions/Scale.mjs";
 import { createFindingKey, readRunFolder, RoundStop } from "../skills/design/scripts/round/RunFolder.mjs";
 
-const USAGE = "usage: node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b>] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--decided <decided list of the case>] [--known <known findings of the base>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]";
+const USAGE = "usage: node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b> [--run-range <a>...<b>]] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--decided <decided list of the case>] [--known <known findings of the base>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]";
 
 const EXIT_CODES = Object.freeze({ ONE_SHOT: 0, NOT_ONE_SHOT: 1, USAGE: 2 });
 
@@ -25,6 +26,7 @@ const SCALES = Object.freeze(["application", "module", "class", "method", "varia
 
 const PLACEMENTS = Object.freeze({
   ON_THE_CHANGE: "on the change",
+  ON_UNTOUCHED_CODE: "on code the run left untouched",
   NOT_ON_THE_CHANGE: "not on the change",
   NOT_NEW: "not new",
   DECIDED: "decided by the design",
@@ -98,14 +100,14 @@ const DIFF_FILE_HEAD = /^diff --git a\/(.+?) b\/(.+)$/;
 
 const PLANTED_CHANGE_FILE = "change.diff";
 
-const HUNK_HEAD = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/;
+const HUNK_HEAD = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 const NEW_FILE_HEAD = /^\+\+\+ b\/(.+)$/;
 
 class UsageStop extends Error {}
 
 const readOptions = argv => {
   const options = { usage: [] };
-  const valueKeys = new Map([["--results", "results"], ["--review", "review"], ["--repo", "repo"], ["--range", "range"], ["--input-review", "inputReview"], ["--expected", "expected"], ["--decided", "decided"], ["--known", "known"], ["--build", "build"], ["--json", "json"]]);
+  const valueKeys = new Map([["--results", "results"], ["--review", "review"], ["--repo", "repo"], ["--range", "range"], ["--run-range", "runRange"], ["--input-review", "inputReview"], ["--expected", "expected"], ["--decided", "decided"], ["--known", "known"], ["--build", "build"], ["--json", "json"]]);
   for (let at = 0; at < argv.length; at++) {
     const name = argv[at];
     const value = argv[at + 1];
@@ -139,7 +141,7 @@ const runGit = (repository, args) => {
   return answered.stdout;
 };
 
-// The files of the range with their status, and per file the line spans of the new side that the change added or changed.
+// The files of the range with their status, and per file the hunks of the range: the line span of the new side that the change added or changed, with the count of the lines each hunk removed and added.
 const readChangeOfTheRange = (repository, range) => {
   const statusOfFileMap = new Map();
   for (const line of runGit(repository, ["diff", "--name-status", "--no-renames", range]).split("\n").filter(Boolean)) {
@@ -162,10 +164,11 @@ const readChangeOfTheRange = (repository, range) => {
   return { statusOfFileMap, changedSpansOfFileMap };
 };
 
+// A hunk that adds no line has the count 0 and starts at the line of the new side after which it removed its lines.
 const readSpanOfTheHunk = hunk => {
-  const from = Number(hunk[1]);
-  const lineCount = hunk[2] === undefined ? 1 : Number(hunk[2]);
-  return { from, to: from + lineCount - 1 };
+  const from = Number(hunk[3]);
+  const lineCount = hunk[4] === undefined ? 1 : Number(hunk[4]);
+  return { from, to: from + lineCount - 1, lineCount, removedLineCount: hunk[2] === undefined ? 1 : Number(hunk[2]) };
 };
 
 const readFindingsOfTheSarif = sarifPath => {
@@ -211,6 +214,54 @@ const isOnTheChange = (finding, change) => {
   return finding.line !== null && isInAChangedSpan(finding, change);
 };
 
+// A hunk touches the lines where it adds or changes one of them, or where it removed lines between 2 of them.
+const touchesTheLines = (hunk, lines) => (hunk.lineCount === 0 ? hunk.from >= lines.from && hunk.from < lines.to : hunk.from <= lines.to && hunk.to >= lines.from);
+
+// The lines of a finding are the span of its abstraction that the closing review prepared in the file of the finding; with no prepared span, a start line cannot show that the whole abstraction stayed as it was, so the finding has no lines.
+const readTheLinesOfTheFinding = (finding, linesOfAbstractionMap) => {
+  const prepared = (linesOfAbstractionMap.get(finding.displayName) || []).find(code => code.path === finding.file && (finding.line === null || (finding.line >= code.lines.from && finding.line <= code.lines.to)));
+  return prepared ? prepared.lines : null;
+};
+
+const readTheLinesOfAbstractionMap = reviewFolder => {
+  const prepare = readJsonIfPresent(path.join(reviewFolder, PREPARE_FILE));
+  const linesOfAbstractionMap = new Map();
+  for (const code of ((prepare && prepare.codeUnderReview) || []).filter(other => other.lines && Number.isFinite(other.lines.from) && Number.isFinite(other.lines.to))) {
+    const displayName = String(code.displayName || "");
+    if (!linesOfAbstractionMap.has(displayName)) linesOfAbstractionMap.set(displayName, []);
+    linesOfAbstractionMap.get(displayName).push({ path: String(code.path || ""), lines: code.lines });
+  }
+  return linesOfAbstractionMap;
+};
+
+// A finding stands on code the run left untouched where the diff of the run touches neither its file nor its lines; a module needs a folder with no file of that diff, and an application a run that changed nothing.
+const isOnUntouchedCode = (finding, runChange, linesOfAbstractionMap) => {
+  if (finding.scale === "application") return runChange.statusOfFileMap.size === 0;
+  if (finding.scale === "module") return !holdsAChangedFile(finding.file, runChange) && !runChange.statusOfFileMap.has(finding.file);
+
+  const status = runChange.statusOfFileMap.get(finding.file);
+  if (!status) return true;
+  if (status === "A") return false;
+
+  const lines = readTheLinesOfTheFinding(finding, linesOfAbstractionMap);
+  if (!lines) return false;
+
+  return !(runChange.changedSpansOfFileMap.get(finding.file) || []).some(hunk => touchesTheLines(hunk, lines));
+};
+
+// The line before the run of a line the run left untouched: each hunk above it moves it by the lines it removed less the lines it added.
+const findTheLineBeforeTheRun = (line, hunks) => hunks
+  .filter(hunk => (hunk.lineCount === 0 ? hunk.from < line : hunk.to < line))
+  .reduce((moved, hunk) => moved + hunk.removedLineCount - hunk.lineCount, line);
+
+// The input raised a finding where 1 of its findings has the same key in the same file on the same line before the run; a finding of the input with no file or no line matches by its key alone.
+const isRaisedByTheInput = (finding, runChange, raisedFindings) => {
+  const lineBeforeTheRun = finding.line === null ? null : findTheLineBeforeTheRun(finding.line, runChange.changedSpansOfFileMap.get(finding.file) || []);
+  return raisedFindings.some(raised => raised.findingKey === finding.findingKey
+    && (raised.file === null || raised.file === finding.file)
+    && (raised.line === null || lineBeforeTheRun === null || raised.line === lineBeforeTheRun));
+};
+
 const isAText = given => typeof given === "string" && given.trim() !== "";
 
 const DECIDED_KEYS = Object.freeze(["displayName", "check", "reason", "says"]);
@@ -229,23 +280,29 @@ const readTheKeysOfTheList = (listFile, label, textKeys) => {
   return new Set(list.map(entry => createFindingKey(entry.displayName, entry.check)));
 };
 
-const placeByTheChange = (finding, change, knownKeysOfTheBase) => {
-  if (isOnTheChange(finding, change)) return PLACEMENTS.ON_THE_CHANGE;
+const placeOnTheChange = (finding, { runChange, linesOfAbstractionMap, raisedFindings }) => {
+  if (finding.kept && isOnUntouchedCode(finding, runChange, linesOfAbstractionMap) && !isRaisedByTheInput(finding, runChange, raisedFindings)) return PLACEMENTS.ON_UNTOUCHED_CODE;
 
-  return knownKeysOfTheBase.has(finding.findingKey) ? PLACEMENTS.KNOWN_OF_THE_BASE : PLACEMENTS.NOT_ON_THE_CHANGE;
+  return PLACEMENTS.ON_THE_CHANGE;
+};
+
+const placeByTheChange = (finding, grading) => {
+  if (isOnTheChange(finding, grading.change)) return placeOnTheChange(finding, grading);
+
+  return grading.knownKeysOfTheBase.has(finding.findingKey) ? PLACEMENTS.KNOWN_OF_THE_BASE : PLACEMENTS.NOT_ON_THE_CHANGE;
 };
 
 // A result decided but changed since with no carried decision stays open: its lines are no longer the lines of the ruling, so neither the ruling, the decided list nor the case sets it apart.
-const placeTheFinding = (finding, change, leftSourceOfKeyMap, { caseDecidedKeys, knownKeysOfTheBase }) => {
+const placeTheFinding = (finding, leftSourceOfKeyMap, grading) => {
   if (finding.carriedChangedSince) return PLACEMENTS.CARRIED_CHANGED_SINCE;
   if (finding.changedSinceTheDecision && finding.baselineState !== NEW_BASELINE_STATE) return PLACEMENTS.NOT_NEW;
-  if (finding.changedSinceTheDecision) return placeByTheChange(finding, change, knownKeysOfTheBase);
+  if (finding.changedSinceTheDecision) return placeByTheChange(finding, grading);
   if (finding.decided) return PLACEMENTS.DECIDED;
-  if (caseDecidedKeys.has(finding.findingKey)) return PLACEMENTS.DECIDED_BY_THE_CASE;
+  if (grading.caseDecidedKeys.has(finding.findingKey)) return PLACEMENTS.DECIDED_BY_THE_CASE;
   if (finding.baselineState !== NEW_BASELINE_STATE) return PLACEMENTS.NOT_NEW;
   if (leftSourceOfKeyMap.has(finding.findingKey)) return PLACEMENTS.LEFT;
 
-  return placeByTheChange(finding, change, knownKeysOfTheBase);
+  return placeByTheChange(finding, grading);
 };
 
 const createScaleCounts = () => Object.fromEntries(SCALES.map(scale => [scale, 0]));
@@ -268,10 +325,25 @@ const countThePlacements = findings => {
   return countOfPlacementMap;
 };
 
-const gradeTheReview = (options, leftSourceOfKeyMap) => {
+// The findings the input raised: every result of the stored input review, or for the feature input each known key of the base, which holds no file and no line.
+const listTheRaisedFindings = (inputRun, knownKeysOfTheBase) => {
+  if (inputRun) return readFindingsOfTheSarif(path.join(inputRun.runFolder, SARIF_FILE));
+
+  return [...knownKeysOfTheBase].map(findingKey => ({ findingKey, file: null, line: null }));
+};
+
+const gradeTheReview = (options, leftSourceOfKeyMap, inputRun) => {
   const change = readChangeOfTheRange(options.repo, options.range);
-  const caseKeys = { caseDecidedKeys: readTheKeysOfTheList(options.decided, "decided", DECIDED_KEYS), knownKeysOfTheBase: readTheKeysOfTheList(options.known, "known", KNOWN_KEYS) };
-  const findings = readFindingsOfTheSarif(path.join(options.review, SARIF_FILE)).map(finding => ({ ...finding, placement: placeTheFinding(finding, change, leftSourceOfKeyMap, caseKeys) }));
+  const knownKeysOfTheBase = readTheKeysOfTheList(options.known, "known", KNOWN_KEYS);
+  const grading = {
+    change,
+    runChange: options.runRange ? readChangeOfTheRange(options.repo, options.runRange) : change,
+    linesOfAbstractionMap: readTheLinesOfAbstractionMap(options.review),
+    raisedFindings: listTheRaisedFindings(inputRun, knownKeysOfTheBase),
+    caseDecidedKeys: readTheKeysOfTheList(options.decided, "decided", DECIDED_KEYS),
+    knownKeysOfTheBase,
+  };
+  const findings = readFindingsOfTheSarif(path.join(options.review, SARIF_FILE)).map(finding => ({ ...finding, placement: placeTheFinding(finding, leftSourceOfKeyMap, grading) }));
   const onTheChange = findings.filter(finding => finding.placement === PLACEMENTS.ON_THE_CHANGE);
   const keptOnTheChange = onTheChange.filter(finding => finding.kept);
   return {
@@ -280,10 +352,11 @@ const gradeTheReview = (options, leftSourceOfKeyMap) => {
     kept: countTheKeptFindings(keptOnTheChange),
     keptOnTheChange,
     toConsiderOnTheChange: onTheChange.length - keptOnTheChange.length,
+    onUntouchedCode: findings.filter(finding => finding.placement === PLACEMENTS.ON_UNTOUCHED_CODE),
     carriedChangedSince: findings.filter(finding => finding.placement === PLACEMENTS.CARRIED_CHANGED_SINCE),
     decidedByTheCase: findings.filter(finding => finding.placement === PLACEMENTS.DECIDED_BY_THE_CASE),
     knownOfTheBase: findings.filter(finding => finding.placement === PLACEMENTS.KNOWN_OF_THE_BASE),
-    apart: countThePlacements(findings.filter(finding => finding.placement !== PLACEMENTS.ON_THE_CHANGE)),
+    apart: countThePlacements(findings.filter(finding => finding.placement !== PLACEMENTS.ON_THE_CHANGE && finding.placement !== PLACEMENTS.ON_UNTOUCHED_CODE)),
   };
 };
 
@@ -553,7 +626,7 @@ const gradeTheRun = options => {
   const inputRun = options.inputReview ? readRunFolder(path.resolve(options.inputReview), false) : null;
   const leftSourceOfKeyMap = inputRun ? readLeftSourceOfKeyMap(options.results, inputRun) : new Map();
   const storedKept = inputRun ? readStoredKeptFindings(inputRun) : [];
-  const closingReview = options.review ? gradeTheReview(options, leftSourceOfKeyMap) : null;
+  const closingReview = options.review ? gradeTheReview(options, leftSourceOfKeyMap, inputRun) : null;
   const review = closingReview && inputRun ? markTheKeyKinds(closingReview, readTheBackSearch(options, storedKept, leftSourceOfKeyMap)) : closingReview;
   const grade = {
     input: inputRun ? "fix-from-review" : "feature",
@@ -599,10 +672,11 @@ const writeTheGradeLine = grade => {
   const scales = SCALES.map(scale => `${scale} ${kept.byScale[scale] || 0}`).join(" · ");
   const stored = grade.stored ? ` · stored findings: ${formatTheStoredCounts(grade.stored)}` : "";
   const toConsider = grade.review ? grade.review.toConsiderOnTheChange : 0;
+  const onUntouchedCode = grade.review ? grade.review.onUntouchedCode.length : 0;
   const apart = grade.review ? grade.review.apart : {};
   const decidedByTheCase = grade.caseDecided ? ` · decided by the case ${apart[PLACEMENTS.DECIDED_BY_THE_CASE] || 0}` : "";
   const knownOfTheBase = grade.caseKnown ? ` · known of the base ${apart[PLACEMENTS.KNOWN_OF_THE_BASE] || 0}` : "";
-  return `one shot: ${grade.oneShot ? "yes" : "no"} · kept on the change ${kept.total} (${scales}; test code ${kept.testCode}) · to consider ${toConsider} · decided ${apart[PLACEMENTS.DECIDED] || 0} · carried but changed since ${apart[PLACEMENTS.CARRIED_CHANGED_SINCE] || 0}${decidedByTheCase}${knownOfTheBase} · stops ${grade.writers.stops} · build ${formatTheBuildWord(grade.build)} · rounds ${grade.roundsNeeded} · ${formatDollars(grade.cost.dollars)}${stored}`;
+  return `one shot: ${grade.oneShot ? "yes" : "no"} · kept on the change ${kept.total} (${scales}; test code ${kept.testCode}) · on code the run left untouched ${onUntouchedCode} · to consider ${toConsider} · decided ${apart[PLACEMENTS.DECIDED] || 0} · carried but changed since ${apart[PLACEMENTS.CARRIED_CHANGED_SINCE] || 0}${decidedByTheCase}${knownOfTheBase} · stops ${grade.writers.stops} · build ${formatTheBuildWord(grade.build)} · rounds ${grade.roundsNeeded} · ${formatDollars(grade.cost.dollars)}${stored}`;
 };
 
 const writeTheWriterLines = writers => {
@@ -629,6 +703,8 @@ const writeTheReviewLines = (review, stored) => {
   ];
   if (stored) lines.push(`  by key: ${Object.values(KEY_KINDS).map(keyKind => formatCount(keyKind, stored.keptByKey[keyKind])).join(" · ")}`);
   for (const finding of review.keptOnTheChange) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}${finding.changedSinceTheDecision ? " (decided but changed since)" : ""}`);
+  lines.push(`on code the run left untouched: ${review.onUntouchedCode.length}`);
+  for (const finding of review.onUntouchedCode) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}`);
   lines.push(`to consider on the change: ${review.toConsiderOnTheChange}`);
   for (const finding of review.carriedChangedSince) lines.push(`  carried but changed since: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
   for (const finding of review.decidedByTheCase) lines.push(`  decided by the case: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
@@ -665,8 +741,10 @@ const writeTheGradeBlock = grade => [
   writeTheGradeLine(grade),
 ];
 
+const formatTheFindingPlace = finding => ({ scale: finding.scale, check: finding.check, displayName: finding.displayName, file: finding.file, line: finding.line });
+
 const writeTheJson = (grade, jsonFile) => {
-  const review = grade.review ? { run: grade.review.run, kept: grade.review.kept, toConsiderOnTheChange: grade.review.toConsiderOnTheChange, apart: grade.review.apart } : null;
+  const review = grade.review ? { run: grade.review.run, kept: grade.review.kept, onUntouchedCode: grade.review.onUntouchedCode.map(formatTheFindingPlace), toConsiderOnTheChange: grade.review.toConsiderOnTheChange, apart: grade.review.apart } : null;
   const graded = { ...grade, review, gradeLine: writeTheGradeLine(grade) };
   fs.writeFileSync(jsonFile, `${JSON.stringify(graded, null, 2)}\n`);
 };
