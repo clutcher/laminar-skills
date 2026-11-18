@@ -139,9 +139,13 @@ const chooseTheMatchesOfItsFile = (decision, matches) => {
 
 const RANK_OF_MATCHED_BY = Object.freeze({ [MATCHED_BY.DISPLAY_NAME]: 0, [MATCHED_BY.FORMER_NAME]: 1, [MATCHED_BY.CLASS_OF_THE_METHOD]: 2 });
 
+const isTakenFromCode = mark => Boolean(mark.decision.takenFrom);
+
+// Of 2 marks with the same match and plan, the decision the design carried onto code that moved leads, so the result names the carry; the design copies a class decision onto its own key with the same lines fingerprint, so both read alike.
 const compareTheMarks = (left, right) => {
   const byName = RANK_OF_MATCHED_BY[left.matchedBy] - RANK_OF_MATCHED_BY[right.matchedBy];
-  return byName || (right.decision.plan ?? 0) - (left.decision.plan ?? 0);
+  const byPlan = (right.decision.plan ?? 0) - (left.decision.plan ?? 0);
+  return byName || byPlan || Number(isTakenFromCode(right)) - Number(isTakenFromCode(left));
 };
 
 // A method decision that marked a class-scale result compares the lines of its method, and every other mark the lines of the result's own abstraction.

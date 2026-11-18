@@ -207,13 +207,23 @@ const isADirectDecision = decision => !decision.reachOf && !decision.takenFrom;
 // A method the change creates: a method marked unchanged or renamed by oldName stands in the current tree, so no decision is taken onto it.
 export const isACreatedMethod = method => !isMarkedUnchanged(method) && !isAText(method.oldName);
 
-// Each method of the model with the sources its body takes code from, each the display name of a decided method with 1 check whose finding is about the moved lines, and its own display name.
+// Each method of the model with the sources its body takes code from, each the display name of a decided method or of the class that holds the method, with 1 check whose finding is about the moved lines, and its own display name.
 export const listMethodsThatTakeCode = model => model.classes.flatMap(theClass => readList(theClass.methods)
   .filter(method => readList(method.takesCodeFrom).length)
   .map(method => ({ theClass, method, displayName: `${theClass.name}${METHOD_MARK}${method.name}`, sources: readList(method.takesCodeFrom) })));
 
-// The method decisions of the check of 1 source on its method by its planned name or a former name, never a decision that was itself taken from another method, so a decision of another check of that method never travels.
-export const listDecisionsOfTheSource = (decisions, source) => decisions.filter(decision => decision.scale === METHOD_SCALE
+// A source names a class where its display name holds no method mark, so it carries a class-scale decision.
+export const isAClassSource = source => isAText(source.displayName) && !source.displayName.includes(METHOD_MARK);
+
+// A class source names the class that holds the created method, by its name or by the name it had before the change, because a decision of another class is not about code the method took.
+export const namesTheHoldingClass = (source, theClass) => [theClass.name, readOldTypeName(theClass)].includes(source.displayName);
+
+const isOfTheSourceScale = (decision, source, theClass) => (isAClassSource(source)
+  ? decision.scale === CLASS_SCALE && namesTheHoldingClass(source, theClass) && decision.displayName === theClass.name
+  : decision.scale === METHOD_SCALE);
+
+// The decisions of the check of 1 source by its planned name or a former name, of its method or of the class that holds the created method, never a decision that was itself taken from another abstraction, so a decision of another check of that abstraction never travels.
+export const listDecisionsOfTheSource = (decisions, source, theClass) => decisions.filter(decision => isOfTheSourceScale(decision, source, theClass)
   && !decision.takenFrom
   && decision.check === source.check
   && [decision.displayName, ...readList(decision.formerNames)].includes(source.displayName));
@@ -222,21 +232,36 @@ export const holdsALinesFingerprint = decision => isAText(decision.linesFingerpr
 
 const withoutTheReach = ({ reachOf, ...decision }) => decision;
 
+const createTakenDecision = (model, plan, theClass, decision, onTheCreatedMethod) => ({
+  ...decision,
+  ...onTheCreatedMethod,
+  file: theClass.file,
+  plan,
+  source: formatTakenCodeSource(decision),
+  plannedKind: model.getKindOfClass(theClass),
+  takenFrom: decision.displayName,
+});
+
 // A created method that takes code from a decided method takes the decision of each named check of that method that holds a lines fingerprint, with that fingerprint, so its result is decided only while its own lines are the lines the person ruled on, and decided but changed since once they differ. It takes no class of its method, so it never decides a class result, and it never decides a finding that no decision holds.
-const listDecisionsOfTheTakenCode = (model, plan, decisions) => listMethodsThatTakeCode(model)
+const listMethodDecisionsOfTheTakenCode = (model, plan, decisions) => listMethodsThatTakeCode(model)
   .filter(({ method }) => isACreatedMethod(method))
-  .flatMap(({ theClass, displayName, sources }) => sources.flatMap(source => listDecisionsOfTheSource(decisions, source)
+  .flatMap(({ theClass, displayName, sources }) => sources.filter(source => !isAClassSource(source)).flatMap(source => listDecisionsOfTheSource(decisions, source, theClass)
     .filter(holdsALinesFingerprint)
-    .map(decision => ({
-      ...withoutTheClassOfTheMethod(withoutTheReach(decision)),
-      displayName,
-      formerNames: [],
-      file: theClass.file,
-      plan,
-      source: formatTakenCodeSource(decision),
-      plannedKind: model.getKindOfClass(theClass),
-      takenFrom: decision.displayName,
-    }))));
+    .map(decision => createTakenDecision(model, plan, theClass, withoutTheClassOfTheMethod(withoutTheReach(decision)), { displayName, formerNames: [] }))));
+
+// A created method that takes the cause of a class decision of its own class takes that decision onto the class, with the lines fingerprint of the class as the person ruled on it, so it reads decided or decided but changed since exactly as the class decision does and only names the code that moved. It stands beside the class decision it copies, which keeps its relations, and 1 copy stands per key.
+const listClassDecisionsOfTheTakenCode = (model, plan, decisions, entries) => {
+  const keysSentToAFix = new Set(readList(entries).filter(isSentToAFix).map(entry => createDecisionKey({ ...entry, scale: String(entry.scale).toLowerCase() })));
+  const decisionOfKeyMap = new Map();
+  for (const { theClass, method, sources } of listMethodsThatTakeCode(model)) {
+    if (!isACreatedMethod(method)) continue;
+    for (const decision of sources.filter(isAClassSource).flatMap(source => listDecisionsOfTheSource(decisions, source, theClass)).filter(holdsALinesFingerprint)) {
+      const key = createDecisionKey(decision);
+      if (!keysSentToAFix.has(key) && !decisionOfKeyMap.has(key)) decisionOfKeyMap.set(key, createTakenDecision(model, plan, theClass, withoutTheReach(decision), {}));
+    }
+  }
+  return [...decisionOfKeyMap.values()];
+};
 
 // A reach never replaces a ruling, in any order of the list: a decision this plan made on its key by an entry or an object, a decision of an earlier plan the export carries, and a key the same round sends to a fix each keep the key, and of 2 reaches on 1 key the first stands.
 const keepTheReachOffTheRulings = (decisions, carried, entries) => {
@@ -308,7 +333,11 @@ export const buildDecidedReview = ({ model, modelBefore, plan, inputRun, entries
   const replacedKeys = new Set(refreshedDecisions.map(refresh => refresh.replacedKey));
   const { carried, dropped } = carryTheEarlierDecisions(earlier, model, new Set(decisionsOfThePlan.filter(isADirectDecision).map(createDecisionKey)), replacedKeys);
   const decisionsBeforeTheTakenCode = keepTheReachOffTheRulings(decisionsOfThePlan, carried, entries);
-  const decisions = keepTheReachOffTheRulings([...decisionsBeforeTheTakenCode, ...listDecisionsOfTheTakenCode(model, plan, [...carried, ...decisionsBeforeTheTakenCode])], carried, entries);
+  const decisionsToTakeCodeFrom = [...carried, ...decisionsBeforeTheTakenCode];
+  const decisions = [
+    ...keepTheReachOffTheRulings([...decisionsBeforeTheTakenCode, ...listMethodDecisionsOfTheTakenCode(model, plan, decisionsToTakeCodeFrom)], carried, entries),
+    ...listClassDecisionsOfTheTakenCode(model, plan, decisionsToTakeCodeFrom, entries),
+  ];
   return {
     decidedReview: {
       plan,
