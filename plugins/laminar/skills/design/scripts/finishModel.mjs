@@ -13,7 +13,7 @@ import { DecidedListStop, checkDecidedListForm, findReachDefects, formatDecidedK
 import { listFindingEntries } from "./plan/FindingList.mjs";
 import { buildDecidedReview, readCommitOfThePlan } from "./plan/DecidedReview.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
-import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, formatPlanLine, getPlanFolder, listFindingsThatStopThePlan, listQuestionsThatStopThePlan, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
+import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, SHAPE_RUN_NOT_JUDGED, describeTheShapeRunNotJudged, formatPlanLine, getPlanFolder, getShapeRunFolder, listFindingsThatStopThePlan, listQuestionsThatStopThePlan, listShapeRunsNotJudged, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { listRoundDispositions } from "./plan/RoundDispositions.mjs";
 import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder, readShapeRunFolders } from "./round/RunFolder.mjs";
 import { listDefectLinesOfTheRun, removeFinishStop, writeFinishStop } from "./plan/FinishStop.mjs";
@@ -157,15 +157,13 @@ const readNoStepKeys = migrationLines => new Set(migrationLines
   .map(line => line.split("\t"))
   .map(columns => `${columns[1]}\t${columns[2]}`));
 
-const SHAPE_RUNS_FOLDER = "shape-runs";
-
 // A shape run that cannot be read gives no decision, and the finish command names it.
 const createShapeRunReader = resultsFolder => {
   const runOfNumberMap = new Map();
   return run => {
     if (!runOfNumberMap.has(run)) {
       try {
-        runOfNumberMap.set(run, readRunFolder(path.join(resultsFolder, SHAPE_RUNS_FOLDER, String(run)), false));
+        runOfNumberMap.set(run, readRunFolder(getShapeRunFolder(resultsFolder, run), false));
       } catch (error) {
         if (!(error instanceof RoundStop)) throw error;
         console.log(`not exported: shape run ${run}: ${error.message}`);
@@ -220,8 +218,31 @@ const decideTheOutcome = (questions, openAfterCeiling, itemsThatDoNotClose, isAu
   return { word: PLAN_OUTCOMES.READY, stop: null };
 };
 
+// The outcome of the plan with the questions, the shape findings open after the ceiling and the items that do not close that decide it.
+const findTheOutcomeOfThePlan = (model, resultsFolder, options) => {
+  const questions = listQuestionsThatStopThePlan(model);
+  const openAfterCeiling = listFindingsThatStopThePlan(model, resultsFolder);
+  const doesNotClose = listItemsThatDoNotCloseOfTheModel(model, options);
+  return { ...decideTheOutcome(questions, openAfterCeiling, doesNotClose, options[AUTONOMOUS_SWITCH]), questions, openAfterCeiling, doesNotClose };
+};
+
+const SHAPE_RUNS_STOP = "shape runs";
+
+// A ready plan goes to the writers, so the finish refuses it while a shape run of the results folder was prepared and never judged, after its 3 steps and before it writes the outcome; a plan that ends with a question or a stop goes to no writer and passes.
+const stopOnTheShapeRunsNotJudged = (resultsFolder, plan) => {
+  const shapeRuns = listShapeRunsNotJudged(resultsFolder);
+  if (!shapeRuns.length) return;
+  const lines = shapeRuns.map(run => `${DEFECT_PREFIX}${SHAPE_RUN_NOT_JUDGED}\tshape run ${run}\t${describeTheShapeRunNotJudged(resultsFolder, run)}`);
+  const says = `${shapeRuns.length} shape run(s) not judged`;
+  writeFinishStop(getPlanFolder(resultsFolder, plan), { plan, at: SHAPE_RUNS_STOP, says, exit: DEFECT_EXIT_CODE, lines });
+  for (const line of lines) console.log(line);
+  console.log(`stopped\t${SHAPE_RUNS_STOP}\t${says}`);
+  console.log(`${RESULT_PREFIX}${JSON.stringify({ stopped: SHAPE_RUNS_STOP, exit: DEFECT_EXIT_CODE })}`);
+  process.exit(DEFECT_EXIT_CODE);
+};
+
 // The plan folder keeps the model, the findings and the commits of the plan, the dispositions of the round of its run folder and its outcome, so 2 plans compare by their files.
-const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput, options) => {
+const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput, outcome) => {
   const planFolder = getPlanFolder(resultsFolder, plan);
   fs.mkdirSync(planFolder, { recursive: true });
   copyFileIfPresent(path.resolve(paths.model), planFolder);
@@ -229,13 +250,8 @@ const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput, optio
   for (const commitFile of [BASE_COMMIT_FILE, PLAN_COMMIT_FILE]) copyFileIfPresent(path.join(path.dirname(path.resolve(paths.model)), commitFile), planFolder);
   copyFileIfPresent(path.join(paths.results, MIGRATION_WORKFLOW_FILE), planFolder);
   if (roundInput) writeJson(path.join(planFolder, DISPOSITIONS_FILE), listRoundDispositions(model, roundInput.run, roundInput));
-  const questions = listQuestionsThatStopThePlan(model);
-  const openAfterCeiling = listFindingsThatStopThePlan(model, resultsFolder);
-  const doesNotClose = listItemsThatDoNotCloseOfTheModel(model, options);
-  const { word: outcomeWord, stop } = decideTheOutcome(questions, openAfterCeiling, doesNotClose, options[AUTONOMOUS_SWITCH]);
-  writeOutcome(resultsFolder, plan, { word: outcomeWord, stop, questions, considerations: paths.considerations, openAfterCeiling, doesNotClose, referencesRead: readList(model.decisions.referencesRead), decidedKeysNotRaised: paths.shapeDecisions?.decidedKeysNotRaised, decidedThroughInterfaceMethod: paths.shapeDecisions?.decidedThroughInterfaceMethod });
-  if (outcomeWord === PLAN_OUTCOMES.READY) writeTheDecidedReview(resultsFolder, plan, model, roundInput);
-  return outcomeWord;
+  writeOutcome(resultsFolder, plan, { word: outcome.word, stop: outcome.stop, questions: outcome.questions, considerations: paths.considerations, openAfterCeiling: outcome.openAfterCeiling, doesNotClose: outcome.doesNotClose, referencesRead: readList(model.decisions.referencesRead), decidedKeysNotRaised: paths.shapeDecisions?.decidedKeysNotRaised, decidedThroughInterfaceMethod: paths.shapeDecisions?.decidedThroughInterfaceMethod });
+  if (outcome.word === PLAN_OUTCOMES.READY) writeTheDecidedReview(resultsFolder, plan, model, roundInput);
 };
 
 function finishModel() {
@@ -266,14 +282,16 @@ function finishModel() {
     console.log(`${step.name}\t${run.resultLine}`);
     if (step.name === "migration") migrationLines = run.lines;
   }
+  const outcome = findTheOutcomeOfThePlan(model, resultsFolder, options);
+  if (outcome.word === PLAN_OUTCOMES.READY) stopOnTheShapeRunsNotJudged(resultsFolder, plan);
   const roundInput = runInput ? { ...runInput, entries, noStepKeys: readNoStepKeys(migrationLines) } : null;
   for (const line of runInput ? runInput.notRefreshedLines : []) console.log(line);
   for (const decidedKey of shapeDecisions ? shapeDecisions.decidedKeysNotRaised : []) console.log(formatDecidedKeyNotRaisedLine(decidedKey));
   for (const entry of shapeDecisions ? shapeDecisions.decidedThroughInterfaceMethod : []) console.log(formatDecidedThroughInterfaceMethodLine(entry));
-  const outcomeWord = writeThePlanFolder(resultsFolder, plan, model, paths, roundInput, options);
+  writeThePlanFolder(resultsFolder, plan, model, paths, roundInput, outcome);
   removeFinishStop(getPlanFolder(resultsFolder, plan));
-  console.log(`${RESULT_PREFIX}${JSON.stringify({ steps: steps.length, design: paths.design, migration: paths.migration, plan, outcome: outcomeWord, ...(paths.findings ? { findings: paths.findings } : {}), ...(shapeDecisions ? { decidedKeysNotRaised: shapeDecisions.decidedKeysNotRaised.length, decidedThroughInterfaceMethod: shapeDecisions.decidedThroughInterfaceMethod.length } : {}) })}`);
-  console.log(formatPlanLine(plan, outcomeWord, resultsFolder));
+  console.log(`${RESULT_PREFIX}${JSON.stringify({ steps: steps.length, design: paths.design, migration: paths.migration, plan, outcome: outcome.word, ...(paths.findings ? { findings: paths.findings } : {}), ...(shapeDecisions ? { decidedKeysNotRaised: shapeDecisions.decidedKeysNotRaised.length, decidedThroughInterfaceMethod: shapeDecisions.decidedThroughInterfaceMethod.length } : {}) })}`);
+  console.log(formatPlanLine(plan, outcome.word, resultsFolder));
 }
 
 finishModel();

@@ -3,7 +3,7 @@ import path from "node:path";
 import { AUTONOMOUS_ANSWERS } from "../model/DesignModelForm.mjs";
 import { isAText, isWaitingAfterTheCeiling, readList } from "../model/DesignModel.mjs";
 import { readChecksOfTheFinding } from "./DecidedList.mjs";
-import { RoundStop, readRunFolder } from "../round/RunFolder.mjs";
+import { PREPARE_FILE, REVIEW_FILE, RoundStop, readRunFolder } from "../round/RunFolder.mjs";
 
 export const BASE_COMMIT_FILE = "base-commit.txt";
 
@@ -57,10 +57,31 @@ export const listQuestionsThatStopThePlan = model => readList(model.decisions.qu
 
 const SHAPE_RUNS_FOLDER = "shape-runs";
 
+const SHAPE_RUN_FOLDER_NAME = /^[1-9]\d*$/;
+
+export const getShapeRunFolder = (resultsFolder, run) => path.join(resultsFolder, SHAPE_RUNS_FOLDER, String(run));
+
+export const SHAPE_RUN_NOT_JUDGED = "shape-run-not-judged";
+
+const isPreparedAndNotJudged = shapeRunFolder => fs.existsSync(path.join(shapeRunFolder, PREPARE_FILE)) && !fs.existsSync(path.join(shapeRunFolder, REVIEW_FILE));
+
+// A shape run whose folder holds prepare.json and no review.md was prepared and never judged, because the render writes review.md also on a run that keeps nothing; the numbers in order.
+export const listShapeRunsNotJudged = resultsFolder => {
+  const shapeRunsFolder = path.join(resultsFolder, SHAPE_RUNS_FOLDER);
+  if (!fs.existsSync(shapeRunsFolder)) return [];
+  return fs.readdirSync(shapeRunsFolder)
+    .filter(name => SHAPE_RUN_FOLDER_NAME.test(name))
+    .map(Number)
+    .filter(run => isPreparedAndNotJudged(getShapeRunFolder(resultsFolder, run)))
+    .sort((first, second) => first - second);
+};
+
+export const describeTheShapeRunNotJudged = (resultsFolder, run) => `${getShapeRunFolder(resultsFolder, run)} holds ${PREPARE_FILE} and no ${REVIEW_FILE}, so no judge workflow, merge and render ran on it, and a plan whose tree no shape judge read is not ready`;
+
 // The first finding of 1 item of a shape run, on the check of the object where it names one, read from the run folder of that shape run; null where the folder cannot be read or holds no such item.
 const findFindingOfTheShapeItem = (resultsFolder, findingObject) => {
   try {
-    const run = readRunFolder(path.join(resultsFolder, SHAPE_RUNS_FOLDER, String(findingObject.run)), false);
+    const run = readRunFolder(getShapeRunFolder(resultsFolder, findingObject.run), false);
     const item = run.items.find(other => other.number === findingObject.number);
     return item ? item.findings.find(finding => !isAText(findingObject.check) || readChecksOfTheFinding(finding).includes(findingObject.check)) || null : null;
   } catch (error) {

@@ -12,7 +12,7 @@ import { readBaseCommit, readDesignModelOrExit, readOptionsOrExit, readTreeCommi
 import { DecidedListStop, checkDecidedListForm, findReachDefects, readDecidedEntries, resolveDecidedList, resolveDecidedListOnShapeRuns } from "./plan/DecidedList.mjs";
 import { buildDecidedReview, listMethodsThatTakeCode } from "./plan/DecidedReview.mjs";
 import { listFindingEntries } from "./plan/FindingList.mjs";
-import { DECIDED_REVIEW_FILE, getPlansFolder } from "./plan/PlanFolder.mjs";
+import { DECIDED_REVIEW_FILE, getPlansFolder, getShapeRunFolder } from "./plan/PlanFolder.mjs";
 import { RoundStop, SHAPE_MODEL_FILE, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder, readShapeRunFolders } from "./round/RunFolder.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
 
@@ -150,8 +150,6 @@ const findDecidedNotGivenDefectsOrExit = (model, options) => {
   }
 };
 
-const SHAPE_RUNS_FOLDER = "shape-runs";
-
 const NO_DECIDED_LIST = Object.freeze({ round: null, decided: [] });
 
 // The decisions of every ready plan of the results folder, from each decided review file under plans/.
@@ -168,7 +166,7 @@ const readTheDecisionsOfThePlans = resultsFolder => {
 // A shape run that cannot be read gives no decision.
 const readShapeRunIfPresent = (resultsFolder, run) => {
   try {
-    return readRunFolder(path.join(resultsFolder, SHAPE_RUNS_FOLDER, String(run)), false);
+    return readRunFolder(getShapeRunFolder(resultsFolder, run), false);
   } catch (error) {
     if (!(error instanceof RoundStop)) throw error;
     return null;

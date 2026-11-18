@@ -12,7 +12,7 @@ export const SARIF_FILE = "review.sarif";
 // The shape model that the prepare command of a shape run saves beside its review.md.
 export const SHAPE_MODEL_FILE = "shape-model.json";
 
-const PREPARE_FILE = "prepare.json";
+export const PREPARE_FILE = "prepare.json";
 
 const SCALE_ORDER = Object.freeze(["application", "module", "class", "method", "variable"]);
 
