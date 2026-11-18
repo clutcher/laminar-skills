@@ -116,15 +116,21 @@ const findItemVerdictOfTheCheck = (verdicts, check) => verdicts.find(verdict => 
   || verdicts.find(verdict => !verdict.check)
   || NO_VERDICT;
 
-const listChecksOfTheGroup = group => [...new Set(group.possibleFindings.map(finding => readCheckKey(finding.check)))];
+const findItemVerdictOfThePossibleFinding = (verdicts, finding) => isAConsideration(finding)
+  ? findItemVerdictOfTheCheck(verdicts.filter(verdict => !isACombine(verdict)), finding.check)
+  : findItemVerdictOfTheCheck(verdicts, finding.check);
+
+const isJoinedByACombineOf = (checks, finding) => !isAConsideration(finding) && checks.includes(readCheckKey(finding.check));
+
+const listChecksACombineCanJoin = group => [...new Set(group.possibleFindings.filter(finding => !isAConsideration(finding)).map(finding => readCheckKey(finding.check)))];
 
 const findCombinedChecks = (verdict, group) => {
-  const checksOfTheItem = listChecksOfTheGroup(group);
-  return [...new Set(listNamedChecks(verdict))].filter(check => checksOfTheItem.includes(check));
+  const checksACombineCanJoin = listChecksACombineCanJoin(group);
+  return [...new Set(listNamedChecks(verdict))].filter(check => checksACombineCanJoin.includes(check));
 };
 
 const joinsEnoughPossibleFindings = (checks, group) => group.possibleFindings
-  .filter(finding => checks.includes(readCheckKey(finding.check))).length >= FEWEST_COMBINED_POSSIBLE_FINDINGS;
+  .filter(finding => isJoinedByACombineOf(checks, finding)).length >= FEWEST_COMBINED_POSSIBLE_FINDINGS;
 
 const isAValidCombine = (verdict, group) => isACombine(verdict)
   && joinsEnoughPossibleFindings(findCombinedChecks(verdict, group), group)
@@ -140,7 +146,7 @@ const combinesOf = (group, verdicts) => {
   });
 };
 
-const combineHolding = (combines, finding) => combines.find(combine => combine.checks.includes(readCheckKey(finding.check)));
+const findTheCombineHolding = (combines, finding) => combines.find(combine => isJoinedByACombineOf(combine.checks, finding));
 
 const readJudgeTypeOf = (finding, group) => finding.judgeType || group.judgeType || "";
 
@@ -163,12 +169,12 @@ const readTheSecondReadWithNoVerdict = (finding, group, returns) => {
 
 const findTheVerdict = (finding, group, returns) => {
   if (group.verdict) return group.verdict;
-  return returns.findVerdictOf(finding.number) || findItemVerdictOfTheCheck(returns.listItemVerdictsOf(group.id), finding.check);
+  return returns.findVerdictOf(finding.number) || findItemVerdictOfThePossibleFinding(returns.listItemVerdictsOf(group.id), finding);
 };
 
 const ruleFinding = (finding, group, returns, combines) => {
   const refutation = returns.findRefutationOf(finding.number);
-  const combine = combineHolding(combines, finding);
+  const combine = findTheCombineHolding(combines, finding);
   if (combine) return { decision: DECISIONS.COMBINE, combine, finding: settleFinding(finding, combine.verdict, DECISIONS.KEEP, group, { ...NO_SECOND_READ, refutation }) };
   const verdict = findTheVerdict(finding, group, returns);
   const said = isAConsideration(finding) ? readDecisionOnAConsideration(verdict) : readDecision(verdict);
