@@ -6,7 +6,7 @@
 // --review, --repo and --range are needed where plan 1 ended ready; a plan that ended in a question or a stop starts no writer and no review.
 // --run-range gives the diff of the run itself where --range holds more, such as the planted change of the fix-from-review input before the commits of the writers; it defaults to --range. A kept finding on the change whose lines the run left byte for byte, and that the input did not raise, counts apart as on code the run left untouched; the input is the stored input review, and for the feature input the known findings of the base stand in for the review of the base.
 // --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left, decided again, decided again with its lines changed since the decision, or back, and --expected gives the planted keys that split the kept findings of the closing review; the change.diff beside it gives the files the planted change touched.
-// --decided is given for either input: each object of the list names a key of the closing review, by displayName and check, that the case itself decided, and a result on that key counts apart as decided by the case, also where its lines changed since a decision of the run, because the case rules on the key and not on its lines.
+// --decided is given for either input: each object of the list names a key of the closing review, by displayName and check, that the case itself decided, and a result on that key counts apart as decided by the case, also where its lines changed since a decision of the run, because the case rules on the key and not on its lines. A key on an api or spi method also sets apart the result of the same check on the method that implements it, with the same name and the same parameter types in design-model.json of --results, as decided by the case through its interface method.
 // --known is given for either input: each object of the list names a key, by displayName and check, that a full review of the base kept, with the review that found it as foundBy. It is measured, not decided, so a result on that key counts apart as known of the base only where it stands off the change; on code the run changed it is a result of the run like any other.
 // It exits with 0 where the run is one shot, 1 where it is not, and 2 on a usage error or a missing file. It writes nothing but --json, and runs git only in --repo.
 // Node with no dependencies.
@@ -17,6 +17,8 @@ import { CHECKS_BY_ID_MAP } from "../skills/review/scripts/checks/CheckCatalog.m
 import { findCheckWords } from "../skills/review/scripts/checks/CheckWords.mjs";
 import { Scale } from "../skills/review/scripts/code/graph/abstractions/Scale.mjs";
 import { createFindingKey, readRunFolder, RoundStop } from "../skills/design/scripts/round/RunFolder.mjs";
+import { DesignModel } from "../skills/design/scripts/model/DesignModel.mjs";
+import { listBoundaryMethodNamesOfTheImplementer } from "../skills/design/scripts/plan/DecidedList.mjs";
 
 const USAGE = "usage: node grade-one-shot.mjs --results <design results folder> [--review <review run folder> --repo <fixture> --range <a>...<b> [--run-range <a>...<b>]] [--input-review <stored input review run folder> --expected <expected.md of the planted change>] [--decided <decided list of the case>] [--known <known findings of the base>] [--build <build file>] [--usage <usage.json> ...] [--json <out>]";
 
@@ -291,18 +293,39 @@ const placeByTheChange = (finding, grading) => {
   return grading.knownKeysOfTheBase.has(finding.findingKey) ? PLACEMENTS.KNOWN_OF_THE_BASE : PLACEMENTS.NOT_ON_THE_CHANGE;
 };
 
+// The api or spi method whose key the case decides, through which the case also decides the result of the same check on the method that implements it; null where the case names the key of the result itself or no such method.
+const findTheInterfaceMethodOfTheCase = (finding, { caseDecidedKeys, designModel }) => {
+  if (!designModel || caseDecidedKeys.has(finding.findingKey)) return null;
+
+  return listBoundaryMethodNamesOfTheImplementer(designModel, finding.displayName).find(displayName => caseDecidedKeys.has(createFindingKey(displayName, finding.check))) || null;
+};
+
+const readTheDesignModelOfTheResults = resultsFolder => {
+  const given = readJsonIfPresent(path.join(resultsFolder, RESULTS_FILES.DESIGN_MODEL));
+  return given ? new DesignModel(given) : null;
+};
+
+const isDecidedByTheCase = (finding, grading) => grading.caseDecidedKeys.has(finding.findingKey) || Boolean(finding.decidedThrough);
+
 // A result decided but changed since with no carried decision stays open: its lines are no longer the lines of the ruling, so neither the ruling nor the decided list sets it apart. The case rules on the key and not on its lines, so a key of the case still sets it apart.
 const placeTheFinding = (finding, leftSourceOfKeyMap, grading) => {
   if (finding.carriedChangedSince) return PLACEMENTS.CARRIED_CHANGED_SINCE;
-  if (finding.changedSinceTheDecision && grading.caseDecidedKeys.has(finding.findingKey)) return PLACEMENTS.DECIDED_BY_THE_CASE;
+  if (finding.changedSinceTheDecision && isDecidedByTheCase(finding, grading)) return PLACEMENTS.DECIDED_BY_THE_CASE;
   if (finding.changedSinceTheDecision && finding.baselineState !== NEW_BASELINE_STATE) return PLACEMENTS.NOT_NEW;
   if (finding.changedSinceTheDecision) return placeByTheChange(finding, grading);
   if (finding.decided) return PLACEMENTS.DECIDED;
-  if (grading.caseDecidedKeys.has(finding.findingKey)) return PLACEMENTS.DECIDED_BY_THE_CASE;
+  if (isDecidedByTheCase(finding, grading)) return PLACEMENTS.DECIDED_BY_THE_CASE;
   if (finding.baselineState !== NEW_BASELINE_STATE) return PLACEMENTS.NOT_NEW;
   if (leftSourceOfKeyMap.has(finding.findingKey)) return PLACEMENTS.LEFT;
 
   return placeByTheChange(finding, grading);
+};
+
+// A result the case decides through its interface method keeps that method as decidedThrough, so a reader tells it from a key the case named.
+const placeWithTheInterfaceMethod = (finding, leftSourceOfKeyMap, grading) => {
+  const decidedThrough = findTheInterfaceMethodOfTheCase(finding, grading);
+  const placement = placeTheFinding({ ...finding, decidedThrough }, leftSourceOfKeyMap, grading);
+  return { ...finding, placement, ...(decidedThrough && placement === PLACEMENTS.DECIDED_BY_THE_CASE ? { decidedThrough } : {}) };
 };
 
 const createScaleCounts = () => Object.fromEntries(SCALES.map(scale => [scale, 0]));
@@ -341,9 +364,10 @@ const gradeTheReview = (options, leftSourceOfKeyMap, inputRun) => {
     linesOfAbstractionMap: readTheLinesOfAbstractionMap(options.review),
     raisedFindings: listTheRaisedFindings(inputRun, knownKeysOfTheBase),
     caseDecidedKeys: readTheKeysOfTheList(options.decided, "decided", DECIDED_KEYS),
+    designModel: options.decided ? readTheDesignModelOfTheResults(options.results) : null,
     knownKeysOfTheBase,
   };
-  const findings = readFindingsOfTheSarif(path.join(options.review, SARIF_FILE)).map(finding => ({ ...finding, placement: placeTheFinding(finding, leftSourceOfKeyMap, grading) }));
+  const findings = readFindingsOfTheSarif(path.join(options.review, SARIF_FILE)).map(finding => placeWithTheInterfaceMethod(finding, leftSourceOfKeyMap, grading));
   const onTheChange = findings.filter(finding => finding.placement === PLACEMENTS.ON_THE_CHANGE);
   const keptOnTheChange = onTheChange.filter(finding => finding.kept);
   return {
@@ -707,7 +731,7 @@ const writeTheReviewLines = (review, stored) => {
   for (const finding of review.onUntouchedCode) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}`);
   lines.push(`to consider on the change: ${review.toConsiderOnTheChange}`);
   for (const finding of review.carriedChangedSince) lines.push(`  carried but changed since: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
-  for (const finding of review.decidedByTheCase) lines.push(`  decided by the case: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
+  for (const finding of review.decidedByTheCase) lines.push(`  decided by the case: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.decidedThrough ? ` (through its interface method ${finding.decidedThrough})` : ""}`);
   for (const finding of review.knownOfTheBase) lines.push(`  known of the base: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
   lines.push(`apart, not graded: ${formatTheApartCounts(review.apart, stored && stored.closingLeftBySource)}`);
   return lines;
@@ -743,8 +767,14 @@ const writeTheGradeBlock = grade => [
 
 const formatTheFindingPlace = finding => ({ scale: finding.scale, check: finding.check, displayName: finding.displayName, file: finding.file, line: finding.line });
 
+// The results the case decides through their interface method, listed only where 1 stands, so a reader tells them from a key the case named.
+const listDecidedThroughInterfaceMethod = review => {
+  const decidedThrough = review.decidedByTheCase.filter(finding => finding.decidedThrough).map(finding => ({ ...formatTheFindingPlace(finding), decidedThrough: finding.decidedThrough }));
+  return decidedThrough.length ? { decidedThroughInterfaceMethod: decidedThrough } : {};
+};
+
 const writeTheJson = (grade, jsonFile) => {
-  const review = grade.review ? { run: grade.review.run, kept: grade.review.kept, onUntouchedCode: grade.review.onUntouchedCode.map(formatTheFindingPlace), toConsiderOnTheChange: grade.review.toConsiderOnTheChange, apart: grade.review.apart } : null;
+  const review = grade.review ? { run: grade.review.run, kept: grade.review.kept, onUntouchedCode: grade.review.onUntouchedCode.map(formatTheFindingPlace), toConsiderOnTheChange: grade.review.toConsiderOnTheChange, apart: grade.review.apart, ...listDecidedThroughInterfaceMethod(grade.review) } : null;
   const graded = { ...grade, review, gradeLine: writeTheGradeLine(grade) };
   fs.writeFileSync(jsonFile, `${JSON.stringify(graded, null, 2)}\n`);
 };
