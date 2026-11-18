@@ -12,5 +12,33 @@
     "reason": "outside the change",
     "says": "rule 1 of plan.md keeps the status 404 for an unknown member, as the loans of a member answer today, so the member lookup throws for an unknown member by the plan of the case",
     "decidedBy": "the case"
+  },
+  {
+    "displayName": "LoanRenewalResult",
+    "check": "S5",
+    "reason": "question to the author",
+    "says": "plan.md fixes the mail state in the answer of the renewal: \"A renewal answers the status 200 with a JSON body of 3 fields: `loanId`, the id of the renewed loan; `newDueDate`, the new due date in the form `yyyy-MM-dd`; and `mailSent`, `true` where the mail was sent and `false` where it was not.\"",
+    "decidedBy": "the plan of the task"
+  },
+  {
+    "displayName": "ApiForLoanRenewal.LoanRenewalResult",
+    "check": "S5",
+    "reason": "question to the author",
+    "says": "plan.md fixes the mail state in the answer of the renewal: \"A renewal answers the status 200 with a JSON body of 3 fields: `loanId`, the id of the renewed loan; `newDueDate`, the new due date in the form `yyyy-MM-dd`; and `mailSent`, `true` where the mail was sent and `false` where it was not.\"",
+    "decidedBy": "the plan of the task"
+  },
+  {
+    "displayName": "LoanRenewalResponse",
+    "check": "S5",
+    "reason": "question to the author",
+    "says": "plan.md fixes the mail state in the answer of the renewal: \"A renewal answers the status 200 with a JSON body of 3 fields: `loanId`, the id of the renewed loan; `newDueDate`, the new due date in the form `yyyy-MM-dd`; and `mailSent`, `true` where the mail was sent and `false` where it was not.\"",
+    "decidedBy": "the plan of the task"
+  },
+  {
+    "displayName": "ApiForLoanRenewal#renewLoan",
+    "check": "S2",
+    "reason": "question to the author",
+    "says": "plan.md fixes the mail state in the answer of the renewal: \"A renewal answers the status 200 with a JSON body of 3 fields: `loanId`, the id of the renewed loan; `newDueDate`, the new due date in the form `yyyy-MM-dd`; and `mailSent`, `true` where the mail was sent and `false` where it was not.\"",
+    "decidedBy": "the plan of the task"
   }
 ]

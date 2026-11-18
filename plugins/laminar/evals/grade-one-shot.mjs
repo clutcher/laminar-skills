@@ -6,7 +6,7 @@
 // --review, --repo and --range are needed where plan 1 ended ready; a plan that ended in a question or a stop starts no writer and no review.
 // --run-range gives the diff of the run itself where --range holds more, such as the planted change of the fix-from-review input before the commits of the writers; it defaults to --range. A kept finding on the change whose lines the run left byte for byte, and that the input did not raise, counts apart as on code the run left untouched; the input is the stored input review, and for the feature input the known findings of the base stand in for the review of the base.
 // --input-review is given for the fix-from-review input: each kept finding of the stored input review is then graded as closed, left, decided again, decided again with its lines changed since the decision, or back, and --expected gives the planted keys that split the kept findings of the closing review; the change.diff beside it gives the files the planted change touched.
-// --decided is given for the feature input: each object of the list names a key of the closing review, by displayName and check, that the case itself decided, and a result on that key counts apart as decided by the case. The fix-from-review input gives its decided list to the designer, so it takes no --decided.
+// --decided is given for either input: each object of the list names a key of the closing review, by displayName and check, that the case itself decided, and a result on that key counts apart as decided by the case, also where its lines changed since a decision of the run, because the case rules on the key and not on its lines.
 // --known is given for either input: each object of the list names a key, by displayName and check, that a full review of the base kept, with the review that found it as foundBy. It is measured, not decided, so a result on that key counts apart as known of the base only where it stands off the change; on code the run changed it is a result of the run like any other.
 // It exits with 0 where the run is one shot, 1 where it is not, and 2 on a usage error or a missing file. It writes nothing but --json, and runs git only in --repo.
 // Node with no dependencies.
@@ -119,7 +119,6 @@ const readOptions = argv => {
   }
   if (!options.results) throw new UsageStop("--results is needed");
   if (options.inputReview && !options.expected) throw new UsageStop("--input-review needs --expected, the expected.md of the planted change");
-  if (options.inputReview && options.decided) throw new UsageStop("--decided is for the feature input; the fix-from-review input gives its decided list to the designer");
 
   return options;
 };
@@ -292,9 +291,10 @@ const placeByTheChange = (finding, grading) => {
   return grading.knownKeysOfTheBase.has(finding.findingKey) ? PLACEMENTS.KNOWN_OF_THE_BASE : PLACEMENTS.NOT_ON_THE_CHANGE;
 };
 
-// A result decided but changed since with no carried decision stays open: its lines are no longer the lines of the ruling, so neither the ruling, the decided list nor the case sets it apart.
+// A result decided but changed since with no carried decision stays open: its lines are no longer the lines of the ruling, so neither the ruling nor the decided list sets it apart. The case rules on the key and not on its lines, so a key of the case still sets it apart.
 const placeTheFinding = (finding, leftSourceOfKeyMap, grading) => {
   if (finding.carriedChangedSince) return PLACEMENTS.CARRIED_CHANGED_SINCE;
+  if (finding.changedSinceTheDecision && grading.caseDecidedKeys.has(finding.findingKey)) return PLACEMENTS.DECIDED_BY_THE_CASE;
   if (finding.changedSinceTheDecision && finding.baselineState !== NEW_BASELINE_STATE) return PLACEMENTS.NOT_NEW;
   if (finding.changedSinceTheDecision) return placeByTheChange(finding, grading);
   if (finding.decided) return PLACEMENTS.DECIDED;
