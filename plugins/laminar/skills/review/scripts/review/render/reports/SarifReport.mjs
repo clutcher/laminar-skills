@@ -181,7 +181,10 @@ const buildCheckProperties = ({ finding, decision, alsoDecidedBy = [] }) => {
 
 const buildReachProperties = decision => (decision.reachOf ? { reachOf: decision.reachOf } : {});
 
-const buildDecisionProperties = mark => ({ check: mark.decision.check, ...buildCheckProperties(mark), displayName: mark.decision.displayName, reason: mark.decision.reason, decidedBy: mark.decision.decidedBy, plan: mark.decision.plan, source: mark.decision.source, matchedBy: mark.matchedBy, ...buildReachProperties(mark.decision) });
+// A decision that the design carried onto the code a created method took names the decided method it came from, so a reader tells it from a ruling on the key itself.
+const buildTakenCodeProperties = decision => (decision.takenFrom ? { takenFrom: decision.takenFrom } : {});
+
+const buildDecisionProperties = mark => ({ check: mark.decision.check, ...buildCheckProperties(mark), displayName: mark.decision.displayName, reason: mark.decision.reason, decidedBy: mark.decision.decidedBy, plan: mark.decision.plan, source: mark.decision.source, matchedBy: mark.matchedBy, ...buildReachProperties(mark.decision), ...buildTakenCodeProperties(mark.decision) });
 
 const buildAcceptedSuppression = mark => ({
   kind: SUPPRESSION.KIND,

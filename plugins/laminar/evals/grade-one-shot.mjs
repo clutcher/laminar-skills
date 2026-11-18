@@ -28,7 +28,7 @@ const PLACEMENTS = Object.freeze({
   NOT_ON_THE_CHANGE: "not on the change",
   NOT_NEW: "not new",
   DECIDED: "decided by the design",
-  DECIDED_CHANGED_SINCE: "decided, but changed since",
+  CARRIED_CHANGED_SINCE: "carried, but changed since",
   DECIDED_BY_THE_CASE: "decided by the case",
   KNOWN_OF_THE_BASE: "known of the base",
   LEFT: "left with a reason",
@@ -56,10 +56,13 @@ const KEPT_LEVEL = "warning";
 // A result the decided review file of the design marked carries this suppression status, and the grade counts it apart, never as kept on the change.
 const ACCEPTED_SUPPRESSION = "accepted";
 
-// A result decided, but whose lines changed since the decision, carries this suppression status; it keeps its level, so the grade counts it apart by the status, neither open nor decided.
+// A result decided, but whose lines changed since the decision, carries this suppression status; it keeps its level, so the grade reads it as open, unless its decision was carried onto the code a created method took.
 const UNDER_REVIEW_SUPPRESSION = "underReview";
 
 const holdsASuppressionOfTheStatus = (result, status) => (result.suppressions || []).some(suppression => suppression.status === status);
+
+// A decision the design carried onto a created method names the decided method in takenFrom: the moved lines were ruled on, and the method changes around them by design, so its result changed since counts apart.
+const holdsACarriedChangedSince = result => (result.suppressions || []).some(suppression => suppression.status === UNDER_REVIEW_SUPPRESSION && isAText((suppression.properties || {}).takenFrom));
 
 const NEW_BASELINE_STATE = "new";
 
@@ -185,6 +188,7 @@ const readFinding = result => {
     baselineState: result.baselineState || NEW_BASELINE_STATE,
     decided: holdsASuppressionOfTheStatus(result, ACCEPTED_SUPPRESSION),
     changedSinceTheDecision: holdsASuppressionOfTheStatus(result, UNDER_REVIEW_SUPPRESSION),
+    carriedChangedSince: holdsACarriedChangedSince(result),
     file: String((location.artifactLocation || {}).uri || ""),
     line: Number.isFinite((location.region || {}).startLine) ? location.region.startLine : null,
     track: CHECKS_BY_ID_MAP[check] ? CHECKS_BY_ID_MAP[check].track : "UNKNOWN",
@@ -225,16 +229,23 @@ const readTheKeysOfTheList = (listFile, label, textKeys) => {
   return new Set(list.map(entry => createFindingKey(entry.displayName, entry.check)));
 };
 
+const placeByTheChange = (finding, change, knownKeysOfTheBase) => {
+  if (isOnTheChange(finding, change)) return PLACEMENTS.ON_THE_CHANGE;
+
+  return knownKeysOfTheBase.has(finding.findingKey) ? PLACEMENTS.KNOWN_OF_THE_BASE : PLACEMENTS.NOT_ON_THE_CHANGE;
+};
+
+// A result decided but changed since with no carried decision stays open: its lines are no longer the lines of the ruling, so neither the ruling, the decided list nor the case sets it apart.
 const placeTheFinding = (finding, change, leftSourceOfKeyMap, { caseDecidedKeys, knownKeysOfTheBase }) => {
-  if (finding.changedSinceTheDecision) return PLACEMENTS.DECIDED_CHANGED_SINCE;
+  if (finding.carriedChangedSince) return PLACEMENTS.CARRIED_CHANGED_SINCE;
+  if (finding.changedSinceTheDecision && finding.baselineState !== NEW_BASELINE_STATE) return PLACEMENTS.NOT_NEW;
+  if (finding.changedSinceTheDecision) return placeByTheChange(finding, change, knownKeysOfTheBase);
   if (finding.decided) return PLACEMENTS.DECIDED;
   if (caseDecidedKeys.has(finding.findingKey)) return PLACEMENTS.DECIDED_BY_THE_CASE;
   if (finding.baselineState !== NEW_BASELINE_STATE) return PLACEMENTS.NOT_NEW;
   if (leftSourceOfKeyMap.has(finding.findingKey)) return PLACEMENTS.LEFT;
 
-  if (isOnTheChange(finding, change)) return PLACEMENTS.ON_THE_CHANGE;
-
-  return knownKeysOfTheBase.has(finding.findingKey) ? PLACEMENTS.KNOWN_OF_THE_BASE : PLACEMENTS.NOT_ON_THE_CHANGE;
+  return placeByTheChange(finding, change, knownKeysOfTheBase);
 };
 
 const createScaleCounts = () => Object.fromEntries(SCALES.map(scale => [scale, 0]));
@@ -269,7 +280,7 @@ const gradeTheReview = (options, leftSourceOfKeyMap) => {
     kept: countTheKeptFindings(keptOnTheChange),
     keptOnTheChange,
     toConsiderOnTheChange: onTheChange.length - keptOnTheChange.length,
-    decidedChangedSince: findings.filter(finding => finding.placement === PLACEMENTS.DECIDED_CHANGED_SINCE),
+    carriedChangedSince: findings.filter(finding => finding.placement === PLACEMENTS.CARRIED_CHANGED_SINCE),
     decidedByTheCase: findings.filter(finding => finding.placement === PLACEMENTS.DECIDED_BY_THE_CASE),
     knownOfTheBase: findings.filter(finding => finding.placement === PLACEMENTS.KNOWN_OF_THE_BASE),
     apart: countThePlacements(findings.filter(finding => finding.placement !== PLACEMENTS.ON_THE_CHANGE)),
@@ -591,7 +602,7 @@ const writeTheGradeLine = grade => {
   const apart = grade.review ? grade.review.apart : {};
   const decidedByTheCase = grade.caseDecided ? ` · decided by the case ${apart[PLACEMENTS.DECIDED_BY_THE_CASE] || 0}` : "";
   const knownOfTheBase = grade.caseKnown ? ` · known of the base ${apart[PLACEMENTS.KNOWN_OF_THE_BASE] || 0}` : "";
-  return `one shot: ${grade.oneShot ? "yes" : "no"} · kept on the change ${kept.total} (${scales}; test code ${kept.testCode}) · to consider ${toConsider} · decided ${apart[PLACEMENTS.DECIDED] || 0} · decided but changed since ${apart[PLACEMENTS.DECIDED_CHANGED_SINCE] || 0}${decidedByTheCase}${knownOfTheBase} · stops ${grade.writers.stops} · build ${formatTheBuildWord(grade.build)} · rounds ${grade.roundsNeeded} · ${formatDollars(grade.cost.dollars)}${stored}`;
+  return `one shot: ${grade.oneShot ? "yes" : "no"} · kept on the change ${kept.total} (${scales}; test code ${kept.testCode}) · to consider ${toConsider} · decided ${apart[PLACEMENTS.DECIDED] || 0} · carried but changed since ${apart[PLACEMENTS.CARRIED_CHANGED_SINCE] || 0}${decidedByTheCase}${knownOfTheBase} · stops ${grade.writers.stops} · build ${formatTheBuildWord(grade.build)} · rounds ${grade.roundsNeeded} · ${formatDollars(grade.cost.dollars)}${stored}`;
 };
 
 const writeTheWriterLines = writers => {
@@ -617,9 +628,9 @@ const writeTheReviewLines = (review, stored) => {
     `  by track: ${formatCounts(review.kept.byTrack)}`,
   ];
   if (stored) lines.push(`  by key: ${Object.values(KEY_KINDS).map(keyKind => formatCount(keyKind, stored.keptByKey[keyKind])).join(" · ")}`);
-  for (const finding of review.keptOnTheChange) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}`);
+  for (const finding of review.keptOnTheChange) lines.push(`  ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}${finding.testCode ? " (test code)" : ""}${finding.changedSinceTheDecision ? " (decided but changed since)" : ""}`);
   lines.push(`to consider on the change: ${review.toConsiderOnTheChange}`);
-  for (const finding of review.decidedChangedSince) lines.push(`  decided but changed since: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
+  for (const finding of review.carriedChangedSince) lines.push(`  carried but changed since: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
   for (const finding of review.decidedByTheCase) lines.push(`  decided by the case: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
   for (const finding of review.knownOfTheBase) lines.push(`  known of the base: ${finding.scale} ${finding.check} ${finding.displayName} ${finding.file}${finding.line ? `:${finding.line}` : ""}`);
   lines.push(`apart, not graded: ${formatTheApartCounts(review.apart, stored && stored.closingLeftBySource)}`);

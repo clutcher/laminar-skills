@@ -207,21 +207,22 @@ const isADirectDecision = decision => !decision.reachOf && !decision.takenFrom;
 // A method the change creates: a method marked unchanged or renamed by oldName stands in the current tree, so no decision is taken onto it.
 export const isACreatedMethod = method => !isMarkedUnchanged(method) && !isAText(method.oldName);
 
-// Each method of the model with the display names of the decided methods its body takes code from, and its own display name.
+// Each method of the model with the sources its body takes code from, each the display name of a decided method with 1 check whose finding is about the moved lines, and its own display name.
 export const listMethodsThatTakeCode = model => model.classes.flatMap(theClass => readList(theClass.methods)
   .filter(method => readList(method.takesCodeFrom).length)
   .map(method => ({ theClass, method, displayName: `${theClass.name}${METHOD_MARK}${method.name}`, sources: readList(method.takesCodeFrom) })));
 
-// The method decisions on 1 source by its planned name or a former name, never a decision that was itself taken from another method.
-export const listDecisionsOfTheSource = (decisions, sourceName) => decisions.filter(decision => decision.scale === METHOD_SCALE
+// The method decisions of the check of 1 source on its method by its planned name or a former name, never a decision that was itself taken from another method, so a decision of another check of that method never travels.
+export const listDecisionsOfTheSource = (decisions, source) => decisions.filter(decision => decision.scale === METHOD_SCALE
   && !decision.takenFrom
-  && [decision.displayName, ...readList(decision.formerNames)].includes(sourceName));
+  && decision.check === source.check
+  && [decision.displayName, ...readList(decision.formerNames)].includes(source.displayName));
 
 export const holdsALinesFingerprint = decision => isAText(decision.linesFingerprint);
 
 const withoutTheReach = ({ reachOf, ...decision }) => decision;
 
-// A created method that takes code from a decided method takes each decision of that method that holds a lines fingerprint, with that fingerprint, so its result is decided only while its own lines are the lines the person ruled on, and decided but changed since once they differ. It takes no class of its method, so it never decides a class result, and it never decides a finding that no decision holds.
+// A created method that takes code from a decided method takes the decision of each named check of that method that holds a lines fingerprint, with that fingerprint, so its result is decided only while its own lines are the lines the person ruled on, and decided but changed since once they differ. It takes no class of its method, so it never decides a class result, and it never decides a finding that no decision holds.
 const listDecisionsOfTheTakenCode = (model, plan, decisions) => listMethodsThatTakeCode(model)
   .filter(({ method }) => isACreatedMethod(method))
   .flatMap(({ theClass, displayName, sources }) => sources.flatMap(source => listDecisionsOfTheSource(decisions, source)

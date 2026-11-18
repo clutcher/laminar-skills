@@ -41,7 +41,8 @@ const createListOf = item => ({ form: "list", item });
 const createObjectOf = keys => ({ form: "object", keys });
 
 const METHOD_FORM = createObjectOf({
-  visibility: TEXT, name: TEXT, returns: TEXT, body: TEXT, oldName: TEXT, unchanged: TRUE_OR_FALSE, static: TRUE_OR_FALSE, uses: TEXTS, calls: TEXTS, takesCodeFrom: TEXTS,
+  visibility: TEXT, name: TEXT, returns: TEXT, body: TEXT, oldName: TEXT, unchanged: TRUE_OR_FALSE, static: TRUE_OR_FALSE, uses: TEXTS, calls: TEXTS,
+  takesCodeFrom: createListOf(createObjectOf({ displayName: TEXT, check: TEXT })),
   parameters: createListOf(createObjectOf({ name: TEXT, type: TEXT })),
 });
 
