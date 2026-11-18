@@ -1,6 +1,6 @@
 import { readList } from "../model/DesignModel.mjs";
 import { getGroupOfTheClass } from "../plan/FindingList.mjs";
-import { readGroupOfTheStop } from "../plan/StopList.mjs";
+import { isAnAnswerOfACommittedGroup, readGroupOfTheStop } from "../plan/StopList.mjs";
 import { findGroupOfTheTestFile } from "./FindingSteps.mjs";
 import { MIGRATION_STAGES } from "./MigrationSteps.mjs";
 
@@ -66,11 +66,11 @@ export const findChangedClassDefects = (model, classNames) => classNames
   .filter(className => !model.findClass(className))
   .map(className => ({ code: CHANGED_CLASS_NOT_IN_MODEL, sentence: `--classes names ${className}, and the model holds no such class` }));
 
-// The groups whose writer stopped in the plan before, by the group of each stop, else by the class of the abstraction it names, so the next writer of the group goes on from its left files.
+// The groups whose writer stopped in the plan before, by the group of each stop, else by the class of the abstraction it names, so the next writer of the group goes on from its left files; the group of an answer of a committed group finished, so it is no stopped group.
 export const listStoppedGroups = (model, plan) => {
   if (!Number.isInteger(plan)) return [];
   return readList(model.decisions.stops)
-    .filter(stop => (stop.plan ?? stop.round) === plan - 1)
+    .filter(stop => (stop.plan ?? stop.round) === plan - 1 && !isAnAnswerOfACommittedGroup(stop))
     .map(stop => readGroupOfTheStop(model, stop))
     .filter(Number.isInteger);
 };

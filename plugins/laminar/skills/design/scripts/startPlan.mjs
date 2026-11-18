@@ -137,7 +137,7 @@ function startPlan() {
   const isAReplan = replansThePlanBefore(resultsFolder, plan, options, given);
   if (isAReplan) console.log(`re-plan: plan ${plan - 1} wrote no group on the plan commit ${headCommit}, so this plan carries nothing and plans the whole model`);
   if (isNew && !isAReplan) {
-    const unfinishedGroups = listUnfinishedGroups(model, stopList.map(stopped => ({ group: stopped.group })), readPlannedGroups(getPlanFolder(resultsFolder, plan - 1)));
+    const unfinishedGroups = listUnfinishedGroups(model, stopList.map(stopped => ({ group: stopped.group, committed: stopped.committed })), readPlannedGroups(getPlanFolder(resultsFolder, plan - 1)));
     const isANewChange = startsANewChange(resultsFolder, plan, options, baseCommit);
     ({ model: given, counts } = runOrExitOnTreeStop(() => carryTheModel(given, readCurrentTree(repositoryRoot, headCommit), unfinishedGroups, isANewChange)));
     console.log(`carried: ${Object.entries(counts).map(([key, count]) => `${key} ${count}`).join(" · ")}`);

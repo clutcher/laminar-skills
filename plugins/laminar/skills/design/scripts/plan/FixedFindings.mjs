@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { isAText, readList } from "../model/DesignModel.mjs";
 import { FINDINGS_FILE, getPlanFolder } from "./PlanFolder.mjs";
-import { readGroupOfTheStop, readPlanOfTheStop } from "./StopList.mjs";
+import { isAnAnswerOfACommittedGroup, readGroupOfTheStop, readPlanOfTheStop } from "./StopList.mjs";
 
 const MIGRATION_WORKFLOW_FILE = "migration.workflow.js";
 
@@ -21,9 +21,9 @@ const readEarlierEntries = planFolder => {
   return fs.existsSync(findingsPath) ? readList(JSON.parse(fs.readFileSync(findingsPath, "utf8"))) : [];
 };
 
-// The groups of the plan before that no writer finished: each group of a stop, by its group or the class it names, and each planned group that waits for one of them, because the writer workflow starts no such group.
+// The groups of the plan before that no writer finished: each group of a stop, by its group or the class it names, and each planned group that waits for one of them, because the writer workflow starts no such group; the group of an answer of a committed group finished.
 export const listUnfinishedGroups = (model, stops, plannedGroups) => {
-  const unfinished = new Set(stops.map(stop => readGroupOfTheStop(model, stop)).filter(Number.isInteger));
+  const unfinished = new Set(stops.filter(stop => !isAnAnswerOfACommittedGroup(stop)).map(stop => readGroupOfTheStop(model, stop)).filter(Number.isInteger));
   for (const planned of plannedGroups) {
     if (readList(planned.dependsOn).some(earlier => unfinished.has(earlier))) unfinished.add(planned.group);
   }
@@ -42,10 +42,12 @@ const isTheSameFinding = (entry, earlier) => entry.number === earlier.number && 
 
 const gotAStep = entry => !isAText(entry.reason) && !entry.toConsider && !entry.fixedBy;
 
-// On a plan that takes the stops of the plan before, from the same run folder, each finding whose finding step a finished group of the plan before wrote stays fixed by that plan and group, so no writer fixes it twice; the stopped and the unstarted groups are planned again.
+// On a plan that takes the stops of the plan before, answers of committed groups included, from the same run folder, each finding whose finding step a finished group of the plan before wrote stays fixed by that plan and group, so no writer fixes it twice; the stopped and the unstarted groups are planned again.
 export const carryTheFixedFindings = (model, resultsFolder, plan, entries) => {
+  const hasStopsOfThePlanBefore = readList(model.decisions.stops).some(stop => readPlanOfTheStop(stop) === plan - 1);
+  if (plan < 2 || !hasStopsOfThePlanBefore) return entries;
+
   const unfinishedGroups = new Set(listUnfinishedGroupsOfThePlanBefore(model, resultsFolder, plan));
-  if (!unfinishedGroups.size) return entries;
 
   const earlierFolder = getPlanFolder(resultsFolder, plan - 1);
   const plannedNumbers = new Set(readPlannedGroups(earlierFolder).map(planned => planned.group));

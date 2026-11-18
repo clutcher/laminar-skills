@@ -32,7 +32,7 @@ The design check reads `review.md` of the input run folder where `--review <path
 
 ## `stops`
 
-1 object per stop of the writer, which the start command records from the input `stop: <file>`. Empty before a writer stopped. The keys: `reason`, a stop reason of the lists below; `at`, a display name, which the design check resolves; `says`, what the writer met; `plan`, the number of the plan whose migration the writer wrote, which a model of 0.72.0 holds as `round`; and `group`, the migration group of the stop, which the start command adds. The first 4 are required, and the render prints each. A reason outside the lists below stops the design check with exit 2.
+1 object per stop of the writer, which the start command records from the input `stop: <file>`. Empty before a writer stopped. The keys: `reason`, a stop reason of the lists below; `at`, a display name, which the design check resolves; `says`, what the writer met; `plan`, the number of the plan whose migration the writer wrote, which a model of 0.72.0 holds as `round`; and `group`, the migration group of the stop, which the start command adds. The answer of a committed group (`writer.md`, section 5) also holds `committed`, `true` only, which the start command copies from the stop list. Such an object is no stop of a writer: its group finished and was committed, so the scripts read the group as finished, and the render writes `, answer of committed group <g>` after its reason. The first 4 are required, and the render prints each. A reason outside the lists below stops the design check with exit 2.
 
 The stop reasons that the writer gives:
 

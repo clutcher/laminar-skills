@@ -88,7 +88,7 @@ function planMigration() {
 
   const currentTree = repositoryRoot ? runOrExitOnTreeStop(() => readCurrentTree(repositoryRoot, readTreeCommit(options))) : null;
   const allSteps = runOrExitOnTreeStop(() => listMigrationSteps(model, currentTree));
-  const { findingSteps, noStepLines, defects: findingDefects } = listFindingSteps(model, allSteps, entries, itemChecks);
+  const { findingSteps, noStepLines, defects: findingDefects } = listFindingSteps(model, allSteps, entries, itemChecks, currentTree);
   const isCut = options.classes !== undefined;
   const modelBefore = isCut ? readModelBeforeOrExit(options, repositoryRoot) : null;
   const { steps, cutLine, classDefects } = isCut ? cutThePlan(model, allSteps, findingSteps, options, modelBefore) : { steps: sortAndNumberTheSteps([...allSteps, ...findingSteps]), cutLine: "", classDefects: [] };

@@ -1,4 +1,5 @@
 import { ANSWER_GIVERS, DOES, KINDS, OVERRIDE_KINDS, getFileOfTheChild, getFolderPath, holdsADecidedReason, isAText, isAnInterface, isLeftUnfixed, readHeadTypeName, readList, readTypeNames } from "../model/DesignModel.mjs";
+import { isAnAnswerOfACommittedGroup } from "../plan/StopList.mjs";
 
 const GUESS_EVIDENCE = new Set(["churn", "none"]);
 
@@ -268,11 +269,14 @@ const writeQuestionSection = questions => {
   return lines;
 };
 
+// An answer of a committed group is no stop of a writer, so its reason cell names the group that finished.
+const writeStopReason = stop => (isAnAnswerOfACommittedGroup(stop) ? `${stop.reason}, answer of committed group ${stop.group}` : stop.reason);
+
 const writeStopSection = stops => {
   const lines = ["## Stops", ""];
   if (!stops.length) return [...lines, "None."];
   lines.push("| Plan | Reason | At | Says |", "|---|---|---|---|");
-  for (const stop of stops) lines.push(`| ${stop.plan ?? stop.round} | ${escapeTableCell(stop.reason)} | ${writeCode(escapeTableCell(stop.at))} | ${escapeTableCell(stop.says)} |`);
+  for (const stop of stops) lines.push(`| ${stop.plan ?? stop.round} | ${escapeTableCell(writeStopReason(stop))} | ${writeCode(escapeTableCell(stop.at))} | ${escapeTableCell(stop.says)} |`);
   return lines;
 };
 

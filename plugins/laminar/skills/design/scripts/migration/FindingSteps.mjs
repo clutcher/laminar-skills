@@ -63,7 +63,7 @@ const findItemDefect = (itemChecks, entry) => {
 };
 
 // 1 finding step per entry of findings.json that holds no reason class and names an abstraction the model keeps; every other entry gets a no-step line or a defect, so no finding is dropped in silence. itemChecks answers which checks each item of the review.md of the run holds, and is null where no review.md is given.
-export const listFindingSteps = (model, steps, entries, itemChecks = null) => {
+export const listFindingSteps = (model, steps, entries, itemChecks = null, currentTree = null) => {
   const findingSteps = [];
   const noStepLines = [];
   const defects = [];
@@ -99,6 +99,11 @@ export const listFindingSteps = (model, steps, entries, itemChecks = null) => {
       continue;
     }
     const group = Number.isFinite(entry.group) ? entry.group : findGroupOfTheTestFile(steps, entry.file);
+    // A finding on a file the plan commit no longer holds names code no writer can change, such as a file an earlier committed group deleted or moved away.
+    if (group === null && currentTree && entry.file && !currentTree.holdsThePath(entry.file)) {
+      noStepLines.push(createNoStepLine(entry, `${entry.file} is not in the plan commit`));
+      continue;
+    }
     if (group === null) {
       defects.push(createFindingDefect(FINDING_DEFECT_CODES.FINDING_WITHOUT_GROUP, entry, `stands in ${entry.file || "no file"}, which no class of the model and no test step of the plan holds; add its class to the model as modified`));
       continue;
