@@ -64,6 +64,7 @@ export const DEFECT_CODES = Object.freeze({
   METHOD_CHANGED_BUT_MARKED_UNCHANGED: "method-changed-but-marked-unchanged",
   GROUP_ORDER_BROKEN: "group-order-broken",
   STEP_ON_UNCHANGED_FILE: "step-on-unchanged-file",
+  STEP_ON_UNLISTED_FILE: "step-on-unlisted-file",
   REMOVED_TEST_FILE_UNLISTED: "removed-test-file-unlisted",
   EXISTING_DEFECT_GROUP_TAKEN: "existing-defect-group-taken",
   FIELD_UNLISTED: "field-unlisted",

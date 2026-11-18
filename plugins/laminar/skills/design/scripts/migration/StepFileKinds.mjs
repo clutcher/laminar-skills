@@ -1,4 +1,5 @@
-import { KINDS, isAText, readList } from "../model/DesignModel.mjs";
+import { KINDS, getFileOfTheChild, isAText, readList } from "../model/DesignModel.mjs";
+import { isATestFile } from "../model/SourceLanguages.mjs";
 import { DEFECT_CODES, createDefect } from "../check/DesignDefect.mjs";
 import { listTestChangesAgainstThePlanBefore } from "./CutSteps.mjs";
 
@@ -32,5 +33,22 @@ const findUnchangedFileStepDefects = (model, steps) => {
   });
 };
 
-// A step that changes a file the model keeps, or a removed test on a file the model does not list, from decisions.tests.removed or from the diff against the model of the plan before, changes code that the design never shows, so a writer changes it with no model and the design check passes it.
-export const findStepFileKindDefects = (model, steps, modelBefore = null) => [...findRemovedTestDefects(model), ...findPlanBeforeRemovalDefects(model, modelBefore), ...findUnchangedFileStepDefects(model, steps)];
+// The paths the children of the model name: each child file or folder and each oldPath, so the old file of a move and a file under a folder child count as listed.
+const listChildPaths = model => model.folders.flatMap(folder => readList(folder.children).flatMap(child => [getFileOfTheChild(folder, child), child.oldPath]))
+  .filter(isAText)
+  .map(childPath => childPath.replace(/\/+$/, ""));
+
+const isListedByAChild = (childPaths, file) => childPaths.some(childPath => file === childPath || file.startsWith(`${childPath}/`));
+
+// A test file stays outside, because the model states its tests under decisions.tests and lists a test file as a child only where it chooses.
+const findUnlistedFileStepDefects = (model, steps) => {
+  const childPaths = listChildPaths(model);
+  return steps.flatMap(step => {
+    const unlistedFiles = [...new Set(step.files)].filter(file => !file.endsWith("/") && !isATestFile(file) && !isListedByAChild(childPaths, file));
+    if (!unlistedFiles.length) return [];
+    return [createDefect(DEFECT_CODES.STEP_ON_UNLISTED_FILE, MIGRATION_PATH, `step ${step.number} of migration group ${step.group} changes ${unlistedFiles.join(", ")}, which the model does not list; list each such file as modified`)];
+  });
+};
+
+// A step that changes a file the model keeps or a production file it does not list, or a removed test on a file the model does not list, from decisions.tests.removed or from the diff against the model of the plan before, changes code that the design never shows, so a writer changes it with no model and the design check passes it.
+export const findStepFileKindDefects = (model, steps, modelBefore = null) => [...findRemovedTestDefects(model), ...findPlanBeforeRemovalDefects(model, modelBefore), ...findUnchangedFileStepDefects(model, steps), ...findUnlistedFileStepDefects(model, steps)];
