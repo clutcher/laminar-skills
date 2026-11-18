@@ -106,8 +106,8 @@ const readBaseTree = (repositoryRoot, commits, currentTree) => {
   return readCurrentTree(repositoryRoot, commits.baseCommit);
 };
 
-// With a tree commit, the current tree is that commit, never the working folder, which may hold the files of a writer. Each shape review may hold the classes and the shape model of its run, the round models are the copies of the model of each round in order, and the decided list is the list of the input as given.
-export const checkDesignModel = (model, repositoryRoot = null, reviewText = null, shapeReviews = [], commits = { treeCommit: null, baseCommit: null }, roundModels = [], decidedList = []) => {
+// With a tree commit, the current tree is that commit, never the working folder, which may hold the files of a writer. Each shape review may hold the classes and the shape model of its run, the round models are the copies of the model of each round in order, the decided list is the list of the input as given, and the ceiling is the ceiling of shape runs that the input states, else null.
+export const checkDesignModel = (model, repositoryRoot = null, reviewText = null, shapeReviews = [], commits = { treeCommit: null, baseCommit: null }, roundModels = [], decidedList = [], ceiling = null) => {
   const currentTree = repositoryRoot ? readCurrentTree(repositoryRoot, commits.treeCommit) : null;
   const baseTree = readBaseTree(repositoryRoot, commits, currentTree);
   const zoneOrder = readZoneOrder(model.decisions.conventions?.zoneOrder, currentTree, model.listScopeFolderPaths());
@@ -123,7 +123,7 @@ export const checkDesignModel = (model, repositoryRoot = null, reviewText = null
     ...findUnknownKeyDefects(model),
     ...completeness.defects,
     ...findTestFileBehaviorDefects(model),
-    ...findFindingsDefects(model, reviewText, shapeReviews, baseTree),
+    ...findFindingsDefects(model, reviewText, shapeReviews, baseTree, ceiling),
     ...findTriedNameDefects(model, shapeReviews, roundModels),
     ...findSimplestFormDefects(model),
     ...findPassedOnCallDefects(model),

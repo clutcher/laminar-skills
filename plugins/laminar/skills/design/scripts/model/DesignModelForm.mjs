@@ -94,7 +94,7 @@ const DECISIONS_FORM = createObjectOf({
     answer: createObjectOf({ option: TEXT, by: createTextOf(Object.values(ANSWER_GIVERS)), says: TEXT }),
   })),
   stops: createListOf(createObjectOf({ reason: createTextOf(STOP_REASONS), at: TEXT, says: TEXT, plan: NUMBER, group: NUMBER, round: NUMBER })),
-  findings: createListOf(createObjectOf({ run: NUMBER, number: NUMBER, check: TEXT, closedBy: TEXT, reason: TEXT, says: TEXT, decidedBy: TEXT, openAfterCeiling: TEXT })),
+  findings: createListOf(createObjectOf({ run: NUMBER, number: NUMBER, check: TEXT, closedBy: TEXT, reason: TEXT, says: TEXT, decidedBy: TEXT, openAfterCeiling: TEXT, doesNotClose: TEXT })),
   existingDefects: createListOf(createObjectOf({ class: TEXT, member: TEXT, defect: TEXT, fix: TEXT, notFixed: TEXT, group: NUMBER })),
   scriptCases: createListOf(createObjectOf({ code: TEXT, name: TEXT, text: TEXT, reason: TEXT, businessRules: TEXTS })),
   referencesRead: TEXTS,

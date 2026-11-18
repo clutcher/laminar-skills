@@ -284,6 +284,7 @@ const describeFindingItem = finding => {
 const writeFindingLine = finding => {
   const item = describeFindingItem(finding);
   if (isAText(finding.closedBy)) return `- ${item}: closed by ${writeCode(finding.closedBy)}`;
+  if (isAText(finding.doesNotClose)) return `- ${item}: not closed by the changes tried: ${finding.doesNotClose}${holdsADecidedReason(finding) ? `; left, ${finding.reason}, decided by ${finding.decidedBy}: ${finding.says}` : ""}`;
   if (isAText(finding.decidedBy)) return `- ${item}: left, ${finding.reason}, decided by ${finding.decidedBy}: ${finding.says}`;
   return `- ${item}: left, ${finding.reason}: ${finding.says}`;
 };

@@ -35,6 +35,15 @@ export const readOptionsOrExit = (usage, optionNames, requiredNames, repeatableN
   process.exit(STOP_EXIT_CODE);
 };
 
+// A whole number above 0, such as a ceiling, or null where the option is not given.
+export const readWholeNumberOrExit = (usage, text, optionName) => {
+  if (text === undefined) return null;
+  if (/^[1-9]\d*$/.test(text)) return Number(text);
+
+  console.error(`--${optionName} takes a whole number above 0, and got ${text}\n${usage}`);
+  process.exit(STOP_EXIT_CODE);
+};
+
 export const readDesignModelOrExit = modelPath => {
   try {
     return readDesignModel(modelPath);

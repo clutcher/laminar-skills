@@ -7,7 +7,8 @@ import { findDecidedNotGivenDefects } from "./check/DecidedNotGiven.mjs";
 import { findNameOfThePath } from "./check/DefectNames.mjs";
 import { findTakenCodeDefects } from "./check/TakenCode.mjs";
 import { listClassesOfTheAbstractions } from "./check/TriedNames.mjs";
-import { readBaseCommit, readDesignModelOrExit, readOptionsOrExit, readTreeCommit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
+import { CHANGES_TRIED, findItemsThatDoNotCloseDefects, findProvenItemDefects, holdsAnItemThatDoesNotClose } from "./check/ItemsThatDoNotClose.mjs";
+import { readBaseCommit, readDesignModelOrExit, readOptionsOrExit, readTreeCommit, readWholeNumberOrExit, runOrExitOnTreeStop } from "./command/CommandLine.mjs";
 import { DecidedListStop, checkDecidedListForm, findReachDefects, readDecidedEntries, resolveDecidedList, resolveDecidedListOnShapeRuns } from "./plan/DecidedList.mjs";
 import { buildDecidedReview, listMethodsThatTakeCode } from "./plan/DecidedReview.mjs";
 import { listFindingEntries } from "./plan/FindingList.mjs";
@@ -15,7 +16,7 @@ import { DECIDED_REVIEW_FILE, getPlansFolder } from "./plan/PlanFolder.mjs";
 import { RoundStop, SHAPE_MODEL_FILE, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder, readShapeRunFolders } from "./round/RunFolder.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
 
-const USAGE = "usage: node checkDesign.mjs --model <design-model.json> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md>] [--decided <decided list>] [--shape-review <results>/shape-runs/<n>/review.md]... [--autonomous]";
+const USAGE = "usage: node checkDesign.mjs --model <design-model.json> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md>] [--decided <decided list>] [--shape-review <results>/shape-runs/<n>/review.md]... [--ceiling <shape runs>] [--autonomous]";
 
 const STOP_EXIT_CODE = 2;
 
@@ -198,6 +199,18 @@ const listDecisionsToTakeCodeFrom = (model, options) => {
   return decidedReview.decided;
 };
 
+// Read only where the model holds the key doesNotClose or a shape run can hold a proven item, the 3rd shape run on, so a shorter loop is checked as before.
+const findItemsThatDoNotCloseDefectsOrExit = (model, options) => {
+  if (!holdsAnItemThatDoesNotClose(model) && options[SHAPE_REVIEW_OPTION].length <= CHANGES_TRIED) return [];
+  try {
+    const shapeRuns = readShapeRunFolders(options[SHAPE_REVIEW_OPTION]);
+    return [...findItemsThatDoNotCloseDefects(model, shapeRuns), ...findProvenItemDefects(model, shapeRuns)].map(defect => ({ ...defect, name: findNameOfThePath(model, defect.path) || defect.path, foundWrong: false }));
+  } catch (error) {
+    if (!(error instanceof RoundStop)) throw error;
+    return exitWith(error.message);
+  }
+};
+
 // Read only where the model holds the key takesCodeFrom, so a model without it is checked as before; a malformed decided list has already stopped the check.
 const findTakenCodeDefectsOrExit = (model, options) => {
   if (!listMethodsThatTakeCode(model).length) return [];
@@ -210,15 +223,16 @@ const findTakenCodeDefectsOrExit = (model, options) => {
 };
 
 function checkDesign() {
-  const options = readOptionsOrExit(USAGE, ["model", "repo", "tree", "base", "review", "decided"], ["model"], [SHAPE_REVIEW_OPTION], [AUTONOMOUS_SWITCH]);
+  const options = readOptionsOrExit(USAGE, ["model", "repo", "tree", "base", "review", "decided", "ceiling"], ["model"], [SHAPE_REVIEW_OPTION], [AUTONOMOUS_SWITCH]);
+  const ceiling = readWholeNumberOrExit(USAGE, options.ceiling, "ceiling");
   const model = readDesignModelOrExit(options.model);
   const reviewText = options.review ? readTextOrExit("review", options.review) : null;
   const shapeReviews = options[SHAPE_REVIEW_OPTION].map(readShapeReviewOrExit);
-  const decidedDefects = [...findDecidedDefectsOrExit(model, options), ...findDecidedNotGivenDefectsOrExit(model, options), ...findTakenCodeDefectsOrExit(model, options)];
+  const decidedDefects = [...findDecidedDefectsOrExit(model, options), ...findDecidedNotGivenDefectsOrExit(model, options), ...findTakenCodeDefectsOrExit(model, options), ...findItemsThatDoNotCloseDefectsOrExit(model, options)];
 
   const repositoryRoot = options.repo ? path.resolve(options.repo) : null;
   const commits = repositoryRoot ? { treeCommit: readTreeCommit(options), baseCommit: readBaseCommit(options) } : undefined;
-  const result = runOrExitOnTreeStop(() => checkDesignModel(model, repositoryRoot, reviewText, shapeReviews, commits, readRoundModelsOrExit(options.model), readDecidedList(options)));
+  const result = runOrExitOnTreeStop(() => checkDesignModel(model, repositoryRoot, reviewText, shapeReviews, commits, readRoundModelsOrExit(options.model), readDecidedList(options), ceiling));
   const autonomousDefects = options[AUTONOMOUS_SWITCH] ? findAutonomousReasonDefects(model, reviewText, shapeReviews).map(defect => ({ ...defect, name: findNameOfThePath(model, defect.path) || defect.path, foundWrong: false })) : [];
   const defects = [...result.defects, ...decidedDefects, ...autonomousDefects];
   for (const headLine of result.headLines) console.log(headLine);

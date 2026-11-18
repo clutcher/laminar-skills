@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { readDesignModelOrExit, readOptionsOrExit } from "./command/CommandLine.mjs";
+import { readDesignModelOrExit, readOptionsOrExit, readWholeNumberOrExit } from "./command/CommandLine.mjs";
 import { ROUND_DEFECT_CODES, checkDispositionsForm, createRoundDefect, resolveDispositions } from "./round/Dispositions.mjs";
 import { LOOP_WORDS, decideLoopLine, listSendLines } from "./round/LoopLine.mjs";
 import { compareTheRound } from "./round/RoundComparison.mjs";
@@ -35,12 +35,6 @@ const NO_FINDINGS_SWITCH = "no-findings";
 const exitOnUsage = message => {
   console.error(message ? `${message}\n${USAGE}` : USAGE);
   process.exit(STOP_EXIT_CODE);
-};
-
-const readWholeNumberOrExit = (text, optionName) => {
-  if (text === undefined) return null;
-  if (!/^[1-9]\d*$/.test(text)) exitOnUsage(`--${optionName} takes a whole number above 0, and got ${text}`);
-  return Number(text);
 };
 
 const readDollarsOrExit = text => {
@@ -119,9 +113,9 @@ function recordRound() {
   const resultsFolder = path.resolve(options.results);
   const roundsFolder = path.join(resultsFolder, ROUNDS_FOLDER);
   const lastRound = findLastRound(roundsFolder);
-  const round = readWholeNumberOrExit(options.round, "round") || lastRound + 1;
+  const round = readWholeNumberOrExit(USAGE, options.round, "round") || lastRound + 1;
   if (round > lastRound + 1) exitOnUsage(`--round ${round} skips a round: the last round is ${lastRound}`);
-  const ceiling = readWholeNumberOrExit(options.ceiling, "ceiling");
+  const ceiling = readWholeNumberOrExit(USAGE, options.ceiling, "ceiling");
   const roundDollars = readDollarsOrExit(options.dollars);
   const model = options.model ? readDesignModelOrExit(options.model) : null;
   const repositoryRoot = options.repo ? path.resolve(options.repo) : null;

@@ -3,6 +3,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { listConsiderations } from "./check/AutonomousReasons.mjs";
+import { DEFECT_CODES } from "./check/DesignDefect.mjs";
+import { holdsAnItemThatDoesNotClose, listItemsThatDoNotClose } from "./check/ItemsThatDoNotClose.mjs";
 import { readNamedReviewItems } from "./check/ReviewItems.mjs";
 import { isAText, readDesignModel, readList } from "./model/DesignModel.mjs";
 import { readDesignModelOrExit, readOptionsOrExit } from "./command/CommandLine.mjs";
@@ -16,7 +18,7 @@ import { listRoundDispositions } from "./plan/RoundDispositions.mjs";
 import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder, readShapeRunFolders } from "./round/RunFolder.mjs";
 import { listDefectLinesOfTheRun, removeFinishStop, writeFinishStop } from "./plan/FinishStop.mjs";
 
-const USAGE = "usage: node finishModel.mjs --model <design-model.json> --results <results folder> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md>] [--decided <decided list>] [--shape-review <results>/shape-runs/<n>/review.md]... [--classes <display names>] [--rounds <results>/rounds] [--autonomous]";
+const USAGE = "usage: node finishModel.mjs --model <design-model.json> --results <results folder> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md>] [--decided <decided list>] [--shape-review <results>/shape-runs/<n>/review.md]... [--classes <display names>] [--rounds <results>/rounds] [--ceiling <shape runs>] [--autonomous]";
 
 const SHAPE_REVIEW_OPTION = "shape-review";
 
@@ -53,7 +55,7 @@ const listCutArguments = (options, plan, paths) => {
 
 // The 3 scripts of the finish command, in that order, each with the options it takes.
 const listFinishSteps = (options, paths, plan) => [
-  { name: "check", script: "checkDesign.mjs", arguments: [...listOptionArguments(options, ["model", "repo", "tree", "base", "review", "decided"]), ...listShapeReviewArguments(options), ...(options[AUTONOMOUS_SWITCH] ? [`--${AUTONOMOUS_SWITCH}`] : [])] },
+  { name: "check", script: "checkDesign.mjs", arguments: [...listOptionArguments(options, ["model", "repo", "tree", "base", "review", "decided", "ceiling"]), ...listShapeReviewArguments(options), ...(options[AUTONOMOUS_SWITCH] ? [`--${AUTONOMOUS_SWITCH}`] : [])] },
   { name: "render", script: "renderDesign.mjs", arguments: [...listOptionArguments(options, ["model", "rounds", "review", "repo", "tree"]), ...listShapeReviewArguments(options), "--out", paths.design] },
   { name: "migration", script: "planMigration.mjs", arguments: [...listOptionArguments(options, ["model", "repo", "tree"]), ...(paths.findings ? ["--findings", paths.findings, ...listOptionArguments(options, ["review"])] : []), ...listCutArguments(options, plan, paths), "--out", paths.migration] },
 ];
@@ -208,8 +210,18 @@ const writeTheDecidedReview = (resultsFolder, plan, model, roundInput) => {
   for (const line of droppedLines) console.log(line);
 };
 
+// The items that 2 changes of the tree did not close, read from the shape runs only where the model holds one; the design check already refused each one without its proof.
+const listItemsThatDoNotCloseOfTheModel = (model, options) => (holdsAnItemThatDoesNotClose(model) ? listItemsThatDoNotClose(model, readShapeRunFolders(options[SHAPE_REVIEW_OPTION])) : []);
+
+// An item that does not close ends autonomous mode with the outcome stop, whose reason is the code of its question line, because no change of the tree is left to try, and is a question for the user in the mode with a user.
+const decideTheOutcome = (questions, openAfterCeiling, itemsThatDoNotClose, isAutonomous) => {
+  if (itemsThatDoNotClose.length && isAutonomous) return { word: PLAN_OUTCOMES.STOP, stop: { reason: DEFECT_CODES.ITEM_DOES_NOT_CLOSE, at: itemsThatDoNotClose[0].displayName, says: itemsThatDoNotClose[0].says } };
+  if (questions.length || openAfterCeiling.length || itemsThatDoNotClose.length) return { word: PLAN_OUTCOMES.QUESTION, stop: null };
+  return { word: PLAN_OUTCOMES.READY, stop: null };
+};
+
 // The plan folder keeps the model, the findings and the commits of the plan, the dispositions of the round of its run folder and its outcome, so 2 plans compare by their files.
-const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput) => {
+const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput, options) => {
   const planFolder = getPlanFolder(resultsFolder, plan);
   fs.mkdirSync(planFolder, { recursive: true });
   copyFileIfPresent(path.resolve(paths.model), planFolder);
@@ -219,14 +231,15 @@ const writeThePlanFolder = (resultsFolder, plan, model, paths, roundInput) => {
   if (roundInput) writeJson(path.join(planFolder, DISPOSITIONS_FILE), listRoundDispositions(model, roundInput.run, roundInput));
   const questions = listQuestionsThatStopThePlan(model);
   const openAfterCeiling = listFindingsThatStopThePlan(model, resultsFolder);
-  const outcomeWord = questions.length || openAfterCeiling.length ? PLAN_OUTCOMES.QUESTION : PLAN_OUTCOMES.READY;
-  writeOutcome(resultsFolder, plan, { word: outcomeWord, questions, considerations: paths.considerations, openAfterCeiling, referencesRead: readList(model.decisions.referencesRead), decidedKeysNotRaised: paths.shapeDecisions?.decidedKeysNotRaised, decidedThroughInterfaceMethod: paths.shapeDecisions?.decidedThroughInterfaceMethod });
+  const doesNotClose = listItemsThatDoNotCloseOfTheModel(model, options);
+  const { word: outcomeWord, stop } = decideTheOutcome(questions, openAfterCeiling, doesNotClose, options[AUTONOMOUS_SWITCH]);
+  writeOutcome(resultsFolder, plan, { word: outcomeWord, stop, questions, considerations: paths.considerations, openAfterCeiling, doesNotClose, referencesRead: readList(model.decisions.referencesRead), decidedKeysNotRaised: paths.shapeDecisions?.decidedKeysNotRaised, decidedThroughInterfaceMethod: paths.shapeDecisions?.decidedThroughInterfaceMethod });
   if (outcomeWord === PLAN_OUTCOMES.READY) writeTheDecidedReview(resultsFolder, plan, model, roundInput);
   return outcomeWord;
 };
 
 function finishModel() {
-  const options = readOptionsOrExit(USAGE, ["model", "repo", "tree", "base", "review", "decided", "results", "rounds", "classes"], ["model", "results"], [SHAPE_REVIEW_OPTION], [AUTONOMOUS_SWITCH]);
+  const options = readOptionsOrExit(USAGE, ["model", "repo", "tree", "base", "review", "decided", "results", "rounds", "classes", "ceiling"], ["model", "results"], [SHAPE_REVIEW_OPTION], [AUTONOMOUS_SWITCH]);
   const resultsFolder = path.resolve(options.results);
   const model = readDesignModelOrExit(options.model);
   const plan = Math.max(findLastPlan(resultsFolder), 1);
@@ -257,7 +270,7 @@ function finishModel() {
   for (const line of runInput ? runInput.notRefreshedLines : []) console.log(line);
   for (const decidedKey of shapeDecisions ? shapeDecisions.decidedKeysNotRaised : []) console.log(formatDecidedKeyNotRaisedLine(decidedKey));
   for (const entry of shapeDecisions ? shapeDecisions.decidedThroughInterfaceMethod : []) console.log(formatDecidedThroughInterfaceMethodLine(entry));
-  const outcomeWord = writeThePlanFolder(resultsFolder, plan, model, paths, roundInput);
+  const outcomeWord = writeThePlanFolder(resultsFolder, plan, model, paths, roundInput, options);
   removeFinishStop(getPlanFolder(resultsFolder, plan));
   console.log(`${RESULT_PREFIX}${JSON.stringify({ steps: steps.length, design: paths.design, migration: paths.migration, plan, outcome: outcomeWord, ...(paths.findings ? { findings: paths.findings } : {}), ...(shapeDecisions ? { decidedKeysNotRaised: shapeDecisions.decidedKeysNotRaised.length, decidedThroughInterfaceMethod: shapeDecisions.decidedThroughInterfaceMethod.length } : {}) })}`);
   console.log(formatPlanLine(plan, outcomeWord, resultsFolder));

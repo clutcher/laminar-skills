@@ -78,6 +78,12 @@ export const holdsADecidedReason = finding => isAText(finding.reason) && isAText
 // A shape-run finding left open at the ceiling of shape runs waits for a decision, so the plan does not go to the writers until a decided reason leaves it.
 export const isWaitingAfterTheCeiling = finding => finding.run !== undefined && isAText(finding.openAfterCeiling) && !holdsADecidedReason(finding);
 
+// A shape-run finding that 2 changes of the tree did not close waits for a decision, so the plan does not go to the writers until a decided reason leaves it.
+export const isWaitingAfterTheChangesTried = finding => finding.run !== undefined && isAText(finding.doesNotClose) && !holdsADecidedReason(finding);
+
+// A shape-run finding that no change of the tree closes, open after the ceiling or not closed by the changes tried, is no decision of the designer until a decided reason leaves it.
+export const holdsAnOpenEnding = finding => isAText(finding.openAfterCeiling) || isAText(finding.doesNotClose);
+
 export const getFolderPath = folder => (folder.path || "").replace(/\/+$/, "");
 
 export const getFileOfTheChild = (folder, child) => `${getFolderPath(folder)}/${child.name || ""}`;

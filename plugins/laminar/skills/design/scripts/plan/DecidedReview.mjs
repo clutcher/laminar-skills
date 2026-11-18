@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { holdsADecidedReason, isAText, isMarkedUnchanged, readList, readOldTypeName } from "../model/DesignModel.mjs";
+import { holdsADecidedReason, holdsAnOpenEnding, isAText, isMarkedUnchanged, readList, readOldTypeName } from "../model/DesignModel.mjs";
 import { findClassOfTheFinding, readFindingNamePieces } from "./FindingList.mjs";
 import { NOT_REFRESHED_REASONS, createFindingCheckKey, formatNotRefreshedLine, readChecksOfTheFinding } from "./DecidedList.mjs";
 import { listFormerNames } from "../round/FormerNames.mjs";
@@ -165,8 +165,8 @@ const createDecisionWithItsReach = (context, finding, decided, reach) => {
 // The reach the decided list gave the check of a finding the designer closes with a reason class, read from the list and never from the model.
 const readReachOfTheFinding = (decisionOfFindingCheckMap, finding) => (decisionOfFindingCheckMap.get(createFindingCheckKey(finding, finding.check)) || {}).reach;
 
-// An object that asks for a change of the code is no decision, so only an object with a reason and no closing enters; an object open after the ceiling enters only with the reason that the user or the decided list gave it.
-const isADecidingObject = object => isAText(object.reason) && !isAText(object.closedBy) && (!isAText(object.openAfterCeiling) || holdsADecidedReason(object));
+// An object that asks for a change of the code is no decision, so only an object with a reason and no closing enters; an object open after the ceiling or not closed by the changes tried enters only with the reason that the user or the decided list gave it.
+const isADecidingObject = object => isAText(object.reason) && !isAText(object.closedBy) && (!holdsAnOpenEnding(object) || holdsADecidedReason(object));
 
 // The findings of an item, 1 per check it decides: an object with a check decides that check, also of a combined result, and one without decides every check of the item.
 const listFindingsOfTheItem = (run, number, check) => {

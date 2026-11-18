@@ -93,6 +93,7 @@ export const writeOutcome = (resultsFolder, plan, outcome) => {
     questions: outcome.questions || [],
     considerations: outcome.considerations || [],
     openAfterCeiling: outcome.openAfterCeiling || [],
+    doesNotClose: outcome.doesNotClose || [],
     referencesRead: outcome.referencesRead || [],
     stop: outcome.stop || null,
     ...(outcome.decidedKeysNotRaised ? { decidedKeysNotRaised: outcome.decidedKeysNotRaised } : {}),
