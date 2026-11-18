@@ -49,6 +49,9 @@ export const isAnInterface = theClass => theClass.kindWord === INTERFACE_KIND_WO
 
 export const isMarkedUnchanged = method => method.unchanged === true;
 
+// The parameter types of a method as 1 text with no white space, so 2 methods compare by their types alone.
+const readParameterTypes = method => readList(method.parameters).map(parameter => String(parameter?.type ?? "").replace(/\s+/g, "")).join(",");
+
 // An oldName of a nested class may name the inner type alone, so it takes the outer names of the class's own name.
 export const readOldTypeName = theClass => {
   if (!isAText(theClass.oldName) || theClass.oldName.includes(".") || !theClass.name.includes(".")) return theClass.oldName;
@@ -286,6 +289,20 @@ export class DesignModel {
       }
     }
     return implementationNames;
+  }
+
+  // The interfaces of the model that the 1 method of the display name implements, each with its method of the same name and the same parameter types; none where the name names no method or 2 or more methods of its class, because the name then names no 1 method.
+  listInterfaceMethodsImplementedBy(displayName) {
+    const methods = isAMethodName(displayName) ? this.listMethodsOfTheName(displayName) : [];
+    if (methods.length !== 1) return [];
+
+    const implementingClass = this.findClass(displayName);
+    const parameterTypes = readParameterTypes(methods[0]);
+    return this.classes
+      .filter(theInterface => isAnInterface(theInterface) && this.implementsOrExtends(implementingClass, theInterface))
+      .flatMap(theInterface => readList(theInterface.methods)
+        .filter(method => method.name === methods[0].name && readParameterTypes(method) === parameterTypes)
+        .map(method => ({ theInterface, method, displayName: this.getMethodDisplayName(theInterface, method) })));
   }
 
   listNamesReachedFrom(theClass, method) {

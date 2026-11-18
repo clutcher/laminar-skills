@@ -31,7 +31,9 @@ export const findDecidedDefects = (model, run, decisionOfFindingCheckMap) => {
   return defects;
 };
 
-const isTheObjectOfTheShapeItem = (findingObject, shapeItem) => findingObject.run === shapeItem.shapeRun && findingObject.number === shapeItem.number && (findingObject.check === undefined || findingObject.check === shapeItem.check);
+const describeTheInterfaceMethod = shapeItem => (shapeItem.decidedThrough ? ` through its interface method ${shapeItem.decidedThrough}` : "");
+
+const isTheObjectOfTheShapeItem =(findingObject, shapeItem) => findingObject.run === shapeItem.shapeRun && findingObject.number === shapeItem.number && (findingObject.check === undefined || findingObject.check === shapeItem.check);
 
 // Each item of a shape run that the decided list decided by its finding key stands in decisions.findings with the same reason, says and decidedBy, beside openAfterCeiling where it has one, because the designer carries a decision of the calling session and never changes it; an item that the tree closed needs no decision.
 export const findShapeDecidedDefects = (model, decidedShapeItems) => {
@@ -43,7 +45,7 @@ export const findShapeDecidedDefects = (model, decidedShapeItems) => {
     if (findingObject && !difference) continue;
 
     const why = findingObject ? `its object of decisions.findings holds ${difference}` : "decisions.findings holds no object of it";
-    defects.push({ code: DECIDED_DEFECT_CODES.DECIDED_NOT_CARRIED, name: shapeItem.displayName, sentence: `shape run ${shapeItem.shapeRun}, item ${shapeItem.number} is decided as ${shapeItem.decision.reason} by ${shapeItem.decision.decidedBy}, and ${why}` });
+    defects.push({ code: DECIDED_DEFECT_CODES.DECIDED_NOT_CARRIED, name: shapeItem.displayName, sentence: `shape run ${shapeItem.shapeRun}, item ${shapeItem.number} is decided as ${shapeItem.decision.reason} by ${shapeItem.decision.decidedBy}${describeTheInterfaceMethod(shapeItem)}, and ${why}` });
   }
   return defects;
 };

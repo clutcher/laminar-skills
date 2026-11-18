@@ -11,7 +11,7 @@ import { DecidedListStop, checkDecidedListForm, findReachDefects, readDecidedEnt
 import { buildDecidedReview, listMethodsThatTakeCode } from "./plan/DecidedReview.mjs";
 import { listFindingEntries } from "./plan/FindingList.mjs";
 import { DECIDED_REVIEW_FILE, getPlansFolder } from "./plan/PlanFolder.mjs";
-import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder, readShapeRunFolders } from "./round/RunFolder.mjs";
+import { RoundStop, SHAPE_MODEL_FILE, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder, readShapeRunFolders } from "./round/RunFolder.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
 
 const USAGE = "usage: node checkDesign.mjs --model <design-model.json> [--repo <repository root> [--tree <commit>] [--base <commit>]] [--review <review.md>] [--decided <decided list>] [--shape-review <results>/shape-runs/<n>/review.md]... [--autonomous]";
@@ -29,8 +29,6 @@ const REVIEW_ABSTRACTIONS_FILE = "review-abstractions.json";
 const ROUNDS_FOLDER = "rounds";
 
 const MODEL_FILE = "design-model.json";
-
-const SHAPE_MODEL_FILE = "shape-model.json";
 
 // A question defect ends the plan with the outcome question and does not stop the finish command, so it counts as no open defect.
 const MARKS = Object.freeze({ DEFECT: "defect", RECHECK: "recheck", FOUND_WRONG: "found-wrong", QUESTION: "question" });
@@ -120,7 +118,7 @@ const findDecidedDefectsOrExit = (model, options) => {
   if (!options.decided) return [];
   try {
     if (!options.review) {
-      const { decidedShapeItems, defects } = resolveDecidedListOnShapeRuns(checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided")), readShapeRunFolders(options[SHAPE_REVIEW_OPTION]));
+      const { decidedShapeItems, defects } = resolveDecidedListOnShapeRuns(checkDecidedListForm(readJsonOrStop(path.resolve(options.decided), "decided")), readShapeRunFolders(options[SHAPE_REVIEW_OPTION]), model);
       return [...defects, ...findShapeDecidedDefects(model, decidedShapeItems)].map(asAnOpenDefect);
     }
     const run = readRunFolder(path.dirname(path.resolve(options.review)), false);

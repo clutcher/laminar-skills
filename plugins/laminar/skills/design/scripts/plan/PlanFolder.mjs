@@ -58,11 +58,21 @@ export const listFindingsThatStopThePlan = model => readList(model.decisions.fin
   .filter(isWaitingAfterTheCeiling)
   .map(finding => ({ run: finding.run, number: finding.number, check: isAText(finding.check) ? finding.check : null, openAfterCeiling: finding.openAfterCeiling }));
 
-// decidedKeysNotRaised stands only where the finish read a decided list with no run folder: the decided keys that no shape run raised.
+// decidedKeysNotRaised and decidedThroughInterfaceMethod stand only where the finish read a decided list with no run folder: the decided keys that no shape run raised, and the items of a shape run that a decided key on an api or spi method decides on the method that implements it.
 export const writeOutcome = (resultsFolder, plan, outcome) => {
   const planFolder = getPlanFolder(resultsFolder, plan);
   fs.mkdirSync(planFolder, { recursive: true });
-  writeJson(path.join(planFolder, OUTCOME_FILE), { plan, outcome: outcome.word, questions: outcome.questions || [], considerations: outcome.considerations || [], openAfterCeiling: outcome.openAfterCeiling || [], referencesRead: outcome.referencesRead || [], stop: outcome.stop || null, ...(outcome.decidedKeysNotRaised ? { decidedKeysNotRaised: outcome.decidedKeysNotRaised } : {}) });
+  writeJson(path.join(planFolder, OUTCOME_FILE), {
+    plan,
+    outcome: outcome.word,
+    questions: outcome.questions || [],
+    considerations: outcome.considerations || [],
+    openAfterCeiling: outcome.openAfterCeiling || [],
+    referencesRead: outcome.referencesRead || [],
+    stop: outcome.stop || null,
+    ...(outcome.decidedKeysNotRaised ? { decidedKeysNotRaised: outcome.decidedKeysNotRaised } : {}),
+    ...(outcome.decidedThroughInterfaceMethod ? { decidedThroughInterfaceMethod: outcome.decidedThroughInterfaceMethod } : {}),
+  });
 };
 
 export const formatPlanLine = (plan, outcomeWord, resultsFolder) => `plan ${plan} ${outcomeWord} ${resultsFolder}`;

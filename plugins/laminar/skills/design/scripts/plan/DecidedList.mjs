@@ -1,5 +1,6 @@
 import { FINDING_REASONS } from "../model/DesignModelForm.mjs";
 import { holdsADecidedReason, isAText } from "../model/DesignModel.mjs";
+import { isInALayoutSplit } from "../check/SimplestForm.mjs";
 
 export const DECIDED_BY_DEFAULT = "caller";
 
@@ -226,9 +227,31 @@ export const DECIDED_KEY_NOT_RAISED_PREFIX = "decided key not raised";
 
 export const formatDecidedKeyNotRaisedLine = decidedKey => `${DECIDED_KEY_NOT_RAISED_PREFIX}\t${decidedKey.displayName}\t${decidedKey.check}\tthe decided list names the finding key ${decidedKey.displayName} with the check ${decidedKey.check}, and no shape run raised it, so it decides nothing in this plan`;
 
-// With no run folder of --review, such as for a described change, the decided list decides items of the shape runs by their finding key, because an item number names an item of 1 run only and a reach names abstractions of a run folder. The list is written before the shape runs, so a key that no shape run raised is no defect: it is a decided key not raised, which the finish command prints and lists in outcome.json, so no object is dropped in silence.
-export const resolveDecidedListOnShapeRuns = (decidedList, shapeRuns) => {
+export const DECIDED_THROUGH_INTERFACE_METHOD_PREFIX = "decided through interface method";
+
+// The entry is 1 object of decidedThroughInterfaceMethod of outcome.json, {run, number, displayName, check, decidedThrough}.
+export const formatDecidedThroughInterfaceMethodLine = entry => `${DECIDED_THROUGH_INTERFACE_METHOD_PREFIX}\t${entry.displayName}\t${entry.check}\t${entry.decidedThrough}\tshape run ${entry.run}, item ${entry.number} on ${entry.displayName}, which implements ${entry.decidedThrough}, is decided by the finding key ${entry.decidedThrough} with the check ${entry.check}`;
+
+// The display names of the api and spi interface methods that the 1 method of the display name implements, with the same name and the same parameter types.
+export const listBoundaryMethodNamesOfTheImplementer = (model, displayName) => model.listInterfaceMethodsImplementedBy(displayName)
+  .filter(implemented => isInALayoutSplit(implemented.theInterface))
+  .map(implemented => implemented.displayName);
+
+// A decided key on an api or spi method also decides an item of the same check on the method that implements it, read from the model of the shape run, else the design model, because the implementer carries the claim of its interface method.
+const listShapeItemsDecidedThroughTheInterface = (decided, shapeRuns, designModel) => shapeRuns.flatMap(shapeRun => {
+  const model = shapeRun.shapeModel || designModel;
+  if (!model) return [];
+
+  return shapeRun.run.items.flatMap(item => {
+    const finding = item.findings.find(other => holdsTheCheck(other, decided.check) && listBoundaryMethodNamesOfTheImplementer(model, other.displayName).includes(decided.displayName));
+    return finding ? [{ shapeRun: shapeRun.number, number: item.number, check: decided.check, displayName: finding.displayName, decidedThrough: decided.displayName }] : [];
+  });
+});
+
+// With no run folder of --review, such as for a described change, the decided list decides items of the shape runs by their finding key, because an item number names an item of 1 run only and a reach names abstractions of a run folder; a key on an api or spi method also decides the item of its implementer, which keeps decidedThrough, so a reader tells it from a key the list named, and a key the list names on the implementer itself wins. The list is written before the shape runs, so a key that no shape run raised is no defect: it is a decided key not raised, which the finish command prints and lists in outcome.json, so no object is dropped in silence.
+export const resolveDecidedListOnShapeRuns = (decidedList, shapeRuns, designModel = null) => {
   const decidedShapeItemOfKeyMap = new Map();
+  const decidedThroughItems = [];
   const decidedKeysNotRaised = [];
   const defects = [];
   for (const decided of decidedList.decided) {
@@ -242,12 +265,18 @@ export const resolveDecidedListOnShapeRuns = (decidedList, shapeRuns) => {
     }
 
     const shapeItems = listShapeItemsOfTheDecided(decided, shapeRuns);
-    if (!shapeItems.length) {
+    const throughItems = listShapeItemsDecidedThroughTheInterface(decided, shapeRuns, designModel);
+    if (!shapeItems.length && !throughItems.length) {
       decidedKeysNotRaised.push({ displayName: decided.displayName, check: decided.check });
       continue;
     }
     const decision = { reason: decided.reason, says: decided.says, decidedBy: decided.decidedBy || DECIDED_BY_DEFAULT };
     for (const shapeItem of shapeItems) decidedShapeItemOfKeyMap.set(createShapeItemCheckKey(shapeItem.shapeRun, shapeItem.number, shapeItem.check), { ...shapeItem, decision });
+    decidedThroughItems.push(...throughItems.map(shapeItem => ({ ...shapeItem, decision })));
+  }
+  for (const shapeItem of decidedThroughItems) {
+    const key = createShapeItemCheckKey(shapeItem.shapeRun, shapeItem.number, shapeItem.check);
+    if (!decidedShapeItemOfKeyMap.has(key)) decidedShapeItemOfKeyMap.set(key, shapeItem);
   }
   return { decidedShapeItems: [...decidedShapeItemOfKeyMap.values()], decidedKeysNotRaised, defects };
 };

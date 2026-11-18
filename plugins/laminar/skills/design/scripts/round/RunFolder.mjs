@@ -3,10 +3,14 @@ import path from "node:path";
 import { readNamedReviewItems } from "../check/ReviewItems.mjs";
 import { CHECK_WORDS, readLead } from "../../../review/scripts/checks/CheckWords.mjs";
 import { COMBINED_LEADS_SEPARATOR } from "../../../review/scripts/review/render/sections/ItemText.mjs";
+import { DesignModel } from "../model/DesignModel.mjs";
 
 export const REVIEW_FILE = "review.md";
 
 export const SARIF_FILE = "review.sarif";
+
+// The shape model that the prepare command of a shape run saves beside its review.md.
+export const SHAPE_MODEL_FILE = "shape-model.json";
 
 const PREPARE_FILE = "prepare.json";
 
@@ -256,10 +260,16 @@ export const createFinderOfTheRunHoldingTheKey = givenRunFolder => {
   };
 };
 
-// The run folders of the shape runs, each with the number of its folder, from the review.md paths of --shape-review; a shape run that kept nothing and holds no review.sarif gives no item.
+// The shape model a shape run judged, null for a run folder of an older version that holds none.
+const readSavedShapeModel = runFolder => {
+  const shapeModelPath = path.join(runFolder, SHAPE_MODEL_FILE);
+  return fs.existsSync(shapeModelPath) ? new DesignModel(readJsonOrStop(shapeModelPath, "shape model")) : null;
+};
+
+// The run folders of the shape runs, each with the number of its folder and the shape model it judged, from the review.md paths of --shape-review; a shape run that kept nothing and holds no review.sarif gives no item.
 export const readShapeRunFolders = reviewPaths => reviewPaths.map(reviewPath => {
   const runFolder = path.dirname(path.resolve(reviewPath));
-  return { number: Number(path.basename(runFolder)), run: readRunFolder(runFolder, !fs.existsSync(path.join(runFolder, SARIF_FILE))) };
+  return { number: Number(path.basename(runFolder)), run: readRunFolder(runFolder, !fs.existsSync(path.join(runFolder, SARIF_FILE))), shapeModel: readSavedShapeModel(runFolder) };
 });
 
 export const readRunFolder = (runFolder, hasNoFindings) => {
