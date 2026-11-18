@@ -1,0 +1,8 @@
+[
+  {
+    "displayName": "FineTotalSearchService",
+    "check": "P3",
+    "foundBy": "base-review-003",
+    "says": "the last full review of the base kept it with low confidence: the service loads the whole member by MemberService#getMember to sum its owed fines; it is a finding the base carries, measured and not decided"
+  }
+]
