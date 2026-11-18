@@ -4,6 +4,7 @@ import { CALLING_METHODS_SECTION, FIELD_TYPE_HEADS, SLICE_NEEDS } from "../abstr
 import { CHECKS_BY_ID_MAP, TRACKS } from "../../../checks/CheckCatalog.mjs";
 import { TEST_METHOD_CHECKS } from "./TrackSelection.mjs";
 import { JUDGE_TYPE_BY_SCALE_MAP, JUDGE_TYPE_BY_TRACK_MAP } from "../../../checks/JudgeType.mjs";
+import { EXISTING_TYPE_HEADS, SHAPE_TYPE_HEADS } from "../abstractions/shape/TypeHeads.mjs";
 
 const EVERY_SECTION = () => true;
 
@@ -12,6 +13,8 @@ const readBy = (judgeType, ...checks) => Object.freeze({ judgeType, checks: chec
 const readOnlyWhere = (reader, readsTheSectionWhere) => Object.freeze({ ...reader, readsTheSectionWhere });
 
 const joinsAnotherApplication = section => Boolean(section.joinsAnotherApplication);
+
+const isReadOnAClass = (section, codeUnderReview) => codeUnderReview.scale === Scale.CLASS.name;
 
 const CLASS_JUDGE = JUDGE_TYPE_BY_SCALE_MAP[Scale.CLASS.name];
 const METHOD_JUDGE = JUDGE_TYPE_BY_SCALE_MAP[Scale.METHOD.name];
@@ -24,12 +27,22 @@ const PERFORMANCE_JUDGE = JUDGE_TYPE_BY_TRACK_MAP[TRACKS.PERFORMANCE];
 
 const PREVENTION_CHECKS = Object.values(CHECKS_BY_ID_MAP).filter(check => check.track === TRACKS.PREVENTION);
 const PERFORMANCE_CHECKS = Object.values(CHECKS_BY_ID_MAP).filter(check => check.track === TRACKS.PERFORMANCE);
+const SIMPLICITY_CHECKS = Object.values(CHECKS_BY_ID_MAP).filter(check => check.track === TRACKS.SIMPLICITY);
 
 const CALLER_SHAPED_CHECKS = [CHECKS_BY_ID_MAP.CP4, CHECKS_BY_ID_MAP.CP7];
 
 const CALL_SITE_READERS = [readBy(METHOD_JUDGE, CHECKS_BY_ID_MAP.S2), readBy(PREVENTION_JUDGE, ...PREVENTION_CHECKS)];
 
 const FIELD_READING_READERS = [readBy(VARIABLE_JUDGE, CHECKS_BY_ID_MAP.S2), readBy(CLASS_JUDGE, CHECKS_BY_ID_MAP.S2, CHECKS_BY_ID_MAP.S5)];
+
+// Every judge that a shape run allows reads its type heads, and the performance judge reads them on a class only, as it reads the field type heads of a review of code.
+const SHAPE_RUN_TYPE_HEADS_READERS = [
+  ...[MODULE_JUDGE, CLASS_JUDGE, METHOD_JUDGE, VARIABLE_JUDGE].map(judgeType => readBy(judgeType, ...SIMPLICITY_CHECKS)),
+  readBy(DECISION_JUDGE, CHECKS_BY_ID_MAP.S1),
+  readBy(PREVENTION_JUDGE, ...PREVENTION_CHECKS),
+  readBy(TEST_METHOD_JUDGE, ...TEST_METHOD_CHECKS),
+  readOnlyWhere(readBy(PERFORMANCE_JUDGE, ...PERFORMANCE_CHECKS), isReadOnAClass),
+];
 
 export const READERS_BY_SECTION_MAP = Object.freeze({
   openConstructs: [readBy(METHOD_JUDGE, CHECKS_BY_ID_MAP.S6)],
@@ -48,6 +61,8 @@ export const READERS_BY_SECTION_MAP = Object.freeze({
   createdSubfolders: [readBy(MODULE_JUDGE, CHECKS_BY_ID_MAP.S2, CHECKS_BY_ID_MAP.S5)],
   childCount: [readBy(MODULE_JUDGE, CHECKS_BY_ID_MAP.S5)],
   [FIELD_READING_SECTIONS.SAME_NAME]: FIELD_READING_READERS,
+  [EXISTING_TYPE_HEADS]: SHAPE_RUN_TYPE_HEADS_READERS,
+  [SHAPE_TYPE_HEADS]: SHAPE_RUN_TYPE_HEADS_READERS,
 });
 
 const THE_CODE_OF_A_GONE_ABSTRACTION = SLICE_NEEDS.THE_REFERENCES_AND_TYPE_HEADS;
@@ -58,7 +73,7 @@ const readsTheSection = (codeUnderReview, sectionName, section = {}) => {
   const selected = (codeUnderReview.checks || []).map(check => check.id);
   return readers.some(reader => reader.judgeType === codeUnderReview.judgeType
     && reader.checks.some(check => selected.includes(check))
-    && reader.readsTheSectionWhere(section));
+    && reader.readsTheSectionWhere(section, codeUnderReview));
 };
 
 const isTheCodeOfAGoneAbstraction = slice => Boolean(slice) && slice.need === THE_CODE_OF_A_GONE_ABSTRACTION;

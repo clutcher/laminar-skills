@@ -120,6 +120,13 @@ export class ModuleBoundaries {
   }
 }
 
+export const formatTheShapeLines = ({ shape, folderKind }) => [
+  `this folder: ${folderKind}`,
+  `${buildFolderLabel(shape.root)} · ${SHAPE_FOLDER_KINDS.ROOT} · ${shape.family}`,
+  ...(shape.app === null ? [] : [`${buildFolderLabel(shape.app)} · ${SHAPE_FOLDER_KINDS.APP}`]),
+  ...mapToShapeFolders(shape).map(shapeFolder => `${buildFolderLabel(shapeFolder.folder)} · ${shapeFolder.folderKind}`),
+];
+
 export class ShapeFacts {
   constructor({ shapes, moduleBoundaries, importsOf, types, readFileLines: linesOf, paths }) {
     this.shapes = shapes;
@@ -140,7 +147,7 @@ export class ShapeFacts {
     const appImports = this.findAppImports(foundShapeFolder.shape, folder);
     const spiTypesImplementedInsideTheApp = this.findSpiTypesImplementedInsideTheApp(foundShapeFolder.shape, folder, isAFolderOfTheChange);
     const openFactLinesByKindMap = {
-      shape: this.buildShapeLines(foundShapeFolder),
+      shape: formatTheShapeLines(foundShapeFolder),
       exposedDomain: this.buildExposedDomainLines(takeFirstFactsWithinTheCap(exposures.filter(exposure => !isSettled(exposure)))),
       spiImplementedInsideApp: isSure ? [] : this.buildSpiTypeLines(takeFirstFactsWithinTheCap(spiTypesImplementedInsideTheApp)),
       appImportsInOut: isSure ? [] : this.buildAppImportLines(takeFirstFactsWithinTheCap(appImports)),
@@ -178,14 +185,6 @@ export class ShapeFacts {
       || supertypeNames.some(name => qualifiesTheFolderOf(name, apiSpiType));
   }
 
-  buildShapeLines({ shape, folderKind }) {
-    return [
-      `this folder: ${folderKind}`,
-      `${buildFolderLabel(shape.root)} · ${SHAPE_FOLDER_KINDS.ROOT} · ${shape.family}`,
-      ...(shape.app === null ? [] : [`${buildFolderLabel(shape.app)} · ${SHAPE_FOLDER_KINDS.APP}`]),
-      ...mapToShapeFolders(shape).map(shapeFolder => `${buildFolderLabel(shapeFolder.folder)} · ${shapeFolder.folderKind}`),
-    ];
-  }
 
   buildPlacedLine(filePath, at) {
     const lines = this.readFileLines(filePath);

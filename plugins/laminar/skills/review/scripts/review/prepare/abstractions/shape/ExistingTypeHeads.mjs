@@ -26,6 +26,10 @@ export class ExistingTypeHeads {
     this.declarationsByPathMap = new Map();
   }
 
+  holdsAHeadOf(typeName, usedFrom) {
+    return !this.namesDeclaredByTheShape.has(typeName) && Boolean(this.findTheNearestDeclaration(typeName, usedFrom));
+  }
+
   listHeads(typeNames, usedFrom) {
     return typeNames
       .filter(name => !this.namesDeclaredByTheShape.has(name))

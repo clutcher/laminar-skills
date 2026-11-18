@@ -3,15 +3,29 @@ import { MAX_LINES_OF_A_TYPE_HEAD } from "./TypeHeads.mjs";
 
 const PRIVATE_METHOD_VISIBILITY = "private";
 
+const NESTED_NAME_SEPARATOR = ".";
+
+const readNameAfterTheLastDot = name => name.slice(name.lastIndexOf(NESTED_NAME_SEPARATOR) + 1);
+
+// A nested type is named in the lines of its users by the name after the last dot, and a type of the same full name wins over it.
+const readPlacementByName = classPlacements => new Map([
+  ...classPlacements.map(placement => [readNameAfterTheLastDot(placement.shapeClass.name), placement]),
+  ...classPlacements.map(placement => [placement.shapeClass.name, placement]),
+]);
+
 export class ShapeTypeHeads {
   constructor({ classPlacements, readRenderedLinesOf }) {
-    this.placementByNameMap = new Map(classPlacements.map(placement => [placement.shapeClass.name, placement]));
+    this.placementByNameMap = readPlacementByName(classPlacements);
     this.readRenderedLinesOf = readRenderedLinesOf;
+  }
+
+  holdsAHeadOf(typeName) {
+    return this.placementByNameMap.has(typeName);
   }
 
   listHeads(typeNames) {
     return typeNames
-      .filter(name => this.placementByNameMap.has(name))
+      .filter(name => this.holdsAHeadOf(name))
       .map(name => this.listDeclaringLines(this.placementByNameMap.get(name)));
   }
 

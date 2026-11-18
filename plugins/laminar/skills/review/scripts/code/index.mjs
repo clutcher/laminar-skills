@@ -69,6 +69,8 @@ export { findOpenConstructsAndCallArgumentFunctions } from "./extract/abstractio
 export { findCallsInsideCallArguments } from "./extract/abstractions/method/generic/measures/CallArgumentCalls.mjs";
 export { ModuleReading } from "./extract/abstractions/module/generic/reading/ModuleReading.mjs";
 export { ModuleShapes } from "./extract/abstractions/module/generic/shapes/ModuleShapes.mjs";
+export { createModuleReadingFromTheFiles } from "./extract/abstractions/module/generic/reading/ModuleReadingFromTheFiles.mjs";
+export { formatTheShapeLines } from "./extract/abstractions/module/generic/shapes/ShapeFacts.mjs";
 export { callsTheRoute } from "./extract/abstractions/method/generic/routes/Route.mjs";
 export { findCallsOnLine, findReceiverBefore } from "./extract/abstractions/method/generic/calls/CallReading.mjs";
 export { LOOP_FORMS } from "./extract/abstractions/method/generic/regions/LoopRegions.mjs";

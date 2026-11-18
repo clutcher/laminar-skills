@@ -1,4 +1,4 @@
-import { BOUNDARY_RANKS, CHANGE_KINDS, CHANGE_MODES, collectTypeNames, CreatedFolders, FILE_STATUS, findDeployableRoots, findDriver, formatDisplayName, isTestPath, ModuleReading, PUBLIC_CHANGE_KINDS, PUBLIC_METHOD_VISIBILITY, readBasePaths, readBoundaryRank, readLanguageFamily, readRepositoryFileLines, renamesTheFile, restatesTheTypeText, Scale, SHAPE_KINDS, ShapeFiles, TestLayout, TestPlacements, VISIBILITIES } from "../../../../code/index.mjs";
+import { BOUNDARY_RANKS, CHANGE_KINDS, CHANGE_MODES, collectTypeNames, createModuleReadingFromTheFiles, CreatedFolders, FILE_STATUS, findDeployableRoots, findDriver, formatDisplayName, formatTheShapeLines, isTestPath, isUpperSnakeName, PUBLIC_CHANGE_KINDS, PUBLIC_METHOD_VISIBILITY, readBasePaths, readBoundaryRank, readLanguageFamily, readRepositoryFileLines, renamesTheFile, restatesTheTypeText, Scale, SHAPE_KINDS, ShapeFiles, TestLayout, TestPlacements, VISIBILITIES } from "../../../../code/index.mjs";
 import { readFolderPath } from "../../../../files/paths.mjs";
 import { numberLines } from "../../formats/SliceFormat.mjs";
 import { ShapeSlices } from "./ShapeSlices.mjs";
@@ -19,7 +19,29 @@ const NO_MODULE_ROOT_READ = Object.freeze({ root: "", isRoot: false, rootForm: "
 
 const EXPOSED_LINE_SEPARATOR = " · ";
 
+// A Java or C# record and a Kotlin data class declare their components in the head, so their tree head lists the fields.
+const KIND_WORDS_WITH_THE_FIELDS_IN_THE_HEAD = new Set(["record", "data class"]);
+
+const NESTED_NAME_SEPARATOR = ".";
+
 const isPlacedInAChangedFile = placement => placement.kind !== SHAPE_KINDS.UNCHANGED && placement.kind !== SHAPE_KINDS.REMOVED;
+
+const isATopType = placement => !placement.shapeClass.name.includes(NESTED_NAME_SEPARATOR);
+
+const formatTypedName = field => (field.type ? `${field.name}: ${field.type}` : field.name);
+
+const formatSupertypes = (word, names) => (names.length ? [`${word} ${names.join(", ")}`] : []);
+
+// A constant is named in upper snake case in Java, Kotlin, TypeScript and Python, and it is no component of the head.
+const formatTheFieldsOfTheHead = shapeClass => (KIND_WORDS_WITH_THE_FIELDS_IN_THE_HEAD.has(shapeClass.kindWord)
+  ? `(${shapeClass.fields.filter(field => !isUpperSnakeName(field.name)).map(formatTypedName).join(", ")})`
+  : "");
+
+const formatTheTreeHead = shapeClass => [
+  `${shapeClass.kindWord} ${shapeClass.name}${formatTheFieldsOfTheHead(shapeClass)}`,
+  ...formatSupertypes("extends", shapeClass.extends),
+  ...formatSupertypes("implements", shapeClass.implements),
+].join(" ");
 
 const readChangeKindOfTheFile = file => {
   if (file.kind === SHAPE_KINDS.CREATED) return CHANGE_KINDS.CREATED;
@@ -112,8 +134,8 @@ export class ShapeAbstractions {
     this.foldersAFileLeft = new Set(this.listFoldersAFileLeft());
     this.foldersARemovedFolderLeft = new Set(this.createdFolders.listFoldersARemovedFolderLeft(this.listPathsTakenAway().map(readFolderPath)));
     this.createdSubfoldersByJoinedFolderMap = this.createdFolders.readCreatedSubfoldersByJoinedFolder(this.listFoldersWithChangedFiles());
-    this.moduleReading = new ModuleReading(repository);
     const applicationRoots = findDeployableRoots(repository);
+    this.moduleReading = createModuleReadingFromTheFiles({ repository, roots: applicationRoots, paths: this.pathsAfterTheShape, readFileLines: filePath => this.readLinesOf(filePath) });
     const change = { mode: CHANGE_MODES.SHAPE, repository, files: this.changedFiles.map(file => ({ ...file, hunks: [] })) };
     this.slices = new ShapeSlices(change, this.pathsAfterTheShape, applicationRoots, filePath => this.readLinesOf(filePath));
     this.testLayout = this.readTheTestLayout();
@@ -278,8 +300,10 @@ export class ShapeAbstractions {
       publicChangeKind: changeKind === CHANGE_KINDS.CREATED ? PUBLIC_CHANGE_KINDS.CREATED : PUBLIC_CHANGE_KINDS.MODIFIED,
       visibility: VISIBILITIES.EXPOSED,
       boundaryRank: BOUNDARY_RANKS.MODULE_BOUNDARY,
+      judgedWhole: this.shapeModel.folders.some(listed => listed.path === folder),
       module: {
         ...this.readTheModuleRoot(folder),
+        ...this.readTheShapeOfTheFolder(folder),
         joinsAFolder: this.createdFolders.joinsAFolder(folder),
         createdSubfolders,
         ...(createdSubfolders.length && !ownFiles.length ? { holdsOnlyCreatedSubfolders: true } : {}),
@@ -288,6 +312,11 @@ export class ShapeAbstractions {
     });
     module.slice = this.slices.buildModuleSlice(module);
     return module;
+  }
+
+  readTheShapeOfTheFolder(folder) {
+    const foundShapeFolder = this.moduleReading.shapes.findShapeFolder(folder);
+    return foundShapeFolder ? { shape: formatTheShapeLines(foundShapeFolder) } : {};
   }
 
   findTheNearestBaseFolder(folder) {
@@ -307,12 +336,21 @@ export class ShapeAbstractions {
     const exposedNamesByPathMap = readExposedNamesByPath(exposedLines);
     const children = this.slices.moduleSlices.folderChildren;
     const lineOf = childPath => {
-      const names = exposedNamesByPathMap.get(childPath);
+      const renderedHeads = this.listRenderedHeadsOf(childPath);
+      const names = renderedHeads.length ? renderedHeads : exposedNamesByPathMap.get(childPath);
       if (names) return `${childPath} · exposes ${names.join(", ")}`;
       return children.listSubfolderPathsOf(readFolderPath(childPath)).includes(childPath) ? `${childPath}/` : childPath;
     };
     const subfolders = children.listSubfolderPathsOf(folder);
     return [...children.readRepositoryFileList(folder), ...subfolders.flatMap(subfolder => children.readRepositoryFileList(subfolder))].map(lineOf);
+  }
+
+  listRenderedHeadsOf(childPath) {
+    const filePath = this.pathsAfterTheShape.find(shownPath => shownPath === childPath || shownPath.endsWith(`/${childPath}`));
+    if (!filePath || !this.shapeFiles.readRenderedLinesOf(filePath).length) return [];
+    return this.shapeFiles.listClassPlacements()
+      .filter(placement => placement.path === filePath && isATopType(placement) && isPlacedInAChangedFile(placement))
+      .map(placement => formatTheTreeHead(placement.shapeClass));
   }
 
   buildTheClasses() {

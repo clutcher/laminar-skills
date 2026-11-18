@@ -18,8 +18,9 @@ export class TypeHeads {
   }
 
   listSectionsOfTheTypes(typeNames, usedFrom) {
-    const shapeHeads = this.shapeTypeHeads.listHeads(typeNames).slice(0, MAX_TYPES_WITH_A_HEAD);
-    const existingHeads = this.existingTypeHeads.listHeads(typeNames, usedFrom).slice(0, MAX_TYPES_WITH_A_HEAD - shapeHeads.length);
+    const headedNames = typeNames.filter(name => this.shapeTypeHeads.holdsAHeadOf(name) || this.existingTypeHeads.holdsAHeadOf(name, usedFrom)).slice(0, MAX_TYPES_WITH_A_HEAD);
+    const shapeHeads = this.shapeTypeHeads.listHeads(headedNames);
+    const existingHeads = this.existingTypeHeads.listHeads(headedNames.filter(name => !this.shapeTypeHeads.holdsAHeadOf(name)), usedFrom);
     return [
       { section: EXISTING_TYPE_HEADS, lines: existingHeads.flat() },
       { section: SHAPE_TYPE_HEADS, lines: shapeHeads.flat() },
