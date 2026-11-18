@@ -119,94 +119,117 @@ new file mode 100644
 +        return new PostboxClient(senderAddress);
 +    }
 +}
-diff --git a/src/main/java/org/example/library/loan/app/api/ApiForMemberLoans.java b/src/main/java/org/example/library/loan/app/api/ApiForMemberLoans.java
+diff --git a/src/main/java/org/example/library/loan/app/api/ApiForFineTotalSearch.java b/src/main/java/org/example/library/loan/app/api/ApiForFineTotalSearch.java
 new file mode 100644
 --- /dev/null
-+++ b/src/main/java/org/example/library/loan/app/api/ApiForMemberLoans.java
-@@ -0,0 +1,6 @@
-+package org.example.library.loan.app.api;
-+
-+public interface ApiForMemberLoans {
-+
-+    MemberLoans searchLoansOfMember(String memberId);
-+}
-diff --git a/src/main/java/org/example/library/loan/app/api/MemberLoans.java b/src/main/java/org/example/library/loan/app/api/MemberLoans.java
-new file mode 100644
---- /dev/null
-+++ b/src/main/java/org/example/library/loan/app/api/MemberLoans.java
-@@ -0,0 +1,9 @@
-+package org.example.library.loan.app.api;
-+
-+import org.example.library.loan.app.domain.model.Loan;
-+
-+import java.math.BigDecimal;
-+import java.util.List;
-+
-+public record MemberLoans(String memberId, List<Loan> loans, BigDecimal owedFines) {
-+}
-diff --git a/src/main/java/org/example/library/loan/app/api/MemberNotFoundException.java b/src/main/java/org/example/library/loan/app/api/MemberNotFoundException.java
-new file mode 100644
---- /dev/null
-+++ b/src/main/java/org/example/library/loan/app/api/MemberNotFoundException.java
++++ b/src/main/java/org/example/library/loan/app/api/ApiForFineTotalSearch.java
 @@ -0,0 +1,8 @@
 +package org.example.library.loan.app.api;
 +
-+public class MemberNotFoundException extends RuntimeException {
++import java.math.BigDecimal;
 +
-+    public MemberNotFoundException(String memberId) {
-+        super("no member has the id " + memberId);
-+    }
++public interface ApiForFineTotalSearch {
++
++    BigDecimal searchOwedFineTotalOfMember(String memberId);
 +}
-diff --git a/src/main/java/org/example/library/loan/app/domain/LoanDesk.java b/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
+diff --git a/src/main/java/org/example/library/loan/app/api/ApiForLoanSearch.java b/src/main/java/org/example/library/loan/app/api/ApiForLoanSearch.java
 new file mode 100644
 --- /dev/null
-+++ b/src/main/java/org/example/library/loan/app/domain/LoanDesk.java
-@@ -0,0 +1,47 @@
-+package org.example.library.loan.app.domain;
++++ b/src/main/java/org/example/library/loan/app/api/ApiForLoanSearch.java
+@@ -0,0 +1,10 @@
++package org.example.library.loan.app.api;
 +
-+import org.example.library.loan.app.api.ApiForMemberLoans;
-+import org.example.library.loan.app.api.MemberLoans;
-+import org.example.library.loan.app.api.MemberNotFoundException;
 +import org.example.library.loan.app.domain.model.Loan;
-+import org.example.library.loan.app.domain.model.LoanOnHoldException;
-+import org.example.library.loan.app.domain.model.Member;
-+import org.example.library.loan.app.spi.LoanRepository;
-+import org.example.library.loan.app.spi.MemberRepository;
 +
 +import java.util.List;
 +
-+public class LoanDesk implements ApiForMemberLoans {
++public interface ApiForLoanSearch {
 +
-+    private static final int RENEWAL_DAYS = 14;
++    List<Loan> searchLoansOfMember(String memberId);
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/FineTotalSearchService.java b/src/main/java/org/example/library/loan/app/domain/FineTotalSearchService.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/FineTotalSearchService.java
+@@ -0,0 +1,21 @@
++package org.example.library.loan.app.domain;
 +
-+    private final LoanRepository loanRepository;
++import org.example.library.loan.app.api.ApiForFineTotalSearch;
++import org.example.library.loan.app.domain.model.Member;
 +
-+    private final MemberRepository memberRepository;
++import java.math.BigDecimal;
 +
-+    public LoanDesk(LoanRepository loanRepository, MemberRepository memberRepository) {
-+        this.loanRepository = loanRepository;
-+        this.memberRepository = memberRepository;
++public class FineTotalSearchService implements ApiForFineTotalSearch {
++
++    private final MemberService memberService;
++
++    public FineTotalSearchService(MemberService memberService) {
++        this.memberService = memberService;
 +    }
 +
 +    @Override
-+    public MemberLoans searchLoansOfMember(String memberId) {
++    public BigDecimal searchOwedFineTotalOfMember(String memberId) {
++        Member member = memberService.getMember(memberId);
++        return member.sumOwedFines();
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/LoanSearchService.java b/src/main/java/org/example/library/loan/app/domain/LoanSearchService.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/LoanSearchService.java
+@@ -0,0 +1,26 @@
++package org.example.library.loan.app.domain;
++
++import org.example.library.loan.app.api.ApiForLoanSearch;
++import org.example.library.loan.app.domain.model.Loan;
++import org.example.library.loan.app.domain.model.Member;
++import org.example.library.loan.app.spi.LoanRepository;
++
++import java.util.List;
++
++public class LoanSearchService implements ApiForLoanSearch {
++
++    private final LoanRepository loanRepository;
++
++    private final MemberService memberService;
++
++    public LoanSearchService(LoanRepository loanRepository, MemberService memberService) {
++        this.loanRepository = loanRepository;
++        this.memberService = memberService;
++    }
++
++    @Override
++    public List<Loan> searchLoansOfMember(String memberId) {
++        Member member = memberService.getMember(memberId);
++        return loanRepository.findLoansOfMember(member.memberId());
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/MemberService.java b/src/main/java/org/example/library/loan/app/domain/MemberService.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/MemberService.java
+@@ -0,0 +1,23 @@
++package org.example.library.loan.app.domain;
++
++import org.example.library.loan.app.domain.model.Member;
++import org.example.library.loan.app.domain.model.MemberNotFoundException;
++import org.example.library.loan.app.spi.MemberRepository;
++
++public class MemberService {
++
++    private final MemberRepository memberRepository;
++
++    public MemberService(MemberRepository memberRepository) {
++        this.memberRepository = memberRepository;
++    }
++
++    public Member getMember(String memberId) {
 +        Member member = memberRepository.findMember(memberId);
 +        if (member == null) {
 +            throw new MemberNotFoundException(memberId);
 +        }
 +
-+        List<Loan> loans = loanRepository.findLoansOfMember(memberId);
-+        return new MemberLoans(memberId, loans, member.sumOwedFines());
-+    }
-+
-+    public Loan renew(Loan loan) {
-+        if (loan.onHold()) {
-+            throw new LoanOnHoldException(loan.loanId());
-+        }
-+
-+        Loan renewed = loan.withDueDate(loan.dueDate().plusDays(RENEWAL_DAYS));
-+        loanRepository.save(renewed);
-+        return renewed;
++        return member;
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/app/domain/model/FineStatement.java b/src/main/java/org/example/library/loan/app/domain/model/FineStatement.java
@@ -237,15 +260,21 @@ diff --git a/src/main/java/org/example/library/loan/app/domain/model/Loan.java b
 new file mode 100644
 --- /dev/null
 +++ b/src/main/java/org/example/library/loan/app/domain/model/Loan.java
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,16 @@
 +package org.example.library.loan.app.domain.model;
 +
 +import java.time.LocalDate;
 +
 +public record Loan(String loanId, String memberId, String itemTitle, LocalDate dueDate, boolean onHold) {
 +
-+    public Loan withDueDate(LocalDate newDueDate) {
-+        return new Loan(loanId, memberId, itemTitle, newDueDate, onHold);
++    private static final int RENEWAL_DAYS = 14;
++
++    public Loan renew() {
++        if (onHold) {
++            throw new LoanOnHoldException(loanId);
++        }
++
++        return new Loan(loanId, memberId, itemTitle, dueDate.plusDays(RENEWAL_DAYS), onHold);
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/app/domain/model/LoanOnHoldException.java b/src/main/java/org/example/library/loan/app/domain/model/LoanOnHoldException.java
@@ -274,6 +303,19 @@ new file mode 100644
 +
 +    public BigDecimal sumOwedFines() {
 +        return fineStatement.sumOwedAmount();
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/app/domain/model/MemberNotFoundException.java b/src/main/java/org/example/library/loan/app/domain/model/MemberNotFoundException.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/app/domain/model/MemberNotFoundException.java
+@@ -0,0 +1,8 @@
++package org.example.library.loan.app.domain.model;
++
++public class MemberNotFoundException extends RuntimeException {
++
++    public MemberNotFoundException(String memberId) {
++        super("no member has the id " + memberId);
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/app/spi/LoanRepository.java b/src/main/java/org/example/library/loan/app/spi/LoanRepository.java
@@ -314,10 +356,12 @@ diff --git a/src/main/java/org/example/library/loan/config/LoanModuleConfigurati
 new file mode 100644
 --- /dev/null
 +++ b/src/main/java/org/example/library/loan/config/LoanModuleConfiguration.java
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,28 @@
 +package org.example.library.loan.config;
 +
-+import org.example.library.loan.app.domain.LoanDesk;
++import org.example.library.loan.app.domain.FineTotalSearchService;
++import org.example.library.loan.app.domain.LoanSearchService;
++import org.example.library.loan.app.domain.MemberService;
 +import org.example.library.loan.app.spi.LoanRepository;
 +import org.example.library.loan.app.spi.MemberRepository;
 +import org.springframework.context.annotation.Bean;
@@ -326,85 +370,123 @@ new file mode 100644
 +@Configuration
 +public class LoanModuleConfiguration {
 +
-+    @Bean("loanDesk")
-+    public LoanDesk createLoanDesk(LoanRepository loanRepository, MemberRepository memberRepository) {
-+        return new LoanDesk(loanRepository, memberRepository);
++    @Bean("memberService")
++    public MemberService createMemberService(MemberRepository memberRepository) {
++        return new MemberService(memberRepository);
++    }
++
++    @Bean("loanSearchService")
++    public LoanSearchService createLoanSearchService(LoanRepository loanRepository, MemberService memberService) {
++        return new LoanSearchService(loanRepository, memberService);
++    }
++
++    @Bean("fineTotalSearchService")
++    public FineTotalSearchService createFineTotalSearchService(MemberService memberService) {
++        return new FineTotalSearchService(memberService);
 +    }
 +}
-diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansController.java b/src/main/java/org/example/library/loan/in/web/MemberLoansController.java
+diff --git a/src/main/java/org/example/library/loan/in/web/LoanOverviewController.java b/src/main/java/org/example/library/loan/in/web/LoanOverviewController.java
 new file mode 100644
 --- /dev/null
-+++ b/src/main/java/org/example/library/loan/in/web/MemberLoansController.java
-@@ -0,0 +1,22 @@
++++ b/src/main/java/org/example/library/loan/in/web/LoanOverviewController.java
+@@ -0,0 +1,36 @@
 +package org.example.library.loan.in.web;
 +
-+import org.example.library.loan.app.api.ApiForMemberLoans;
-+import org.example.library.loan.in.web.response.MemberLoansResponse;
++import org.example.library.loan.app.api.ApiForFineTotalSearch;
++import org.example.library.loan.app.api.ApiForLoanSearch;
++import org.example.library.loan.app.domain.model.Loan;
++import org.example.library.loan.in.web.converter.LoanOverviewResponseConverter;
++import org.example.library.loan.in.web.response.LoanOverviewResponse;
 +import org.springframework.web.bind.annotation.GetMapping;
 +import org.springframework.web.bind.annotation.PathVariable;
 +import org.springframework.web.bind.annotation.RestController;
 +
++import java.math.BigDecimal;
++import java.util.List;
++
 +@RestController
-+public class MemberLoansController {
++public class LoanOverviewController {
 +
-+    private final ApiForMemberLoans apiForMemberLoans;
++    private final ApiForLoanSearch apiForLoanSearch;
 +
-+    public MemberLoansController(ApiForMemberLoans apiForMemberLoans) {
-+        this.apiForMemberLoans = apiForMemberLoans;
++    private final ApiForFineTotalSearch apiForFineTotalSearch;
++
++    private final LoanOverviewResponseConverter loanOverviewResponseConverter;
++
++    public LoanOverviewController(ApiForLoanSearch apiForLoanSearch, ApiForFineTotalSearch apiForFineTotalSearch, LoanOverviewResponseConverter loanOverviewResponseConverter) {
++        this.apiForLoanSearch = apiForLoanSearch;
++        this.apiForFineTotalSearch = apiForFineTotalSearch;
++        this.loanOverviewResponseConverter = loanOverviewResponseConverter;
 +    }
 +
 +    @GetMapping("/members/{memberId}/loans")
-+    public MemberLoansResponse searchLoansOfMember(@PathVariable String memberId) {
-+        return MemberLoansResponse.mapMemberLoans(apiForMemberLoans.searchLoansOfMember(memberId));
++    public LoanOverviewResponse searchLoanOverview(@PathVariable String memberId) {
++        List<Loan> heldLoans = apiForLoanSearch.searchLoansOfMember(memberId);
++        BigDecimal owedFineTotal = apiForFineTotalSearch.searchOwedFineTotalOfMember(memberId);
++        return loanOverviewResponseConverter.convert(memberId, heldLoans, owedFineTotal);
 +    }
 +}
-diff --git a/src/main/java/org/example/library/loan/in/web/MemberLoansExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/MemberLoansExceptionHandler.java
+diff --git a/src/main/java/org/example/library/loan/in/web/MemberExceptionHandler.java b/src/main/java/org/example/library/loan/in/web/MemberExceptionHandler.java
 new file mode 100644
 --- /dev/null
-+++ b/src/main/java/org/example/library/loan/in/web/MemberLoansExceptionHandler.java
++++ b/src/main/java/org/example/library/loan/in/web/MemberExceptionHandler.java
 @@ -0,0 +1,16 @@
 +package org.example.library.loan.in.web;
 +
-+import org.example.library.loan.app.api.MemberNotFoundException;
++import org.example.library.loan.app.domain.model.MemberNotFoundException;
 +import org.springframework.http.HttpStatus;
 +import org.springframework.http.ProblemDetail;
 +import org.springframework.web.bind.annotation.ExceptionHandler;
 +import org.springframework.web.bind.annotation.RestControllerAdvice;
 +
 +@RestControllerAdvice
-+public class MemberLoansExceptionHandler {
++public class MemberExceptionHandler {
 +
 +    @ExceptionHandler(MemberNotFoundException.class)
 +    public ProblemDetail answerMemberNotFound(MemberNotFoundException exception) {
 +        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
 +    }
 +}
-diff --git a/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java b/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java
+diff --git a/src/main/java/org/example/library/loan/in/web/converter/LoanOverviewResponseConverter.java b/src/main/java/org/example/library/loan/in/web/converter/LoanOverviewResponseConverter.java
 new file mode 100644
 --- /dev/null
-+++ b/src/main/java/org/example/library/loan/in/web/response/MemberLoansResponse.java
-@@ -0,0 +1,23 @@
-+package org.example.library.loan.in.web.response;
++++ b/src/main/java/org/example/library/loan/in/web/converter/LoanOverviewResponseConverter.java
+@@ -0,0 +1,21 @@
++package org.example.library.loan.in.web.converter;
 +
-+import org.example.library.loan.app.api.MemberLoans;
 +import org.example.library.loan.app.domain.model.Loan;
++import org.example.library.loan.in.web.response.LoanOverviewResponse;
++import org.springframework.stereotype.Component;
++
++import java.math.BigDecimal;
++import java.util.List;
++
++@Component
++public class LoanOverviewResponseConverter {
++
++    public LoanOverviewResponse convert(String memberId, List<Loan> heldLoans, BigDecimal owedFineTotal) {
++        List<LoanOverviewResponse.HeldLoan> heldLoanResponses = heldLoans.stream().map(this::convertHeldLoan).toList();
++        return new LoanOverviewResponse(memberId, heldLoanResponses, owedFineTotal);
++    }
++
++    private LoanOverviewResponse.HeldLoan convertHeldLoan(Loan heldLoan) {
++        return new LoanOverviewResponse.HeldLoan(heldLoan.loanId(), heldLoan.itemTitle(), heldLoan.dueDate());
++    }
++}
+diff --git a/src/main/java/org/example/library/loan/in/web/response/LoanOverviewResponse.java b/src/main/java/org/example/library/loan/in/web/response/LoanOverviewResponse.java
+new file mode 100644
+--- /dev/null
++++ b/src/main/java/org/example/library/loan/in/web/response/LoanOverviewResponse.java
+@@ -0,0 +1,11 @@
++package org.example.library.loan.in.web.response;
 +
 +import java.math.BigDecimal;
 +import java.time.LocalDate;
 +import java.util.List;
 +
-+public record MemberLoansResponse(String memberId, List<Item> loans, BigDecimal owedFines) {
++public record LoanOverviewResponse(String memberId, List<HeldLoan> loans, BigDecimal owedFines) {
 +
-+    public static MemberLoansResponse mapMemberLoans(MemberLoans memberLoans) {
-+        List<Item> items = memberLoans.loans().stream().map(Item::mapLoan).toList();
-+        return new MemberLoansResponse(memberLoans.memberId(), items, memberLoans.owedFines());
-+    }
-+
-+    public record Item(String loanId, String itemTitle, LocalDate dueDate) {
-+
-+        static Item mapLoan(Loan loan) {
-+            return new Item(loan.loanId(), loan.itemTitle(), loan.dueDate());
-+        }
++    public record HeldLoan(String loanId, String itemTitle, LocalDate dueDate) {
 +    }
 +}
 diff --git a/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java b/src/main/java/org/example/library/loan/out/memory/LoanRepositoryUsingMemory.java
@@ -477,10 +559,10 @@ new file mode 100644
 @@ -0,0 +1,2 @@
 +spring.application.name=lending-library
 +library.mail.sender-address=loans@library.example
-diff --git a/src/test/java/org/example/library/loan/in/web/MemberLoansControllerTest.java b/src/test/java/org/example/library/loan/in/web/MemberLoansControllerTest.java
+diff --git a/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java b/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
 new file mode 100644
 --- /dev/null
-+++ b/src/test/java/org/example/library/loan/in/web/MemberLoansControllerTest.java
++++ b/src/test/java/org/example/library/loan/in/web/LoanOverviewControllerTest.java
 @@ -0,0 +1,82 @@
 +package org.example.library.loan.in.web;
 +
@@ -503,7 +585,7 @@ new file mode 100644
 +
 +@SpringBootTest
 +@AutoConfigureMockMvc
-+class MemberLoansControllerTest {
++class LoanOverviewControllerTest {
 +
 +    private final MockMvc mockMvc;
 +
@@ -511,7 +593,7 @@ new file mode 100644
 +
 +    private final MemberRepository memberRepository;
 +
-+    MemberLoansControllerTest(MockMvc mockMvc, LoanRepository loanRepository, MemberRepository memberRepository) {
++    LoanOverviewControllerTest(MockMvc mockMvc, LoanRepository loanRepository, MemberRepository memberRepository) {
 +        this.mockMvc = mockMvc;
 +        this.loanRepository = loanRepository;
 +        this.memberRepository = memberRepository;

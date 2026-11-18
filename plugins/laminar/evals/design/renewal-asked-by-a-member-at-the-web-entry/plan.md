@@ -1,6 +1,6 @@
 # Plan: a member renews a loan at the web entry
 
-A member renews 1 loan they hold, with a call to the web entry of the lending library. The renewal reuses the rule of renewal that `LoanDesk#renew` already holds: the due date moves by 14 days, and a loan on hold for another member is not renewed. After a renewal, the member gets 1 mail with the new due date.
+A member renews 1 loan they hold, with a call to the web entry of the lending library. The renewal reuses the rule of renewal that `Loan#renew` already holds: the due date moves by 14 days, and a loan on hold for another member is not renewed. After a renewal, the member gets 1 mail with the new due date.
 
 ## The call
 

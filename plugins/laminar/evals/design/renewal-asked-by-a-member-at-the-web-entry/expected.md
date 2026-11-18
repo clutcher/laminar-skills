@@ -4,7 +4,7 @@
 
 - checkDesign: no defect
 - No file moves
-- New files: at most 10
+- New files: at most 12
 
 ## Level 2
 
