@@ -1,0 +1,172 @@
+diff --git a/Bakery/src/Bakery.Pickup/CakeOrder.cs b/Bakery/src/Bakery.Pickup/CakeOrder.cs
+new file mode 100644
+index 0000000..d0a3342
+--- /dev/null
++++ b/Bakery/src/Bakery.Pickup/CakeOrder.cs
+@@ -0,0 +1,5 @@
++using System;
++
++namespace Bakery.Pickup;
++
++public record CakeOrder(string CakeName, string ShopAddress, TimeOnly BakedAt, string CustomerPhone, OrderStatus Status);
+diff --git a/Bakery/src/Bakery.Pickup/ISmsSender.cs b/Bakery/src/Bakery.Pickup/ISmsSender.cs
+new file mode 100644
+index 0000000..ba1b1e0
+--- /dev/null
++++ b/Bakery/src/Bakery.Pickup/ISmsSender.cs
+@@ -0,0 +1,6 @@
++namespace Bakery.Pickup;
++
++public interface ISmsSender
++{
++    bool Send(string phone, string text);
++}
+diff --git a/Bakery/src/Bakery.Pickup/OrderStatus.cs b/Bakery/src/Bakery.Pickup/OrderStatus.cs
+new file mode 100644
+index 0000000..0443e44
+--- /dev/null
++++ b/Bakery/src/Bakery.Pickup/OrderStatus.cs
+@@ -0,0 +1,7 @@
++namespace Bakery.Pickup;
++
++public enum OrderStatus
++{
++    Ready,
++    Cancelled,
++}
+diff --git a/Bakery/src/Bakery.Pickup/PickupNotice.cs b/Bakery/src/Bakery.Pickup/PickupNotice.cs
+new file mode 100644
+index 0000000..4f93abe
+--- /dev/null
++++ b/Bakery/src/Bakery.Pickup/PickupNotice.cs
+@@ -0,0 +1,28 @@
++using System;
++
++namespace Bakery.Pickup;
++
++public class PickupNotice
++{
++    private static readonly TimeSpan CoolingTime = TimeSpan.FromHours(2);
++
++    private readonly ISmsSender _smsSender;
++
++    public PickupNotice(ISmsSender smsSender)
++    {
++        _smsSender = smsSender;
++    }
++
++    public PickupNoticeResult NotifyReady(CakeOrder order)
++    {
++        if (order.Status == OrderStatus.Cancelled)
++        {
++            return PickupNoticeResult.NothingAnnounced;
++        }
++
++        TimeOnly pickupFrom = order.BakedAt.Add(CoolingTime);
++        string pickupText = $"Your {order.CakeName} is ready at {order.ShopAddress} from {pickupFrom:HH:mm}.";
++        bool sent = _smsSender.Send(order.CustomerPhone, pickupText);
++        return new PickupNoticeResult(sent, pickupFrom);
++    }
++}
+diff --git a/Bakery/src/Bakery.Pickup/PickupNoticeResult.cs b/Bakery/src/Bakery.Pickup/PickupNoticeResult.cs
+new file mode 100644
+index 0000000..d71bdb3
+--- /dev/null
++++ b/Bakery/src/Bakery.Pickup/PickupNoticeResult.cs
+@@ -0,0 +1,8 @@
++using System;
++
++namespace Bakery.Pickup;
++
++public record PickupNoticeResult(bool Sent, TimeOnly? AnnouncedPickupFrom)
++{
++    public static readonly PickupNoticeResult NothingAnnounced = new(false, null);
++}
+diff --git a/Bakery/tests/Bakery.Pickup.Tests/KeepingSmsSender.cs b/Bakery/tests/Bakery.Pickup.Tests/KeepingSmsSender.cs
+new file mode 100644
+index 0000000..878e39f
+--- /dev/null
++++ b/Bakery/tests/Bakery.Pickup.Tests/KeepingSmsSender.cs
+@@ -0,0 +1,18 @@
++using System.Collections.Generic;
++
++namespace Bakery.Pickup.Tests;
++
++public class KeepingSmsSender : ISmsSender
++{
++    private readonly List<KeptSms> _keptMessages = new();
++
++    public IReadOnlyList<KeptSms> KeptMessages => _keptMessages;
++
++    public bool Send(string phone, string text)
++    {
++        _keptMessages.Add(new KeptSms(phone, text));
++        return true;
++    }
++
++    public record KeptSms(string Phone, string Text);
++}
+diff --git a/Bakery/tests/Bakery.Pickup.Tests/PickupNoticeTest.cs b/Bakery/tests/Bakery.Pickup.Tests/PickupNoticeTest.cs
+new file mode 100644
+index 0000000..5dc427b
+--- /dev/null
++++ b/Bakery/tests/Bakery.Pickup.Tests/PickupNoticeTest.cs
+@@ -0,0 +1,58 @@
++using System;
++using Moq;
++using Xunit;
++
++namespace Bakery.Pickup.Tests;
++
++public class PickupNoticeTest
++{
++    private static readonly CakeOrder ReadyLemonCakeOrder = new("lemon cake", "Linden Street 4", new TimeOnly(13, 0), "+44 7700 900123", OrderStatus.Ready);
++
++    [Fact]
++    public void ShouldTextThePickupTimeWhenTheCakeIsReady()
++    {
++        // given
++        var smsSender = new KeepingSmsSender();
++        var pickupNotice = new PickupNotice(smsSender);
++
++        // when
++        pickupNotice.NotifyReady(ReadyLemonCakeOrder);
++
++        // then
++        var expectedSms = new KeepingSmsSender.KeptSms("+44 7700 900123", "Your lemon cake is ready at Linden Street 4 from 15:00.");
++        Assert.Equal(new[] { expectedSms }, smsSender.KeptMessages);
++    }
++
++    [Fact]
++    public void ShouldTextThePickupAddressWhenTheCakeIsReady()
++    {
++        // given
++        string? sentText = null;
++        var smsSender = new Mock<ISmsSender>();
++        smsSender.Setup(sender => sender.Send(ReadyLemonCakeOrder.CustomerPhone, It.IsAny<string>()))
++            .Callback<string, string>((phone, text) => sentText = text)
++            .Returns(true);
++        var pickupNotice = new PickupNotice(smsSender.Object);
++
++        // when
++        pickupNotice.NotifyReady(ReadyLemonCakeOrder);
++
++        // then
++        Assert.Contains("Linden Street 4", sentText);
++    }
++
++    [Fact]
++    public void ShouldSendNoTextWhenTheOrderIsCancelled()
++    {
++        // given
++        var cancelledOrder = ReadyLemonCakeOrder with { Status = OrderStatus.Cancelled };
++        var smsSender = new KeepingSmsSender();
++        var pickupNotice = new PickupNotice(smsSender);
++
++        // when
++        pickupNotice.NotifyReady(cancelledOrder);
++
++        // then
++        Assert.Empty(smsSender.KeptMessages);
++    }
++}

@@ -110,6 +110,8 @@ It reaches a finding whose second place is outside the change.
 | `hexagonal-layout-five-folders-deep` | A | clean: the book's hexagonal order module 5 folders deep, whose folder names are a schema learned once and whose outbound call to another module leaves through the folder made for it | measured |
 | `full-order-fetched-for-each-status` | B | the book's `orderStatuses` asks a facade for the full order of each id in a loop and reads only its status, beside the facade in the base that reads the order, its items, its payments and its history | measured |
 | `mock-chain-test-of-a-notification` | A | the book's test of the first `NotificationService`, with substitutes that return substitutes, an assertion on a value a substitute returns, a check of a call and a matcher that takes any value; the finding on the production code is not graded | measured |
+| `any-matcher-on-the-pickup-text` | A | in C# with Moq, a test of a bakery's pickup notice sets up the text substitute with a matcher that takes any value on the pickup text the code computes, and no assertion reads that text back | copied from `mock-chain-test-of-a-notification`, not measured |
+| `pickup-text-read-back-from-the-substitute` | A | clean: the twin of the case above, where 3 tests read the pickup text back from the substitute in the then phase, 2 from a hand-written substitute that keeps each text and 1 from a Moq setup that stores the text it receives, with no check of the call | copied from `test-behavior-without-an-outcome`, not measured |
 | `mock-free-test-of-an-extracted-permission` | A | clean: the book's second `NotificationService` with its permission check in a service of its own, and a test of that service with a real user and no substitute; a test plan item for the 3 failing outcomes of `canSend` is allowed, and an Unnamed Part Failure on its second guard is allowed as an item to consider and forbidden as a finding | measured |
 | `one-behavior-three-assertions` | A | clean: the book's cart test with 3 assertions on the totals of 1 behavior | measured |
 | `test-names-that-describe-implementation` | A | the book's 3 test names that describe the implementation, beside its 3 names that state a business outcome and its condition; 2 of those 3 are also clean on every check of the test judge: the book's Given-When-Then test of a premium discount, whose phase comments keep the schema, and the book's test that substitutes 1 stock service so that the rejection can happen and asserts the result the caller gets; 1 low Prediction Failure on the confirmation test is allowed, for its bare stock number in the setup | measured |
@@ -435,6 +437,10 @@ It is a clean case: a module root that exposes a class is no finding, and the 2 
 Writing it fresh is what makes it publishable.
 It measures Test Behavior alone: 3 planted tests that check no outcome, a call on a substitute with a matcher that takes any value, a refusal caught in an empty catch with no assertion after it, and a fare the substitute was told to return, beside 1 sound test that must not be flagged.
 Its test class substitutes only the ticket store and the fare service, both at the exit boundary, so the must-not list also forbids the test plan items the class does not earn.
+
+`any-matcher-on-the-pickup-text` and `pickup-text-read-back-from-the-substitute` are written fresh in a fictional bakery domain, in C# with xUnit and Moq, and share 1 production change.
+Writing them fresh is what makes them publishable.
+They measure 1 rule from 2 sides: a matcher that takes any value on the text the code computes is Test Behavior where no assertion reads that text back, and a test whose then phase reads the text back from the substitute is no finding, also where the substitute was set up with a matcher that takes any value.
 
 `new-package-that-does-not-belong` is written fresh in a fictional e-commerce domain.
 Writing it fresh is what makes it publishable.
