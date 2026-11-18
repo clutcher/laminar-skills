@@ -5,7 +5,8 @@ A member renews 1 loan they hold, with a call to the web entry of the lending li
 ## The call
 
 - `POST /members/{memberId}/loans/{loanId}/renewals`, with no body.
-- A renewal answers the status 200 with a JSON body of 3 fields: `loanId`, the id of the renewed loan; `newDueDate`, the new due date in the form `yyyy-MM-dd`; and `mailSent`, `true` where the mail was sent and `false` where it was not.
+- A renewal answers the status 200. From the answer, the caller learns which loan was renewed, its new due date, and which mails the renewal sent.
+- The body of the answer is this JSON, as output only: `{"loanId": "<id of the renewed loan>", "newDueDate": "<new due date as yyyy-MM-dd>", "sentMails": ["RENEWAL_CONFIRMATION"]}`. The list `sentMails` holds `RENEWAL_CONFIRMATION` where the mail was sent, and it is empty where the mail was not sent.
 
 ## The rules, in the order they are checked
 
@@ -20,7 +21,7 @@ Each refusal answers a problem detail, as the loans of a member answer today, an
 ## The mail
 
 - After the renewal is stored, the member gets 1 mail at the address in the field `email` of `Member`, through `PostboxClient#send`, with the subject `Your loan is renewed` and the body `<item title> is now due on <new due date as yyyy-MM-dd>.`.
-- Where `PostboxClient#send` throws `PostboxUnavailable`, the renewal stays stored, no second attempt is made, and the call answers 200 with `mailSent` `false`.
+- Where `PostboxClient#send` throws `PostboxUnavailable`, the renewal stays stored, no second attempt is made, and the call answers 200 with an empty list `sentMails`.
 
 ## The tests
 
