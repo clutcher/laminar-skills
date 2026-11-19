@@ -373,6 +373,7 @@ export class ShapeAbstractions {
       visibility: VISIBILITIES.EXPOSED,
       boundaryRank: readBoundaryRank([], [], VISIBILITIES.EXPOSED),
       lines: placement.lines,
+      holdsAMethodBody: placement.methods.some(({ method }) => Boolean(method.body)),
     });
     shapeClass.slice = this.slices.buildOwnLinesSlice(shapeClass, renderedLines, this.listTypeHeadSections(shapeClass, renderedLines));
     const methods = placement.methods
@@ -462,6 +463,7 @@ export class ShapeAbstractions {
       visibility,
       boundaryRank: readBoundaryRank([], [], visibility),
       lines,
+      holdsAMethodBody: Boolean(method.body),
     });
   }
 

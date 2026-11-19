@@ -9,6 +9,9 @@ const PERFORMANCE_SCALES = new Set([Scale.METHOD.name, Scale.CLASS.name]);
 
 export const holdsBehavior = abstraction => !(abstraction.path && isATypesOnlyFile(abstraction.path));
 
+// A shape run says whether a method body stands in a class or a method; a walked run reads the code and leaves the key out.
+const isLeftWithoutABodyByTheShape = abstraction => abstraction.holdsAMethodBody === false;
+
 export const TEST_METHOD_CHECKS = Object.freeze([CHECKS_BY_ID_MAP.S2, CHECKS_BY_ID_MAP.S4, CHECKS_BY_ID_MAP.S5, CHECKS_BY_ID_MAP.CD2]);
 export const TEST_CLASS_CHECKS = Object.freeze([CHECKS_BY_ID_MAP.S2, CHECKS_BY_ID_MAP.S5]);
 export const TEST_PLAN_CHECKS = Object.freeze(Object.values(CHECKS_BY_ID_MAP).filter(check => check.track === TRACKS.TEST_PLAN));
@@ -101,7 +104,7 @@ export function listTracks(abstraction) {
   if (isReadOnly(abstraction) || holdsKeyTreesAt(abstraction.path)) return [TRACKS.SIMPLICITY];
   const tracks = [TRACKS.SIMPLICITY];
   if (PREVENTION_SCALES.has(abstraction.scale) && (holdsBehavior(abstraction) || !SCALES_JUDGED_FOR_PREVENTION_ONLY_WITH_BEHAVIOR.has(abstraction.scale))) tracks.push(TRACKS.PREVENTION);
-  if (PERFORMANCE_SCALES.has(abstraction.scale) && holdsBehavior(abstraction)) tracks.push(TRACKS.PERFORMANCE);
+  if (PERFORMANCE_SCALES.has(abstraction.scale) && holdsBehavior(abstraction) && !isLeftWithoutABodyByTheShape(abstraction)) tracks.push(TRACKS.PERFORMANCE);
   if (hasSameDecision(abstraction)) tracks.push(TRACKS.DECISION);
   if (holdsAJudgedComment(abstraction)) tracks.push(TRACKS.COMMENT);
   return tracks;
