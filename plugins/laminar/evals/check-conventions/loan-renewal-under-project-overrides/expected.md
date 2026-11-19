@@ -15,7 +15,6 @@ The change is `main...change`, checked with the argument `change`. A place names
 
 - `LoanRenewalService:20`, `project loans.md §2`, scale `variable` or `class`: the constant of the renewal fee is a bare decimal too.
 - `LoanRenewalService#renewLoan:38`, `code-style java.md §1`, scale `method`: the service builds the renewed loan again from the fields of the old loan, work the limits of the rule give to the record.
-- `RenewalReceipt:6`, `code-style classes.md §5` or `code-style naming.md §2`, scale `variable`: the component `renewalFee` repeats the word Renewal of the type around it.
 - `LoanRenewalService#renewLoan`, any line from 30 to 48, `code-style methods.md §10`, scale `method`: the method fetches the active loan and in the same body decides the renewal limit and calculates the new due date, a calculation the book puts apart from the fetching.
 
 ## Must not appear
