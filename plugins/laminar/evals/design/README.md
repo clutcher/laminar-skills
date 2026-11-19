@@ -14,7 +14,7 @@ A case is a small fictional repository with the input of the skill `design` of t
 - `expected.md`: the checks of the design model, under `## Level 1` and `## Level 2`.
 - `judges.txt`: the judge types of the review run of the inputs, which a level 2 review of the written code also runs, in the form `runReview.mjs prepare --judges` takes.
 
-## The 2 levels
+## Level 1 and level 2
 
 Level 1 grades `design-model.json` of the results folder at no model cost. `design.md` is not graded at level 1, because the render writes it from the model, so the model is the data. Each item under `## Level 1` is 1 check, in 1 of these forms:
 
