@@ -1,0 +1,28 @@
+diff --git a/canoe/src/main/java/com/example/canoe/rental/CanoeRentalService.java b/canoe/src/main/java/com/example/canoe/rental/CanoeRentalService.java
+new file mode 100644
+--- /dev/null
++++ b/canoe/src/main/java/com/example/canoe/rental/CanoeRentalService.java
+@@ -0,0 +1,23 @@
++package com.example.canoe.rental;
++
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class CanoeRentalService {
++
++    private final CanoeRentalRepository rentalRepository;
++    private final PaddlerRepository paddlerRepository;
++    private final MailClient mailClient;
++
++    public CanoeRental cancelRental(String rentalCode) {
++        CanoeRental rental = rentalRepository.findByCode(rentalCode);
++        rental.cancel();
++        rentalRepository.save(rental);
++        Paddler paddler = paddlerRepository.findById(rental.getPaddlerId());
++        String subject = "Your canoe rental " + rental.getCode() + " is cancelled";
++        String text = "Hello " + paddler.getFirstName() + ", your rental of the canoe "
++                + rental.getCanoeName() + " on " + rental.getRentalDate() + " is cancelled.";
++        mailClient.send(new Mail(paddler.getEmail(), subject, text));
++        return rental;
++    }
++}

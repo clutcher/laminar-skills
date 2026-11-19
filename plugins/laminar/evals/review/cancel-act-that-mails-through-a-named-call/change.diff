@@ -1,0 +1,23 @@
+diff --git a/canoe/src/main/java/com/example/canoe/rental/CanoeRentalService.java b/canoe/src/main/java/com/example/canoe/rental/CanoeRentalService.java
+new file mode 100644
+--- /dev/null
++++ b/canoe/src/main/java/com/example/canoe/rental/CanoeRentalService.java
+@@ -0,0 +1,18 @@
++package com.example.canoe.rental;
++
++import lombok.RequiredArgsConstructor;
++
++@RequiredArgsConstructor
++public class CanoeRentalService {
++
++    private final CanoeRentalRepository rentalRepository;
++    private final CancellationMailer cancellationMailer;
++
++    public CanoeRental cancelRental(String rentalCode) {
++        CanoeRental rental = rentalRepository.findByCode(rentalCode);
++        rental.cancel();
++        rentalRepository.save(rental);
++        cancellationMailer.sendCancellationMail(rental);
++        return rental;
++    }
++}
