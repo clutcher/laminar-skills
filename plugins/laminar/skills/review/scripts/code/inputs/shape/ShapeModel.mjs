@@ -71,6 +71,12 @@ function readFolder(given, where) {
 
 const readTypedName = (given, where) => ({ name: readName(given.name, `${where}.name`), type: readOptionalText(given.type, `${where}.type`) });
 
+const readOptionalTrueOrFalse = (given, where) => {
+  if (given === undefined || given === null) return false;
+  if (typeof given !== "boolean") stopAt(where, "must be true or false");
+  return given;
+};
+
 function readMethod(given, where) {
   const body = readOptionalText(given.body, `${where}.body`);
   return {
@@ -80,6 +86,7 @@ function readMethod(given, where) {
     returns: readOptionalText(given.returns, `${where}.returns`),
     uses: readTextList(given.uses, `${where}.uses`),
     ...(body ? { body } : {}),
+    ...(readOptionalTrueOrFalse(given.unchanged, `${where}.unchanged`) ? { unchanged: true } : {}),
   };
 }
 

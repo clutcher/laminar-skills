@@ -28,6 +28,9 @@ const isPlacedInAChangedFile = placement => placement.kind !== SHAPE_KINDS.UNCHA
 
 const isATopType = placement => !placement.shapeClass.name.includes(NESTED_NAME_SEPARATOR);
 
+// A method that the model marks unchanged keeps the name and the signature of the current tree, so the change does not write its name, and no name form of the script is settled on it.
+const holdsANameTheChangeWrites = ({ method }) => method.unchanged !== true;
+
 const formatTypedName = field => (field.type ? `${field.name}: ${field.type}` : field.name);
 
 const formatSupertypes = (word, names) => (names.length ? [`${word} ${names.join(", ")}`] : []);
@@ -379,7 +382,7 @@ export class ShapeAbstractions {
     const methods = placement.methods
       .filter(({ method }) => Boolean(method.body))
       .map(methodPlacement => this.buildTheMethod(shapeClass, placement, methodPlacement, renderedLines));
-    for (const methodPlacement of placement.methods.filter(({ method }) => !method.body)) this.methodsWithNoBody.push(this.buildTheMethodWithNoBody(shapeClass, methodPlacement, renderedLines));
+    for (const methodPlacement of placement.methods.filter(({ method }) => !method.body).filter(holdsANameTheChangeWrites)) this.methodsWithNoBody.push(this.buildTheMethodWithNoBody(shapeClass, methodPlacement, renderedLines));
     shapeClass.children = [...this.buildTheFields(shapeClass, placement, renderedLines), ...methods];
     return shapeClass;
   }
