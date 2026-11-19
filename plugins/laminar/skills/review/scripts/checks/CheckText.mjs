@@ -149,3 +149,25 @@ export const readCheckRulesOfTheBody = (body, judgeType, checks) => {
 };
 
 export const readCheckRules = (judgeType, checks) => (judgeType ? readCheckRulesOfTheBody(readBody(judgeType), judgeType, checks) : "");
+
+export const THE_VERIFIER = "verifier";
+
+const REVIEW_CONVENTIONS_HEADING = "### Review conventions";
+
+const listReviewConventionLines = section => {
+  const lines = section.split("\n");
+  const start = lines.indexOf(REVIEW_CONVENTIONS_HEADING);
+  if (start === -1) return [];
+  const end = lines.findIndex((line, at) => at > start && line.startsWith(LIST_HEADING_PREFIX));
+  return lines.slice(start + 1, end === -1 ? lines.length : end).filter(line => line.startsWith(RULE_PREFIX));
+};
+
+// Only the entries that open with the name of a raised check reach the refuter: an entry for every check stays with the verifier alone.
+export const readVerifierReviewConventionsOfTheBody = (body, checks) => {
+  const checkNames = CHECK_WORDS.map(checkWords => checkWords.check);
+  const raised = collectRaisedCheckNames(checks);
+  const entries = listReviewConventionLines(findRulesSection(body)).filter(line => findChecksNamedByRule(line, checkNames).some(name => raised.has(name)));
+  return entries.length ? [REVIEW_CONVENTIONS_HEADING, ...entries].join("\n") : "";
+};
+
+export const readVerifierReviewConventions = checks => readVerifierReviewConventionsOfTheBody(readBody(THE_VERIFIER), checks);

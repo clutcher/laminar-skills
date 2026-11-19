@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { readCheckRules } from "../../../checks/CheckText.mjs";
+import { readCheckRules, readVerifierReviewConventions } from "../../../checks/CheckText.mjs";
 import { getOrReadAndRemember } from "../../../collections/memos.mjs";
 import { resolveAbsolutePath } from "../../../files/paths.mjs";
 import { buildCodeUnderReviewFile } from "../abstractions/CodeUnderReviewPlaces.mjs";
@@ -46,6 +46,7 @@ export class VerifyHandOff {
     this.groupByIdMap = new Map(groups.map(group => [group.id, group]));
     this.codeUnderReviewByIdMap = new Map((everyCodeUnderReview || []).map(codeUnderReview => [codeUnderReview.id, codeUnderReview]));
     this.rulesMemo = new Map();
+    this.verifierReviewConventionsMemo = new Map();
     this.codeUnderReviewTextMemo = new Map();
     this.itemTuples = this.items.map(item => this.buildItemTuple(item)).filter(Boolean);
     this.list = [...this.itemTuples, ...this.coveredPaths.map(buildCoveredPathTuple)];
@@ -103,8 +104,13 @@ export class VerifyHandOff {
       item,
       judgeType,
       rules: this.readRules(judgeType, [possibleFinding.check]),
+      verifierReviewConventions: this.readVerifierReviewConventionsOfCheck(possibleFinding.check),
       codeUnderReviewFile: this.readCodeUnderReviewFile({ id: possibleFinding.codeUnderReviewId, judgeType }),
     });
+  }
+
+  readVerifierReviewConventionsOfCheck(check) {
+    return getOrReadAndRemember(this.verifierReviewConventionsMemo, check, () => readVerifierReviewConventions([check]));
   }
 
   buildCoveredPathFile(covered) {
