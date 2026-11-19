@@ -7,6 +7,13 @@ export const SHAPE_TYPE_HEADS = "shapeTypeHeads";
 export const MAX_TYPES_WITH_A_HEAD = 6;
 export const MAX_LINES_OF_A_TYPE_HEAD = 12;
 
+const NESTED_NAME_SEPARATOR = ".";
+
+// A nested type is named in the lines of its users, and in its own lines, by the name after the last dot.
+export const readNameAfterTheLastDot = name => name.slice(name.lastIndexOf(NESTED_NAME_SEPARATOR) + 1);
+
+export const namesTheOwnType = (typeName, ownName) => typeName === ownName || typeName === readNameAfterTheLastDot(ownName);
+
 export class TypeHeads {
   constructor({ shapeTypeHeads, existingTypeHeads }) {
     this.shapeTypeHeads = shapeTypeHeads;
@@ -14,7 +21,7 @@ export class TypeHeads {
   }
 
   listSections(ownLines, { ownName, usedFrom }) {
-    return this.listSectionsOfTheTypes(collectTypeNames(ownLines).filter(name => name !== ownName), usedFrom);
+    return this.listSectionsOfTheTypes(collectTypeNames(ownLines).filter(name => !namesTheOwnType(name, ownName)), usedFrom);
   }
 
   listSectionsOfTheTypes(typeNames, usedFrom) {

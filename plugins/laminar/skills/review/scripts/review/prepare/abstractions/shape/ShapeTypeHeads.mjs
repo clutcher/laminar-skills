@@ -1,13 +1,9 @@
 import { formatPlacedSliceLine } from "../../../../code/index.mjs";
-import { MAX_LINES_OF_A_TYPE_HEAD } from "./TypeHeads.mjs";
+import { MAX_LINES_OF_A_TYPE_HEAD, readNameAfterTheLastDot } from "./TypeHeads.mjs";
 
 const PRIVATE_METHOD_VISIBILITY = "private";
 
-const NESTED_NAME_SEPARATOR = ".";
-
-const readNameAfterTheLastDot = name => name.slice(name.lastIndexOf(NESTED_NAME_SEPARATOR) + 1);
-
-// A nested type is named in the lines of its users by the name after the last dot, and a type of the same full name wins over it.
+// A type of the same full name wins over a nested type named by the name after the last dot.
 const readPlacementByName = classPlacements => new Map([
   ...classPlacements.map(placement => [readNameAfterTheLastDot(placement.shapeClass.name), placement]),
   ...classPlacements.map(placement => [placement.shapeClass.name, placement]),

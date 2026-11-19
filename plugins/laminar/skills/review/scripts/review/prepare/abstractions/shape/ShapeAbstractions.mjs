@@ -4,7 +4,7 @@ import { numberLines } from "../../formats/SliceFormat.mjs";
 import { ShapeSlices } from "./ShapeSlices.mjs";
 import { ExistingTypeHeads } from "./ExistingTypeHeads.mjs";
 import { ShapeTypeHeads } from "./ShapeTypeHeads.mjs";
-import { TypeHeads } from "./TypeHeads.mjs";
+import { namesTheOwnType, TypeHeads } from "./TypeHeads.mjs";
 import { ShapeDecisionSearch } from "./ShapeDecisionSearch.mjs";
 
 const BOUNDARY_MOVING_FILE_STATUSES = new Set([FILE_STATUS.CREATED, FILE_STATUS.REMOVED, FILE_STATUS.RENAMED]);
@@ -408,7 +408,7 @@ export class ShapeAbstractions {
   listTypeHeadSectionsOfTheFields(shapeClass, modeledClass, fields, renderedLines) {
     const supertypeNames = [...modeledClass.extends, ...modeledClass.implements];
     const fieldTypeNames = collectTypeNames(fields.map(field => renderedLines[field.lines.from - 1]));
-    const typeNames = [...new Set([...supertypeNames, ...fieldTypeNames])].filter(typeName => typeName !== shapeClass.name);
+    const typeNames = [...new Set([...supertypeNames, ...fieldTypeNames])].filter(typeName => !namesTheOwnType(typeName, shapeClass.name));
     return this.typeHeads.listSectionsOfTheTypes(typeNames, shapeClass.path);
   }
 
