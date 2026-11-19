@@ -75,7 +75,7 @@ const listOtherPartsOfTheFolder = (model, currentTree, folder, wholeClass) => {
 };
 
 const describeTheBoundaryFolder = (theClass, wholeClass, folder) => (BOUNDARY_FOLDER_NAMES.has(folder.split("/").pop())
-  ? `; in an api or spi folder every interface stays at the root and never gets a subfolder of its own, and where the folder holds the request, result and failure types of 2 or more interfaces, those types go into 1 subfolder named for what they are, such as model, and ${theClass.name} goes there nested in ${wholeClass.name} or in a subfolder named for ${wholeClass.name}`
+  ? `; in an api or spi folder every interface stays at the root and never gets a subfolder of its own, and the request, result and failure types of the interfaces stand in the 1 place that the project conventions choose among the 4 places of code-style modules.md section 3, where ${theClass.name} stands nested in ${wholeClass.name} or in a subfolder named for ${wholeClass.name}`
   : "");
 
 const describeTheLoosePiece = (theClass, wholeClass, folder, otherParts) => `${theClass.name} holds a piece of the data of ${wholeClass.name}, the only type of the model that holds it in a field, and it stands loose beside ${wholeClass.name} in ${folder}, which also holds ${otherParts.join(", ")}; a type that holds a piece of the data of 1 other type goes with that type (code-style modules.md section 3): nest ${theClass.name} in ${wholeClass.name}, or put ${wholeClass.name} and ${theClass.name} into a subfolder named for ${wholeClass.name}${describeTheBoundaryFolder(theClass, wholeClass, folder)}`;
