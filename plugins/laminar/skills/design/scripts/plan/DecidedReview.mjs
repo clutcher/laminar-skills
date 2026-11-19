@@ -352,6 +352,34 @@ export const buildDecidedReview = ({ model, modelBefore, plan, inputRun, entries
   };
 };
 
+const isAnObjectOfAShapeRunBefore = (object, run) => Number.isFinite(object.run) && object.run < run;
+
+// The objects of the shape runs before the given one, in the order of their runs, so the object of a later run comes after every object of an earlier run.
+const listObjectsOfTheShapeRunsBefore = (model, run) => readList(model.decisions.findings)
+  .filter(object => isAnObjectOfAShapeRunBefore(object, run))
+  .sort((first, second) => first.run - second.run);
+
+// The decided review file of 1 shape run of the plan in progress: per key, by check, scale and planned display name as the render matches a result, the latest object of the shape runs before it decides, so where the designer closed or left a key again in a later shape run, that later object wins, and a key whose latest object asks for a change of the tree gets no decision.
+export const buildShapeRunDecidedReview = ({ model, run, readShapeRun }) => {
+  const latestDecisionOfKeyMap = new Map();
+  for (const object of listObjectsOfTheShapeRunsBefore(model, run)) {
+    const decided = { ...object, plan: null, source: formatShapeRunSource(object.run, object.number) };
+    for (const finding of listFindingsOfTheItem(readShapeRun(object.run), object.number, object.check)) {
+      const decision = createDecision(model, null, finding, decided, null);
+      latestDecisionOfKeyMap.set(createDecisionKey(decision), { object, decision });
+    }
+  }
+  return {
+    plan: null,
+    baseCommit: "",
+    planCommit: "",
+    decided: [...latestDecisionOfKeyMap.values()].filter(({ object }) => isADecidingObject(object)).map(({ decision }) => decision),
+    overrides: [],
+    answeredQuestions: [],
+    existingDefects: [],
+  };
+};
+
 const readTextIfPresent = filePath => (fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8").trim() : "");
 
 export const readCommitOfThePlan = (planFolder, commitFile) => readTextIfPresent(path.join(planFolder, commitFile));

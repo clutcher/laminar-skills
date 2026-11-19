@@ -13,7 +13,7 @@ import { DecidedListStop, checkDecidedListForm, findReachDefects, formatDecidedK
 import { listFindingEntries } from "./plan/FindingList.mjs";
 import { buildDecidedReview, readCommitOfThePlan } from "./plan/DecidedReview.mjs";
 import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
-import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, SHAPE_RUN_NOT_JUDGED, describeTheShapeRunNotJudged, formatPlanLine, getPlanFolder, getShapeRunFolder, holdsAModelOfAPlanBefore, isAReplanOfThePlanBefore, listFindingsThatStopThePlan, listQuestionsThatStopThePlan, listShapeQuestionsThatStopThePlan, listShapeRunsNotJudged, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
+import { BASE_COMMIT_FILE, DECIDED_REVIEW_FILE, DISPOSITIONS_FILE, FINDINGS_FILE, MODEL_FILE, PLAN_COMMIT_FILE, PLAN_OUTCOMES, copyFileIfPresent, findLastPlan, SHAPE_RUN_NOT_JUDGED, createShapeRunReader, describeTheShapeRunNotJudged, formatPlanLine, getPlanFolder, holdsAModelOfAPlanBefore, isAReplanOfThePlanBefore, listFindingsThatStopThePlan, listQuestionsThatStopThePlan, listShapeQuestionsThatStopThePlan, listShapeRunsNotJudged, writeJson, writeOutcome } from "./plan/PlanFolder.mjs";
 import { listRoundDispositions } from "./plan/RoundDispositions.mjs";
 import { RoundStop, createFinderOfTheRunHoldingTheKey, findTheRoundOfTheRun, readJsonOrStop, readRunFolder, readShapeRunFolders } from "./round/RunFolder.mjs";
 import { listDefectLinesOfTheRun, removeFinishStop, writeFinishStop } from "./plan/FinishStop.mjs";
@@ -158,23 +158,6 @@ const readNoStepKeys = migrationLines => new Set(migrationLines
   .map(line => line.split("\t"))
   .map(columns => `${columns[1]}\t${columns[2]}`));
 
-// A shape run that cannot be read gives no decision, and the finish command names it.
-const createShapeRunReader = resultsFolder => {
-  const runOfNumberMap = new Map();
-  return run => {
-    if (!runOfNumberMap.has(run)) {
-      try {
-        runOfNumberMap.set(run, readRunFolder(getShapeRunFolder(resultsFolder, run), false));
-      } catch (error) {
-        if (!(error instanceof RoundStop)) throw error;
-        console.log(`not exported: shape run ${run}: ${error.message}`);
-        runOfNumberMap.set(run, null);
-      }
-    }
-    return runOfNumberMap.get(run);
-  };
-};
-
 const readModelOfThePlanIfPresent = (resultsFolder, plan) => {
   const modelPath = path.join(getPlanFolder(resultsFolder, plan), MODEL_FILE);
   return plan >= 1 && fs.existsSync(modelPath) ? readDesignModel(modelPath) : null;
@@ -197,7 +180,7 @@ const writeTheDecidedReview = (resultsFolder, plan, model, roundInput) => {
     plan,
     inputRun: roundInput ? roundInput.run : null,
     entries: roundInput ? roundInput.entries : [],
-    readShapeRun: createShapeRunReader(resultsFolder),
+    readShapeRun: createShapeRunReader(resultsFolder, "not exported"),
     baseCommit: readCommitOfThePlan(planFolder, BASE_COMMIT_FILE),
     planCommit: readCommitOfThePlan(planFolder, PLAN_COMMIT_FILE),
     earlier: findTheEarlierExport(resultsFolder, plan),

@@ -86,6 +86,23 @@ const SHAPE_RUN_FOLDER_NAME = /^[1-9]\d*$/;
 
 export const getShapeRunFolder = (resultsFolder, run) => path.join(resultsFolder, SHAPE_RUNS_FOLDER, String(run));
 
+// The reader of the shape runs of a results folder, each read once; a shape run that cannot be read gives no decision, and the command names it on a line that opens with its own word.
+export const createShapeRunReader = (resultsFolder, notReadWord) => {
+  const runOfNumberMap = new Map();
+  return run => {
+    if (!runOfNumberMap.has(run)) {
+      try {
+        runOfNumberMap.set(run, readRunFolder(getShapeRunFolder(resultsFolder, run), false));
+      } catch (error) {
+        if (!(error instanceof RoundStop)) throw error;
+        console.log(`${notReadWord}: shape run ${run}: ${error.message}`);
+        runOfNumberMap.set(run, null);
+      }
+    }
+    return runOfNumberMap.get(run);
+  };
+};
+
 export const SHAPE_RUN_NOT_JUDGED = "shape-run-not-judged";
 
 const isPreparedAndNotJudged = shapeRunFolder => fs.existsSync(path.join(shapeRunFolder, PREPARE_FILE)) && !fs.existsSync(path.join(shapeRunFolder, REVIEW_FILE));
