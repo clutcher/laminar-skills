@@ -44,6 +44,8 @@ const numberThePossibleFindings = groups => {
 
 const isAPatchReview = reviewed => String(reviewed.mode || "").toUpperCase() === CHANGE_MODES.PATCH;
 
+const isAShapeRun = reviewed => String(reviewed.mode || "").toUpperCase() === CHANGE_MODES.SHAPE;
+
 const MODE_WORDS = Object.freeze({ [CHANGE_MODES.PATCH]: "patch", [CHANGE_MODES.SHAPE]: "shape" });
 
 const readModeWord = reviewed => MODE_WORDS[String(reviewed.mode || "").toUpperCase()] || "repository";
@@ -78,7 +80,7 @@ export class RenderStep {
   run() {
     this.covered = new TestCoveredPaths(this.merged.coveredPaths, this.returns, { mode: this.prepared.mode });
     this.settled = new SettledFindings([...numberThePossibleFindings(this.merged.groups), ...this.covered.pathsToTest], this.returns, this.covered.listNumbers(), this.prepared.codeUnderReview || [], (this.prepared.filter || {}).scales || []);
-    this.decided = this.decidedReview ? new DecidedResults(this.decidedReview, [...this.settled.kept, ...this.settled.considered], this.readTheChangeKinds(), { notAppliedReason: this.decidedNotAppliedReason, linesFingerprints: new LinesFingerprintsOfTheRun(this.prepared, this.reviewed), written: readTheLinesOfTheWriters(this.decidedReview) }) : null;
+    this.decided = this.decidedReview ? new DecidedResults(this.decidedReview, [...this.settled.kept, ...this.settled.considered], this.readTheChangeKinds(), { notAppliedReason: this.decidedNotAppliedReason, linesFingerprints: new LinesFingerprintsOfTheRun(this.prepared, this.reviewed), written: readTheLinesOfTheWriters(this.decidedReview), isAShapeRun: isAShapeRun(this.reviewed) }) : null;
     if (this.decided) this.settled.moveOutTheDecided(this.decided.listDecidedFindings());
     this.related = this.decided ? new RelatedDecisions(this.decided.appliedDecisions, [...this.settled.kept, ...this.settled.considered], readClassOfTreeKeyMap(this.reviewed.abstractions)) : null;
     this.scope = buildScope(this.prepared, readJsonFileIfPresent(path.join(this.runFolder, COST_PLAN_FILE), null), readJsonFileIfPresent(path.join(this.runFolder, FULL_COST_PLAN_FILE), null), this.settled.countLeftOutByScale());

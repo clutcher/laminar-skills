@@ -97,10 +97,10 @@ const isTheAbstraction = (abstraction, displayNames, scale, file) => displayName
   && String(abstraction.scale || "").toLowerCase() === scale
   && (!file || abstraction.path === file);
 
-// The abstractions of 1 run folder that a lines fingerprint is read from: the code under review of prepare.json first, then the tree of review-abstractions.json, which a stored copy of a run folder may lack.
+// The abstractions of 1 run folder that a lines fingerprint is read from: the code under review of prepare.json first, then the tree of review-abstractions.json, which a stored copy of a run folder may lack, then the methods with no body of a shape run, which stand outside that tree.
 export class LinesFingerprintsOfTheRun {
   constructor(prepared, reviewed) {
-    this.abstractions = [...((prepared || {}).codeUnderReview || []), ...listTheTree((reviewed || {}).abstractions || [])];
+    this.abstractions = [...((prepared || {}).codeUnderReview || []), ...listTheTree((reviewed || {}).abstractions || []), ...((reviewed || {}).methodsWithNoBody || [])];
   }
 
   static readFrom(runFolder) {

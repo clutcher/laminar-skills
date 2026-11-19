@@ -187,6 +187,9 @@ export const readTheLinesOfTheWriters = decidedReview => {
 // A decision holds while the lines it was made on stand as they were; lines the run cannot read count as changed, so a decision never hides a result it cannot confirm.
 const isChangedSince = mark => Boolean(mark.decision.linesFingerprint) && mark.linesFingerprintNow !== mark.decision.linesFingerprint;
 
+// In a shape run only the designer rules on the lines again, so a decision of an earlier shape run whose lines changed expires, and its result stands again among the items for a new decision.
+const expireTheChangedSince = mark => ({ decision: mark.decision, finding: mark.finding, expiry: `its lines changed since the decision, lines fingerprint ${mark.decision.linesFingerprint} at the decision and ${mark.linesFingerprintNow || "none"} now` });
+
 // Every decision on a result that holds a lines fingerprint is compared, so a result stays decided only while the lines of each of its decisions stand as they were; the first decision that reads changed since leads the mark, else the first by its match and its plan.
 const createTheMarkOfTheFinding = (finding, marks, linesFingerprints) => {
   const compared = [...marks].sort(compareTheMarks).map(mark => (mark.decision.linesFingerprint ? { ...mark, linesFingerprintNow: readLinesFingerprintNow({ finding, ...mark }, linesFingerprints) } : mark));
@@ -201,7 +204,7 @@ const isAReachWithoutAFingerprint = decision => Boolean(decision.reachOf) && !de
 
 export class DecidedResults {
   // A file whose plan base the reviewed range does not hold applies no decision, and the reports say why.
-  constructor(decidedReview, settledFindings, changeKinds, { notAppliedReason = "", linesFingerprints = NO_LINES_FINGERPRINTS, written = NO_WRITTEN_LINES } = {}) {
+  constructor(decidedReview, settledFindings, changeKinds, { notAppliedReason = "", linesFingerprints = NO_LINES_FINGERPRINTS, written = NO_WRITTEN_LINES, isAShapeRun = false } = {}) {
     this.filePath = decidedReview.filePath;
     this.decisionCount = decidedReview.decisions.length;
     this.overrides = decidedReview.overrides;
@@ -222,7 +225,9 @@ export class DecidedResults {
       .filter(finding => marksOfFindingMap.has(finding))
       .map(finding => createTheMarkOfTheFinding(finding, marksOfFindingMap.get(finding), linesFingerprints));
     this.decided = marks.filter(mark => !isChangedSince(mark));
-    this.changedSince = marks.filter(isChangedSince).map(mark => ({ ...mark, changedSince: true, writtenByPlan: findThePlanThatWroteTheLines(mark, written) }));
+    const changedSinceMarks = marks.filter(isChangedSince);
+    if (isAShapeRun) this.expired.push(...changedSinceMarks.map(expireTheChangedSince));
+    this.changedSince = isAShapeRun ? [] : changedSinceMarks.map(mark => ({ ...mark, changedSince: true, writtenByPlan: findThePlanThatWroteTheLines(mark, written) }));
   }
 
   matchTheDecision(decision, settledFindings, changeKinds, marksOfFindingMap) {

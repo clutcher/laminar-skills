@@ -359,13 +359,21 @@ const listObjectsOfTheShapeRunsBefore = (model, run) => readList(model.decisions
   .filter(object => isAnObjectOfAShapeRunBefore(object, run))
   .sort((first, second) => first.run - second.run);
 
+const OUTSIDE_THE_CHANGE = "outside the change";
+
+// Every line of a changed file counts as changed in a shape run, so an outside-the-change decision holds only by the lines fingerprint of its own lines in the shape run of the object: it holds while those lines stay, whatever kind the model gives the file, and expires once they change.
+const readTheLinesFingerprintsOfTheObject = (object, readLinesFingerprints) => (object.reason === OUTSIDE_THE_CHANGE ? readLinesFingerprints(object.run) : null);
+
+const READS_NO_LINES_FINGERPRINTS = () => null;
+
 // The decided review file of 1 shape run of the plan in progress: per key, by check, scale and planned display name as the render matches a result, the latest object of the shape runs before it decides, so where the designer closed or left a key again in a later shape run, that later object wins, and a key whose latest object asks for a change of the tree gets no decision.
-export const buildShapeRunDecidedReview = ({ model, run, readShapeRun }) => {
+export const buildShapeRunDecidedReview = ({ model, run, readShapeRun, readLinesFingerprints = READS_NO_LINES_FINGERPRINTS }) => {
   const latestDecisionOfKeyMap = new Map();
   for (const object of listObjectsOfTheShapeRunsBefore(model, run)) {
     const decided = { ...object, plan: null, source: formatShapeRunSource(object.run, object.number) };
+    const linesFingerprints = readTheLinesFingerprintsOfTheObject(object, readLinesFingerprints);
     for (const finding of listFindingsOfTheItem(readShapeRun(object.run), object.number, object.check)) {
-      const decision = createDecision(model, null, finding, decided, null);
+      const decision = createDecision(model, null, finding, decided, linesFingerprints);
       latestDecisionOfKeyMap.set(createDecisionKey(decision), { object, decision });
     }
   }

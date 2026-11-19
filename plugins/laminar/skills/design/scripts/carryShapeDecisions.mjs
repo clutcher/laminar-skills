@@ -2,8 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { readDesignModelOrExit, readOptionsOrExit } from "./command/CommandLine.mjs";
 import { buildShapeRunDecidedReview } from "./plan/DecidedReview.mjs";
-import { DECIDED_REVIEW_FILE, createShapeRunReader, writeJson } from "./plan/PlanFolder.mjs";
+import { DECIDED_REVIEW_FILE, createShapeRunReader, getShapeRunFolder, writeJson } from "./plan/PlanFolder.mjs";
 import { SHAPE_MODEL_FILE } from "./round/RunFolder.mjs";
+import { LinesFingerprintsOfTheRun } from "../../review/scripts/review/render/verdicts/LinesFingerprint.mjs";
 
 const USAGE = "usage: node carryShapeDecisions.mjs --run <results>/shape-runs/<n>";
 
@@ -36,7 +37,12 @@ function carryShapeDecisions() {
   const run = readShapeRunNumberOrExit(runFolder);
   const model = readTheJudgedModelOrExit(runFolder);
   const resultsFolder = path.dirname(path.dirname(runFolder));
-  const decidedReview = buildShapeRunDecidedReview({ model, run, readShapeRun: createShapeRunReader(resultsFolder, "not carried") });
+  const decidedReview = buildShapeRunDecidedReview({
+    model,
+    run,
+    readShapeRun: createShapeRunReader(resultsFolder, "not carried"),
+    readLinesFingerprints: earlierRun => LinesFingerprintsOfTheRun.readFrom(getShapeRunFolder(resultsFolder, earlierRun)),
+  });
   const decidedReviewPath = path.join(runFolder, DECIDED_REVIEW_FILE);
   writeJson(decidedReviewPath, decidedReview);
   console.log(`RESULT ${JSON.stringify({ decidedReview: decidedReviewPath, decisions: decidedReview.decided.length })}`);
