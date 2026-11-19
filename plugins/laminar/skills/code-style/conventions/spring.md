@@ -44,7 +44,7 @@ Build an executor from the factory the framework gives, and set only the values 
 
 ## 9. Tests with the framework
 
-- An integration test starts the application and calls its entry boundary as a real caller does, such as through a web test client, and replaces only what lies past the exit boundary with a substitute bean of the framework, never a plain substitute the context does not know (tests, sections 3 and 4).
+- An integration test starts the application and calls its entry boundary as a real caller does, such as through a web test client, and replaces only what lies past the exit boundary, and only with a substitute that is a bean in the context, also a hand-written one (tests, sections 2 to 4).
 - Assert on the content of the response with concrete values; for an effect that leaves no trace in the response, read back in the then phase what the substitute bean received (tests, section 2).
 - Test pure logic without the framework context (java.md, section 11).
 - A test class takes the beans it uses by field injection or through its constructor (section 1), because only the framework builds a test class. For a constructor, set spring.test.constructor.autowire.mode=all once in the test properties, and write no Autowired marker on the constructor.
