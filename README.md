@@ -1,6 +1,6 @@
 # Laminar Skills
 
-A Claude Code plugin that reviews code against the 3 qualities of high-quality code that the book *Laminar Software Design* defines: simple enough for humans to understand and change, works correctly as intended, and performs adequately for its purpose.
+A Claude Code plugin that reviews code against the 3 qualities of high-quality code that the book *Laminar Software Design* defines: simple to understand and change, correct in behavior, and fast enough for its purpose.
 
 Simplicity is judged from how people read code: each Simplicity and Design finding names the cognitive failure behind it and what it costs the next reader. Correctness is judged as prevention, the design decisions that exclude errors, and as detection, the tests that verify behavior. Performance is judged as waste: extra data movement that a known alternative avoids, such as I/O in a loop. The 2 principles of the book, encapsulation and single level of abstraction, give the fixed direction of a simplicity fix, and they are not the measure the review judges by.
 
@@ -211,9 +211,9 @@ The report says these limits where they apply, because silence must never read a
 
 ## The book
 
-The skill is built from *Laminar Software Design: Foundations of High-Quality Code*, by Igor Zarvanskyi, which the author publishes.
+The skill is built from *Laminar Software Design: Foundations of High-Quality Code*, written and self-published by its author, Igor Zarvanskyi.
 
-Find the book on [Amazon](https://www.amazon.com/dp/8409859289) and [Google Books](https://books.google.es/books?id=sacHEgAAQBAJ).
+Find the book on [clutcher.dev](https://clutcher.dev/book/laminar-software-design/), [Amazon](https://www.amazon.com/dp/8409859289) and [Google Play Books](https://play.google.com/store/books/details?id=sacHEgAAQBAJ).
 
 Every check is built on a rule of the book, and the vocabulary the review uses is the vocabulary the book defines. Where the book leaves a question open, the review adds a small number of review conventions of its own, and it takes no side between anemic and rich types, between inheritance and composition, or between test-first and design-first.
 
