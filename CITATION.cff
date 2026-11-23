@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use Laminar Skills, please cite it as below."
+type: software
+title: "Laminar Skills"
+abstract: "A Claude Code plugin that reviews code against the 3 qualities of high-quality code that the book Laminar Software Design defines: simple to understand and change, correct in behavior, and fast enough for its purpose."
+authors:
+  - family-names: Zarvanskyi
+    given-names: Igor
+    website: "https://clutcher.dev"
+repository-code: "https://github.com/clutcher/laminar-skills"
+url: "https://clutcher.dev/book/laminar-software-design/"
+license:
+  - MIT
+  - CC-BY-4.0
+keywords:
+  - code review
+  - software design
+  - agentic engineering
+  - multi-agent systems
+  - Claude Code
+  - LLM evals
+references:
+  - type: book
+    title: "Laminar Software Design: Foundations of High-Quality Code"
+    authors:
+      - family-names: Zarvanskyi
+        given-names: Igor
+    year: 2026
+    isbn: "978-84-09-85928-3"
+    url: "https://clutcher.dev/book/laminar-software-design/"
