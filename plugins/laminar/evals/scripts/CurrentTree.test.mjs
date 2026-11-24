@@ -33,7 +33,7 @@ describe("CurrentTree#holdsTheSignature on a TypeScript file", () => {
   const currentTree = readCurrentTree(FIXTURE_FOLDER);
 
   for (const { form, ...method } of SIGNATURE_FORMS) {
-    test(`should find 1 declaration when the method is ${form}`, () => {
+    test(`should find 1 signature text when the method is ${form}`, () => {
       // when
       const signatureTexts = currentTree.listSignatureTextsOf(FIXTURE_FILE, method.name);
 
