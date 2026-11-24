@@ -1,0 +1,118 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..aea8123
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# Library shelves
++
++TypeScript 5, ES modules. The shelf labels of the library catalogue live under `src/shelf`. Tests run with Vitest.
+diff --git a/package.json b/package.json
+new file mode 100644
+index 0000000..80a343f
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1,12 @@
++{
++  "name": "library-shelves",
++  "private": true,
++  "type": "module",
++  "scripts": {
++    "test": "vitest run"
++  },
++  "devDependencies": {
++    "typescript": "5.9.3",
++    "vitest": "3.2.4"
++  }
++}
+diff --git a/src/shelf/shelfLabels.test.ts b/src/shelf/shelfLabels.test.ts
+new file mode 100644
+index 0000000..9bf1598
+--- /dev/null
++++ b/src/shelf/shelfLabels.test.ts
+@@ -0,0 +1,30 @@
++import { describe, expect, it } from 'vitest';
++
++import { formatShelfCode, toUniqueStatusShelfParts } from './shelfLabels';
++import { ShelfStatus } from './shelfTypes';
++
++const labelOfLoanOnly = (status: ShelfStatus): string | null => (status === ShelfStatus.OnLoan ? 'On loan' : null);
++
++describe('shelfLabels', () => {
++  it('shouldShowEachStatusLabelOnceWhenTwoBooksShareTheStatus', () => {
++    // given
++    const books = [
++      { title: 'Tides', shelf: { aisle: 'B', row: 3 }, status: ShelfStatus.OnLoan },
++      { title: 'Harbours', shelf: { aisle: 'B', row: 4 }, status: ShelfStatus.OnLoan },
++    ];
++
++    // when
++    const parts = toUniqueStatusShelfParts(books, labelOfLoanOnly);
++
++    // then
++    expect(parts.map((part) => part.statusLabel)).toEqual(['On loan', null]);
++  });
++
++  it('shouldJoinTheAisleAndTheRowWhenTheShelfIsFormatted', () => {
++    // when
++    const shelfCode = formatShelfCode({ aisle: 'B', row: 3 });
++
++    // then
++    expect(shelfCode).toBe('B-3');
++  });
++});
+diff --git a/src/shelf/shelfLabels.ts b/src/shelf/shelfLabels.ts
+new file mode 100644
+index 0000000..c5ab709
+--- /dev/null
++++ b/src/shelf/shelfLabels.ts
+@@ -0,0 +1,21 @@
++import type { Book, Shelf, ShelfParts, ShelfStatus } from './shelfTypes';
++
++export function toShelfParts(book: Book, labelOf: (status: ShelfStatus) => string | null): ShelfParts {
++  return { title: book.title, shelfCode: formatShelfCode(book.shelf), statusLabel: labelOf(book.status) };
++}
++
++export const toUniqueStatusShelfParts = (
++  books: Book[],
++  statusLabelOf: (status: ShelfStatus) => string | null,
++): ShelfParts[] => {
++  const shownLabels = new Set<string>();
++  return books.map((book) => {
++    const parts = toShelfParts(book, statusLabelOf);
++    if (parts.statusLabel === null) return parts;
++    if (shownLabels.has(parts.statusLabel)) return { ...parts, statusLabel: null };
++    shownLabels.add(parts.statusLabel);
++    return parts;
++  });
++};
++
++export const formatShelfCode = (shelf: Shelf): string => `${shelf.aisle}-${shelf.row}`;
+diff --git a/src/shelf/shelfTypes.ts b/src/shelf/shelfTypes.ts
+new file mode 100644
+index 0000000..f54e0ad
+--- /dev/null
++++ b/src/shelf/shelfTypes.ts
+@@ -0,0 +1,22 @@
++export enum ShelfStatus {
++  OnShelf = 'ON_SHELF',
++  OnLoan = 'ON_LOAN',
++  InRepair = 'IN_REPAIR',
++}
++
++export interface Shelf {
++  aisle: string;
++  row: number;
++}
++
++export interface Book {
++  title: string;
++  shelf: Shelf;
++  status: ShelfStatus;
++}
++
++export interface ShelfParts {
++  title: string;
++  shelfCode: string;
++  statusLabel: string | null;
++}

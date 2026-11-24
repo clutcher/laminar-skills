@@ -24,14 +24,31 @@ export class CurrentTreeStop extends Error {}
 
 const isAWordIn = (text, word) => new RegExp(`(^|[^\\w$])${word.replace(/[$]/g, "\\$")}([^\\w$]|$)`).test(text);
 
-// The parameter list of a method by its name: a call or a declaration, name(a, b), in every language the scripts read; and a JavaScript or TypeScript function assigned to the name, as a const or a class property, name = (a: A): R =>, name = async (a) =>, name = function (a), or name = a =>.
+// The deepest nesting of brackets that a parameter list or a list of type parameters holds and the pattern still reads, such as a callback that takes a callback, (run: (next: (value: T) => void) => void).
+const LARGEST_BRACKET_DEPTH = 3;
+
+// The text between an opening and a closing bracket, with brackets of the same kind nested inside it up to the given depth; the excluded characters stand nowhere in it.
+const createBracketContentPattern = (open, close, excluded, depth) => {
+  const flat = `[^${open}${close}${excluded}]`;
+  if (depth === 0) return `${flat}*`;
+  return `(?:${flat}|${open}${createBracketContentPattern(open, close, excluded, depth - 1)}${close})*`;
+};
+
+const PARAMETERS = createBracketContentPattern("\\(", "\\)", "", LARGEST_BRACKET_DEPTH);
+
+const TYPE_PARAMETERS = `<${createBracketContentPattern("<", ">", "()", LARGEST_BRACKET_DEPTH)}>`;
+
+// The parameter list of a method by its name: a call or a declaration, name(a, b), in every language the scripts read; and a JavaScript or TypeScript function assigned to the name, as a const or a class property, name = (a: A): R =>, name = async (a) =>, name = function (a), or name = a =>. A parameter list may hold a parameter whose type holds its own brackets, such as a callback, (labelOf: (status: Status) => string), and a list of type parameters may hold a generic type, <T extends Record<string, unknown>>.
 const createParameterListsPattern = escapedName => {
   const nameStart = `(?:^|[^\\w$])${escapedName}`;
-  const direct = `${nameStart}\\s*\\(([^()]*)\\)`;
-  const assigned = `${nameStart}\\s*(?::[^=;(){}]*)?=\\s*(?:async\\s+)?(?:(?:function\\s*\\*?\\s*(?:[\\w$]+\\s*)?(?:<[^<>()]*>\\s*)?\\(([^()]*)\\))|(?:(?:<[^<>()]*>\\s*)?\\(([^()]*)\\)\\s*(?::[^;{}]*?)?=>))`;
+  const direct = `${nameStart}\\s*\\((${PARAMETERS})\\)`;
+  const assigned = `${nameStart}\\s*(?::[^=;(){}]*)?=\\s*(?:async\\s+)?(?:(?:function\\s*\\*?\\s*(?:[\\w$]+\\s*)?(?:${TYPE_PARAMETERS}\\s*)?\\((${PARAMETERS})\\))|(?:(?:${TYPE_PARAMETERS}\\s*)?\\((${PARAMETERS})\\)\\s*(?::[^;{}]*?)?=>))`;
   const single = `${nameStart}\\s*(?::[^=;(){}]*)?=\\s*(?:async\\s+)?([\\w$]+)\\s*=>`;
   return new RegExp(`${direct}|${assigned}|${single}`, "gd");
 };
+
+// The capture group of the pattern that holds the parameters of name(a, b), a call or a declaration.
+const DIRECT_GROUP = 1;
 
 // The words before a method name that declare it and name no type it returns: the modifiers and the declaring words of the common stacks.
 const DECLARING_WORDS = new Set(["public", "private", "protected", "internal", "static", "final", "abstract", "override", "open", "suspend", "default", "synchronized", "native", "export", "declare", "readonly", "async", "fun", "function", "def", "const", "let", "var", "val", "get", "set", "operator", "inline", "infix", "tailrec", "external", "sealed", "virtual", "extern"]);
@@ -54,12 +71,26 @@ const readTextAfterTheParameters = (text, parameterListEnd) => {
   return end < 0 ? afterText : afterText.slice(0, end);
 };
 
-// The return type that the declaration of a method states, read from the start of its line to its opening brace; null where the line is a call, or a declaration that states no return type, such as an expression body in Kotlin.
-const readDeclaredReturnType = (text, nameStart, parameterListEnd) => {
+// The last name before the method name on its line: "" where the line starts with the method name, undefined where no name stands right before it, such as after = or (.
+const readLastNameBefore = (text, nameStart) => {
   const lineStart = text.lastIndexOf("\n", nameStart - 1) + 1;
   const textBefore = text.slice(lineStart, nameStart).trimEnd();
-  const lastNameBefore = textBefore === "" ? "" : LAST_NAME_BEFORE.exec(textBefore)?.[1];
-  if (lastNameBefore === undefined || CALLING_WORDS.has(lastNameBefore)) return null;
+  return textBefore === "" ? "" : LAST_NAME_BEFORE.exec(textBefore)?.[1];
+};
+
+const isACallingLine = lastNameBefore => lastNameBefore === undefined || CALLING_WORDS.has(lastNameBefore);
+
+// The text after a parameter list that ends a call inside a statement or an argument: a semicolon, a closing bracket, a comma or a member access.
+const CALL_END_AFTER = /^\s*[;),.\]]/;
+
+const HOLDS_A_BRACKET = /[()]/;
+
+const isACall = (text, nameStart, parameterListEnd) => isACallingLine(readLastNameBefore(text, nameStart)) || CALL_END_AFTER.test(text.slice(parameterListEnd + 1));
+
+// The return type that the declaration of a method states, read from the start of its line to its opening brace; null where the line is a call, or a declaration that states no return type, such as an expression body in Kotlin.
+const readDeclaredReturnType = (text, nameStart, parameterListEnd) => {
+  const lastNameBefore = readLastNameBefore(text, nameStart);
+  if (isACallingLine(lastNameBefore)) return null;
   if (lastNameBefore !== "" && !DECLARING_WORDS.has(lastNameBefore)) return lastNameBefore;
 
   return RETURN_TYPE_AFTER.exec(readTextAfterTheParameters(text, parameterListEnd))?.[1] ?? null;
@@ -273,15 +304,19 @@ class CurrentTree {
     return this.files.filter(file => words.every(word => this.holdsTheWord(file, word)));
   }
 
-  // Each call or declaration of the method in the file, with its parameter text and the return type its declaration states.
+  // Each call or declaration of the method in the file, with its parameter text and the return type its declaration states. A call whose arguments hold brackets, such as f(a, g(b)), is left out, so its argument names never stand for the parameters of a declaration.
   listSignatureTextsOf(file, methodName) {
     const text = this.readFileText(file);
     if (text === null) return [];
     const parameterLists = createParameterListsPattern(methodName.replace(/[$]/g, "\\$"));
-    return [...text.matchAll(parameterLists)].map(match => {
+    return [...text.matchAll(parameterLists)].flatMap(match => {
       const group = match.slice(1).findIndex(parameterText => parameterText !== undefined) + 1;
+      const parameterText = match[group];
       const nameStart = text.startsWith(methodName, match.index) ? match.index : match.index + 1;
-      return { parameterText: match[group], returnTypeText: readDeclaredReturnType(text, nameStart, match.indices[group][1]) };
+      const parameterListEnd = match.indices[group][1];
+      if (group === DIRECT_GROUP && HOLDS_A_BRACKET.test(parameterText) && isACall(text, nameStart, parameterListEnd)) return [];
+
+      return [{ parameterText, returnTypeText: readDeclaredReturnType(text, nameStart, parameterListEnd) }];
     });
   }
 
